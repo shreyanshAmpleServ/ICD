@@ -10,7 +10,7 @@ import { REF_TYPE_NAME } from '@/mock/control';
 import { useQ, delay } from '@/api/query';
 import { consignment, parties, partyName, unitsOf, vesselCalls } from '@/mock/core';
 import { allCustomsRefs, documentsOf, linesOf, releasesFor } from '@/mock/cargo';
-import { regimeName, refTypeName } from './Consignments';
+import { regimeName, refTypeName } from '../index';
 import { CustomsRefDrawer } from '@/features/customs';
 import { RequestRelease } from '@/features/container-management/releases';
 import { Progress } from '@/features/container-management/shared';
@@ -195,9 +195,9 @@ export function ConsignmentDetail() {
 
       <EditConsignment open={edit} onClose={() => setEdit(false)} c={c} />
       <CustomsRefDrawer open={refOpen} onClose={() => setRefOpen(false)} consignmentId={id}
-        onSaved={(r, affected, sets) => {
+        onSaved={(r: any, affected: any[], sets?: string) => {
           setNewRefs((x) => [r, ...x]);
-          if (sets) setCleared((m) => ({ ...m, ...Object.fromEntries(affected.map((a) => [a, sets])) }));
+          if (sets) setCleared((m) => ({ ...m, ...Object.fromEntries(affected.map((a: any) => [a, sets])) }));
           setTab(sets === 'CLEARED' ? 'units' : 'customs');
         }} />
       <RequestRelease open={relOpen} onClose={() => setRelOpen(false)} consignmentId={id} onDone={() => { bump((n) => n + 1); setTab('releases'); }} />

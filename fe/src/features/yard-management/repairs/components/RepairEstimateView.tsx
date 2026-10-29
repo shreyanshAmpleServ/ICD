@@ -23,7 +23,7 @@ import { useQ } from '@/api/query';
 import { partyName } from '@/mock/core';
 import { LABOUR_RATE, repairCodes, repairName, type Estimate } from '@/mock/ops';
 import { repairsApi } from '../api';
-import { EST_STATUS } from './RepairsView';
+import { EST_STATUS } from '../index';
 import { DecisionDrawer } from './DecisionDrawer';
 
 /* Repair estimate: PATCH while draft, :send to the line, :decision per line,

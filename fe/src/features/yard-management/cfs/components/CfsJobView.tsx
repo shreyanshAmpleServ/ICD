@@ -22,7 +22,7 @@ import type { S } from '@/api/types';
 import { useQ } from '@/api/query';
 import { equipment } from '@/mock/core';
 import { contractors, type Job } from '@/mock/ops';
-import { JOB_KIND } from './CfsView';
+import { JOB_KIND } from '../index';
 import { cfsApi } from '../api';
 import { CompleteJobDrawer } from './CompleteJobDrawer';
 

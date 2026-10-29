@@ -9,7 +9,7 @@ import { useQ, delay } from '@/api/query';
 import { at } from '@/mock/gen';
 import { EXCEPTION_NAME, RESOLUTION_CODES, ROLE_NAME, SLA_MIN, allApprovals, allExceptions, entityLink, exceptionComments, hoursUntil, ME, type Cmt } from '@/mock/cargo';
 import { Countdown } from '@/features/container-management/shared';
-import { isOpen } from './ExceptionsView';
+import { isOpen } from '../index';
 import { AssignDrawer } from './AssignDrawer';
 import { ResolveDrawer } from './ResolveDrawer';
 
@@ -122,9 +122,8 @@ export function ExceptionDetailView() {
         {!open && (
           <Banner
             tone="go"
-            title={`${e.status === 'CLOSED' ? 'Closed' : 'Resolved'}: ${
-              RESOLUTION_CODES.find(([k]) => k === e.resolutionCode)?.[1] ?? e.resolutionCode ?? ''
-            }`}
+            title={`${e.status === 'CLOSED' ? 'Closed' : 'Resolved'}: ${RESOLUTION_CODES.find(([k]) => k === e.resolutionCode)?.[1] ?? e.resolutionCode ?? ''
+              }`}
           >
             {e.resolutionNote ?? 'No note.'}
           </Banner>

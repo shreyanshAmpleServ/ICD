@@ -1,13 +1,5 @@
-export {
-  ControlTower as ControlTowerPage,
-  ControlTower,
-  Kpis as KpisPage,
-  Kpis,
-  Reports as ReportsPage,
-  Reports,
-  Forecasts as ForecastsPage,
-  Forecasts,
-  Audit as AuditPage,
-  Audit,
-} from '@/features/reports/components';
-
+export { ControlTowerView as ControlTowerPage, ControlTowerView as ControlTower } from '../control-tower';
+export { KpisView as KpisPage, KpisView as Kpis } from '../kpis';
+export { ReportsView as ReportsPage, ReportsView as Reports } from '../reports';
+export { ForecastsView as ForecastsPage, ForecastsView as Forecasts } from '../forecasts';
+export { AuditView as AuditPage, AuditView as Audit } from '../audit';

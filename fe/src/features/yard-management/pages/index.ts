@@ -1,23 +1,17 @@
+export { YardMapView as YardMapPage, YardMapView as YardMap } from '../map';
+export { MovesView as MovesPage, MovesView as Moves } from '../moves';
 export {
-  YardMap as YardMapPage,
-  YardMap,
-  Moves as MovesPage,
-  Moves,
-  Inspections as InspectionsPage,
-  Inspections,
+  InspectionsView as InspectionsPage,
+  InspectionsView as Inspections,
   InspectionForm as InspectionFormPage,
   InspectionForm,
-  Keys as KeysPage,
-  Keys,
-  Cfs as CfsPage,
-  Cfs,
-  CfsJob as CfsJobPage,
-  CfsJob,
-  Reefers as ReefersPage,
-  Reefers,
-  Repairs as RepairsPage,
-  Repairs,
+} from '../inspections';
+export { KeysView as KeysPage, KeysView as Keys } from '../keys';
+export { CfsView as CfsPage, CfsView as Cfs, CfsJob as CfsJobPage, CfsJob } from '../cfs';
+export { ReefersView as ReefersPage, ReefersView as Reefers } from '../reefers';
+export {
+  RepairsView as RepairsPage,
+  RepairsView as Repairs,
   RepairEstimate as RepairEstimatePage,
   RepairEstimate,
-} from '@/features/yard-management/components';
-
+} from '../repairs';
