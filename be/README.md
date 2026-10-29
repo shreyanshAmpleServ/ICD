@@ -13,7 +13,7 @@ be/
 ├── src/                             # Core application source code
 │   ├── index.ts                     # Main entry point (loads env, connects DB, bootstraps server)
 │   ├── server.ts                    # HTTP server startup, port management & graceful shutdown
-│   ├── app.ts                       # Express app configuration & global middleware setup
+│   ├── app.ts                       # Express app configuration & global middlewares setup
 │   ├── configs/                     # Centralized environment, logger, Prisma & RBAC config
 │   │   ├── env.ts
 │   │   ├── permissions.ts
@@ -25,7 +25,7 @@ be/
 │   │   ├── siteScope.ts             # Enforces mandatory X-Site-Id header (e.g., DAR1, DAR2)
 │   │   ├── permission.ts            # Enforces x-permission RBAC grants (DO, REQ, APPR, VIEW)
 │   │   ├── concurrency.ts           # Enforces Idempotency-Key and If-Match (optimistic locking)
-│   │   └── validate.ts              # Zod request validation middleware
+│   │   └── validate.ts              # Zod request validation middlewares
 │   ├── helpers/                     # Domain helpers (notifications, status transitions)
 │   ├── jobs/                        # Scheduled cron background tasks
 │   ├── routes/                      # Main route aggregator (/api)
@@ -65,22 +65,26 @@ be/
 ## Getting Started
 
 ### 1. Install Dependencies
+
 ```bash
 cd be
 npm install
 ```
 
 ### 2. Configure Environment
+
 ```bash
 cp .env.example .env
 ```
 
 ### 3. Run the Development Server
+
 ```bash
 npm run dev
 ```
 
 The server starts at `http://localhost:4000`:
+
 - **API Base**: `http://localhost:4000/api`
 - **V1 API**: `http://localhost:4000/api/v1`
 - **Interactive Swagger Documentation**: `http://localhost:4000/api/docs`

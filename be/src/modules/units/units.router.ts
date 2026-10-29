@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireSite } from "../../middleware/siteScope";
-import { requirePermission } from "../../middleware/permission";
+import { requireSite } from "../../middlewares/siteScope";
+import { requirePermission } from "../../middlewares/permission";
 import { unitTypes, identityRules, plateFormats } from "../../data/admin";
 import { allStays } from "../../data/core";
 import { holdsOf } from "../../data/control";

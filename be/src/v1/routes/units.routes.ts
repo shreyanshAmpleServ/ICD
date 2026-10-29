@@ -1,124 +1,121 @@
-import { Router } from 'express';
-import { requireSite, requirePermission, validateBody } from '../../middlewares';
-import { asyncHandler } from '../../utils';
-import { unitsController } from '../controllers/units.controller';
+import { Router } from "express";
+import {
+  requireSite,
+  requirePermission,
+  validateBody,
+} from "../../middlewares";
+import { asyncHandler } from "../../utils";
+import { unitsController } from "../controllers/units.controller";
 import {
   validateIdentitySchema,
   createUnitTypeSchema,
-  createUnitSchema
-} from '../validations/units.validation';
+  createUnitSchema,
+} from "../validations/units.validation";
 
 const router = Router();
 
-// ------------------------------------------------------------------ Unit Types & Setup (Global 🌐)
 router.get(
-  '/unit-types',
+  "/unit-types",
   requireSite(true),
-  requirePermission('masters.view'),
-  asyncHandler(unitsController.getUnitTypes)
+  requirePermission("masters.view"),
+  asyncHandler(unitsController.getUnitTypes),
 );
 
 router.post(
-  '/unit-types',
+  "/unit-types",
   requireSite(true),
-  requirePermission('admin.config.manage', 'DO'),
+  requirePermission("admin.config.manage", "DO"),
   validateBody(createUnitTypeSchema),
-  asyncHandler(unitsController.createUnitType)
+  asyncHandler(unitsController.createUnitType),
 );
 
 router.get(
-  '/unit-types/:unitTypeId',
+  "/unit-types/:unitTypeId",
   requireSite(true),
-  requirePermission('masters.view'),
-  asyncHandler(unitsController.getUnitTypeById)
+  requirePermission("masters.view"),
+  asyncHandler(unitsController.getUnitTypeById),
 );
 
 router.patch(
-  '/unit-types/:unitTypeId',
+  "/unit-types/:unitTypeId",
   requireSite(true),
-  requirePermission('admin.config.manage', 'DO'),
-  asyncHandler(unitsController.updateUnitType)
+  requirePermission("admin.config.manage", "DO"),
+  asyncHandler(unitsController.updateUnitType),
 );
 
 router.get(
-  '/identity-rules',
+  "/identity-rules",
   requireSite(true),
-  requirePermission('masters.view'),
-  asyncHandler(unitsController.getIdentityRules)
+  requirePermission("masters.view"),
+  asyncHandler(unitsController.getIdentityRules),
 );
 
 router.post(
-  '/identity:validate',
+  "/identity:validate",
   requireSite(false),
-  requirePermission('masters.view'),
+  requirePermission("masters.view"),
   validateBody(validateIdentitySchema),
-  asyncHandler(unitsController.validateIdentity)
+  asyncHandler(unitsController.validateIdentity),
 );
 
 router.get(
-  '/plate-formats',
+  "/plate-formats",
   requireSite(true),
-  requirePermission('masters.view'),
-  asyncHandler(unitsController.getPlateFormats)
+  requirePermission("masters.view"),
+  asyncHandler(unitsController.getPlateFormats),
 );
 
-// ------------------------------------------------------------------ Search & Units
-router.get(
-  '/search',
-  requireSite(true),
-  asyncHandler(unitsController.search)
-);
+router.get("/search", requireSite(true), asyncHandler(unitsController.search));
 
 router.get(
-  '/units',
+  "/units",
   requireSite(false),
-  requirePermission('consignment.view'),
-  asyncHandler(unitsController.getUnits)
+  requirePermission("consignment.view"),
+  asyncHandler(unitsController.getUnits),
 );
 
 router.post(
-  '/units',
+  "/units",
   requireSite(false),
-  requirePermission('consignment.edit', 'DO'),
+  requirePermission("consignment.edit", "DO"),
   validateBody(createUnitSchema),
-  asyncHandler(unitsController.createUnit)
+  asyncHandler(unitsController.createUnit),
 );
 
 router.get(
-  '/units/:unitStayId',
+  "/units/:unitStayId",
   requireSite(false),
-  requirePermission('consignment.view'),
-  asyncHandler(unitsController.getUnitById)
+  requirePermission("consignment.view"),
+  asyncHandler(unitsController.getUnitById),
 );
 
 router.patch(
-  '/units/:unitStayId',
+  "/units/:unitStayId",
   requireSite(false),
-  requirePermission('consignment.edit', 'DO'),
-  asyncHandler(unitsController.updateUnit)
+  requirePermission("consignment.edit", "DO"),
+  asyncHandler(unitsController.updateUnit),
 );
 
 router.get(
-  '/units/:unitStayId/timeline',
+  "/units/:unitStayId/timeline",
   requireSite(false),
-  requirePermission('consignment.view'),
-  asyncHandler(unitsController.getUnitTimeline)
+  requirePermission("consignment.view"),
+  asyncHandler(unitsController.getUnitTimeline),
 );
 
 router.get(
-  '/units/:unitStayId/holds',
+  "/units/:unitStayId/holds",
   requireSite(false),
-  requirePermission('consignment.view'),
-  asyncHandler(unitsController.getUnitHolds)
+  requirePermission("consignment.view"),
+  asyncHandler(unitsController.getUnitHolds),
 );
 
 router.get(
-  '/units/:unitStayId/history',
+  "/units/:unitStayId/history",
   requireSite(false),
-  requirePermission('consignment.view'),
-  asyncHandler(unitsController.getUnitHistory)
+  requirePermission("consignment.view"),
+  asyncHandler(unitsController.getUnitHistory),
 );
 
 export const unitsRouter = router;
 export default router;
-
