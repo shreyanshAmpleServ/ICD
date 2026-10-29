@@ -1,0 +1,152 @@
+[
+  {
+    "method": "GET",
+    "path": "/users",
+    "tag": "Access",
+    "operationId": "getUsers",
+    "summary": "List users",
+    "permission": "admin.users.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/users",
+    "tag": "Access",
+    "operationId": "postUsers",
+    "summary": "Create a user (link an NG identity)",
+    "permission": "admin.users.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}",
+    "tag": "Access",
+    "operationId": "getUsersByUserId",
+    "summary": "Get a user",
+    "permission": "admin.users.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/users/{userId}",
+    "tag": "Access",
+    "operationId": "updateUsersByUserId",
+    "summary": "Update a user",
+    "permission": "admin.users.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/users/{userId}/roles",
+    "tag": "Access",
+    "operationId": "postUsersByUserIdRoles",
+    "summary": "Grant a role at a site",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/users/{userId}/roles/{userRoleId}",
+    "tag": "Access",
+    "operationId": "deleteUsersByUserIdRolesByUserRoleId",
+    "summary": "Revoke a role",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/roles",
+    "tag": "Access",
+    "operationId": "getRoles",
+    "summary": "List roles",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/roles",
+    "tag": "Access",
+    "operationId": "postRoles",
+    "summary": "Create a role",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/roles/{roleId}",
+    "tag": "Access",
+    "operationId": "getRolesByRoleId",
+    "summary": "Get a role",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/roles/{roleId}",
+    "tag": "Access",
+    "operationId": "updateRolesByRoleId",
+    "summary": "Update a role",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/roles/{roleId}/permissions",
+    "tag": "Access",
+    "operationId": "replaceRolesByRoleIdPermissions",
+    "summary": "Replace a role's permissions",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/permissions",
+    "tag": "Access",
+    "operationId": "getPermissions",
+    "summary": "List permissions",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/devices",
+    "tag": "Access",
+    "operationId": "getDevices",
+    "summary": "List registered devices",
+    "permission": "admin.device.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/devices",
+    "tag": "Access",
+    "operationId": "postDevices",
+    "summary": "Register a device (gate tablet, handheld, gate agent)",
+    "permission": "admin.device.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/devices/{deviceId}:revoke",
+    "tag": "Access",
+    "operationId": "postDevicesByDeviceIdRevoke",
+    "summary": "Revoke a device",
+    "permission": "admin.device.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

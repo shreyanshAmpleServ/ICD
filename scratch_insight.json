@@ -1,0 +1,382 @@
+[
+  {
+    "method": "GET",
+    "path": "/dashboards/control-tower",
+    "tag": "Dashboards",
+    "operationId": "getDashboardsControlTower",
+    "summary": "Control tower snapshot",
+    "permission": "dashboard.control_tower",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/dashboards/{dashboardCode}",
+    "tag": "Dashboards",
+    "operationId": "getDashboardsByDashboardCode",
+    "summary": "Role dashboard (gate, yard, cashier, executive...)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/kpis",
+    "tag": "Dashboards",
+    "operationId": "getKpis",
+    "summary": "KPI series for trend charts",
+    "permission": "dashboard.executive",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/reports",
+    "tag": "Reports",
+    "operationId": "getReports",
+    "summary": "Report catalogue (filtered by permission)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/reports/{reportCode}/runs",
+    "tag": "Reports",
+    "operationId": "postReportsByReportCodeRuns",
+    "summary": "Run or export a report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/report-runs/{reportRunId}",
+    "tag": "Reports",
+    "operationId": "getReportRunsByReportRunId",
+    "summary": "Get a report run",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/report-runs/{reportRunId}/file",
+    "tag": "Reports",
+    "operationId": "getReportRunsByReportRunIdFile",
+    "summary": "Download the exported file",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/saved-reports",
+    "tag": "Reports",
+    "operationId": "getSavedReports",
+    "summary": "List saved reports",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/saved-reports",
+    "tag": "Reports",
+    "operationId": "postSavedReports",
+    "summary": "Create a saved report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/saved-reports/{savedReportId}",
+    "tag": "Reports",
+    "operationId": "getSavedReportsBySavedReportId",
+    "summary": "Get a saved report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/saved-reports/{savedReportId}",
+    "tag": "Reports",
+    "operationId": "updateSavedReportsBySavedReportId",
+    "summary": "Update a saved report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/saved-reports/{savedReportId}",
+    "tag": "Reports",
+    "operationId": "deleteSavedReportsBySavedReportId",
+    "summary": "Delete a saved report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notifications/inbox",
+    "tag": "Notifications",
+    "operationId": "getNotificationsInbox",
+    "summary": "My in-app notifications",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/notifications/{notificationId}:read",
+    "tag": "Notifications",
+    "operationId": "postNotificationsByNotificationIdRead",
+    "summary": "Mark one read",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/notifications:read-all",
+    "tag": "Notifications",
+    "operationId": "postNotificationsReadAll",
+    "summary": "Mark all read",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notification-templates",
+    "tag": "Notifications",
+    "operationId": "getNotificationTemplates",
+    "summary": "List notification templates",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/notification-templates",
+    "tag": "Notifications",
+    "operationId": "postNotificationTemplates",
+    "summary": "Create a notification template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notification-templates/{notificationTemplateId}",
+    "tag": "Notifications",
+    "operationId": "getNotificationTemplatesByNotificationTemplateId",
+    "summary": "Get a notification template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/notification-templates/{notificationTemplateId}",
+    "tag": "Notifications",
+    "operationId": "updateNotificationTemplatesByNotificationTemplateId",
+    "summary": "Update a notification template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notification-rules",
+    "tag": "Notifications",
+    "operationId": "getNotificationRules",
+    "summary": "List notification rules",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/notification-rules",
+    "tag": "Notifications",
+    "operationId": "postNotificationRules",
+    "summary": "Create a notification rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notification-rules/{notificationRuleId}",
+    "tag": "Notifications",
+    "operationId": "getNotificationRulesByNotificationRuleId",
+    "summary": "Get a notification rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/notification-rules/{notificationRuleId}",
+    "tag": "Notifications",
+    "operationId": "updateNotificationRulesByNotificationRuleId",
+    "summary": "Update a notification rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/print-templates",
+    "tag": "Printing",
+    "operationId": "getPrintTemplates",
+    "summary": "List print templates",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/print-templates",
+    "tag": "Printing",
+    "operationId": "postPrintTemplates",
+    "summary": "Create a print template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/print-templates/{printTemplateId}",
+    "tag": "Printing",
+    "operationId": "getPrintTemplatesByPrintTemplateId",
+    "summary": "Get a print template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/print-templates/{printTemplateId}",
+    "tag": "Printing",
+    "operationId": "updatePrintTemplatesByPrintTemplateId",
+    "summary": "Update a print template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/print",
+    "tag": "Printing",
+    "operationId": "postPrint",
+    "summary": "Print a document (logged)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/conversations",
+    "tag": "Aiva",
+    "operationId": "getAivaConversations",
+    "summary": "My conversations",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/conversations",
+    "tag": "Aiva",
+    "operationId": "postAivaConversations",
+    "summary": "Start a conversation",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/conversations/{aivaConversationId}/messages",
+    "tag": "Aiva",
+    "operationId": "getAivaConversationsByAivaConversationIdMessages",
+    "summary": "Conversation messages",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/conversations/{aivaConversationId}/messages",
+    "tag": "Aiva",
+    "operationId": "postAivaConversationsByAivaConversationIdMessages",
+    "summary": "Ask Aiva (streamed answer)",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/messages/{aivaMessageId}/feedback",
+    "tag": "Aiva",
+    "operationId": "postAivaMessagesByAivaMessageIdFeedback",
+    "summary": "Rate an answer",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/messages/{aivaMessageId}/tool-calls",
+    "tag": "Aiva",
+    "operationId": "getAivaMessagesByAivaMessageIdToolCalls",
+    "summary": "Tool calls behind an answer",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/tools",
+    "tag": "Aiva",
+    "operationId": "getAivaTools",
+    "summary": "Tools available to the signed-in user",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/drafts",
+    "tag": "Aiva",
+    "operationId": "getAivaDrafts",
+    "summary": "My Aiva drafts",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/drafts/{aivaDraftActionId}:submit",
+    "tag": "Aiva",
+    "operationId": "postAivaDraftsByAivaDraftActionIdSubmit",
+    "summary": "Submit an Aiva draft",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/drafts/{aivaDraftActionId}:discard",
+    "tag": "Aiva",
+    "operationId": "postAivaDraftsByAivaDraftActionIdDiscard",
+    "summary": "Discard an Aiva draft",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

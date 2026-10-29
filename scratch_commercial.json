@@ -1,0 +1,702 @@
+[
+  {
+    "method": "GET",
+    "path": "/accounting-periods",
+    "tag": "Finance setup",
+    "operationId": "getAccountingPeriods",
+    "summary": "List accounting periods",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/accounting-periods/{accountingPeriodId}:close",
+    "tag": "Finance setup",
+    "operationId": "postAccountingPeriodsByAccountingPeriodIdClose",
+    "summary": "Close a period",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/accounting-periods/{accountingPeriodId}:reopen",
+    "tag": "Finance setup",
+    "operationId": "postAccountingPeriodsByAccountingPeriodIdReopen",
+    "summary": "Reopen a period",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/gl-settings",
+    "tag": "Finance setup",
+    "operationId": "getGlSettings",
+    "summary": "GL account mapping",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/gl-settings",
+    "tag": "Finance setup",
+    "operationId": "replaceGlSettings",
+    "summary": "Replace GL account mapping",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exchange-rates",
+    "tag": "Finance setup",
+    "operationId": "getExchangeRates",
+    "summary": "List exchange rates",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exchange-rates",
+    "tag": "Finance setup",
+    "operationId": "postExchangeRates",
+    "summary": "Enter an exchange rate (daily or monthly)",
+    "permission": "finance.exchange_rate.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exchange-rates/effective",
+    "tag": "Finance setup",
+    "operationId": "getExchangeRatesEffective",
+    "summary": "Rate in force on a date",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/exchange-rates/{exchangeRateId}",
+    "tag": "Finance setup",
+    "operationId": "updateExchangeRatesByExchangeRateId",
+    "summary": "Correct an unused exchange rate",
+    "permission": "finance.exchange_rate.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tax-codes",
+    "tag": "Finance setup",
+    "operationId": "getTaxCodes",
+    "summary": "List tax codes",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/tax-codes",
+    "tag": "Finance setup",
+    "operationId": "postTaxCodes",
+    "summary": "Create a tax code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tax-codes/{taxCodeId}",
+    "tag": "Finance setup",
+    "operationId": "getTaxCodesByTaxCodeId",
+    "summary": "Get a tax code",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/tax-codes/{taxCodeId}",
+    "tag": "Finance setup",
+    "operationId": "updateTaxCodesByTaxCodeId",
+    "summary": "Update a tax code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/charge-codes",
+    "tag": "Finance setup",
+    "operationId": "getChargeCodes",
+    "summary": "List charge codes",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/charge-codes",
+    "tag": "Finance setup",
+    "operationId": "postChargeCodes",
+    "summary": "Create a charge code",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/charge-codes/{chargeCodeId}",
+    "tag": "Finance setup",
+    "operationId": "getChargeCodesByChargeCodeId",
+    "summary": "Get a charge code",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/charge-codes/{chargeCodeId}",
+    "tag": "Finance setup",
+    "operationId": "updateChargeCodesByChargeCodeId",
+    "summary": "Update a charge code",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payment-channels",
+    "tag": "Finance setup",
+    "operationId": "getPaymentChannels",
+    "summary": "List payment channels",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/payment-channels",
+    "tag": "Finance setup",
+    "operationId": "postPaymentChannels",
+    "summary": "Create a payment channel",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payment-channels/{paymentChannelId}",
+    "tag": "Finance setup",
+    "operationId": "getPaymentChannelsByPaymentChannelId",
+    "summary": "Get a payment channel",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/payment-channels/{paymentChannelId}",
+    "tag": "Finance setup",
+    "operationId": "updatePaymentChannelsByPaymentChannelId",
+    "summary": "Update a payment channel",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tariffs",
+    "tag": "Tariffs",
+    "operationId": "getTariffs",
+    "summary": "List tariffs",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/tariffs",
+    "tag": "Tariffs",
+    "operationId": "postTariffs",
+    "summary": "Create a tariff",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tariffs/{tariffId}",
+    "tag": "Tariffs",
+    "operationId": "getTariffsByTariffId",
+    "summary": "Get a tariff",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/tariffs/{tariffId}",
+    "tag": "Tariffs",
+    "operationId": "updateTariffsByTariffId",
+    "summary": "Update a tariff",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tariffs/{tariffId}/rules",
+    "tag": "Tariffs",
+    "operationId": "getTariffsByTariffIdRules",
+    "summary": "List tariff rules",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/tariffs/{tariffId}/rules",
+    "tag": "Tariffs",
+    "operationId": "replaceTariffsByTariffIdRules",
+    "summary": "Replace tariff rules (draft only)",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/tariffs/{tariffId}:submit",
+    "tag": "Tariffs",
+    "operationId": "postTariffsByTariffIdSubmit",
+    "summary": "Submit a draft tariff for approval",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/tariffs/{tariffId}:new-version",
+    "tag": "Tariffs",
+    "operationId": "postTariffsByTariffIdNewVersion",
+    "summary": "Create a new draft version",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/rating/preview",
+    "tag": "Tariffs",
+    "operationId": "postRatingPreview",
+    "summary": "Preview charges for a unit or consignment up to a date",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/billable-events",
+    "tag": "Charges",
+    "operationId": "getBillableEvents",
+    "summary": "List billable events",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/billable-events:manual",
+    "tag": "Charges",
+    "operationId": "postBillableEventsManual",
+    "summary": "Add a manual charge",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/charges",
+    "tag": "Charges",
+    "operationId": "getCharges",
+    "summary": "Uninvoiced and invoiced charges",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/charges/{chargeId}:waive",
+    "tag": "Charges",
+    "operationId": "postChargesByChargeIdWaive",
+    "summary": "Request a waiver or discount",
+    "permission": "billing.waiver",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/free-day-extensions",
+    "tag": "Charges",
+    "operationId": "postFreeDayExtensions",
+    "summary": "Extend free days for a stay or consignment",
+    "permission": "billing.freeday.extend",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/proformas",
+    "tag": "Invoicing",
+    "operationId": "postProformas",
+    "summary": "Create a proforma",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/invoices",
+    "tag": "Invoicing",
+    "operationId": "getInvoices",
+    "summary": "List invoices, proformas and notes",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/invoices",
+    "tag": "Invoicing",
+    "operationId": "postInvoices",
+    "summary": "Create a draft invoice",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/invoices:from-proforma",
+    "tag": "Invoicing",
+    "operationId": "postInvoicesFromProforma",
+    "summary": "Convert a proforma to an invoice",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/{invoiceId}",
+    "tag": "Invoicing",
+    "operationId": "getInvoicesByInvoiceId",
+    "summary": "Get an invoice",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/invoices/{invoiceId}",
+    "tag": "Invoicing",
+    "operationId": "updateInvoicesByInvoiceId",
+    "summary": "Edit a draft",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/{invoiceId}:post",
+    "tag": "Invoicing",
+    "operationId": "postInvoicesByInvoiceIdPost",
+    "summary": "Post an invoice",
+    "permission": "billing.invoice.post",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/{invoiceId}:cancel",
+    "tag": "Invoicing",
+    "operationId": "postInvoicesByInvoiceIdCancel",
+    "summary": "Cancel a draft or proforma",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/{invoiceId}/pdf",
+    "tag": "Invoicing",
+    "operationId": "getInvoicesByInvoiceIdPdf",
+    "summary": "Invoice PDF",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/credit-notes",
+    "tag": "Invoicing",
+    "operationId": "postCreditNotes",
+    "summary": "Issue a credit note",
+    "permission": "billing.creditnote",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/debit-notes",
+    "tag": "Invoicing",
+    "operationId": "postDebitNotes",
+    "summary": "Issue a debit note",
+    "permission": "billing.invoice.post",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/fiscal-receipts",
+    "tag": "Invoicing",
+    "operationId": "getFiscalReceipts",
+    "summary": "Fiscal receipt (VFD) log",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/fiscal-receipts/{fiscalReceiptId}:retry",
+    "tag": "Invoicing",
+    "operationId": "postFiscalReceiptsByFiscalReceiptIdRetry",
+    "summary": "Retry a failed fiscal receipt",
+    "permission": "billing.invoice.post",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/cashier-shifts",
+    "tag": "Cashier",
+    "operationId": "getCashierShifts",
+    "summary": "List shifts",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/cashier-shifts",
+    "tag": "Cashier",
+    "operationId": "postCashierShifts",
+    "summary": "Open a cashier shift",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/cashier-shifts/current",
+    "tag": "Cashier",
+    "operationId": "getCashierShiftsCurrent",
+    "summary": "My open shift",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/cashier-shifts/{cashierShiftId}:close",
+    "tag": "Cashier",
+    "operationId": "postCashierShiftsByCashierShiftIdClose",
+    "summary": "Close a shift with counted totals",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/cashier-shifts/{cashierShiftId}:approve",
+    "tag": "Cashier",
+    "operationId": "postCashierShiftsByCashierShiftIdApprove",
+    "summary": "Approve a shift cash-up",
+    "permission": "payment.cashup.approve",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payments",
+    "tag": "Cashier",
+    "operationId": "getPayments",
+    "summary": "List payments",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/payments",
+    "tag": "Cashier",
+    "operationId": "postPayments",
+    "summary": "Record a payment",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payments/{paymentId}",
+    "tag": "Cashier",
+    "operationId": "getPaymentsByPaymentId",
+    "summary": "Get a payment",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/payments/{paymentId}:allocate",
+    "tag": "Cashier",
+    "operationId": "postPaymentsByPaymentIdAllocate",
+    "summary": "Allocate a payment to invoices",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/payments/{paymentId}:reverse",
+    "tag": "Cashier",
+    "operationId": "postPaymentsByPaymentIdReverse",
+    "summary": "Reverse a payment",
+    "permission": "payment.refund",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payments/{paymentId}/receipt",
+    "tag": "Cashier",
+    "operationId": "getPaymentsByPaymentIdReceipt",
+    "summary": "Payment receipt PDF",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/refunds",
+    "tag": "Cashier",
+    "operationId": "getRefunds",
+    "summary": "List refunds",
+    "permission": "payment.refund",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/refunds",
+    "tag": "Cashier",
+    "operationId": "postRefunds",
+    "summary": "Request a refund",
+    "permission": "payment.refund",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/refunds/{refundId}:mark-paid",
+    "tag": "Cashier",
+    "operationId": "postRefundsByRefundIdMarkPaid",
+    "summary": "Mark a refund paid",
+    "permission": "payment.refund",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/disbursements",
+    "tag": "Disbursements",
+    "operationId": "getDisbursements",
+    "summary": "List disbursements",
+    "permission": "finance.disbursement.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/disbursements",
+    "tag": "Disbursements",
+    "operationId": "postDisbursements",
+    "summary": "Record a disbursement",
+    "permission": "finance.disbursement.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/disbursements/{disbursementId}",
+    "tag": "Disbursements",
+    "operationId": "getDisbursementsByDisbursementId",
+    "summary": "Get a disbursement",
+    "permission": "finance.disbursement.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/disbursements/{disbursementId}:write-off",
+    "tag": "Disbursements",
+    "operationId": "postDisbursementsByDisbursementIdWriteOff",
+    "summary": "Write off an unrecovered disbursement",
+    "permission": "finance.disbursement.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/gl-postings",
+    "tag": "Accounting",
+    "operationId": "getGlPostings",
+    "summary": "GL postings to NG",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/gl-postings/{glPostingId}:retry",
+    "tag": "Accounting",
+    "operationId": "postGlPostingsByGlPostingIdRetry",
+    "summary": "Retry a failed posting",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/statements/{partyId}",
+    "tag": "Accounting",
+    "operationId": "getStatementsByPartyId",
+    "summary": "Customer statement with ageing",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/statements/{partyId}/pdf",
+    "tag": "Accounting",
+    "operationId": "getStatementsByPartyIdPdf",
+    "summary": "Customer statement PDF",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

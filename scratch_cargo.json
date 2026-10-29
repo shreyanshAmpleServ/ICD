@@ -1,0 +1,182 @@
+[
+  {
+    "method": "GET",
+    "path": "/vessel-calls",
+    "tag": "Vessel calls",
+    "operationId": "getVesselCalls",
+    "summary": "List vessel calls",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/vessel-calls",
+    "tag": "Vessel calls",
+    "operationId": "postVesselCalls",
+    "summary": "Create a vessel call",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/vessel-calls/{vesselCallId}",
+    "tag": "Vessel calls",
+    "operationId": "getVesselCallsByVesselCallId",
+    "summary": "Get a vessel call",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/vessel-calls/{vesselCallId}",
+    "tag": "Vessel calls",
+    "operationId": "updateVesselCallsByVesselCallId",
+    "summary": "Update a vessel call",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/manifests",
+    "tag": "Manifests",
+    "operationId": "getManifests",
+    "summary": "List manifests",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/manifests",
+    "tag": "Manifests",
+    "operationId": "postManifests",
+    "summary": "Upload a manifest file",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/manifests/{manifestId}",
+    "tag": "Manifests",
+    "operationId": "getManifestsByManifestId",
+    "summary": "Get a manifest",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/manifests/{manifestId}/lines",
+    "tag": "Manifests",
+    "operationId": "getManifestsByManifestIdLines",
+    "summary": "List manifest lines with validation results",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/manifests/{manifestId}/lines/{manifestLineId}",
+    "tag": "Manifests",
+    "operationId": "updateManifestsByManifestIdLinesByManifestLineId",
+    "summary": "Correct a manifest line",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/manifests/{manifestId}:apply",
+    "tag": "Manifests",
+    "operationId": "postManifestsByManifestIdApply",
+    "summary": "Apply manifest (create consignments and expected units)",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/manifests/{manifestId}:cancel",
+    "tag": "Manifests",
+    "operationId": "postManifestsByManifestIdCancel",
+    "summary": "Cancel an unapplied manifest",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/consignments",
+    "tag": "Consignments",
+    "operationId": "getConsignments",
+    "summary": "List consignments",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/consignments",
+    "tag": "Consignments",
+    "operationId": "postConsignments",
+    "summary": "Create a consignment",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/consignments/{consignmentId}",
+    "tag": "Consignments",
+    "operationId": "getConsignmentsByConsignmentId",
+    "summary": "Get a consignment",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/consignments/{consignmentId}",
+    "tag": "Consignments",
+    "operationId": "updateConsignmentsByConsignmentId",
+    "summary": "Update a consignment",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/consignments/{consignmentId}/lines",
+    "tag": "Consignments",
+    "operationId": "getConsignmentsByConsignmentIdLines",
+    "summary": "List consignment lines",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/consignments/{consignmentId}/lines",
+    "tag": "Consignments",
+    "operationId": "replaceConsignmentsByConsignmentIdLines",
+    "summary": "Replace consignment lines",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/consignments/{consignmentId}/units",
+    "tag": "Consignments",
+    "operationId": "getConsignmentsByConsignmentIdUnits",
+    "summary": "List units of a consignment",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

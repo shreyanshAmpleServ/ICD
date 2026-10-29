@@ -1,0 +1,142 @@
+[
+  {
+    "method": "GET",
+    "path": "/unit-types",
+    "tag": "Unit setup",
+    "operationId": "getUnitTypes",
+    "summary": "List unit types",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/unit-types",
+    "tag": "Unit setup",
+    "operationId": "postUnitTypes",
+    "summary": "Create a unit type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/unit-types/{unitTypeId}",
+    "tag": "Unit setup",
+    "operationId": "getUnitTypesByUnitTypeId",
+    "summary": "Get a unit type",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/unit-types/{unitTypeId}",
+    "tag": "Unit setup",
+    "operationId": "updateUnitTypesByUnitTypeId",
+    "summary": "Update a unit type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/identity-rules",
+    "tag": "Unit setup",
+    "operationId": "getIdentityRules",
+    "summary": "List identity rules",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/identity:validate",
+    "tag": "Unit setup",
+    "operationId": "postIdentityValidate",
+    "summary": "Validate a container number, VIN or lot reference",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/cargo-regimes",
+    "tag": "Unit setup",
+    "operationId": "getCargoRegimes",
+    "summary": "List cargo regimes",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/search",
+    "tag": "Units",
+    "operationId": "getSearch",
+    "summary": "One search across units, consignments, visits, invoices and parties",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units",
+    "tag": "Units",
+    "operationId": "getUnits",
+    "summary": "Search units at the site",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/units",
+    "tag": "Units",
+    "operationId": "postUnits",
+    "summary": "Create an expected unit manually",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units/{unitStayId}",
+    "tag": "Units",
+    "operationId": "getUnitsByUnitStayId",
+    "summary": "Get a unit stay (the unit card)",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/units/{unitStayId}",
+    "tag": "Units",
+    "operationId": "updateUnitsByUnitStayId",
+    "summary": "Update a unit stay",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units/{unitStayId}/timeline",
+    "tag": "Units",
+    "operationId": "getUnitsByUnitStayIdTimeline",
+    "summary": "Unit timeline",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/cargo-units/{cargoUnitId}/stays",
+    "tag": "Units",
+    "operationId": "getCargoUnitsByCargoUnitIdStays",
+    "summary": "History of stays for a physical unit",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

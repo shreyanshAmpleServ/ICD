@@ -1,0 +1,692 @@
+[
+  {
+    "method": "GET",
+    "path": "/appointment-slot-rules",
+    "tag": "Appointments",
+    "operationId": "getAppointmentSlotRules",
+    "summary": "List appointment slot rules",
+    "permission": "appointment.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/appointment-slot-rules",
+    "tag": "Appointments",
+    "operationId": "postAppointmentSlotRules",
+    "summary": "Create a appointment slot rule",
+    "permission": "appointment.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/appointment-slot-rules/{appointmentSlotRuleId}",
+    "tag": "Appointments",
+    "operationId": "getAppointmentSlotRulesByAppointmentSlotRuleId",
+    "summary": "Get a appointment slot rule",
+    "permission": "appointment.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/appointment-slot-rules/{appointmentSlotRuleId}",
+    "tag": "Appointments",
+    "operationId": "updateAppointmentSlotRulesByAppointmentSlotRuleId",
+    "summary": "Update a appointment slot rule",
+    "permission": "appointment.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/appointments/availability",
+    "tag": "Appointments",
+    "operationId": "getAppointmentsAvailability",
+    "summary": "Free capacity per slot",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/appointments",
+    "tag": "Appointments",
+    "operationId": "getAppointments",
+    "summary": "List appointments",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/appointments",
+    "tag": "Appointments",
+    "operationId": "postAppointments",
+    "summary": "Book an appointment",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/appointments/{appointmentId}",
+    "tag": "Appointments",
+    "operationId": "getAppointmentsByAppointmentId",
+    "summary": "Get an appointment",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/appointments/{appointmentId}:cancel",
+    "tag": "Appointments",
+    "operationId": "postAppointmentsByAppointmentIdCancel",
+    "summary": "Cancel an appointment",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/appointments/{appointmentId}:reschedule",
+    "tag": "Appointments",
+    "operationId": "postAppointmentsByAppointmentIdReschedule",
+    "summary": "Move to another slot",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/labour-contractors",
+    "tag": "CFS",
+    "operationId": "getLabourContractors",
+    "summary": "List labour contractors",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/labour-contractors",
+    "tag": "CFS",
+    "operationId": "postLabourContractors",
+    "summary": "Create a labour contractor",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/labour-contractors/{labourContractorId}",
+    "tag": "CFS",
+    "operationId": "getLabourContractorsByLabourContractorId",
+    "summary": "Get a labour contractor",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/labour-contractors/{labourContractorId}",
+    "tag": "CFS",
+    "operationId": "updateLabourContractorsByLabourContractorId",
+    "summary": "Update a labour contractor",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/handling-jobs",
+    "tag": "CFS",
+    "operationId": "getHandlingJobs",
+    "summary": "List handling jobs",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/handling-jobs",
+    "tag": "CFS",
+    "operationId": "postHandlingJobs",
+    "summary": "Plan a handling job",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/handling-jobs/{handlingJobId}",
+    "tag": "CFS",
+    "operationId": "getHandlingJobsByHandlingJobId",
+    "summary": "Get a handling job",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/handling-jobs/{handlingJobId}",
+    "tag": "CFS",
+    "operationId": "updateHandlingJobsByHandlingJobId",
+    "summary": "Update a planned job",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/handling-jobs/{handlingJobId}/lines",
+    "tag": "CFS",
+    "operationId": "replaceHandlingJobsByHandlingJobIdLines",
+    "summary": "Save tally lines",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/handling-jobs/{handlingJobId}:start",
+    "tag": "CFS",
+    "operationId": "postHandlingJobsByHandlingJobIdStart",
+    "summary": "Start a job",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/handling-jobs/{handlingJobId}:complete",
+    "tag": "CFS",
+    "operationId": "postHandlingJobsByHandlingJobIdComplete",
+    "summary": "Complete a job (sign tally)",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/handling-jobs/{handlingJobId}:approve",
+    "tag": "CFS",
+    "operationId": "postHandlingJobsByHandlingJobIdApprove",
+    "summary": "Approve a completed job",
+    "permission": "cfs.job.approve",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/lots/{unitStayId}/balance",
+    "tag": "CFS",
+    "operationId": "getLotsByUnitStayIdBalance",
+    "summary": "Lot balance and deliveries",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/portal/invitations",
+    "tag": "Portal",
+    "operationId": "getPortalInvitations",
+    "summary": "List invitations",
+    "permission": "portal.invite",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/portal/invitations",
+    "tag": "Portal",
+    "operationId": "postPortalInvitations",
+    "summary": "Invite a customer or agent user",
+    "permission": "portal.invite",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/portal/invitations/{invitationId}:revoke",
+    "tag": "Portal",
+    "operationId": "postPortalInvitationsByInvitationIdRevoke",
+    "summary": "Revoke an invitation",
+    "permission": "portal.invite",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/portal/invitations:accept",
+    "tag": "Portal",
+    "operationId": "postPortalInvitationsAccept",
+    "summary": "Accept an invitation",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/service-requests",
+    "tag": "Portal",
+    "operationId": "getServiceRequests",
+    "summary": "List service requests",
+    "permission": "portal.request.submit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/service-requests",
+    "tag": "Portal",
+    "operationId": "postServiceRequests",
+    "summary": "Submit a service request",
+    "permission": "portal.request.submit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/service-requests/{serviceRequestId}",
+    "tag": "Portal",
+    "operationId": "getServiceRequestsByServiceRequestId",
+    "summary": "Get a service request",
+    "permission": "portal.request.submit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/service-requests/{serviceRequestId}:respond",
+    "tag": "Portal",
+    "operationId": "postServiceRequestsByServiceRequestIdRespond",
+    "summary": "Respond to a service request",
+    "permission": "portal.request.handle",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/reefer-sessions",
+    "tag": "Reefer",
+    "operationId": "getReeferSessions",
+    "summary": "Reefer monitor list",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/reefer-sessions",
+    "tag": "Reefer",
+    "operationId": "postReeferSessions",
+    "summary": "Plug in a reefer",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/reefer-sessions/{reeferSessionId}",
+    "tag": "Reefer",
+    "operationId": "getReeferSessionsByReeferSessionId",
+    "summary": "Get a reefer session",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/reefer-sessions/{reeferSessionId}:unplug",
+    "tag": "Reefer",
+    "operationId": "postReeferSessionsByReeferSessionIdUnplug",
+    "summary": "Unplug a reefer",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/reefer-sessions/{reeferSessionId}/readings",
+    "tag": "Reefer",
+    "operationId": "getReeferSessionsByReeferSessionIdReadings",
+    "summary": "Temperature log",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/reefer-sessions/{reeferSessionId}/readings",
+    "tag": "Reefer",
+    "operationId": "postReeferSessionsByReeferSessionIdReadings",
+    "summary": "Record a temperature reading",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/imo-classes",
+    "tag": "Dangerous goods",
+    "operationId": "getImoClasses",
+    "summary": "IMO hazard classes",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/segregation-rules",
+    "tag": "Dangerous goods",
+    "operationId": "getSegregationRules",
+    "summary": "Segregation rules",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/segregation-rules",
+    "tag": "Dangerous goods",
+    "operationId": "replaceSegregationRules",
+    "summary": "Replace segregation rules (load from IMDG Code)",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units/{unitStayId}/dg-lines",
+    "tag": "Dangerous goods",
+    "operationId": "getUnitsByUnitStayIdDgLines",
+    "summary": "DG lines of a unit",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/units/{unitStayId}/dg-lines",
+    "tag": "Dangerous goods",
+    "operationId": "replaceUnitsByUnitStayIdDgLines",
+    "summary": "Replace DG lines of a unit",
+    "permission": "dg.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/repair-codes",
+    "tag": "M&R",
+    "operationId": "getRepairCodes",
+    "summary": "List repair codes",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-codes",
+    "tag": "M&R",
+    "operationId": "postRepairCodes",
+    "summary": "Create a repair code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/repair-codes/{repairCodeId}",
+    "tag": "M&R",
+    "operationId": "getRepairCodesByRepairCodeId",
+    "summary": "Get a repair code",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/repair-codes/{repairCodeId}",
+    "tag": "M&R",
+    "operationId": "updateRepairCodesByRepairCodeId",
+    "summary": "Update a repair code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/repair-estimates",
+    "tag": "M&R",
+    "operationId": "getRepairEstimates",
+    "summary": "List repair estimates",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-estimates",
+    "tag": "M&R",
+    "operationId": "postRepairEstimates",
+    "summary": "Create a repair estimate (from inspection findings)",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/repair-estimates/{repairEstimateId}",
+    "tag": "M&R",
+    "operationId": "getRepairEstimatesByRepairEstimateId",
+    "summary": "Get a repair estimate",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/repair-estimates/{repairEstimateId}",
+    "tag": "M&R",
+    "operationId": "updateRepairEstimatesByRepairEstimateId",
+    "summary": "Edit a draft estimate",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-estimates/{repairEstimateId}:send",
+    "tag": "M&R",
+    "operationId": "postRepairEstimatesByRepairEstimateIdSend",
+    "summary": "Send to the line",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-estimates/{repairEstimateId}:decision",
+    "tag": "M&R",
+    "operationId": "postRepairEstimatesByRepairEstimateIdDecision",
+    "summary": "Record the line's decision",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-estimates/{repairEstimateId}:complete",
+    "tag": "M&R",
+    "operationId": "postRepairEstimatesByRepairEstimateIdComplete",
+    "summary": "Mark repairs done",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/device-integrations",
+    "tag": "Devices",
+    "operationId": "getDeviceIntegrations",
+    "summary": "List device integrations",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/device-integrations",
+    "tag": "Devices",
+    "operationId": "postDeviceIntegrations",
+    "summary": "Create a device integration",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/device-integrations/{deviceIntegrationId}",
+    "tag": "Devices",
+    "operationId": "getDeviceIntegrationsByDeviceIntegrationId",
+    "summary": "Get a device integration",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/device-integrations/{deviceIntegrationId}",
+    "tag": "Devices",
+    "operationId": "updateDeviceIntegrationsByDeviceIntegrationId",
+    "summary": "Update a device integration",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/device-reads:ingest",
+    "tag": "Devices",
+    "operationId": "postDeviceReadsIngest",
+    "summary": "Ingest device reads (gate agent)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/device-reads",
+    "tag": "Devices",
+    "operationId": "getDeviceReads",
+    "summary": "List device reads",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/device-reads/{deviceReadId}:match",
+    "tag": "Devices",
+    "operationId": "postDeviceReadsByDeviceReadIdMatch",
+    "summary": "Match a read to a visit manually",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/integration-messages",
+    "tag": "EDI",
+    "operationId": "getIntegrationMessages",
+    "summary": "Integration message log",
+    "permission": "integration.monitor",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/integration-messages/{integrationMessageId}",
+    "tag": "EDI",
+    "operationId": "getIntegrationMessagesByIntegrationMessageId",
+    "summary": "Get a message",
+    "permission": "integration.monitor",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/integration-messages/{integrationMessageId}:retry",
+    "tag": "EDI",
+    "operationId": "postIntegrationMessagesByIntegrationMessageIdRetry",
+    "summary": "Retry a failed message",
+    "permission": "integration.monitor",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/edi/inbound/{partnerCode}",
+    "tag": "EDI",
+    "operationId": "postEdiInboundByPartnerCode",
+    "summary": "Receive an inbound message (CODECO, COARRI, BAPLIE, customs...)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/models",
+    "tag": "Intelligence",
+    "operationId": "getModels",
+    "summary": "Model versions",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/models/{mlModelVersionId}:activate",
+    "tag": "Intelligence",
+    "operationId": "postModelsByMlModelVersionIdActivate",
+    "summary": "Activate a model version",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/predictions/dwell",
+    "tag": "Intelligence",
+    "operationId": "getPredictionsDwell",
+    "summary": "Dwell predictions",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/forecasts/occupancy",
+    "tag": "Intelligence",
+    "operationId": "getForecastsOccupancy",
+    "summary": "Occupancy forecast",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/suggestion-log",
+    "tag": "Intelligence",
+    "operationId": "getYardSuggestionLog",
+    "summary": "Allocation suggestions versus choices",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

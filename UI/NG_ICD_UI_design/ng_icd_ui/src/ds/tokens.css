@@ -1,0 +1,74 @@
+/* NG ICD design tokens.
+   Palette taken from the yard itself: marine slate ink, galvanised steel,
+   wet-concrete surfaces, and hi-vis yellow for the one thing to act on.
+   Signal colours carry meaning only: green = clear to go, red = hold/stop,
+   blue = customs, amber = waiting on someone. Never use them as decoration. */
+
+:root {
+  /* base */
+  --ink: #172a35;           /* text, shell, strong rules */
+  --ink-2: #3e5361;         /* secondary text */
+  --ink-3: #6b7d88;         /* tertiary text, placeholders */
+  --steel: #d7dee0;         /* rules, borders, nav */
+  --steel-2: #e6eaeb;       /* hover, zebra, inactive fills */
+  --concrete: #f1f3f2;      /* app background */
+  --paper: #ffffff;         /* surfaces */
+  --hivis: #f5c400;         /* primary action, focus, current place */
+  --hivis-ink: #172a35;     /* text on hi-vis */
+  --hivis-soft: #fff4c2;
+
+  /* signals */
+  --go: #1d7f55;      --go-soft: #e1f2ea;
+  --stop: #c4372d;    --stop-soft: #fbe6e3;
+  --customs: #2d68ad; --customs-soft: #e3edf8;
+  --wait: #a86f00;    --wait-soft: #fbf0d6;
+  --idle: #6b7d88;    --idle-soft: #eceff0;
+  --reefer: #127c8c;  --dg: #b4410f;
+
+  /* chart series (validated: CVD + lightness band; ochre needs direct labels) */
+  --cat1: #2a5d9f; --cat2: #d9930d; --cat3: #0f8a7a; --grid: #e3e8ea;
+
+  /* type */
+  --font: 'Barlow', system-ui, sans-serif;
+  --font-cond: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif;
+  --fs-xs: 12px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 18px; --fs-xl: 24px; --fs-xxl: 32px; --fs-hero: 44px;
+  --lh: 1.45;
+
+  /* space & shape: 4px grid. Radius grows with the size of the thing. */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  --r-sm: 3px; --r-md: 6px; --r-lg: 10px;
+  --rail: 232px;
+  --topbar: 56px;
+  --touch: 44px;           /* minimum target; gate tablets use --touch-xl */
+  --touch-xl: 64px;
+  --shadow-pop: 0 10px 30px rgba(23, 42, 53, .18), 0 1px 3px rgba(23, 42, 53, .12);
+}
+
+:root[data-theme='dark'] {
+  --ink: #e7eef1; --ink-2: #b4c3cb; --ink-3: #82939d;
+  --steel: #304652; --steel-2: #24363f;
+  --concrete: #13222b; --paper: #1a2c36;
+  --hivis: #f5c400; --hivis-ink: #13222b; --hivis-soft: #3d3712;
+  --go: #4cc08a; --go-soft: #173a2c;
+  --stop: #ff7b6e; --stop-soft: #43211f;
+  --customs: #7fb0ec; --customs-soft: #1b3350;
+  --wait: #e8b23c; --wait-soft: #3d3112;
+  --idle: #9aabb4; --idle-soft: #26363f;
+  --shadow-pop: 0 10px 30px rgba(0,0,0,.5);
+  --cat1: #5b8fd6; --cat2: #b8851c; --cat3: #239a88; --grid: #2a3d48;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ink: #e7eef1; --ink-2: #b4c3cb; --ink-3: #82939d;
+    --steel: #304652; --steel-2: #24363f;
+    --concrete: #13222b; --paper: #1a2c36;
+    --hivis-ink: #13222b; --hivis-soft: #3d3712;
+    --go: #4cc08a; --go-soft: #173a2c;
+    --stop: #ff7b6e; --stop-soft: #43211f;
+    --customs: #7fb0ec; --customs-soft: #1b3350;
+    --wait: #e8b23c; --wait-soft: #3d3112;
+    --idle: #9aabb4; --idle-soft: #26363f;
+    --shadow-pop: 0 10px 30px rgba(0,0,0,.5);
+    --cat1: #5b8fd6; --cat2: #b8851c; --cat3: #239a88; --grid: #2a3d48;
+  }
+}

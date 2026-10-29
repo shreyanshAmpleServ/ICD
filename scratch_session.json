@@ -1,0 +1,12 @@
+[
+  {
+    "method": "GET",
+    "path": "/me",
+    "tag": "Session",
+    "operationId": "getMe",
+    "summary": "Get the signed-in user",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

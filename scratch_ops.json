@@ -1,0 +1,4262 @@
+[
+  {
+    "method": "GET",
+    "path": "/me",
+    "tag": "Session",
+    "operationId": "getMe",
+    "summary": "Get the signed-in user",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/companies",
+    "tag": "Setup",
+    "operationId": "getCompanies",
+    "summary": "List companies",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/companies",
+    "tag": "Setup",
+    "operationId": "postCompanies",
+    "summary": "Create a company",
+    "permission": "admin.site.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/companies/{companyId}",
+    "tag": "Setup",
+    "operationId": "getCompaniesByCompanyId",
+    "summary": "Get a company",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/companies/{companyId}",
+    "tag": "Setup",
+    "operationId": "updateCompaniesByCompanyId",
+    "summary": "Update a company",
+    "permission": "admin.site.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/sites",
+    "tag": "Setup",
+    "operationId": "getSites",
+    "summary": "List sites",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/sites",
+    "tag": "Setup",
+    "operationId": "postSites",
+    "summary": "Create a site",
+    "permission": "admin.site.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/sites/{siteId}",
+    "tag": "Setup",
+    "operationId": "getSitesBySiteId",
+    "summary": "Get a site",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/sites/{siteId}",
+    "tag": "Setup",
+    "operationId": "updateSitesBySiteId",
+    "summary": "Update a site",
+    "permission": "admin.site.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/calendars",
+    "tag": "Setup",
+    "operationId": "getCalendars",
+    "summary": "List calendars",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/calendars",
+    "tag": "Setup",
+    "operationId": "postCalendars",
+    "summary": "Create a calendar",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/calendars/{calendarId}",
+    "tag": "Setup",
+    "operationId": "getCalendarsByCalendarId",
+    "summary": "Get a calendar",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/calendars/{calendarId}",
+    "tag": "Setup",
+    "operationId": "updateCalendarsByCalendarId",
+    "summary": "Update a calendar",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/calendars/{calendarId}/holidays",
+    "tag": "Setup",
+    "operationId": "getCalendarsByCalendarIdHolidays",
+    "summary": "List holidays in a calendar",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/calendars/{calendarId}/holidays",
+    "tag": "Setup",
+    "operationId": "postCalendarsByCalendarIdHolidays",
+    "summary": "Add a holiday",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/calendars/{calendarId}/holidays/{calendarHolidayId}",
+    "tag": "Setup",
+    "operationId": "deleteCalendarsByCalendarIdHolidaysByCalendarHolidayId",
+    "summary": "Remove a holiday",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/number-sequences",
+    "tag": "Setup",
+    "operationId": "getNumberSequences",
+    "summary": "List number sequences",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/number-sequences",
+    "tag": "Setup",
+    "operationId": "postNumberSequences",
+    "summary": "Create a number sequence",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/number-sequences/{numberSequenceId}",
+    "tag": "Setup",
+    "operationId": "getNumberSequencesByNumberSequenceId",
+    "summary": "Get a number sequence",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/number-sequences/{numberSequenceId}",
+    "tag": "Setup",
+    "operationId": "updateNumberSequencesByNumberSequenceId",
+    "summary": "Update a number sequence",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/field-rules",
+    "tag": "Setup",
+    "operationId": "getFieldRules",
+    "summary": "List field rules (mandatory, hidden, read-only per screen)",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/field-rules/{screenCode}",
+    "tag": "Setup",
+    "operationId": "replaceFieldRulesByScreenCode",
+    "summary": "Replace the field rules for a screen",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/levels",
+    "tag": "Yard design",
+    "operationId": "getYardLevels",
+    "summary": "List yard levels",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/levels",
+    "tag": "Yard design",
+    "operationId": "postYardLevels",
+    "summary": "Create a yard level",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/levels/{yardLevelId}",
+    "tag": "Yard design",
+    "operationId": "getYardLevelsByYardLevelId",
+    "summary": "Get a yard level",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/yard/levels/{yardLevelId}",
+    "tag": "Yard design",
+    "operationId": "updateYardLevelsByYardLevelId",
+    "summary": "Update a yard level",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/locations",
+    "tag": "Yard design",
+    "operationId": "getYardLocations",
+    "summary": "List yard locations",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/locations",
+    "tag": "Yard design",
+    "operationId": "postYardLocations",
+    "summary": "Create a yard location",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/locations/{yardLocationId}",
+    "tag": "Yard design",
+    "operationId": "getYardLocationsByYardLocationId",
+    "summary": "Get a yard location",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/yard/locations/{yardLocationId}",
+    "tag": "Yard design",
+    "operationId": "updateYardLocationsByYardLocationId",
+    "summary": "Update a yard location",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/locations/{yardLocationId}/children",
+    "tag": "Yard design",
+    "operationId": "getYardLocationsByYardLocationIdChildren",
+    "summary": "List child locations",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/locations:generate",
+    "tag": "Yard design",
+    "operationId": "postYardLocationsGenerate",
+    "summary": "Generate rows, bays and tiers in bulk",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/locations/{yardLocationId}:block",
+    "tag": "Yard design",
+    "operationId": "postYardLocationsByYardLocationIdBlock",
+    "summary": "Block a location",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/locations/{yardLocationId}:unblock",
+    "tag": "Yard design",
+    "operationId": "postYardLocationsByYardLocationIdUnblock",
+    "summary": "Unblock a location",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/tags",
+    "tag": "Yard design",
+    "operationId": "getYardTags",
+    "summary": "List location tags",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/tags",
+    "tag": "Yard design",
+    "operationId": "postYardTags",
+    "summary": "Create a location tag",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/tags/{locationTagId}",
+    "tag": "Yard design",
+    "operationId": "getYardTagsByLocationTagId",
+    "summary": "Get a location tag",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/yard/tags/{locationTagId}",
+    "tag": "Yard design",
+    "operationId": "updateYardTagsByLocationTagId",
+    "summary": "Update a location tag",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/gates",
+    "tag": "Gate setup",
+    "operationId": "getGates",
+    "summary": "List gates",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/gates",
+    "tag": "Gate setup",
+    "operationId": "postGates",
+    "summary": "Create a gate",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/gates/{gateId}",
+    "tag": "Gate setup",
+    "operationId": "getGatesByGateId",
+    "summary": "Get a gate",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/gates/{gateId}",
+    "tag": "Gate setup",
+    "operationId": "updateGatesByGateId",
+    "summary": "Update a gate",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/checkpoints",
+    "tag": "Gate setup",
+    "operationId": "getCheckpoints",
+    "summary": "List checkpoints",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/checkpoints",
+    "tag": "Gate setup",
+    "operationId": "postCheckpoints",
+    "summary": "Create a checkpoint",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/checkpoints/{checkpointId}",
+    "tag": "Gate setup",
+    "operationId": "getCheckpointsByCheckpointId",
+    "summary": "Get a checkpoint",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/checkpoints/{checkpointId}",
+    "tag": "Gate setup",
+    "operationId": "updateCheckpointsByCheckpointId",
+    "summary": "Update a checkpoint",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/visit-types",
+    "tag": "Gate setup",
+    "operationId": "getVisitTypes",
+    "summary": "List visit types",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/visit-types",
+    "tag": "Gate setup",
+    "operationId": "postVisitTypes",
+    "summary": "Create a visit type",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/visit-types/{visitTypeId}",
+    "tag": "Gate setup",
+    "operationId": "getVisitTypesByVisitTypeId",
+    "summary": "Get a visit type",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/visit-types/{visitTypeId}",
+    "tag": "Gate setup",
+    "operationId": "updateVisitTypesByVisitTypeId",
+    "summary": "Update a visit type",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/unit-types",
+    "tag": "Unit setup",
+    "operationId": "getUnitTypes",
+    "summary": "List unit types",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/unit-types",
+    "tag": "Unit setup",
+    "operationId": "postUnitTypes",
+    "summary": "Create a unit type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/unit-types/{unitTypeId}",
+    "tag": "Unit setup",
+    "operationId": "getUnitTypesByUnitTypeId",
+    "summary": "Get a unit type",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/unit-types/{unitTypeId}",
+    "tag": "Unit setup",
+    "operationId": "updateUnitTypesByUnitTypeId",
+    "summary": "Update a unit type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/identity-rules",
+    "tag": "Unit setup",
+    "operationId": "getIdentityRules",
+    "summary": "List identity rules",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/identity:validate",
+    "tag": "Unit setup",
+    "operationId": "postIdentityValidate",
+    "summary": "Validate a container number, VIN or lot reference",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/cargo-regimes",
+    "tag": "Unit setup",
+    "operationId": "getCargoRegimes",
+    "summary": "List cargo regimes",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/parties",
+    "tag": "Masters",
+    "operationId": "getParties",
+    "summary": "List parties",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/parties",
+    "tag": "Masters",
+    "operationId": "postParties",
+    "summary": "Create a party",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/parties/{partyId}",
+    "tag": "Masters",
+    "operationId": "getPartiesByPartyId",
+    "summary": "Get a party",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/parties/{partyId}",
+    "tag": "Masters",
+    "operationId": "updatePartiesByPartyId",
+    "summary": "Update a party",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/parties:provisional",
+    "tag": "Masters",
+    "operationId": "postPartiesProvisional",
+    "summary": "Create a provisional party (pending NG)",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/parties/{partyId}:match",
+    "tag": "Masters",
+    "operationId": "postPartiesByPartyIdMatch",
+    "summary": "Match a provisional party to its NG record",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/parties/{partyId}/contacts",
+    "tag": "Masters",
+    "operationId": "getPartiesByPartyIdContacts",
+    "summary": "List party contacts",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/parties/{partyId}/contacts",
+    "tag": "Masters",
+    "operationId": "replacePartiesByPartyIdContacts",
+    "summary": "Replace party contacts",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/trucks",
+    "tag": "Masters",
+    "operationId": "getTrucks",
+    "summary": "List trucks",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/trucks",
+    "tag": "Masters",
+    "operationId": "postTrucks",
+    "summary": "Create a truck",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/trucks/{truckId}",
+    "tag": "Masters",
+    "operationId": "getTrucksByTruckId",
+    "summary": "Get a truck",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/trucks/{truckId}",
+    "tag": "Masters",
+    "operationId": "updateTrucksByTruckId",
+    "summary": "Update a truck",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/drivers",
+    "tag": "Masters",
+    "operationId": "getDrivers",
+    "summary": "List drivers",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/drivers",
+    "tag": "Masters",
+    "operationId": "postDrivers",
+    "summary": "Create a driver",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/drivers/{driverId}",
+    "tag": "Masters",
+    "operationId": "getDriversByDriverId",
+    "summary": "Get a driver",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/drivers/{driverId}",
+    "tag": "Masters",
+    "operationId": "updateDriversByDriverId",
+    "summary": "Update a driver",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/vessels",
+    "tag": "Masters",
+    "operationId": "getVessels",
+    "summary": "List vessels",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/vessels",
+    "tag": "Masters",
+    "operationId": "postVessels",
+    "summary": "Create a vessel",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/vessels/{vesselId}",
+    "tag": "Masters",
+    "operationId": "getVesselsByVesselId",
+    "summary": "Get a vessel",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/vessels/{vesselId}",
+    "tag": "Masters",
+    "operationId": "updateVesselsByVesselId",
+    "summary": "Update a vessel",
+    "permission": "masters.local.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/ports",
+    "tag": "Masters",
+    "operationId": "getPorts",
+    "summary": "List ports",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/ports",
+    "tag": "Masters",
+    "operationId": "postPorts",
+    "summary": "Create a port",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/ports/{portId}",
+    "tag": "Masters",
+    "operationId": "getPortsByPortId",
+    "summary": "Get a port",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/ports/{portId}",
+    "tag": "Masters",
+    "operationId": "updatePortsByPortId",
+    "summary": "Update a port",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/commodities",
+    "tag": "Masters",
+    "operationId": "getCommodities",
+    "summary": "List commodities",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/commodities",
+    "tag": "Masters",
+    "operationId": "postCommodities",
+    "summary": "Create a commodity",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/commodities/{commodityId}",
+    "tag": "Masters",
+    "operationId": "getCommoditiesByCommodityId",
+    "summary": "Get a commodity",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/commodities/{commodityId}",
+    "tag": "Masters",
+    "operationId": "updateCommoditiesByCommodityId",
+    "summary": "Update a commodity",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/equipment",
+    "tag": "Masters",
+    "operationId": "getEquipment",
+    "summary": "List equipment items",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/equipment",
+    "tag": "Masters",
+    "operationId": "postEquipment",
+    "summary": "Create a equipment item",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/equipment/{equipmentId}",
+    "tag": "Masters",
+    "operationId": "getEquipmentByEquipmentId",
+    "summary": "Get a equipment item",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/equipment/{equipmentId}",
+    "tag": "Masters",
+    "operationId": "updateEquipmentByEquipmentId",
+    "summary": "Update a equipment item",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/users",
+    "tag": "Access",
+    "operationId": "getUsers",
+    "summary": "List users",
+    "permission": "admin.users.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/users",
+    "tag": "Access",
+    "operationId": "postUsers",
+    "summary": "Create a user (link an NG identity)",
+    "permission": "admin.users.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/users/{userId}",
+    "tag": "Access",
+    "operationId": "getUsersByUserId",
+    "summary": "Get a user",
+    "permission": "admin.users.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/users/{userId}",
+    "tag": "Access",
+    "operationId": "updateUsersByUserId",
+    "summary": "Update a user",
+    "permission": "admin.users.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/users/{userId}/roles",
+    "tag": "Access",
+    "operationId": "postUsersByUserIdRoles",
+    "summary": "Grant a role at a site",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/users/{userId}/roles/{userRoleId}",
+    "tag": "Access",
+    "operationId": "deleteUsersByUserIdRolesByUserRoleId",
+    "summary": "Revoke a role",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/roles",
+    "tag": "Access",
+    "operationId": "getRoles",
+    "summary": "List roles",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/roles",
+    "tag": "Access",
+    "operationId": "postRoles",
+    "summary": "Create a role",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/roles/{roleId}",
+    "tag": "Access",
+    "operationId": "getRolesByRoleId",
+    "summary": "Get a role",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/roles/{roleId}",
+    "tag": "Access",
+    "operationId": "updateRolesByRoleId",
+    "summary": "Update a role",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/roles/{roleId}/permissions",
+    "tag": "Access",
+    "operationId": "replaceRolesByRoleIdPermissions",
+    "summary": "Replace a role's permissions",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/permissions",
+    "tag": "Access",
+    "operationId": "getPermissions",
+    "summary": "List permissions",
+    "permission": "admin.roles.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/devices",
+    "tag": "Access",
+    "operationId": "getDevices",
+    "summary": "List registered devices",
+    "permission": "admin.device.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/devices",
+    "tag": "Access",
+    "operationId": "postDevices",
+    "summary": "Register a device (gate tablet, handheld, gate agent)",
+    "permission": "admin.device.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/devices/{deviceId}:revoke",
+    "tag": "Access",
+    "operationId": "postDevicesByDeviceIdRevoke",
+    "summary": "Revoke a device",
+    "permission": "admin.device.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/document-types",
+    "tag": "Documents",
+    "operationId": "getDocumentTypes",
+    "summary": "List document types",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/document-types",
+    "tag": "Documents",
+    "operationId": "postDocumentTypes",
+    "summary": "Create a document type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/document-types/{documentTypeId}",
+    "tag": "Documents",
+    "operationId": "getDocumentTypesByDocumentTypeId",
+    "summary": "Get a document type",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/document-types/{documentTypeId}",
+    "tag": "Documents",
+    "operationId": "updateDocumentTypesByDocumentTypeId",
+    "summary": "Update a document type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/documents",
+    "tag": "Documents",
+    "operationId": "getDocuments",
+    "summary": "List documents for an entity",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/documents",
+    "tag": "Documents",
+    "operationId": "postDocuments",
+    "summary": "Upload a document",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/documents/{documentId}",
+    "tag": "Documents",
+    "operationId": "getDocumentsByDocumentId",
+    "summary": "Get document metadata",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/documents/{documentId}",
+    "tag": "Documents",
+    "operationId": "deleteDocumentsByDocumentId",
+    "summary": "Void a document",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/documents/{documentId}/content",
+    "tag": "Documents",
+    "operationId": "getDocumentsByDocumentIdContent",
+    "summary": "Download the file",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/audit-log",
+    "tag": "Audit",
+    "operationId": "getAuditLog",
+    "summary": "Search the audit trail",
+    "permission": "admin.audit.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/audit-log/{entityName}/{entityId}",
+    "tag": "Audit",
+    "operationId": "getAuditLogByEntityNameByEntityId",
+    "summary": "Audit history of one record",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/sync/status",
+    "tag": "Sync",
+    "operationId": "getSyncStatus",
+    "summary": "Master sync and outbox status",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/sync/{masterCode}:run",
+    "tag": "Sync",
+    "operationId": "postSyncByMasterCodeRun",
+    "summary": "Run a master sync now",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/vessel-calls",
+    "tag": "Vessel calls",
+    "operationId": "getVesselCalls",
+    "summary": "List vessel calls",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/vessel-calls",
+    "tag": "Vessel calls",
+    "operationId": "postVesselCalls",
+    "summary": "Create a vessel call",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/vessel-calls/{vesselCallId}",
+    "tag": "Vessel calls",
+    "operationId": "getVesselCallsByVesselCallId",
+    "summary": "Get a vessel call",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/vessel-calls/{vesselCallId}",
+    "tag": "Vessel calls",
+    "operationId": "updateVesselCallsByVesselCallId",
+    "summary": "Update a vessel call",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/manifests",
+    "tag": "Manifests",
+    "operationId": "getManifests",
+    "summary": "List manifests",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/manifests",
+    "tag": "Manifests",
+    "operationId": "postManifests",
+    "summary": "Upload a manifest file",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/manifests/{manifestId}",
+    "tag": "Manifests",
+    "operationId": "getManifestsByManifestId",
+    "summary": "Get a manifest",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/manifests/{manifestId}/lines",
+    "tag": "Manifests",
+    "operationId": "getManifestsByManifestIdLines",
+    "summary": "List manifest lines with validation results",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/manifests/{manifestId}/lines/{manifestLineId}",
+    "tag": "Manifests",
+    "operationId": "updateManifestsByManifestIdLinesByManifestLineId",
+    "summary": "Correct a manifest line",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/manifests/{manifestId}:apply",
+    "tag": "Manifests",
+    "operationId": "postManifestsByManifestIdApply",
+    "summary": "Apply manifest (create consignments and expected units)",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/manifests/{manifestId}:cancel",
+    "tag": "Manifests",
+    "operationId": "postManifestsByManifestIdCancel",
+    "summary": "Cancel an unapplied manifest",
+    "permission": "manifest.import",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/consignments",
+    "tag": "Consignments",
+    "operationId": "getConsignments",
+    "summary": "List consignments",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/consignments",
+    "tag": "Consignments",
+    "operationId": "postConsignments",
+    "summary": "Create a consignment",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/consignments/{consignmentId}",
+    "tag": "Consignments",
+    "operationId": "getConsignmentsByConsignmentId",
+    "summary": "Get a consignment",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/consignments/{consignmentId}",
+    "tag": "Consignments",
+    "operationId": "updateConsignmentsByConsignmentId",
+    "summary": "Update a consignment",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/consignments/{consignmentId}/lines",
+    "tag": "Consignments",
+    "operationId": "getConsignmentsByConsignmentIdLines",
+    "summary": "List consignment lines",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/consignments/{consignmentId}/lines",
+    "tag": "Consignments",
+    "operationId": "replaceConsignmentsByConsignmentIdLines",
+    "summary": "Replace consignment lines",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/consignments/{consignmentId}/units",
+    "tag": "Consignments",
+    "operationId": "getConsignmentsByConsignmentIdUnits",
+    "summary": "List units of a consignment",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/search",
+    "tag": "Units",
+    "operationId": "getSearch",
+    "summary": "One search across units, consignments, visits, invoices and parties",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units",
+    "tag": "Units",
+    "operationId": "getUnits",
+    "summary": "Search units at the site",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/units",
+    "tag": "Units",
+    "operationId": "postUnits",
+    "summary": "Create an expected unit manually",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units/{unitStayId}",
+    "tag": "Units",
+    "operationId": "getUnitsByUnitStayId",
+    "summary": "Get a unit stay (the unit card)",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/units/{unitStayId}",
+    "tag": "Units",
+    "operationId": "updateUnitsByUnitStayId",
+    "summary": "Update a unit stay",
+    "permission": "consignment.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units/{unitStayId}/timeline",
+    "tag": "Units",
+    "operationId": "getUnitsByUnitStayIdTimeline",
+    "summary": "Unit timeline",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/cargo-units/{cargoUnitId}/stays",
+    "tag": "Units",
+    "operationId": "getCargoUnitsByCargoUnitIdStays",
+    "summary": "History of stays for a physical unit",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/truck-visits",
+    "tag": "Gate",
+    "operationId": "getTruckVisits",
+    "summary": "Gate queue and visit search",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits",
+    "tag": "Gate",
+    "operationId": "postTruckVisits",
+    "summary": "Announce a truck visit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/truck-visits/{truckVisitId}",
+    "tag": "Gate",
+    "operationId": "getTruckVisitsByTruckVisitId",
+    "summary": "Get a truck visit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/gate-passes/{passToken}",
+    "tag": "Gate",
+    "operationId": "getGatePassesByPassToken",
+    "summary": "Find a visit by its gate pass QR",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/truck-visits/{truckVisitId}/checkpoint-events",
+    "tag": "Gate",
+    "operationId": "getTruckVisitsByTruckVisitIdCheckpointEvents",
+    "summary": "List checkpoint events",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}/checkpoint-events",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdCheckpointEvents",
+    "summary": "Pass a checkpoint",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}/units",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdUnits",
+    "summary": "Add a unit to a visit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/truck-visits/{truckVisitId}/units/{visitUnitId}",
+    "tag": "Gate",
+    "operationId": "deleteTruckVisitsByTruckVisitIdUnitsByVisitUnitId",
+    "summary": "Remove a planned unit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}/units/{visitUnitId}:complete",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdUnitsByVisitUnitIdComplete",
+    "summary": "Complete drop-off or pick-up of a unit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}:cancel",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdCancel",
+    "summary": "Cancel a visit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}/gate-pass:print",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdGatePassPrint",
+    "summary": "Print the gate pass",
+    "permission": "gate.pass.print",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/inspection-templates",
+    "tag": "Inspections",
+    "operationId": "getInspectionTemplates",
+    "summary": "List inspection templates",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspection-templates",
+    "tag": "Inspections",
+    "operationId": "postInspectionTemplates",
+    "summary": "Create a inspection template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/inspection-templates/{inspectionTemplateId}",
+    "tag": "Inspections",
+    "operationId": "getInspectionTemplatesByInspectionTemplateId",
+    "summary": "Get a inspection template",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/inspection-templates/{inspectionTemplateId}",
+    "tag": "Inspections",
+    "operationId": "updateInspectionTemplatesByInspectionTemplateId",
+    "summary": "Update a inspection template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/damage-codes",
+    "tag": "Inspections",
+    "operationId": "getDamageCodes",
+    "summary": "List damage codes",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/damage-codes",
+    "tag": "Inspections",
+    "operationId": "postDamageCodes",
+    "summary": "Create a damage code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/damage-codes/{damageCodeId}",
+    "tag": "Inspections",
+    "operationId": "getDamageCodesByDamageCodeId",
+    "summary": "Get a damage code",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/damage-codes/{damageCodeId}",
+    "tag": "Inspections",
+    "operationId": "updateDamageCodesByDamageCodeId",
+    "summary": "Update a damage code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/inspections",
+    "tag": "Inspections",
+    "operationId": "getInspections",
+    "summary": "List inspections",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspections",
+    "tag": "Inspections",
+    "operationId": "postInspections",
+    "summary": "Start an inspection",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/inspections/{inspectionId}",
+    "tag": "Inspections",
+    "operationId": "getInspectionsByInspectionId",
+    "summary": "Get an inspection",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/inspections/{inspectionId}/results",
+    "tag": "Inspections",
+    "operationId": "replaceInspectionsByInspectionIdResults",
+    "summary": "Save checklist results",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspections/{inspectionId}/findings",
+    "tag": "Inspections",
+    "operationId": "postInspectionsByInspectionIdFindings",
+    "summary": "Add a damage finding",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/inspections/{inspectionId}/findings/{inspectionFindingId}",
+    "tag": "Inspections",
+    "operationId": "deleteInspectionsByInspectionIdFindingsByInspectionFindingId",
+    "summary": "Remove a finding",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspections/{inspectionId}:complete",
+    "tag": "Inspections",
+    "operationId": "postInspectionsByInspectionIdComplete",
+    "summary": "Complete an inspection (sign)",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspections/{inspectionId}:approve",
+    "tag": "Inspections",
+    "operationId": "postInspectionsByInspectionIdApprove",
+    "summary": "Approve major damage",
+    "permission": "inspection.damage.approve",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/map",
+    "tag": "Yard",
+    "operationId": "getYardMap",
+    "summary": "Yard map for a level or block",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/blocks/{blockId}/slots",
+    "tag": "Yard",
+    "operationId": "getYardBlocksByBlockIdSlots",
+    "summary": "Slots of a block with units",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/occupancy",
+    "tag": "Yard",
+    "operationId": "getYardOccupancy",
+    "summary": "Occupancy summary",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/suggestions",
+    "tag": "Yard",
+    "operationId": "postYardSuggestions",
+    "summary": "Suggest slots for a unit",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/move-orders",
+    "tag": "Yard",
+    "operationId": "getMoveOrders",
+    "summary": "Move order list (driver/handheld view)",
+    "permission": "yard.move.execute",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders",
+    "tag": "Yard",
+    "operationId": "postMoveOrders",
+    "summary": "Create a move order",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/move-orders/{moveOrderId}",
+    "tag": "Yard",
+    "operationId": "getMoveOrdersByMoveOrderId",
+    "summary": "Get a move order",
+    "permission": "yard.move.execute",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders/{moveOrderId}:assign",
+    "tag": "Yard",
+    "operationId": "postMoveOrdersByMoveOrderIdAssign",
+    "summary": "Assign equipment and operator",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders/{moveOrderId}:start",
+    "tag": "Yard",
+    "operationId": "postMoveOrdersByMoveOrderIdStart",
+    "summary": "Start a move",
+    "permission": "yard.move.execute",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders/{moveOrderId}:complete",
+    "tag": "Yard",
+    "operationId": "postMoveOrdersByMoveOrderIdComplete",
+    "summary": "Complete a move",
+    "permission": "yard.move.execute",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders/{moveOrderId}:cancel",
+    "tag": "Yard",
+    "operationId": "postMoveOrdersByMoveOrderIdCancel",
+    "summary": "Cancel a move order",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard-moves",
+    "tag": "Yard",
+    "operationId": "getYardMoves",
+    "summary": "Move history",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/weighings",
+    "tag": "Weighbridge",
+    "operationId": "getWeighings",
+    "summary": "List weighings",
+    "permission": "weighbridge.ticket",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/weighings",
+    "tag": "Weighbridge",
+    "operationId": "postWeighings",
+    "summary": "Record a weighing ticket",
+    "permission": "weighbridge.ticket",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/weighings/{weighingId}",
+    "tag": "Weighbridge",
+    "operationId": "getWeighingsByWeighingId",
+    "summary": "Get a weighing",
+    "permission": "weighbridge.ticket",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/keys",
+    "tag": "Keys",
+    "operationId": "getKeys",
+    "summary": "List key custody records",
+    "permission": "yard.key.custody",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/keys",
+    "tag": "Keys",
+    "operationId": "postKeys",
+    "summary": "Register keys received",
+    "permission": "yard.key.custody",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/keys/{keyCustodyId}/movements",
+    "tag": "Keys",
+    "operationId": "getKeysByKeyCustodyIdMovements",
+    "summary": "Key movement history",
+    "permission": "yard.key.custody",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/keys/{keyCustodyId}/movements",
+    "tag": "Keys",
+    "operationId": "postKeysByKeyCustodyIdMovements",
+    "summary": "Record a key movement",
+    "permission": "yard.key.custody",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/customs/ref-types",
+    "tag": "Customs",
+    "operationId": "getCustomsRefTypes",
+    "summary": "Customs reference types for the country pack",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/customs/refs",
+    "tag": "Customs",
+    "operationId": "getCustomsRefs",
+    "summary": "List customs references",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/customs/refs",
+    "tag": "Customs",
+    "operationId": "postCustomsRefs",
+    "summary": "Record a customs reference",
+    "permission": "customs.ref.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/customs/refs/{customsRefId}",
+    "tag": "Customs",
+    "operationId": "getCustomsRefsByCustomsRefId",
+    "summary": "Get a customs reference",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/customs/refs/{customsRefId}",
+    "tag": "Customs",
+    "operationId": "updateCustomsRefsByCustomsRefId",
+    "summary": "Update a customs reference",
+    "permission": "customs.ref.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/customs/refs/{customsRefId}:cancel",
+    "tag": "Customs",
+    "operationId": "postCustomsRefsByCustomsRefIdCancel",
+    "summary": "Cancel a customs reference",
+    "permission": "customs.ref.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exams",
+    "tag": "Customs",
+    "operationId": "getExams",
+    "summary": "List examinations",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exams",
+    "tag": "Customs",
+    "operationId": "postExams",
+    "summary": "Schedule an examination",
+    "permission": "customs.exam.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exams/{examId}:complete",
+    "tag": "Customs",
+    "operationId": "postExamsByExamIdComplete",
+    "summary": "Record the examination result",
+    "permission": "customs.exam.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/hold-types",
+    "tag": "Holds",
+    "operationId": "getHoldTypes",
+    "summary": "List hold types",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/hold-types",
+    "tag": "Holds",
+    "operationId": "postHoldTypes",
+    "summary": "Create a hold type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/hold-types/{holdTypeId}",
+    "tag": "Holds",
+    "operationId": "getHoldTypesByHoldTypeId",
+    "summary": "Get a hold type",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/hold-types/{holdTypeId}",
+    "tag": "Holds",
+    "operationId": "updateHoldTypesByHoldTypeId",
+    "summary": "Update a hold type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/holds",
+    "tag": "Holds",
+    "operationId": "getHolds",
+    "summary": "List holds",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/holds",
+    "tag": "Holds",
+    "operationId": "postHolds",
+    "summary": "Place holds on one or more stays",
+    "permission": "customs.hold.place",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/holds/{holdId}",
+    "tag": "Holds",
+    "operationId": "getHoldsByHoldId",
+    "summary": "Get a hold",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/holds/{holdId}:lift",
+    "tag": "Holds",
+    "operationId": "postHoldsByHoldIdLift",
+    "summary": "Lift a hold",
+    "permission": "customs.hold.lift",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-conditions",
+    "tag": "Release",
+    "operationId": "getReleaseConditions",
+    "summary": "The release conditions",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-rules",
+    "tag": "Release",
+    "operationId": "getReleaseRules",
+    "summary": "List release rules",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-rules",
+    "tag": "Release",
+    "operationId": "postReleaseRules",
+    "summary": "Create a release rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-rules/{releaseRuleId}",
+    "tag": "Release",
+    "operationId": "getReleaseRulesByReleaseRuleId",
+    "summary": "Get a release rule",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/release-rules/{releaseRuleId}",
+    "tag": "Release",
+    "operationId": "updateReleaseRulesByReleaseRuleId",
+    "summary": "Update a release rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-orders",
+    "tag": "Release",
+    "operationId": "getReleaseOrders",
+    "summary": "List release orders",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders",
+    "tag": "Release",
+    "operationId": "postReleaseOrders",
+    "summary": "Request a release order",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-orders/{releaseOrderId}",
+    "tag": "Release",
+    "operationId": "getReleaseOrdersByReleaseOrderId",
+    "summary": "Get a release order",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-qr/{qrToken}",
+    "tag": "Release",
+    "operationId": "getReleaseQrByQrToken",
+    "summary": "Find a release order by its QR",
+    "permission": "gate.visit.checkout",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}:evaluate",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdEvaluate",
+    "summary": "Evaluate release conditions",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}:approve",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdApprove",
+    "summary": "Approve and issue the release order",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}:cancel",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdCancel",
+    "summary": "Cancel a release order",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}:revalidate",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdRevalidate",
+    "summary": "Extend validity after further payment",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}/units:change",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdUnitsChange",
+    "summary": "Add or remove units",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/gate-out-checks",
+    "tag": "Release",
+    "operationId": "postGateOutChecks",
+    "summary": "Check whether units may leave",
+    "permission": "gate.visit.checkout",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units/{unitStayId}/gate-out-explanation",
+    "tag": "Release",
+    "operationId": "getUnitsByUnitStayIdGateOutExplanation",
+    "summary": "Explain why a unit can or cannot leave",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/approvals",
+    "tag": "Approvals",
+    "operationId": "getApprovals",
+    "summary": "Approval inbox",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/approvals/{approvalRequestId}",
+    "tag": "Approvals",
+    "operationId": "getApprovalsByApprovalRequestId",
+    "summary": "Get an approval request",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/approvals/{approvalRequestId}:decide",
+    "tag": "Approvals",
+    "operationId": "postApprovalsByApprovalRequestIdDecide",
+    "summary": "Approve or reject",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/approvals/{approvalRequestId}:cancel",
+    "tag": "Approvals",
+    "operationId": "postApprovalsByApprovalRequestIdCancel",
+    "summary": "Withdraw a request",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/approval-policies",
+    "tag": "Approvals",
+    "operationId": "getApprovalPolicies",
+    "summary": "List approval policies",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/approval-policies",
+    "tag": "Approvals",
+    "operationId": "postApprovalPolicies",
+    "summary": "Create a approval policy",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/approval-policies/{approvalPolicyId}",
+    "tag": "Approvals",
+    "operationId": "getApprovalPoliciesByApprovalPolicyId",
+    "summary": "Get a approval policy",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/approval-policies/{approvalPolicyId}",
+    "tag": "Approvals",
+    "operationId": "updateApprovalPoliciesByApprovalPolicyId",
+    "summary": "Update a approval policy",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/delegations",
+    "tag": "Approvals",
+    "operationId": "getDelegations",
+    "summary": "List delegations",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/delegations",
+    "tag": "Approvals",
+    "operationId": "postDelegations",
+    "summary": "Create a delegation (cover during leave)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/delegations/{delegationId}:revoke",
+    "tag": "Approvals",
+    "operationId": "postDelegationsByDelegationIdRevoke",
+    "summary": "Revoke a delegation",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exception-types",
+    "tag": "Exceptions",
+    "operationId": "getExceptionTypes",
+    "summary": "List exception types",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exception-types",
+    "tag": "Exceptions",
+    "operationId": "postExceptionTypes",
+    "summary": "Create a exception type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exception-types/{exceptionTypeId}",
+    "tag": "Exceptions",
+    "operationId": "getExceptionTypesByExceptionTypeId",
+    "summary": "Get a exception type",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/exception-types/{exceptionTypeId}",
+    "tag": "Exceptions",
+    "operationId": "updateExceptionTypesByExceptionTypeId",
+    "summary": "Update a exception type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/resolution-codes",
+    "tag": "Exceptions",
+    "operationId": "getResolutionCodes",
+    "summary": "List resolution codes",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/resolution-codes",
+    "tag": "Exceptions",
+    "operationId": "postResolutionCodes",
+    "summary": "Create a resolution code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/resolution-codes/{resolutionCodeId}",
+    "tag": "Exceptions",
+    "operationId": "getResolutionCodesByResolutionCodeId",
+    "summary": "Get a resolution code",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/resolution-codes/{resolutionCodeId}",
+    "tag": "Exceptions",
+    "operationId": "updateResolutionCodesByResolutionCodeId",
+    "summary": "Update a resolution code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exceptions",
+    "tag": "Exceptions",
+    "operationId": "getExceptions",
+    "summary": "List exception cases",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions",
+    "tag": "Exceptions",
+    "operationId": "postExceptions",
+    "summary": "Open an exception case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exceptions/{exceptionCaseId}",
+    "tag": "Exceptions",
+    "operationId": "getExceptionsByExceptionCaseId",
+    "summary": "Get an exception case",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}:assign",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdAssign",
+    "summary": "Assign a case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exceptions/{exceptionCaseId}/comments",
+    "tag": "Exceptions",
+    "operationId": "getExceptionsByExceptionCaseIdComments",
+    "summary": "List comments",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}/comments",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdComments",
+    "summary": "Add a comment",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}:resolve",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdResolve",
+    "summary": "Resolve a case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}:close",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdClose",
+    "summary": "Close a resolved case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}:reopen",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdReopen",
+    "summary": "Reopen a case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/accounting-periods",
+    "tag": "Finance setup",
+    "operationId": "getAccountingPeriods",
+    "summary": "List accounting periods",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/accounting-periods/{accountingPeriodId}:close",
+    "tag": "Finance setup",
+    "operationId": "postAccountingPeriodsByAccountingPeriodIdClose",
+    "summary": "Close a period",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/accounting-periods/{accountingPeriodId}:reopen",
+    "tag": "Finance setup",
+    "operationId": "postAccountingPeriodsByAccountingPeriodIdReopen",
+    "summary": "Reopen a period",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/gl-settings",
+    "tag": "Finance setup",
+    "operationId": "getGlSettings",
+    "summary": "GL account mapping",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/gl-settings",
+    "tag": "Finance setup",
+    "operationId": "replaceGlSettings",
+    "summary": "Replace GL account mapping",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exchange-rates",
+    "tag": "Finance setup",
+    "operationId": "getExchangeRates",
+    "summary": "List exchange rates",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exchange-rates",
+    "tag": "Finance setup",
+    "operationId": "postExchangeRates",
+    "summary": "Enter an exchange rate (daily or monthly)",
+    "permission": "finance.exchange_rate.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exchange-rates/effective",
+    "tag": "Finance setup",
+    "operationId": "getExchangeRatesEffective",
+    "summary": "Rate in force on a date",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/exchange-rates/{exchangeRateId}",
+    "tag": "Finance setup",
+    "operationId": "updateExchangeRatesByExchangeRateId",
+    "summary": "Correct an unused exchange rate",
+    "permission": "finance.exchange_rate.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tax-codes",
+    "tag": "Finance setup",
+    "operationId": "getTaxCodes",
+    "summary": "List tax codes",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/tax-codes",
+    "tag": "Finance setup",
+    "operationId": "postTaxCodes",
+    "summary": "Create a tax code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tax-codes/{taxCodeId}",
+    "tag": "Finance setup",
+    "operationId": "getTaxCodesByTaxCodeId",
+    "summary": "Get a tax code",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/tax-codes/{taxCodeId}",
+    "tag": "Finance setup",
+    "operationId": "updateTaxCodesByTaxCodeId",
+    "summary": "Update a tax code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/charge-codes",
+    "tag": "Finance setup",
+    "operationId": "getChargeCodes",
+    "summary": "List charge codes",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/charge-codes",
+    "tag": "Finance setup",
+    "operationId": "postChargeCodes",
+    "summary": "Create a charge code",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/charge-codes/{chargeCodeId}",
+    "tag": "Finance setup",
+    "operationId": "getChargeCodesByChargeCodeId",
+    "summary": "Get a charge code",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/charge-codes/{chargeCodeId}",
+    "tag": "Finance setup",
+    "operationId": "updateChargeCodesByChargeCodeId",
+    "summary": "Update a charge code",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payment-channels",
+    "tag": "Finance setup",
+    "operationId": "getPaymentChannels",
+    "summary": "List payment channels",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/payment-channels",
+    "tag": "Finance setup",
+    "operationId": "postPaymentChannels",
+    "summary": "Create a payment channel",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payment-channels/{paymentChannelId}",
+    "tag": "Finance setup",
+    "operationId": "getPaymentChannelsByPaymentChannelId",
+    "summary": "Get a payment channel",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/payment-channels/{paymentChannelId}",
+    "tag": "Finance setup",
+    "operationId": "updatePaymentChannelsByPaymentChannelId",
+    "summary": "Update a payment channel",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tariffs",
+    "tag": "Tariffs",
+    "operationId": "getTariffs",
+    "summary": "List tariffs",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/tariffs",
+    "tag": "Tariffs",
+    "operationId": "postTariffs",
+    "summary": "Create a tariff",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tariffs/{tariffId}",
+    "tag": "Tariffs",
+    "operationId": "getTariffsByTariffId",
+    "summary": "Get a tariff",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/tariffs/{tariffId}",
+    "tag": "Tariffs",
+    "operationId": "updateTariffsByTariffId",
+    "summary": "Update a tariff",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/tariffs/{tariffId}/rules",
+    "tag": "Tariffs",
+    "operationId": "getTariffsByTariffIdRules",
+    "summary": "List tariff rules",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/tariffs/{tariffId}/rules",
+    "tag": "Tariffs",
+    "operationId": "replaceTariffsByTariffIdRules",
+    "summary": "Replace tariff rules (draft only)",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/tariffs/{tariffId}:submit",
+    "tag": "Tariffs",
+    "operationId": "postTariffsByTariffIdSubmit",
+    "summary": "Submit a draft tariff for approval",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/tariffs/{tariffId}:new-version",
+    "tag": "Tariffs",
+    "operationId": "postTariffsByTariffIdNewVersion",
+    "summary": "Create a new draft version",
+    "permission": "billing.tariff.change",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/rating/preview",
+    "tag": "Tariffs",
+    "operationId": "postRatingPreview",
+    "summary": "Preview charges for a unit or consignment up to a date",
+    "permission": "billing.rates.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/billable-events",
+    "tag": "Charges",
+    "operationId": "getBillableEvents",
+    "summary": "List billable events",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/billable-events:manual",
+    "tag": "Charges",
+    "operationId": "postBillableEventsManual",
+    "summary": "Add a manual charge",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/charges",
+    "tag": "Charges",
+    "operationId": "getCharges",
+    "summary": "Uninvoiced and invoiced charges",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/charges/{chargeId}:waive",
+    "tag": "Charges",
+    "operationId": "postChargesByChargeIdWaive",
+    "summary": "Request a waiver or discount",
+    "permission": "billing.waiver",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/free-day-extensions",
+    "tag": "Charges",
+    "operationId": "postFreeDayExtensions",
+    "summary": "Extend free days for a stay or consignment",
+    "permission": "billing.freeday.extend",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/proformas",
+    "tag": "Invoicing",
+    "operationId": "postProformas",
+    "summary": "Create a proforma",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/invoices",
+    "tag": "Invoicing",
+    "operationId": "getInvoices",
+    "summary": "List invoices, proformas and notes",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/invoices",
+    "tag": "Invoicing",
+    "operationId": "postInvoices",
+    "summary": "Create a draft invoice",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/invoices:from-proforma",
+    "tag": "Invoicing",
+    "operationId": "postInvoicesFromProforma",
+    "summary": "Convert a proforma to an invoice",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/{invoiceId}",
+    "tag": "Invoicing",
+    "operationId": "getInvoicesByInvoiceId",
+    "summary": "Get an invoice",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/invoices/{invoiceId}",
+    "tag": "Invoicing",
+    "operationId": "updateInvoicesByInvoiceId",
+    "summary": "Edit a draft",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/{invoiceId}:post",
+    "tag": "Invoicing",
+    "operationId": "postInvoicesByInvoiceIdPost",
+    "summary": "Post an invoice",
+    "permission": "billing.invoice.post",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/{invoiceId}:cancel",
+    "tag": "Invoicing",
+    "operationId": "postInvoicesByInvoiceIdCancel",
+    "summary": "Cancel a draft or proforma",
+    "permission": "billing.invoice.create",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/{invoiceId}/pdf",
+    "tag": "Invoicing",
+    "operationId": "getInvoicesByInvoiceIdPdf",
+    "summary": "Invoice PDF",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/credit-notes",
+    "tag": "Invoicing",
+    "operationId": "postCreditNotes",
+    "summary": "Issue a credit note",
+    "permission": "billing.creditnote",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/debit-notes",
+    "tag": "Invoicing",
+    "operationId": "postDebitNotes",
+    "summary": "Issue a debit note",
+    "permission": "billing.invoice.post",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/fiscal-receipts",
+    "tag": "Invoicing",
+    "operationId": "getFiscalReceipts",
+    "summary": "Fiscal receipt (VFD) log",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/fiscal-receipts/{fiscalReceiptId}:retry",
+    "tag": "Invoicing",
+    "operationId": "postFiscalReceiptsByFiscalReceiptIdRetry",
+    "summary": "Retry a failed fiscal receipt",
+    "permission": "billing.invoice.post",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/cashier-shifts",
+    "tag": "Cashier",
+    "operationId": "getCashierShifts",
+    "summary": "List shifts",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/cashier-shifts",
+    "tag": "Cashier",
+    "operationId": "postCashierShifts",
+    "summary": "Open a cashier shift",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/cashier-shifts/current",
+    "tag": "Cashier",
+    "operationId": "getCashierShiftsCurrent",
+    "summary": "My open shift",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/cashier-shifts/{cashierShiftId}:close",
+    "tag": "Cashier",
+    "operationId": "postCashierShiftsByCashierShiftIdClose",
+    "summary": "Close a shift with counted totals",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/cashier-shifts/{cashierShiftId}:approve",
+    "tag": "Cashier",
+    "operationId": "postCashierShiftsByCashierShiftIdApprove",
+    "summary": "Approve a shift cash-up",
+    "permission": "payment.cashup.approve",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payments",
+    "tag": "Cashier",
+    "operationId": "getPayments",
+    "summary": "List payments",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/payments",
+    "tag": "Cashier",
+    "operationId": "postPayments",
+    "summary": "Record a payment",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payments/{paymentId}",
+    "tag": "Cashier",
+    "operationId": "getPaymentsByPaymentId",
+    "summary": "Get a payment",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/payments/{paymentId}:allocate",
+    "tag": "Cashier",
+    "operationId": "postPaymentsByPaymentIdAllocate",
+    "summary": "Allocate a payment to invoices",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/payments/{paymentId}:reverse",
+    "tag": "Cashier",
+    "operationId": "postPaymentsByPaymentIdReverse",
+    "summary": "Reverse a payment",
+    "permission": "payment.refund",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/payments/{paymentId}/receipt",
+    "tag": "Cashier",
+    "operationId": "getPaymentsByPaymentIdReceipt",
+    "summary": "Payment receipt PDF",
+    "permission": "payment.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/refunds",
+    "tag": "Cashier",
+    "operationId": "getRefunds",
+    "summary": "List refunds",
+    "permission": "payment.refund",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/refunds",
+    "tag": "Cashier",
+    "operationId": "postRefunds",
+    "summary": "Request a refund",
+    "permission": "payment.refund",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/refunds/{refundId}:mark-paid",
+    "tag": "Cashier",
+    "operationId": "postRefundsByRefundIdMarkPaid",
+    "summary": "Mark a refund paid",
+    "permission": "payment.refund",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/disbursements",
+    "tag": "Disbursements",
+    "operationId": "getDisbursements",
+    "summary": "List disbursements",
+    "permission": "finance.disbursement.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/disbursements",
+    "tag": "Disbursements",
+    "operationId": "postDisbursements",
+    "summary": "Record a disbursement",
+    "permission": "finance.disbursement.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/disbursements/{disbursementId}",
+    "tag": "Disbursements",
+    "operationId": "getDisbursementsByDisbursementId",
+    "summary": "Get a disbursement",
+    "permission": "finance.disbursement.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/disbursements/{disbursementId}:write-off",
+    "tag": "Disbursements",
+    "operationId": "postDisbursementsByDisbursementIdWriteOff",
+    "summary": "Write off an unrecovered disbursement",
+    "permission": "finance.disbursement.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/gl-postings",
+    "tag": "Accounting",
+    "operationId": "getGlPostings",
+    "summary": "GL postings to NG",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/gl-postings/{glPostingId}:retry",
+    "tag": "Accounting",
+    "operationId": "postGlPostingsByGlPostingIdRetry",
+    "summary": "Retry a failed posting",
+    "permission": "finance.period.close",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/statements/{partyId}",
+    "tag": "Accounting",
+    "operationId": "getStatementsByPartyId",
+    "summary": "Customer statement with ageing",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/statements/{partyId}/pdf",
+    "tag": "Accounting",
+    "operationId": "getStatementsByPartyIdPdf",
+    "summary": "Customer statement PDF",
+    "permission": "billing.invoice.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/dashboards/control-tower",
+    "tag": "Dashboards",
+    "operationId": "getDashboardsControlTower",
+    "summary": "Control tower snapshot",
+    "permission": "dashboard.control_tower",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/dashboards/{dashboardCode}",
+    "tag": "Dashboards",
+    "operationId": "getDashboardsByDashboardCode",
+    "summary": "Role dashboard (gate, yard, cashier, executive...)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/kpis",
+    "tag": "Dashboards",
+    "operationId": "getKpis",
+    "summary": "KPI series for trend charts",
+    "permission": "dashboard.executive",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/reports",
+    "tag": "Reports",
+    "operationId": "getReports",
+    "summary": "Report catalogue (filtered by permission)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/reports/{reportCode}/runs",
+    "tag": "Reports",
+    "operationId": "postReportsByReportCodeRuns",
+    "summary": "Run or export a report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/report-runs/{reportRunId}",
+    "tag": "Reports",
+    "operationId": "getReportRunsByReportRunId",
+    "summary": "Get a report run",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/report-runs/{reportRunId}/file",
+    "tag": "Reports",
+    "operationId": "getReportRunsByReportRunIdFile",
+    "summary": "Download the exported file",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/saved-reports",
+    "tag": "Reports",
+    "operationId": "getSavedReports",
+    "summary": "List saved reports",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/saved-reports",
+    "tag": "Reports",
+    "operationId": "postSavedReports",
+    "summary": "Create a saved report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/saved-reports/{savedReportId}",
+    "tag": "Reports",
+    "operationId": "getSavedReportsBySavedReportId",
+    "summary": "Get a saved report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/saved-reports/{savedReportId}",
+    "tag": "Reports",
+    "operationId": "updateSavedReportsBySavedReportId",
+    "summary": "Update a saved report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/saved-reports/{savedReportId}",
+    "tag": "Reports",
+    "operationId": "deleteSavedReportsBySavedReportId",
+    "summary": "Delete a saved report",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notifications/inbox",
+    "tag": "Notifications",
+    "operationId": "getNotificationsInbox",
+    "summary": "My in-app notifications",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/notifications/{notificationId}:read",
+    "tag": "Notifications",
+    "operationId": "postNotificationsByNotificationIdRead",
+    "summary": "Mark one read",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/notifications:read-all",
+    "tag": "Notifications",
+    "operationId": "postNotificationsReadAll",
+    "summary": "Mark all read",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notification-templates",
+    "tag": "Notifications",
+    "operationId": "getNotificationTemplates",
+    "summary": "List notification templates",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/notification-templates",
+    "tag": "Notifications",
+    "operationId": "postNotificationTemplates",
+    "summary": "Create a notification template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notification-templates/{notificationTemplateId}",
+    "tag": "Notifications",
+    "operationId": "getNotificationTemplatesByNotificationTemplateId",
+    "summary": "Get a notification template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/notification-templates/{notificationTemplateId}",
+    "tag": "Notifications",
+    "operationId": "updateNotificationTemplatesByNotificationTemplateId",
+    "summary": "Update a notification template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notification-rules",
+    "tag": "Notifications",
+    "operationId": "getNotificationRules",
+    "summary": "List notification rules",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/notification-rules",
+    "tag": "Notifications",
+    "operationId": "postNotificationRules",
+    "summary": "Create a notification rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/notification-rules/{notificationRuleId}",
+    "tag": "Notifications",
+    "operationId": "getNotificationRulesByNotificationRuleId",
+    "summary": "Get a notification rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/notification-rules/{notificationRuleId}",
+    "tag": "Notifications",
+    "operationId": "updateNotificationRulesByNotificationRuleId",
+    "summary": "Update a notification rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/print-templates",
+    "tag": "Printing",
+    "operationId": "getPrintTemplates",
+    "summary": "List print templates",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/print-templates",
+    "tag": "Printing",
+    "operationId": "postPrintTemplates",
+    "summary": "Create a print template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/print-templates/{printTemplateId}",
+    "tag": "Printing",
+    "operationId": "getPrintTemplatesByPrintTemplateId",
+    "summary": "Get a print template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/print-templates/{printTemplateId}",
+    "tag": "Printing",
+    "operationId": "updatePrintTemplatesByPrintTemplateId",
+    "summary": "Update a print template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/print",
+    "tag": "Printing",
+    "operationId": "postPrint",
+    "summary": "Print a document (logged)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/conversations",
+    "tag": "Aiva",
+    "operationId": "getAivaConversations",
+    "summary": "My conversations",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/conversations",
+    "tag": "Aiva",
+    "operationId": "postAivaConversations",
+    "summary": "Start a conversation",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/conversations/{aivaConversationId}/messages",
+    "tag": "Aiva",
+    "operationId": "getAivaConversationsByAivaConversationIdMessages",
+    "summary": "Conversation messages",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/conversations/{aivaConversationId}/messages",
+    "tag": "Aiva",
+    "operationId": "postAivaConversationsByAivaConversationIdMessages",
+    "summary": "Ask Aiva (streamed answer)",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/messages/{aivaMessageId}/feedback",
+    "tag": "Aiva",
+    "operationId": "postAivaMessagesByAivaMessageIdFeedback",
+    "summary": "Rate an answer",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/messages/{aivaMessageId}/tool-calls",
+    "tag": "Aiva",
+    "operationId": "getAivaMessagesByAivaMessageIdToolCalls",
+    "summary": "Tool calls behind an answer",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/tools",
+    "tag": "Aiva",
+    "operationId": "getAivaTools",
+    "summary": "Tools available to the signed-in user",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/appointment-slot-rules",
+    "tag": "Appointments",
+    "operationId": "getAppointmentSlotRules",
+    "summary": "List appointment slot rules",
+    "permission": "appointment.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/appointment-slot-rules",
+    "tag": "Appointments",
+    "operationId": "postAppointmentSlotRules",
+    "summary": "Create a appointment slot rule",
+    "permission": "appointment.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/appointment-slot-rules/{appointmentSlotRuleId}",
+    "tag": "Appointments",
+    "operationId": "getAppointmentSlotRulesByAppointmentSlotRuleId",
+    "summary": "Get a appointment slot rule",
+    "permission": "appointment.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/appointment-slot-rules/{appointmentSlotRuleId}",
+    "tag": "Appointments",
+    "operationId": "updateAppointmentSlotRulesByAppointmentSlotRuleId",
+    "summary": "Update a appointment slot rule",
+    "permission": "appointment.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/appointments/availability",
+    "tag": "Appointments",
+    "operationId": "getAppointmentsAvailability",
+    "summary": "Free capacity per slot",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/appointments",
+    "tag": "Appointments",
+    "operationId": "getAppointments",
+    "summary": "List appointments",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/appointments",
+    "tag": "Appointments",
+    "operationId": "postAppointments",
+    "summary": "Book an appointment",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/appointments/{appointmentId}",
+    "tag": "Appointments",
+    "operationId": "getAppointmentsByAppointmentId",
+    "summary": "Get an appointment",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/appointments/{appointmentId}:cancel",
+    "tag": "Appointments",
+    "operationId": "postAppointmentsByAppointmentIdCancel",
+    "summary": "Cancel an appointment",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/appointments/{appointmentId}:reschedule",
+    "tag": "Appointments",
+    "operationId": "postAppointmentsByAppointmentIdReschedule",
+    "summary": "Move to another slot",
+    "permission": "appointment.book",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/labour-contractors",
+    "tag": "CFS",
+    "operationId": "getLabourContractors",
+    "summary": "List labour contractors",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/labour-contractors",
+    "tag": "CFS",
+    "operationId": "postLabourContractors",
+    "summary": "Create a labour contractor",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/labour-contractors/{labourContractorId}",
+    "tag": "CFS",
+    "operationId": "getLabourContractorsByLabourContractorId",
+    "summary": "Get a labour contractor",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/labour-contractors/{labourContractorId}",
+    "tag": "CFS",
+    "operationId": "updateLabourContractorsByLabourContractorId",
+    "summary": "Update a labour contractor",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/handling-jobs",
+    "tag": "CFS",
+    "operationId": "getHandlingJobs",
+    "summary": "List handling jobs",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/handling-jobs",
+    "tag": "CFS",
+    "operationId": "postHandlingJobs",
+    "summary": "Plan a handling job",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/handling-jobs/{handlingJobId}",
+    "tag": "CFS",
+    "operationId": "getHandlingJobsByHandlingJobId",
+    "summary": "Get a handling job",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/handling-jobs/{handlingJobId}",
+    "tag": "CFS",
+    "operationId": "updateHandlingJobsByHandlingJobId",
+    "summary": "Update a planned job",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/handling-jobs/{handlingJobId}/lines",
+    "tag": "CFS",
+    "operationId": "replaceHandlingJobsByHandlingJobIdLines",
+    "summary": "Save tally lines",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/handling-jobs/{handlingJobId}:start",
+    "tag": "CFS",
+    "operationId": "postHandlingJobsByHandlingJobIdStart",
+    "summary": "Start a job",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/handling-jobs/{handlingJobId}:complete",
+    "tag": "CFS",
+    "operationId": "postHandlingJobsByHandlingJobIdComplete",
+    "summary": "Complete a job (sign tally)",
+    "permission": "cfs.job.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/handling-jobs/{handlingJobId}:approve",
+    "tag": "CFS",
+    "operationId": "postHandlingJobsByHandlingJobIdApprove",
+    "summary": "Approve a completed job",
+    "permission": "cfs.job.approve",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/lots/{unitStayId}/balance",
+    "tag": "CFS",
+    "operationId": "getLotsByUnitStayIdBalance",
+    "summary": "Lot balance and deliveries",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/portal/invitations",
+    "tag": "Portal",
+    "operationId": "getPortalInvitations",
+    "summary": "List invitations",
+    "permission": "portal.invite",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/portal/invitations",
+    "tag": "Portal",
+    "operationId": "postPortalInvitations",
+    "summary": "Invite a customer or agent user",
+    "permission": "portal.invite",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/portal/invitations/{invitationId}:revoke",
+    "tag": "Portal",
+    "operationId": "postPortalInvitationsByInvitationIdRevoke",
+    "summary": "Revoke an invitation",
+    "permission": "portal.invite",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/portal/invitations:accept",
+    "tag": "Portal",
+    "operationId": "postPortalInvitationsAccept",
+    "summary": "Accept an invitation",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/service-requests",
+    "tag": "Portal",
+    "operationId": "getServiceRequests",
+    "summary": "List service requests",
+    "permission": "portal.request.submit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/service-requests",
+    "tag": "Portal",
+    "operationId": "postServiceRequests",
+    "summary": "Submit a service request",
+    "permission": "portal.request.submit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/service-requests/{serviceRequestId}",
+    "tag": "Portal",
+    "operationId": "getServiceRequestsByServiceRequestId",
+    "summary": "Get a service request",
+    "permission": "portal.request.submit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/service-requests/{serviceRequestId}:respond",
+    "tag": "Portal",
+    "operationId": "postServiceRequestsByServiceRequestIdRespond",
+    "summary": "Respond to a service request",
+    "permission": "portal.request.handle",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/reefer-sessions",
+    "tag": "Reefer",
+    "operationId": "getReeferSessions",
+    "summary": "Reefer monitor list",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/reefer-sessions",
+    "tag": "Reefer",
+    "operationId": "postReeferSessions",
+    "summary": "Plug in a reefer",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/reefer-sessions/{reeferSessionId}",
+    "tag": "Reefer",
+    "operationId": "getReeferSessionsByReeferSessionId",
+    "summary": "Get a reefer session",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/reefer-sessions/{reeferSessionId}:unplug",
+    "tag": "Reefer",
+    "operationId": "postReeferSessionsByReeferSessionIdUnplug",
+    "summary": "Unplug a reefer",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/reefer-sessions/{reeferSessionId}/readings",
+    "tag": "Reefer",
+    "operationId": "getReeferSessionsByReeferSessionIdReadings",
+    "summary": "Temperature log",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/reefer-sessions/{reeferSessionId}/readings",
+    "tag": "Reefer",
+    "operationId": "postReeferSessionsByReeferSessionIdReadings",
+    "summary": "Record a temperature reading",
+    "permission": "reefer.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/imo-classes",
+    "tag": "Dangerous goods",
+    "operationId": "getImoClasses",
+    "summary": "IMO hazard classes",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/segregation-rules",
+    "tag": "Dangerous goods",
+    "operationId": "getSegregationRules",
+    "summary": "Segregation rules",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/segregation-rules",
+    "tag": "Dangerous goods",
+    "operationId": "replaceSegregationRules",
+    "summary": "Replace segregation rules (load from IMDG Code)",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units/{unitStayId}/dg-lines",
+    "tag": "Dangerous goods",
+    "operationId": "getUnitsByUnitStayIdDgLines",
+    "summary": "DG lines of a unit",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/units/{unitStayId}/dg-lines",
+    "tag": "Dangerous goods",
+    "operationId": "replaceUnitsByUnitStayIdDgLines",
+    "summary": "Replace DG lines of a unit",
+    "permission": "dg.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/repair-codes",
+    "tag": "M&R",
+    "operationId": "getRepairCodes",
+    "summary": "List repair codes",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-codes",
+    "tag": "M&R",
+    "operationId": "postRepairCodes",
+    "summary": "Create a repair code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/repair-codes/{repairCodeId}",
+    "tag": "M&R",
+    "operationId": "getRepairCodesByRepairCodeId",
+    "summary": "Get a repair code",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/repair-codes/{repairCodeId}",
+    "tag": "M&R",
+    "operationId": "updateRepairCodesByRepairCodeId",
+    "summary": "Update a repair code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/repair-estimates",
+    "tag": "M&R",
+    "operationId": "getRepairEstimates",
+    "summary": "List repair estimates",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-estimates",
+    "tag": "M&R",
+    "operationId": "postRepairEstimates",
+    "summary": "Create a repair estimate (from inspection findings)",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/repair-estimates/{repairEstimateId}",
+    "tag": "M&R",
+    "operationId": "getRepairEstimatesByRepairEstimateId",
+    "summary": "Get a repair estimate",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/repair-estimates/{repairEstimateId}",
+    "tag": "M&R",
+    "operationId": "updateRepairEstimatesByRepairEstimateId",
+    "summary": "Edit a draft estimate",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-estimates/{repairEstimateId}:send",
+    "tag": "M&R",
+    "operationId": "postRepairEstimatesByRepairEstimateIdSend",
+    "summary": "Send to the line",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-estimates/{repairEstimateId}:decision",
+    "tag": "M&R",
+    "operationId": "postRepairEstimatesByRepairEstimateIdDecision",
+    "summary": "Record the line's decision",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/repair-estimates/{repairEstimateId}:complete",
+    "tag": "M&R",
+    "operationId": "postRepairEstimatesByRepairEstimateIdComplete",
+    "summary": "Mark repairs done",
+    "permission": "repair.estimate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/device-integrations",
+    "tag": "Devices",
+    "operationId": "getDeviceIntegrations",
+    "summary": "List device integrations",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/device-integrations",
+    "tag": "Devices",
+    "operationId": "postDeviceIntegrations",
+    "summary": "Create a device integration",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/device-integrations/{deviceIntegrationId}",
+    "tag": "Devices",
+    "operationId": "getDeviceIntegrationsByDeviceIntegrationId",
+    "summary": "Get a device integration",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/device-integrations/{deviceIntegrationId}",
+    "tag": "Devices",
+    "operationId": "updateDeviceIntegrationsByDeviceIntegrationId",
+    "summary": "Update a device integration",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/device-reads:ingest",
+    "tag": "Devices",
+    "operationId": "postDeviceReadsIngest",
+    "summary": "Ingest device reads (gate agent)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/device-reads",
+    "tag": "Devices",
+    "operationId": "getDeviceReads",
+    "summary": "List device reads",
+    "permission": "device.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/device-reads/{deviceReadId}:match",
+    "tag": "Devices",
+    "operationId": "postDeviceReadsByDeviceReadIdMatch",
+    "summary": "Match a read to a visit manually",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/integration-messages",
+    "tag": "EDI",
+    "operationId": "getIntegrationMessages",
+    "summary": "Integration message log",
+    "permission": "integration.monitor",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/integration-messages/{integrationMessageId}",
+    "tag": "EDI",
+    "operationId": "getIntegrationMessagesByIntegrationMessageId",
+    "summary": "Get a message",
+    "permission": "integration.monitor",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/integration-messages/{integrationMessageId}:retry",
+    "tag": "EDI",
+    "operationId": "postIntegrationMessagesByIntegrationMessageIdRetry",
+    "summary": "Retry a failed message",
+    "permission": "integration.monitor",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/edi/inbound/{partnerCode}",
+    "tag": "EDI",
+    "operationId": "postEdiInboundByPartnerCode",
+    "summary": "Receive an inbound message (CODECO, COARRI, BAPLIE, customs...)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/models",
+    "tag": "Intelligence",
+    "operationId": "getModels",
+    "summary": "Model versions",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/models/{mlModelVersionId}:activate",
+    "tag": "Intelligence",
+    "operationId": "postModelsByMlModelVersionIdActivate",
+    "summary": "Activate a model version",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/predictions/dwell",
+    "tag": "Intelligence",
+    "operationId": "getPredictionsDwell",
+    "summary": "Dwell predictions",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/forecasts/occupancy",
+    "tag": "Intelligence",
+    "operationId": "getForecastsOccupancy",
+    "summary": "Occupancy forecast",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/suggestion-log",
+    "tag": "Intelligence",
+    "operationId": "getYardSuggestionLog",
+    "summary": "Allocation suggestions versus choices",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/aiva/drafts",
+    "tag": "Aiva",
+    "operationId": "getAivaDrafts",
+    "summary": "My Aiva drafts",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/drafts/{aivaDraftActionId}:submit",
+    "tag": "Aiva",
+    "operationId": "postAivaDraftsByAivaDraftActionIdSubmit",
+    "summary": "Submit an Aiva draft",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/aiva/drafts/{aivaDraftActionId}:discard",
+    "tag": "Aiva",
+    "operationId": "postAivaDraftsByAivaDraftActionIdDiscard",
+    "summary": "Discard an Aiva draft",
+    "permission": "aiva.use",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

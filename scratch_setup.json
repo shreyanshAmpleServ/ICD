@@ -1,0 +1,342 @@
+[
+  {
+    "method": "GET",
+    "path": "/companies",
+    "tag": "Setup",
+    "operationId": "getCompanies",
+    "summary": "List companies",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/companies",
+    "tag": "Setup",
+    "operationId": "postCompanies",
+    "summary": "Create a company",
+    "permission": "admin.site.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/companies/{companyId}",
+    "tag": "Setup",
+    "operationId": "getCompaniesByCompanyId",
+    "summary": "Get a company",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/companies/{companyId}",
+    "tag": "Setup",
+    "operationId": "updateCompaniesByCompanyId",
+    "summary": "Update a company",
+    "permission": "admin.site.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/sites",
+    "tag": "Setup",
+    "operationId": "getSites",
+    "summary": "List sites",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/sites",
+    "tag": "Setup",
+    "operationId": "postSites",
+    "summary": "Create a site",
+    "permission": "admin.site.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/sites/{siteId}",
+    "tag": "Setup",
+    "operationId": "getSitesBySiteId",
+    "summary": "Get a site",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/sites/{siteId}",
+    "tag": "Setup",
+    "operationId": "updateSitesBySiteId",
+    "summary": "Update a site",
+    "permission": "admin.site.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/calendars",
+    "tag": "Setup",
+    "operationId": "getCalendars",
+    "summary": "List calendars",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/calendars",
+    "tag": "Setup",
+    "operationId": "postCalendars",
+    "summary": "Create a calendar",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/calendars/{calendarId}",
+    "tag": "Setup",
+    "operationId": "getCalendarsByCalendarId",
+    "summary": "Get a calendar",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/calendars/{calendarId}",
+    "tag": "Setup",
+    "operationId": "updateCalendarsByCalendarId",
+    "summary": "Update a calendar",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/calendars/{calendarId}/holidays",
+    "tag": "Setup",
+    "operationId": "getCalendarsByCalendarIdHolidays",
+    "summary": "List holidays in a calendar",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/calendars/{calendarId}/holidays",
+    "tag": "Setup",
+    "operationId": "postCalendarsByCalendarIdHolidays",
+    "summary": "Add a holiday",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/calendars/{calendarId}/holidays/{calendarHolidayId}",
+    "tag": "Setup",
+    "operationId": "deleteCalendarsByCalendarIdHolidaysByCalendarHolidayId",
+    "summary": "Remove a holiday",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/number-sequences",
+    "tag": "Setup",
+    "operationId": "getNumberSequences",
+    "summary": "List number sequences",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/number-sequences",
+    "tag": "Setup",
+    "operationId": "postNumberSequences",
+    "summary": "Create a number sequence",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/number-sequences/{numberSequenceId}",
+    "tag": "Setup",
+    "operationId": "getNumberSequencesByNumberSequenceId",
+    "summary": "Get a number sequence",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/number-sequences/{numberSequenceId}",
+    "tag": "Setup",
+    "operationId": "updateNumberSequencesByNumberSequenceId",
+    "summary": "Update a number sequence",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/field-rules",
+    "tag": "Setup",
+    "operationId": "getFieldRules",
+    "summary": "List field rules (mandatory, hidden, read-only per screen)",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/field-rules/{screenCode}",
+    "tag": "Setup",
+    "operationId": "replaceFieldRulesByScreenCode",
+    "summary": "Replace the field rules for a screen",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/document-types",
+    "tag": "Documents",
+    "operationId": "getDocumentTypes",
+    "summary": "List document types",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/document-types",
+    "tag": "Documents",
+    "operationId": "postDocumentTypes",
+    "summary": "Create a document type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/document-types/{documentTypeId}",
+    "tag": "Documents",
+    "operationId": "getDocumentTypesByDocumentTypeId",
+    "summary": "Get a document type",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/document-types/{documentTypeId}",
+    "tag": "Documents",
+    "operationId": "updateDocumentTypesByDocumentTypeId",
+    "summary": "Update a document type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/documents",
+    "tag": "Documents",
+    "operationId": "getDocuments",
+    "summary": "List documents for an entity",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/documents",
+    "tag": "Documents",
+    "operationId": "postDocuments",
+    "summary": "Upload a document",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/documents/{documentId}",
+    "tag": "Documents",
+    "operationId": "getDocumentsByDocumentId",
+    "summary": "Get document metadata",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/documents/{documentId}",
+    "tag": "Documents",
+    "operationId": "deleteDocumentsByDocumentId",
+    "summary": "Void a document",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/documents/{documentId}/content",
+    "tag": "Documents",
+    "operationId": "getDocumentsByDocumentIdContent",
+    "summary": "Download the file",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/audit-log",
+    "tag": "Audit",
+    "operationId": "getAuditLog",
+    "summary": "Search the audit trail",
+    "permission": "admin.audit.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/audit-log/{entityName}/{entityId}",
+    "tag": "Audit",
+    "operationId": "getAuditLogByEntityNameByEntityId",
+    "summary": "Audit history of one record",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/sync/status",
+    "tag": "Sync",
+    "operationId": "getSyncStatus",
+    "summary": "Master sync and outbox status",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/sync/{masterCode}:run",
+    "tag": "Sync",
+    "operationId": "postSyncByMasterCodeRun",
+    "summary": "Run a master sync now",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

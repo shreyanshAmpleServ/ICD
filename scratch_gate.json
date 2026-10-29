@@ -1,0 +1,232 @@
+[
+  {
+    "method": "GET",
+    "path": "/gates",
+    "tag": "Gate setup",
+    "operationId": "getGates",
+    "summary": "List gates",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/gates",
+    "tag": "Gate setup",
+    "operationId": "postGates",
+    "summary": "Create a gate",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/gates/{gateId}",
+    "tag": "Gate setup",
+    "operationId": "getGatesByGateId",
+    "summary": "Get a gate",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/gates/{gateId}",
+    "tag": "Gate setup",
+    "operationId": "updateGatesByGateId",
+    "summary": "Update a gate",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/checkpoints",
+    "tag": "Gate setup",
+    "operationId": "getCheckpoints",
+    "summary": "List checkpoints",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/checkpoints",
+    "tag": "Gate setup",
+    "operationId": "postCheckpoints",
+    "summary": "Create a checkpoint",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/checkpoints/{checkpointId}",
+    "tag": "Gate setup",
+    "operationId": "getCheckpointsByCheckpointId",
+    "summary": "Get a checkpoint",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/checkpoints/{checkpointId}",
+    "tag": "Gate setup",
+    "operationId": "updateCheckpointsByCheckpointId",
+    "summary": "Update a checkpoint",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/visit-types",
+    "tag": "Gate setup",
+    "operationId": "getVisitTypes",
+    "summary": "List visit types",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/visit-types",
+    "tag": "Gate setup",
+    "operationId": "postVisitTypes",
+    "summary": "Create a visit type",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/visit-types/{visitTypeId}",
+    "tag": "Gate setup",
+    "operationId": "getVisitTypesByVisitTypeId",
+    "summary": "Get a visit type",
+    "permission": "masters.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/visit-types/{visitTypeId}",
+    "tag": "Gate setup",
+    "operationId": "updateVisitTypesByVisitTypeId",
+    "summary": "Update a visit type",
+    "permission": "admin.gate.configure",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/truck-visits",
+    "tag": "Gate",
+    "operationId": "getTruckVisits",
+    "summary": "Gate queue and visit search",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits",
+    "tag": "Gate",
+    "operationId": "postTruckVisits",
+    "summary": "Announce a truck visit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/truck-visits/{truckVisitId}",
+    "tag": "Gate",
+    "operationId": "getTruckVisitsByTruckVisitId",
+    "summary": "Get a truck visit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/gate-passes/{passToken}",
+    "tag": "Gate",
+    "operationId": "getGatePassesByPassToken",
+    "summary": "Find a visit by its gate pass QR",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/truck-visits/{truckVisitId}/checkpoint-events",
+    "tag": "Gate",
+    "operationId": "getTruckVisitsByTruckVisitIdCheckpointEvents",
+    "summary": "List checkpoint events",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}/checkpoint-events",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdCheckpointEvents",
+    "summary": "Pass a checkpoint",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}/units",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdUnits",
+    "summary": "Add a unit to a visit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/truck-visits/{truckVisitId}/units/{visitUnitId}",
+    "tag": "Gate",
+    "operationId": "deleteTruckVisitsByTruckVisitIdUnitsByVisitUnitId",
+    "summary": "Remove a planned unit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}/units/{visitUnitId}:complete",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdUnitsByVisitUnitIdComplete",
+    "summary": "Complete drop-off or pick-up of a unit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}:cancel",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdCancel",
+    "summary": "Cancel a visit",
+    "permission": "gate.visit.checkin",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/truck-visits/{truckVisitId}/gate-pass:print",
+    "tag": "Gate",
+    "operationId": "postTruckVisitsByTruckVisitIdGatePassPrint",
+    "summary": "Print the gate pass",
+    "permission": "gate.pass.print",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

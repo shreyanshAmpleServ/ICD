@@ -1,0 +1,232 @@
+[
+  {
+    "method": "GET",
+    "path": "/inspection-templates",
+    "tag": "Inspections",
+    "operationId": "getInspectionTemplates",
+    "summary": "List inspection templates",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspection-templates",
+    "tag": "Inspections",
+    "operationId": "postInspectionTemplates",
+    "summary": "Create a inspection template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/inspection-templates/{inspectionTemplateId}",
+    "tag": "Inspections",
+    "operationId": "getInspectionTemplatesByInspectionTemplateId",
+    "summary": "Get a inspection template",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/inspection-templates/{inspectionTemplateId}",
+    "tag": "Inspections",
+    "operationId": "updateInspectionTemplatesByInspectionTemplateId",
+    "summary": "Update a inspection template",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/damage-codes",
+    "tag": "Inspections",
+    "operationId": "getDamageCodes",
+    "summary": "List damage codes",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/damage-codes",
+    "tag": "Inspections",
+    "operationId": "postDamageCodes",
+    "summary": "Create a damage code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/damage-codes/{damageCodeId}",
+    "tag": "Inspections",
+    "operationId": "getDamageCodesByDamageCodeId",
+    "summary": "Get a damage code",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/damage-codes/{damageCodeId}",
+    "tag": "Inspections",
+    "operationId": "updateDamageCodesByDamageCodeId",
+    "summary": "Update a damage code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/inspections",
+    "tag": "Inspections",
+    "operationId": "getInspections",
+    "summary": "List inspections",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspections",
+    "tag": "Inspections",
+    "operationId": "postInspections",
+    "summary": "Start an inspection",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/inspections/{inspectionId}",
+    "tag": "Inspections",
+    "operationId": "getInspectionsByInspectionId",
+    "summary": "Get an inspection",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PUT",
+    "path": "/inspections/{inspectionId}/results",
+    "tag": "Inspections",
+    "operationId": "replaceInspectionsByInspectionIdResults",
+    "summary": "Save checklist results",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspections/{inspectionId}/findings",
+    "tag": "Inspections",
+    "operationId": "postInspectionsByInspectionIdFindings",
+    "summary": "Add a damage finding",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/inspections/{inspectionId}/findings/{inspectionFindingId}",
+    "tag": "Inspections",
+    "operationId": "deleteInspectionsByInspectionIdFindingsByInspectionFindingId",
+    "summary": "Remove a finding",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspections/{inspectionId}:complete",
+    "tag": "Inspections",
+    "operationId": "postInspectionsByInspectionIdComplete",
+    "summary": "Complete an inspection (sign)",
+    "permission": "inspection.perform",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/inspections/{inspectionId}:approve",
+    "tag": "Inspections",
+    "operationId": "postInspectionsByInspectionIdApprove",
+    "summary": "Approve major damage",
+    "permission": "inspection.damage.approve",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/weighings",
+    "tag": "Weighbridge",
+    "operationId": "getWeighings",
+    "summary": "List weighings",
+    "permission": "weighbridge.ticket",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/weighings",
+    "tag": "Weighbridge",
+    "operationId": "postWeighings",
+    "summary": "Record a weighing ticket",
+    "permission": "weighbridge.ticket",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/weighings/{weighingId}",
+    "tag": "Weighbridge",
+    "operationId": "getWeighingsByWeighingId",
+    "summary": "Get a weighing",
+    "permission": "weighbridge.ticket",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/keys",
+    "tag": "Keys",
+    "operationId": "getKeys",
+    "summary": "List key custody records",
+    "permission": "yard.key.custody",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/keys",
+    "tag": "Keys",
+    "operationId": "postKeys",
+    "summary": "Register keys received",
+    "permission": "yard.key.custody",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/keys/{keyCustodyId}/movements",
+    "tag": "Keys",
+    "operationId": "getKeysByKeyCustodyIdMovements",
+    "summary": "Key movement history",
+    "permission": "yard.key.custody",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/keys/{keyCustodyId}/movements",
+    "tag": "Keys",
+    "operationId": "postKeysByKeyCustodyIdMovements",
+    "summary": "Record a key movement",
+    "permission": "yard.key.custody",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

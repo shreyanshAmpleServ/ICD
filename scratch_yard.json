@@ -1,0 +1,282 @@
+[
+  {
+    "method": "GET",
+    "path": "/yard/levels",
+    "tag": "Yard design",
+    "operationId": "getYardLevels",
+    "summary": "List yard levels",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/levels",
+    "tag": "Yard design",
+    "operationId": "postYardLevels",
+    "summary": "Create a yard level",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/levels/{yardLevelId}",
+    "tag": "Yard design",
+    "operationId": "getYardLevelsByYardLevelId",
+    "summary": "Get a yard level",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/yard/levels/{yardLevelId}",
+    "tag": "Yard design",
+    "operationId": "updateYardLevelsByYardLevelId",
+    "summary": "Update a yard level",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/locations",
+    "tag": "Yard design",
+    "operationId": "getYardLocations",
+    "summary": "List yard locations",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/locations",
+    "tag": "Yard design",
+    "operationId": "postYardLocations",
+    "summary": "Create a yard location",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/locations/{yardLocationId}",
+    "tag": "Yard design",
+    "operationId": "getYardLocationsByYardLocationId",
+    "summary": "Get a yard location",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/yard/locations/{yardLocationId}",
+    "tag": "Yard design",
+    "operationId": "updateYardLocationsByYardLocationId",
+    "summary": "Update a yard location",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/locations/{yardLocationId}/children",
+    "tag": "Yard design",
+    "operationId": "getYardLocationsByYardLocationIdChildren",
+    "summary": "List child locations",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/locations:generate",
+    "tag": "Yard design",
+    "operationId": "postYardLocationsGenerate",
+    "summary": "Generate rows, bays and tiers in bulk",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/locations/{yardLocationId}:block",
+    "tag": "Yard design",
+    "operationId": "postYardLocationsByYardLocationIdBlock",
+    "summary": "Block a location",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/locations/{yardLocationId}:unblock",
+    "tag": "Yard design",
+    "operationId": "postYardLocationsByYardLocationIdUnblock",
+    "summary": "Unblock a location",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/tags",
+    "tag": "Yard design",
+    "operationId": "getYardTags",
+    "summary": "List location tags",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/tags",
+    "tag": "Yard design",
+    "operationId": "postYardTags",
+    "summary": "Create a location tag",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/tags/{locationTagId}",
+    "tag": "Yard design",
+    "operationId": "getYardTagsByLocationTagId",
+    "summary": "Get a location tag",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/yard/tags/{locationTagId}",
+    "tag": "Yard design",
+    "operationId": "updateYardTagsByLocationTagId",
+    "summary": "Update a location tag",
+    "permission": "admin.yard.design",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/map",
+    "tag": "Yard",
+    "operationId": "getYardMap",
+    "summary": "Yard map for a level or block",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/blocks/{blockId}/slots",
+    "tag": "Yard",
+    "operationId": "getYardBlocksByBlockIdSlots",
+    "summary": "Slots of a block with units",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard/occupancy",
+    "tag": "Yard",
+    "operationId": "getYardOccupancy",
+    "summary": "Occupancy summary",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/yard/suggestions",
+    "tag": "Yard",
+    "operationId": "postYardSuggestions",
+    "summary": "Suggest slots for a unit",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/move-orders",
+    "tag": "Yard",
+    "operationId": "getMoveOrders",
+    "summary": "Move order list (driver/handheld view)",
+    "permission": "yard.move.execute",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders",
+    "tag": "Yard",
+    "operationId": "postMoveOrders",
+    "summary": "Create a move order",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/move-orders/{moveOrderId}",
+    "tag": "Yard",
+    "operationId": "getMoveOrdersByMoveOrderId",
+    "summary": "Get a move order",
+    "permission": "yard.move.execute",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders/{moveOrderId}:assign",
+    "tag": "Yard",
+    "operationId": "postMoveOrdersByMoveOrderIdAssign",
+    "summary": "Assign equipment and operator",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders/{moveOrderId}:start",
+    "tag": "Yard",
+    "operationId": "postMoveOrdersByMoveOrderIdStart",
+    "summary": "Start a move",
+    "permission": "yard.move.execute",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders/{moveOrderId}:complete",
+    "tag": "Yard",
+    "operationId": "postMoveOrdersByMoveOrderIdComplete",
+    "summary": "Complete a move",
+    "permission": "yard.move.execute",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/move-orders/{moveOrderId}:cancel",
+    "tag": "Yard",
+    "operationId": "postMoveOrdersByMoveOrderIdCancel",
+    "summary": "Cancel a move order",
+    "permission": "yard.allocate",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/yard-moves",
+    "tag": "Yard",
+    "operationId": "getYardMoves",
+    "summary": "Move history",
+    "permission": "yard.map.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

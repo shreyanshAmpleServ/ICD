@@ -1,0 +1,612 @@
+[
+  {
+    "method": "GET",
+    "path": "/customs/ref-types",
+    "tag": "Customs",
+    "operationId": "getCustomsRefTypes",
+    "summary": "Customs reference types for the country pack",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/customs/refs",
+    "tag": "Customs",
+    "operationId": "getCustomsRefs",
+    "summary": "List customs references",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/customs/refs",
+    "tag": "Customs",
+    "operationId": "postCustomsRefs",
+    "summary": "Record a customs reference",
+    "permission": "customs.ref.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/customs/refs/{customsRefId}",
+    "tag": "Customs",
+    "operationId": "getCustomsRefsByCustomsRefId",
+    "summary": "Get a customs reference",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/customs/refs/{customsRefId}",
+    "tag": "Customs",
+    "operationId": "updateCustomsRefsByCustomsRefId",
+    "summary": "Update a customs reference",
+    "permission": "customs.ref.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/customs/refs/{customsRefId}:cancel",
+    "tag": "Customs",
+    "operationId": "postCustomsRefsByCustomsRefIdCancel",
+    "summary": "Cancel a customs reference",
+    "permission": "customs.ref.edit",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exams",
+    "tag": "Customs",
+    "operationId": "getExams",
+    "summary": "List examinations",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exams",
+    "tag": "Customs",
+    "operationId": "postExams",
+    "summary": "Schedule an examination",
+    "permission": "customs.exam.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exams/{examId}:complete",
+    "tag": "Customs",
+    "operationId": "postExamsByExamIdComplete",
+    "summary": "Record the examination result",
+    "permission": "customs.exam.record",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/hold-types",
+    "tag": "Holds",
+    "operationId": "getHoldTypes",
+    "summary": "List hold types",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/hold-types",
+    "tag": "Holds",
+    "operationId": "postHoldTypes",
+    "summary": "Create a hold type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/hold-types/{holdTypeId}",
+    "tag": "Holds",
+    "operationId": "getHoldTypesByHoldTypeId",
+    "summary": "Get a hold type",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/hold-types/{holdTypeId}",
+    "tag": "Holds",
+    "operationId": "updateHoldTypesByHoldTypeId",
+    "summary": "Update a hold type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/holds",
+    "tag": "Holds",
+    "operationId": "getHolds",
+    "summary": "List holds",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/holds",
+    "tag": "Holds",
+    "operationId": "postHolds",
+    "summary": "Place holds on one or more stays",
+    "permission": "customs.hold.place",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/holds/{holdId}",
+    "tag": "Holds",
+    "operationId": "getHoldsByHoldId",
+    "summary": "Get a hold",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/holds/{holdId}:lift",
+    "tag": "Holds",
+    "operationId": "postHoldsByHoldIdLift",
+    "summary": "Lift a hold",
+    "permission": "customs.hold.lift",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-conditions",
+    "tag": "Release",
+    "operationId": "getReleaseConditions",
+    "summary": "The release conditions",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-rules",
+    "tag": "Release",
+    "operationId": "getReleaseRules",
+    "summary": "List release rules",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-rules",
+    "tag": "Release",
+    "operationId": "postReleaseRules",
+    "summary": "Create a release rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-rules/{releaseRuleId}",
+    "tag": "Release",
+    "operationId": "getReleaseRulesByReleaseRuleId",
+    "summary": "Get a release rule",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/release-rules/{releaseRuleId}",
+    "tag": "Release",
+    "operationId": "updateReleaseRulesByReleaseRuleId",
+    "summary": "Update a release rule",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-orders",
+    "tag": "Release",
+    "operationId": "getReleaseOrders",
+    "summary": "List release orders",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders",
+    "tag": "Release",
+    "operationId": "postReleaseOrders",
+    "summary": "Request a release order",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-orders/{releaseOrderId}",
+    "tag": "Release",
+    "operationId": "getReleaseOrdersByReleaseOrderId",
+    "summary": "Get a release order",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/release-qr/{qrToken}",
+    "tag": "Release",
+    "operationId": "getReleaseQrByQrToken",
+    "summary": "Find a release order by its QR",
+    "permission": "gate.visit.checkout",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}:evaluate",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdEvaluate",
+    "summary": "Evaluate release conditions",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}:approve",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdApprove",
+    "summary": "Approve and issue the release order",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}:cancel",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdCancel",
+    "summary": "Cancel a release order",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}:revalidate",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdRevalidate",
+    "summary": "Extend validity after further payment",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/release-orders/{releaseOrderId}/units:change",
+    "tag": "Release",
+    "operationId": "postReleaseOrdersByReleaseOrderIdUnitsChange",
+    "summary": "Add or remove units",
+    "permission": "release.issue",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/gate-out-checks",
+    "tag": "Release",
+    "operationId": "postGateOutChecks",
+    "summary": "Check whether units may leave",
+    "permission": "gate.visit.checkout",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/units/{unitStayId}/gate-out-explanation",
+    "tag": "Release",
+    "operationId": "getUnitsByUnitStayIdGateOutExplanation",
+    "summary": "Explain why a unit can or cannot leave",
+    "permission": "consignment.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/approvals",
+    "tag": "Approvals",
+    "operationId": "getApprovals",
+    "summary": "Approval inbox",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/approvals/{approvalRequestId}",
+    "tag": "Approvals",
+    "operationId": "getApprovalsByApprovalRequestId",
+    "summary": "Get an approval request",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/approvals/{approvalRequestId}:decide",
+    "tag": "Approvals",
+    "operationId": "postApprovalsByApprovalRequestIdDecide",
+    "summary": "Approve or reject",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/approvals/{approvalRequestId}:cancel",
+    "tag": "Approvals",
+    "operationId": "postApprovalsByApprovalRequestIdCancel",
+    "summary": "Withdraw a request",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/approval-policies",
+    "tag": "Approvals",
+    "operationId": "getApprovalPolicies",
+    "summary": "List approval policies",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/approval-policies",
+    "tag": "Approvals",
+    "operationId": "postApprovalPolicies",
+    "summary": "Create a approval policy",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/approval-policies/{approvalPolicyId}",
+    "tag": "Approvals",
+    "operationId": "getApprovalPoliciesByApprovalPolicyId",
+    "summary": "Get a approval policy",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/approval-policies/{approvalPolicyId}",
+    "tag": "Approvals",
+    "operationId": "updateApprovalPoliciesByApprovalPolicyId",
+    "summary": "Update a approval policy",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/delegations",
+    "tag": "Approvals",
+    "operationId": "getDelegations",
+    "summary": "List delegations",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/delegations",
+    "tag": "Approvals",
+    "operationId": "postDelegations",
+    "summary": "Create a delegation (cover during leave)",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/delegations/{delegationId}:revoke",
+    "tag": "Approvals",
+    "operationId": "postDelegationsByDelegationIdRevoke",
+    "summary": "Revoke a delegation",
+    "permission": "",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exception-types",
+    "tag": "Exceptions",
+    "operationId": "getExceptionTypes",
+    "summary": "List exception types",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exception-types",
+    "tag": "Exceptions",
+    "operationId": "postExceptionTypes",
+    "summary": "Create a exception type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exception-types/{exceptionTypeId}",
+    "tag": "Exceptions",
+    "operationId": "getExceptionTypesByExceptionTypeId",
+    "summary": "Get a exception type",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/exception-types/{exceptionTypeId}",
+    "tag": "Exceptions",
+    "operationId": "updateExceptionTypesByExceptionTypeId",
+    "summary": "Update a exception type",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/resolution-codes",
+    "tag": "Exceptions",
+    "operationId": "getResolutionCodes",
+    "summary": "List resolution codes",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/resolution-codes",
+    "tag": "Exceptions",
+    "operationId": "postResolutionCodes",
+    "summary": "Create a resolution code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/resolution-codes/{resolutionCodeId}",
+    "tag": "Exceptions",
+    "operationId": "getResolutionCodesByResolutionCodeId",
+    "summary": "Get a resolution code",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/resolution-codes/{resolutionCodeId}",
+    "tag": "Exceptions",
+    "operationId": "updateResolutionCodesByResolutionCodeId",
+    "summary": "Update a resolution code",
+    "permission": "admin.config.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exceptions",
+    "tag": "Exceptions",
+    "operationId": "getExceptions",
+    "summary": "List exception cases",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions",
+    "tag": "Exceptions",
+    "operationId": "postExceptions",
+    "summary": "Open an exception case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exceptions/{exceptionCaseId}",
+    "tag": "Exceptions",
+    "operationId": "getExceptionsByExceptionCaseId",
+    "summary": "Get an exception case",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}:assign",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdAssign",
+    "summary": "Assign a case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "GET",
+    "path": "/exceptions/{exceptionCaseId}/comments",
+    "tag": "Exceptions",
+    "operationId": "getExceptionsByExceptionCaseIdComments",
+    "summary": "List comments",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}/comments",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdComments",
+    "summary": "Add a comment",
+    "permission": "exception.view",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}:resolve",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdResolve",
+    "summary": "Resolve a case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}:close",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdClose",
+    "summary": "Close a resolved case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  },
+  {
+    "method": "POST",
+    "path": "/exceptions/{exceptionCaseId}:reopen",
+    "tag": "Exceptions",
+    "operationId": "postExceptionsByExceptionCaseIdReopen",
+    "summary": "Reopen a case",
+    "permission": "exception.manage",
+    "isGlobal": false,
+    "idempotencyRequired": false
+  }
+]

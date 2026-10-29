@@ -1,0 +1,1329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model appointments {
+  appointment_id       Int         @id(map: "PK__appointm__A50828FC54F8AB6F") @default(autoincrement())
+  site_id              Int
+  visit_type_id        Int
+  transporter_party_id Int
+  appointment_no       String      @unique(map: "UQ__appointm__A5090472411673D3") @db.NVarChar(50)
+  truck_plate          String      @db.NVarChar(30)
+  slot_start           DateTime
+  slot_end             DateTime
+  status               String?     @default("BOOKED", map: "DF__appointme__statu__511AFFBC") @db.NVarChar(30)
+  created_at           DateTime?   @default(dbgenerated("sysutcdatetime()"), map: "DF__appointme__creat__520F23F5")
+  parties              parties     @relation(fields: [transporter_party_id], references: [party_id], onUpdate: NoAction, map: "FK_appointments_transporters")
+  sites                sites       @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_appointments_sites")
+  visit_types          visit_types @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_appointments_visit_types")
+}
+
+model approval_requests {
+  approval_request_id                                 Int       @id(map: "PK__approval__AB34D1C8C921A4AF") @default(autoincrement())
+  site_id                                             Int
+  requested_by_user_id                                Int
+  decided_by_user_id                                  Int?
+  request_no                                          String    @unique(map: "UQ__approval__18D3F2FD472531DD") @db.NVarChar(50)
+  permission_code                                     String    @db.NVarChar(100)
+  entity_name                                         String    @db.NVarChar(50)
+  entity_id                                           Int
+  requested_amount                                    Decimal?  @db.Decimal(18, 2)
+  currency                                            String?   @default("USD", map: "DF__approval___curre__5AD97420") @db.NVarChar(5)
+  status                                              String?   @default("PENDING", map: "DF__approval___statu__5BCD9859") @db.NVarChar(30)
+  requested_at                                        DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__approval___reque__5CC1BC92")
+  decided_at                                          DateTime?
+  decision_notes                                      String?   @db.NVarChar(500)
+  users_approval_requests_decided_by_user_idTousers   users?    @relation("approval_requests_decided_by_user_idTousers", fields: [decided_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_approval_requests_decided_by")
+  users_approval_requests_requested_by_user_idTousers users     @relation("approval_requests_requested_by_user_idTousers", fields: [requested_by_user_id], references: [user_id], onUpdate: NoAction, map: "FK_approval_requests_requested_by")
+  sites                                               sites     @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_approval_requests_sites")
+}
+
+model audit_entries {
+  audit_entry_id Int       @id(map: "PK__audit_en__3726D4A72B826990") @default(autoincrement())
+  site_id        Int
+  user_id        Int?
+  entity_name    String    @db.NVarChar(50)
+  entity_id      Int
+  action_type    String?   @default("UPDATE", map: "DF__audit_ent__actio__7F80E8EA") @db.NVarChar(30)
+  field_name     String?   @db.NVarChar(50)
+  old_value      String?   @db.NVarChar(500)
+  new_value      String?   @db.NVarChar(500)
+  created_at     DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__audit_ent__creat__00750D23")
+  sites          sites     @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_audit_entries_sites")
+  users          users?    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_audit_entries_users")
+}
+
+model billable_charges {
+  charge_id        Int             @id(map: "PK__billable__F3F52EBC4BDA8A0A") @default(autoincrement())
+  site_id          Int
+  consignment_id   Int?
+  bill_to_party_id Int
+  tariff_rule_id   Int?
+  unit_stay_id     Int?
+  charge_code      String          @db.NVarChar(50)
+  charge_name      String          @db.NVarChar(150)
+  quantity         Decimal?        @default(1.00, map: "DF__billable___quant__10416098") @db.Decimal(10, 2)
+  unit_price       Decimal         @db.Decimal(18, 2)
+  amount           Decimal         @db.Decimal(18, 2)
+  currency         String?         @default("USD", map: "DF__billable___curre__113584D1") @db.NVarChar(5)
+  is_waived        Boolean?        @default(false, map: "DF__billable___is_wa__1229A90A")
+  status           String?         @default("UNBILLED", map: "DF__billable___statu__131DCD43") @db.NVarChar(30)
+  created_at       DateTime?       @default(dbgenerated("sysutcdatetime()"), map: "DF__billable___creat__1411F17C")
+  consignments     consignments?   @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_billable_charges_consignments")
+  parties          parties         @relation(fields: [bill_to_party_id], references: [party_id], onUpdate: NoAction, map: "FK_billable_charges_parties")
+  tariff_rules     tariff_rules?   @relation(fields: [tariff_rule_id], references: [tariff_rule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_billable_charges_rules")
+  sites            sites           @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_billable_charges_sites")
+  unit_stays       unit_stays?     @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_billable_charges_unit_stays")
+  invoice_lines    invoice_lines[]
+}
+
+model calendars {
+  calendar_id                        Int        @id(map: "PK__calendar__584C1344F248C510") @default(autoincrement())
+  site_id                            Int?
+  calendar_code                      String     @unique(map: "UQ__calendar__8D3A6A9A9584E7B1") @db.NVarChar(50)
+  calendar_name                      String     @db.NVarChar(100)
+  country_code                       String?    @default("TZ", map: "DF__calendars__count__60083D91") @db.NVarChar(8)
+  created_at                         DateTime?  @default(dbgenerated("sysutcdatetime()"), map: "DF__calendars__creat__60FC61CA")
+  sites                              sites?     @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_calendars_sites")
+  holidays                           holidays[]
+  sites_sites_calendar_idTocalendars sites[]    @relation("sites_calendar_idTocalendars")
+}
+
+model cargo_regimes {
+  cargo_regime_id  Int            @id(map: "PK__cargo_re__B0FE75F24C75C72C") @default(autoincrement())
+  regime_code      String         @unique(map: "UQ__cargo_re__E7CDBC6A816AE819") @db.NVarChar(30)
+  regime_name      String         @db.NVarChar(100)
+  requires_customs Boolean?       @default(true, map: "DF__cargo_reg__requi__51851410")
+  consignments     consignments[]
+  unit_stays       unit_stays[]
+}
+
+model cashier_shifts {
+  cashier_shift_id Int        @id(map: "PK__cashier___E4ACCDE1CA951CE0") @default(autoincrement())
+  site_id          Int
+  cashier_user_id  Int
+  opened_at        DateTime?  @default(dbgenerated("sysutcdatetime()"), map: "DF__cashier_s__opene__216BEC9A")
+  closed_at        DateTime?
+  opening_balance  Decimal?   @default(0.00, map: "DF__cashier_s__openi__226010D3") @db.Decimal(18, 2)
+  closing_balance  Decimal?   @db.Decimal(18, 2)
+  status           String?    @default("OPEN", map: "DF__cashier_s__statu__2354350C") @db.NVarChar(30)
+  users            users      @relation(fields: [cashier_user_id], references: [user_id], onUpdate: NoAction, map: "FK_cashier_shifts_users")
+  sites            sites      @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_cashier_shifts_sites")
+  payments         payments[]
+}
+
+model checkpoints {
+  checkpoint_id   Int      @id(map: "PK__checkpoi__0D7B874C00285714") @default(autoincrement())
+  gate_id         Int?
+  checkpoint_code String   @unique(map: "UQ__checkpoi__3862ACAE36A7BC6D") @db.NVarChar(30)
+  checkpoint_name String   @db.NVarChar(100)
+  checkpoint_kind String?  @default("OUTER_IN", map: "DF__checkpoin__check__153B1FDF") @db.NVarChar(30)
+  is_active       Boolean? @default(true, map: "DF__checkpoin__is_ac__162F4418")
+  gates           gates?   @relation(fields: [gate_id], references: [gate_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_checkpoints_gates")
+}
+
+model commodities {
+  commodity_id   Int      @id(map: "PK__commodit__4BD0F147F581FAFA") @default(autoincrement())
+  commodity_code String   @unique(map: "UQ__commodit__6C0BFFF3EDDB915A") @db.NVarChar(30)
+  commodity_name String   @db.NVarChar(100)
+  hs_code        String?  @db.NVarChar(30)
+  is_hazardous   Boolean? @default(false, map: "DF__commoditi__is_ha__48EFCE0F")
+  is_active      Boolean? @default(true, map: "DF__commoditi__is_ac__49E3F248")
+}
+
+model companies {
+  company_id         Int                  @id(map: "PK__companie__3E26723589374662") @default(autoincrement())
+  company_code       String               @unique(map: "UQ__companie__F4E508EA2C0E1320") @db.NVarChar(32)
+  legal_name         String               @db.NVarChar(128)
+  trading_name       String?              @db.NVarChar(128)
+  country_code       String?              @default("TZ", map: "DF__companies__count__50C5FA01") @db.NVarChar(8)
+  country_pack_code  String?              @default("TZ_DEFAULT", map: "DF__companies__count__51BA1E3A") @db.NVarChar(16)
+  base_currency      String?              @default("USD", map: "DF__companies__base___52AE4273") @db.NVarChar(8)
+  tax_id             String?              @db.NVarChar(64)
+  vat_no             String?              @db.NVarChar(64)
+  is_active          Boolean?             @default(true, map: "DF__companies__is_ac__53A266AC")
+  created_at         DateTime?            @default(dbgenerated("sysutcdatetime()"), map: "DF__companies__creat__54968AE5")
+  updated_at         DateTime?
+  accounting_periods accounting_periods[]
+  exchange_rates     exchange_rates[]
+  gl_settings        gl_settings[]
+  number_sequences   number_sequences[]
+  sites              sites[]
+  tariffs            tariffs[]
+}
+
+model consignments {
+  consignment_id                                       Int                 @id(map: "PK__consignm__3114B3D0D420D30A") @default(autoincrement())
+  site_id                                              Int
+  cargo_regime_id                                      Int
+  vessel_call_id                                       Int?
+  shipping_line_party_id                               Int?
+  consignee_party_id                                   Int?
+  bill_to_party_id                                     Int?
+  agent_party_id                                       Int?
+  ref_type                                             String?             @default("BL", map: "DF__consignme__ref_t__60C757A0") @db.NVarChar(30)
+  ref_no                                               String              @unique(map: "UQ__consignm__BDA580DBD41F6E40") @db.NVarChar(50)
+  status                                               String?             @default("OPEN", map: "DF__consignme__statu__61BB7BD9") @db.NVarChar(30)
+  created_at                                           DateTime?           @default(dbgenerated("sysutcdatetime()"), map: "DF__consignme__creat__62AFA012")
+  billable_charges                                     billable_charges[]
+  consignment_lines                                    consignment_lines[]
+  parties_consignments_agent_party_idToparties         parties?            @relation("consignments_agent_party_idToparties", fields: [agent_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_agent")
+  parties_consignments_bill_to_party_idToparties       parties?            @relation("consignments_bill_to_party_idToparties", fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_bill_to")
+  cargo_regimes                                        cargo_regimes       @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onUpdate: NoAction, map: "FK_consignments_cargo_regimes")
+  parties_consignments_consignee_party_idToparties     parties?            @relation("consignments_consignee_party_idToparties", fields: [consignee_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_consignee")
+  parties_consignments_shipping_line_party_idToparties parties?            @relation("consignments_shipping_line_party_idToparties", fields: [shipping_line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_shipping_line")
+  sites                                                sites               @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_consignments_sites")
+  vessel_calls                                         vessel_calls?       @relation(fields: [vessel_call_id], references: [vessel_call_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_vessel_calls")
+  customs_refs                                         customs_refs[]
+  invoices                                             invoices[]
+  release_orders                                       release_orders[]
+  unit_stays                                           unit_stays[]
+}
+
+model customs_refs {
+  customs_ref_id Int          @id(map: "PK__customs___F09E74EAA1C01850") @default(autoincrement())
+  consignment_id Int
+  unit_stay_id   Int?
+  ref_type       String?      @default("TANSAD", map: "DF__customs_r__ref_t__420DC656") @db.NVarChar(30)
+  ref_no         String       @db.NVarChar(50)
+  status         String?      @default("CLEARED", map: "DF__customs_r__statu__4301EA8F") @db.NVarChar(30)
+  lodged_at      DateTime?    @default(dbgenerated("sysutcdatetime()"), map: "DF__customs_r__lodge__43F60EC8")
+  cleared_at     DateTime?    @default(dbgenerated("sysutcdatetime()"), map: "DF__customs_r__clear__44EA3301")
+  consignments   consignments @relation(fields: [consignment_id], references: [consignment_id], onUpdate: NoAction, map: "FK_customs_refs_consignments")
+  unit_stays     unit_stays?  @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_customs_refs_unit_stays")
+}
+
+model drivers {
+  driver_id            Int            @id(map: "PK__drivers__A411C5BD5E713B03") @default(autoincrement())
+  driver_name          String         @db.NVarChar(100)
+  licence_no           String         @unique(map: "UQ__drivers__8F6BF5400DCA62F1") @db.NVarChar(50)
+  licence_class        String?        @db.NVarChar(20)
+  licence_country      String?        @default("TZ", map: "DF__drivers__licence__3B95D2F1") @db.NVarChar(5)
+  phone                String?        @db.NVarChar(30)
+  transporter_party_id Int?
+  is_active            Boolean?       @default(true, map: "DF__drivers__is_acti__3C89F72A")
+  parties              parties?       @relation(fields: [transporter_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_drivers_parties")
+  truck_visits         truck_visits[]
+}
+
+model equipment {
+  equipment_id   Int          @id(map: "PK__equipmen__197068AF72D79A92") @default(autoincrement())
+  site_id        Int
+  equipment_code String       @unique(map: "UQ__equipmen__87CC6B9BA2FC7883") @db.NVarChar(50)
+  equipment_name String       @db.NVarChar(100)
+  equipment_type String       @db.NVarChar(50)
+  capacity_kg    Int?
+  is_active      Boolean?     @default(true, map: "DF__equipment__is_ac__4DB4832C")
+  sites          sites        @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_equipment_sites")
+  yard_moves     yard_moves[]
+}
+
+model exception_cases {
+  exception_case_id   Int                  @id(map: "PK__exceptio__207E37CA6FEEEAA6") @default(autoincrement())
+  site_id             Int
+  case_no             String               @unique(map: "UQ__exceptio__A8FFAB342CE8E605") @db.NVarChar(50)
+  truck_visit_id      Int?
+  unit_stay_id        Int?
+  assigned_to_user_id Int?
+  category            String               @db.NVarChar(50)
+  severity            String?              @default("MEDIUM", map: "DF__exception__sever__65570293") @db.NVarChar(20)
+  status              String?              @default("OPEN", map: "DF__exception__statu__664B26CC") @db.NVarChar(30)
+  opened_at           DateTime?            @default(dbgenerated("sysutcdatetime()"), map: "DF__exception__opene__673F4B05")
+  resolved_at         DateTime?
+  users               users?               @relation(fields: [assigned_to_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_exception_cases_assigned_to")
+  sites               sites                @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_exception_cases_sites")
+  unit_stays          unit_stays?          @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_exception_cases_stays")
+  truck_visits        truck_visits?        @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_exception_cases_visits")
+  exception_comments  exception_comments[]
+}
+
+model exception_comments {
+  exception_comment_id Int             @id(map: "PK__exceptio__1F13612726D2A837") @default(autoincrement())
+  exception_case_id    Int
+  user_id              Int
+  comment_text         String          @db.NVarChar(500)
+  created_at           DateTime?       @default(dbgenerated("sysutcdatetime()"), map: "DF__exception__creat__6A1BB7B0")
+  exception_cases      exception_cases @relation(fields: [exception_case_id], references: [exception_case_id], onUpdate: NoAction, map: "FK_exception_comments_cases")
+  users                users           @relation(fields: [user_id], references: [user_id], onUpdate: NoAction, map: "FK_exception_comments_users")
+}
+
+model exchange_rates {
+  exchange_rate_id Int       @id(map: "PK__exchange__0638B3CD31311B08") @default(autoincrement())
+  company_id       Int
+  base_currency    String?   @default("USD", map: "DF__exchange___base___74994623") @db.NVarChar(5)
+  quote_currency   String?   @default("TZS", map: "DF__exchange___quote__758D6A5C") @db.NVarChar(5)
+  rate             Decimal   @db.Decimal(18, 4)
+  effective_date   DateTime? @default(dbgenerated("CONVERT([date],getutcdate())"), map: "DF__exchange___effec__76818E95") @db.Date
+  is_current       Boolean?  @default(true, map: "DF__exchange___is_cu__7775B2CE")
+  companies        companies @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_exchange_rates_companies")
+}
+
+model gate_lanes {
+  gate_lane_id Int            @id(map: "PK__gate_lan__522855AA9266A35B") @default(autoincrement())
+  gate_id      Int
+  lane_code    String         @db.NVarChar(30)
+  direction    String?        @default("IN", map: "DF__gate_lane__direc__10766AC2") @db.NVarChar(20)
+  is_active    Boolean?       @default(true, map: "DF__gate_lane__is_ac__116A8EFB")
+  gates        gates          @relation(fields: [gate_id], references: [gate_id], onUpdate: NoAction, map: "FK_gate_lanes_gates")
+  truck_visits truck_visits[]
+}
+
+model gates {
+  gate_id      Int            @id(map: "PK__gates__8CB11922D10D7D88") @default(autoincrement())
+  site_id      Int
+  gate_code    String         @unique(map: "UQ__gates__ADC1214B9A9DE39D") @db.NVarChar(30)
+  gate_name    String         @db.NVarChar(100)
+  gate_kind    String?        @default("OUTER", map: "DF__gates__gate_kind__0CA5D9DE") @db.NVarChar(30)
+  is_active    Boolean?       @default(true, map: "DF__gates__is_active__0D99FE17")
+  checkpoints  checkpoints[]
+  gate_lanes   gate_lanes[]
+  sites        sites          @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_gates_sites")
+  truck_visits truck_visits[]
+}
+
+model holds {
+  hold_id                              Int        @id(map: "PK__holds__A05B7B86A86CE504") @default(autoincrement())
+  unit_stay_id                         Int
+  placed_by_user_id                    Int
+  lifted_by_user_id                    Int?
+  hold_type                            String     @db.NVarChar(30)
+  reason                               String     @db.NVarChar(250)
+  status                               String?    @default("ACTIVE", map: "DF__holds__status__3E3D3572") @db.NVarChar(30)
+  placed_at                            DateTime?  @default(dbgenerated("sysutcdatetime()"), map: "DF__holds__placed_at__3F3159AB")
+  lifted_at                            DateTime?
+  users_holds_lifted_by_user_idTousers users?     @relation("holds_lifted_by_user_idTousers", fields: [lifted_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_holds_lifted_by")
+  users_holds_placed_by_user_idTousers users      @relation("holds_placed_by_user_idTousers", fields: [placed_by_user_id], references: [user_id], onUpdate: NoAction, map: "FK_holds_placed_by")
+  unit_stays                           unit_stays @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_holds_unit_stays")
+}
+
+model holidays {
+  holiday_id   Int       @id(map: "PK__holidays__253884EAFE64DAAC") @default(autoincrement())
+  calendar_id  Int
+  holiday_date DateTime  @db.Date
+  holiday_name String    @db.NVarChar(100)
+  created_at   DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__holidays__create__63D8CE75")
+  calendars    calendars @relation(fields: [calendar_id], references: [calendar_id], onUpdate: NoAction, map: "FK_holidays_calendars")
+}
+
+model inspections {
+  inspection_id       Int                   @id(map: "PK__inspecti__C3C4E743B196EE87") @default(autoincrement())
+  site_id             Int
+  unit_stay_id        Int
+  inspector_user_id   Int?
+  inspection_type     String?               @default("GATE_IN", map: "DF__inspectio__inspe__31D75E8D") @db.NVarChar(30)
+  condition_status    String?               @default("SOUND", map: "DF__inspectio__condi__32CB82C6") @db.NVarChar(30)
+  inspected_at        DateTime?             @default(dbgenerated("sysutcdatetime()"), map: "DF__inspectio__inspe__33BFA6FF")
+  status              String?               @default("COMPLETED", map: "DF__inspectio__statu__34B3CB38") @db.NVarChar(30)
+  inspection_findings inspection_findings[]
+  users               users?                @relation(fields: [inspector_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_inspections_users")
+  sites               sites                 @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_inspections_sites")
+  unit_stays          unit_stays            @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_inspections_unit_stays")
+}
+
+model invoice_lines {
+  invoice_line_id  Int              @id(map: "PK__invoice___D5A715D6176BDA26") @default(autoincrement())
+  invoice_id       Int
+  charge_id        Int
+  unit_stay_id     Int?
+  line_no          Int
+  description      String           @db.NVarChar(150)
+  quantity         Decimal?         @default(1.00, map: "DF__invoice_l__quant__1E8F7FEF") @db.Decimal(10, 2)
+  unit_price       Decimal          @db.Decimal(18, 2)
+  amount           Decimal          @db.Decimal(18, 2)
+  billable_charges billable_charges @relation(fields: [charge_id], references: [charge_id], onUpdate: NoAction, map: "FK_invoice_lines_charges")
+  invoices         invoices         @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_invoice_lines_invoices")
+  unit_stays       unit_stays?      @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_lines_unit_stays")
+}
+
+model invoices {
+  invoice_id          Int                   @id(map: "PK__invoices__F58DFD498AF99C15") @default(autoincrement())
+  site_id             Int
+  consignment_id      Int?
+  bill_to_party_id    Int
+  invoice_no          String                @unique(map: "UQ__invoices__F58CA1E25B4161C0") @db.NVarChar(50)
+  invoice_type        String?               @default("COMMERCIAL", map: "DF__invoices__invoic__17E28260") @db.NVarChar(30)
+  status              String?               @default("ISSUED", map: "DF__invoices__status__18D6A699") @db.NVarChar(30)
+  currency            String?               @default("USD", map: "DF__invoices__curren__19CACAD2") @db.NVarChar(5)
+  subtotal            Decimal               @db.Decimal(18, 2)
+  tax_amount          Decimal?              @default(0.00, map: "DF__invoices__tax_am__1ABEEF0B") @db.Decimal(18, 2)
+  total_amount        Decimal               @db.Decimal(18, 2)
+  created_at          DateTime?             @default(dbgenerated("sysutcdatetime()"), map: "DF__invoices__create__1BB31344")
+  invoice_lines       invoice_lines[]
+  consignments        consignments?         @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoices_consignments")
+  parties             parties               @relation(fields: [bill_to_party_id], references: [party_id], onUpdate: NoAction, map: "FK_invoices_parties")
+  sites               sites                 @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_invoices_sites")
+  payment_allocations payment_allocations[]
+  refunds             refunds[]
+}
+
+model manifests {
+  manifest_id            Int              @id(map: "PK__manifest__D6D06BECC11FBCD7") @default(autoincrement())
+  vessel_call_id         Int?
+  shipping_line_party_id Int?
+  manifest_ref           String?          @db.NVarChar(50)
+  line_count             Int?             @default(0, map: "DF__manifests__line___573DED66")
+  status                 String?          @default("VALIDATING", map: "DF__manifests__statu__5832119F") @db.NVarChar(30)
+  imported_at            DateTime?        @default(dbgenerated("sysutcdatetime()"), map: "DF__manifests__impor__592635D8")
+  manifest_lines         manifest_lines[]
+  parties                parties?         @relation(fields: [shipping_line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_manifests_parties")
+  vessel_calls           vessel_calls?    @relation(fields: [vessel_call_id], references: [vessel_call_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_manifests_vessel_calls")
+}
+
+model notifications {
+  notification_id Int       @id(map: "PK__notifica__E059842FC94C4385") @default(autoincrement())
+  site_id         Int
+  user_id         Int
+  event_type      String    @db.NVarChar(50)
+  title           String    @db.NVarChar(150)
+  message         String    @db.NVarChar(500)
+  is_read         Boolean?  @default(false, map: "DF__notificat__is_re__384F51F2")
+  created_at      DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__notificat__creat__3943762B")
+  sites           sites     @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_notifications_sites")
+  users           users     @relation(fields: [user_id], references: [user_id], onUpdate: NoAction, map: "FK_notifications_users")
+}
+
+model number_sequences {
+  number_sequence_id Int       @id(map: "PK__number_s__058C489647197A3A") @default(autoincrement())
+  company_id         Int
+  site_id            Int?
+  document_kind      String    @db.NVarChar(50)
+  prefix             String    @db.NVarChar(20)
+  pattern            String?   @default("{PREFIX}-{YEAR}-{SEQ:6}", map: "DF__number_se__patte__66B53B20") @db.NVarChar(50)
+  next_value         Int?      @default(1, map: "DF__number_se__next___67A95F59")
+  reset_policy       String?   @default("YEARLY", map: "DF__number_se__reset__689D8392") @db.NVarChar(30)
+  current_period     String?   @db.NVarChar(20)
+  companies          companies @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_number_sequences_companies")
+  sites              sites?    @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_number_sequences_sites")
+}
+
+model parties {
+  party_id                                                  Int                  @id(map: "PK__parties__8A2AF38EF45FA744") @default(autoincrement())
+  party_code                                                String               @unique(map: "UQ__parties__E4449B5EBF32AECC") @db.NVarChar(50)
+  party_name                                                String               @db.NVarChar(150)
+  short_name                                                String?              @db.NVarChar(50)
+  tax_id                                                    String?              @db.NVarChar(50)
+  vat_no                                                    String?              @db.NVarChar(50)
+  country_code                                              String?              @default("TZ", map: "DF__parties__country__1C1D2798") @db.NVarChar(5)
+  city                                                      String?              @default("Dar es Salaam", map: "DF__parties__city__1D114BD1") @db.NVarChar(50)
+  phone                                                     String?              @db.NVarChar(30)
+  email                                                     String?              @db.NVarChar(100)
+  credit_status                                             String?              @default("CASH", map: "DF__parties__credit___1E05700A") @db.NVarChar(20)
+  credit_limit                                              Decimal?             @default(0.00, map: "DF__parties__credit___1EF99443") @db.Decimal(18, 2)
+  is_provisional                                            Boolean?             @default(false, map: "DF__parties__is_prov__1FEDB87C")
+  is_active                                                 Boolean?             @default(true, map: "DF__parties__is_acti__20E1DCB5")
+  created_at                                                DateTime?            @default(dbgenerated("sysutcdatetime()"), map: "DF__parties__created__21D600EE")
+  appointments                                              appointments[]
+  billable_charges                                          billable_charges[]
+  cargo_units                                               cargo_units[]
+  consignments_consignments_agent_party_idToparties         consignments[]       @relation("consignments_agent_party_idToparties")
+  consignments_consignments_bill_to_party_idToparties       consignments[]       @relation("consignments_bill_to_party_idToparties")
+  consignments_consignments_consignee_party_idToparties     consignments[]       @relation("consignments_consignee_party_idToparties")
+  consignments_consignments_shipping_line_party_idToparties consignments[]       @relation("consignments_shipping_line_party_idToparties")
+  disbursements                                             disbursements[]
+  drivers                                                   drivers[]
+  invoices                                                  invoices[]
+  manifests                                                 manifests[]
+  party_contacts                                            party_contacts[]
+  payments                                                  payments[]
+  portal_invitations                                        portal_invitations[]
+  release_orders                                            release_orders[]
+  repair_estimates                                          repair_estimates[]
+  service_requests                                          service_requests[]
+  truck_visits                                              truck_visits[]
+  trucks                                                    trucks[]
+  users                                                     users[]
+  vessel_calls                                              vessel_calls[]
+  vessels                                                   vessels[]
+}
+
+model party_contacts {
+  party_contact_id Int      @id(map: "PK__party_co__8614496D068C6418") @default(autoincrement())
+  party_id         Int
+  contact_name     String   @db.NVarChar(100)
+  job_title        String?  @db.NVarChar(100)
+  phone            String?  @db.NVarChar(30)
+  email            String?  @db.NVarChar(100)
+  is_primary       Boolean? @default(false, map: "DF__party_con__is_pr__24B26D99")
+  is_active        Boolean? @default(true, map: "DF__party_con__is_ac__25A691D2")
+  parties          parties  @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_party_contacts_parties")
+}
+
+model payment_allocations {
+  allocation_id    Int       @id(map: "PK__payment___5DFAFF30F0466FA4") @default(autoincrement())
+  payment_id       Int
+  invoice_id       Int
+  allocated_amount Decimal   @db.Decimal(18, 2)
+  allocated_at     DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__payment_a__alloc__2CDD9F46")
+  invoices         invoices  @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_payment_allocations_invoices")
+  payments         payments  @relation(fields: [payment_id], references: [payment_id], onUpdate: NoAction, map: "FK_payment_allocations_payments")
+}
+
+model payments {
+  payment_id          Int                   @id(map: "PK__payments__ED1FC9EA9F91FFF0") @default(autoincrement())
+  site_id             Int
+  cashier_shift_id    Int?
+  party_id            Int
+  payment_ref         String                @unique(map: "UQ__payments__36733CA715E159F2") @db.NVarChar(50)
+  payment_channel     String?               @default("BANK_TRANSFER", map: "DF__payments__paymen__2724C5F0") @db.NVarChar(50)
+  amount              Decimal               @db.Decimal(18, 2)
+  currency            String?               @default("USD", map: "DF__payments__curren__2818EA29") @db.NVarChar(5)
+  status              String?               @default("COMPLETED", map: "DF__payments__status__290D0E62") @db.NVarChar(30)
+  paid_at             DateTime?             @default(dbgenerated("sysutcdatetime()"), map: "DF__payments__paid_a__2A01329B")
+  payment_allocations payment_allocations[]
+  parties             parties               @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_payments_parties")
+  cashier_shifts      cashier_shifts?       @relation(fields: [cashier_shift_id], references: [cashier_shift_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payments_shifts")
+  sites               sites                 @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_payments_sites")
+  refunds             refunds[]
+}
+
+model permissions {
+  permission_id    Int                @id(map: "PK__permissi__E5331AFA1A8586C6") @default(autoincrement())
+  permission_code  String             @unique(map: "UQ__permissi__A98A808E01EB2264") @db.NVarChar(100)
+  module           String             @db.NVarChar(50)
+  description      String?            @db.NVarChar(250)
+  is_approval      Boolean?           @default(false, map: "DF__permissio__is_ap__1387E197")
+  supports_limit   Boolean?           @default(false, map: "DF__permissio__suppo__147C05D0")
+  role_permissions role_permissions[]
+}
+
+model ports {
+  port_id      Int            @id(map: "PK__ports__E57CDF5B0F9305D3") @default(autoincrement())
+  port_code    String         @unique(map: "UQ__ports__467F72F3F7AEED22") @db.NVarChar(20)
+  port_name    String         @db.NVarChar(100)
+  country_code String?        @default("TZ", map: "DF__ports__country_c__4336F4B9") @db.NVarChar(5)
+  port_kind    String?        @default("SEAPORT", map: "DF__ports__port_kind__442B18F2") @db.NVarChar(30)
+  is_active    Boolean?       @default(true, map: "DF__ports__is_active__451F3D2B")
+  vessel_calls vessel_calls[]
+}
+
+model release_orders {
+  release_order_id      Int          @id(map: "PK__release___02712F9BDB7FE1EA") @default(autoincrement())
+  site_id               Int
+  consignment_id        Int
+  requested_by_party_id Int
+  approved_by_user_id   Int?
+  release_no            String       @unique(map: "UQ__release___7F5F25A4615ECD48") @db.NVarChar(50)
+  status                String?      @default("ISSUED", map: "DF__release_o__statu__515009E6") @db.NVarChar(30)
+  issued_at             DateTime?    @default(dbgenerated("sysutcdatetime()"), map: "DF__release_o__issue__52442E1F")
+  expires_at            DateTime?
+  users                 users?       @relation(fields: [approved_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_orders_approved_by")
+  consignments          consignments @relation(fields: [consignment_id], references: [consignment_id], onUpdate: NoAction, map: "FK_release_orders_consignments")
+  parties               parties      @relation(fields: [requested_by_party_id], references: [party_id], onUpdate: NoAction, map: "FK_release_orders_requested_by")
+  sites                 sites        @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_release_orders_sites")
+}
+
+model role_permissions {
+  role_permission_id Int         @id(map: "PK__role_per__B1E85A10553477E0") @default(autoincrement())
+  role_id            Int
+  permission_id      Int
+  grant_type         String?     @default("DO", map: "DF__role_perm__grant__1758727B") @db.NVarChar(20)
+  limit_amount       Decimal?    @db.Decimal(18, 2)
+  limit_currency     String?     @default("USD", map: "DF__role_perm__limit__184C96B4") @db.NVarChar(5)
+  permissions        permissions @relation(fields: [permission_id], references: [permission_id], onUpdate: NoAction, map: "FK_role_permissions_permissions")
+  roles              roles       @relation(fields: [role_id], references: [role_id], onUpdate: NoAction, map: "FK_role_permissions_roles")
+}
+
+model roles {
+  role_id          Int                @id(map: "PK__roles__760965CCF453B8D6") @default(autoincrement())
+  role_code        String             @unique(map: "UQ__roles__BAE63075B25F4D16") @db.NVarChar(50)
+  role_name        String             @db.NVarChar(100)
+  description      String?            @db.NVarChar(250)
+  is_system        Boolean?           @default(false, map: "DF__roles__is_system__0DCF0841")
+  is_external      Boolean?           @default(false, map: "DF__roles__is_extern__0EC32C7A")
+  is_active        Boolean?           @default(true, map: "DF__roles__is_active__0FB750B3")
+  role_permissions role_permissions[]
+  user_roles       user_roles[]
+}
+
+model sites {
+  site_id                                Int                      @id(map: "PK__sites__B22FDBCAFD26E196") @default(autoincrement())
+  company_id                             Int
+  site_code                              String                   @unique(map: "UQ__sites__FF464BAEAFD44D0F") @db.NVarChar(32)
+  site_name                              String                   @db.NVarChar(128)
+  country_code                           String?                  @default("TZ", map: "DF__sites__country_c__58671BC9") @db.NVarChar(8)
+  time_zone                              String?                  @default("Africa/Dar_es_Salaam", map: "DF__sites__time_zone__595B4002") @db.NVarChar(64)
+  calendar_id                            Int?
+  address_line1                          String?                  @db.NVarChar(256)
+  city                                   String?                  @default("Dar es Salaam", map: "DF__sites__city__5A4F643B") @db.NVarChar(64)
+  is_active                              Boolean?                 @default(true, map: "DF__sites__is_active__5B438874")
+  created_at                             DateTime?                @default(dbgenerated("sysutcdatetime()"), map: "DF__sites__created_a__5C37ACAD")
+  updated_at                             DateTime?
+  appointment_slot_rules                 appointment_slot_rules[]
+  appointments                           appointments[]
+  approval_policies                      approval_policies[]
+  approval_requests                      approval_requests[]
+  audit_entries                          audit_entries[]
+  billable_charges                       billable_charges[]
+  calendars                              calendars[]
+  cashier_shifts                         cashier_shifts[]
+  consignments                           consignments[]
+  customs_exams                          customs_exams[]
+  delegations                            delegations[]
+  device_integrations                    device_integrations[]
+  devices                                devices[]
+  disbursements                          disbursements[]
+  documents                              documents[]
+  equipment                              equipment[]
+  exception_cases                        exception_cases[]
+  gates                                  gates[]
+  handling_jobs                          handling_jobs[]
+  inspections                            inspections[]
+  invoices                               invoices[]
+  key_custodies                          key_custodies[]
+  labour_contractors                     labour_contractors[]
+  location_tags                          location_tags[]
+  notification_rules                     notification_rules[]
+  notifications                          notifications[]
+  number_sequences                       number_sequences[]
+  payments                               payments[]
+  print_templates                        print_templates[]
+  reefer_sessions                        reefer_sessions[]
+  refunds                                refunds[]
+  release_orders                         release_orders[]
+  release_rules                          release_rules[]
+  service_requests                       service_requests[]
+  calendars_sites_calendar_idTocalendars calendars?               @relation("sites_calendar_idTocalendars", fields: [calendar_id], references: [calendar_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_sites_calendars")
+  companies                              companies                @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_sites_companies")
+  tariffs                                tariffs[]
+  truck_visits                           truck_visits[]
+  unit_stays                             unit_stays[]
+  user_roles                             user_roles[]
+  user_sites                             user_sites[]
+  users                                  users[]
+  vessel_calls                           vessel_calls[]
+  weighing_tickets                       weighing_tickets[]
+  yard_blocks                            yard_blocks[]
+  yard_levels                            yard_levels[]
+  yard_locations                         yard_locations[]
+  yard_moves                             yard_moves[]
+}
+
+model tariff_rules {
+  tariff_rule_id    Int                @id(map: "PK__tariff_r__AE09765980E3320B") @default(autoincrement())
+  tariff_id         Int
+  charge_code       String             @db.NVarChar(50)
+  unit_type_id      Int?
+  calculation_basis String?            @default("FLAT", map: "DF__tariff_ru__calcu__0B7CAB7B") @db.NVarChar(50)
+  base_rate         Decimal            @db.Decimal(18, 2)
+  currency          String?            @default("USD", map: "DF__tariff_ru__curre__0C70CFB4") @db.NVarChar(5)
+  free_days         Int?               @default(0, map: "DF__tariff_ru__free___0D64F3ED")
+  billable_charges  billable_charges[]
+  tariffs           tariffs            @relation(fields: [tariff_id], references: [tariff_id], onUpdate: NoAction, map: "FK_tariff_rules_tariffs")
+  unit_types        unit_types?        @relation(fields: [unit_type_id], references: [unit_type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_rules_unit_types")
+}
+
+model tariffs {
+  tariff_id    Int            @id(map: "PK__tariffs__668D423B2E4AD1BD") @default(autoincrement())
+  company_id   Int
+  site_id      Int
+  tariff_code  String         @db.NVarChar(50)
+  tariff_name  String         @db.NVarChar(100)
+  valid_from   DateTime       @db.Date
+  valid_to     DateTime?      @db.Date
+  is_active    Boolean?       @default(true, map: "DF__tariffs__is_acti__08A03ED0")
+  tariff_rules tariff_rules[]
+  companies    companies      @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_tariffs_companies")
+  sites        sites          @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_tariffs_sites")
+}
+
+model truck_visit_units {
+  truck_visit_unit_id Int          @id(map: "PK__truck_vi__843D171B537B0882") @default(autoincrement())
+  truck_visit_id      Int
+  unit_stay_id        Int
+  direction           String?      @default("DROP", map: "DF__truck_vis__direc__22951AFD") @db.NVarChar(20)
+  status              String?      @default("PLANNED", map: "DF__truck_vis__statu__23893F36") @db.NVarChar(30)
+  truck_position      String?      @default("SINGLE", map: "DF__truck_vis__truck__247D636F") @db.NVarChar(20)
+  seal_no             String?      @db.NVarChar(50)
+  unit_stays          unit_stays   @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_truck_visit_units_stays")
+  truck_visits        truck_visits @relation(fields: [truck_visit_id], references: [truck_visit_id], onUpdate: NoAction, map: "FK_truck_visit_units_visits")
+}
+
+model truck_visits {
+  truck_visit_id       Int                 @id(map: "PK__truck_vi__97C5E17A2C481C84") @default(autoincrement())
+  site_id              Int
+  visit_no             String              @unique(map: "UQ__truck_vi__375A2D1301BC5E0B") @db.NVarChar(50)
+  visit_type_id        Int
+  truck_id             Int?
+  driver_id            Int?
+  transporter_party_id Int?
+  gate_id              Int?
+  gate_lane_id         Int?
+  status               String?             @default("IN_LANE", map: "DF__truck_vis__statu__1EC48A19") @db.NVarChar(30)
+  arrived_at           DateTime?           @default(dbgenerated("sysutcdatetime()"), map: "DF__truck_vis__arriv__1FB8AE52")
+  departed_at          DateTime?
+  exception_cases      exception_cases[]
+  truck_visit_units    truck_visit_units[]
+  drivers              drivers?            @relation(fields: [driver_id], references: [driver_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visits_drivers")
+  gate_lanes           gate_lanes?         @relation(fields: [gate_lane_id], references: [gate_lane_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visits_gate_lanes")
+  gates                gates?              @relation(fields: [gate_id], references: [gate_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visits_gates")
+  parties              parties?            @relation(fields: [transporter_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visits_transporters")
+  sites                sites               @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_truck_visits_sites")
+  trucks               trucks?             @relation(fields: [truck_id], references: [truck_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visits_trucks")
+  visit_types          visit_types         @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_truck_visits_visit_types")
+  weighing_tickets     weighing_tickets[]
+}
+
+model trucks {
+  truck_id             Int            @id(map: "PK__trucks__27C8351A71465A41") @default(autoincrement())
+  plate_no             String         @unique(map: "UQ__trucks__1E8A9DE47B213AA5") @db.NVarChar(30)
+  vehicle_kind         String?        @default("TRUCK", map: "DF__trucks__vehicle___35DCF99B") @db.NVarChar(30)
+  transporter_party_id Int?
+  country_code         String?        @default("TZ", map: "DF__trucks__country___36D11DD4") @db.NVarChar(5)
+  make_model           String?        @db.NVarChar(100)
+  tare_kg              Int?
+  is_active            Boolean?       @default(true, map: "DF__trucks__is_activ__37C5420D")
+  truck_visits         truck_visits[]
+  parties              parties?       @relation(fields: [transporter_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_trucks_parties")
+}
+
+model unit_stays {
+  unit_stay_id      Int                 @id(map: "PK__unit_sta__079F1EA4ED3BC9DE") @default(autoincrement())
+  site_id           Int
+  unit_type_id      Int
+  consignment_id    Int?
+  cargo_regime_id   Int
+  yard_location_id  Int?
+  unit_no           String              @db.NVarChar(30)
+  flow              String?             @default("IMPORT", map: "DF__unit_stays__flow__031C6FA4") @db.NVarChar(30)
+  full_empty        String?             @default("F", map: "DF__unit_stay__full___041093DD") @db.NVarChar(5)
+  physical_status   String?             @default("IN_YARD", map: "DF__unit_stay__physi__0504B816") @db.NVarChar(30)
+  customs_status    String?             @default("CLEARED", map: "DF__unit_stay__custo__05F8DC4F") @db.NVarChar(30)
+  billing_status    String?             @default("NONE", map: "DF__unit_stay__billi__06ED0088") @db.NVarChar(30)
+  release_status    String?             @default("READY", map: "DF__unit_stay__relea__07E124C1") @db.NVarChar(30)
+  seal_no           String?             @db.NVarChar(50)
+  gross_weight_kg   Decimal?            @db.Decimal(12, 2)
+  arrived_at        DateTime?           @default(dbgenerated("sysutcdatetime()"), map: "DF__unit_stay__arriv__08D548FA")
+  departed_at       DateTime?
+  billable_charges  billable_charges[]
+  customs_exams     customs_exams[]
+  customs_refs      customs_refs[]
+  dg_lines          dg_lines[]
+  exception_cases   exception_cases[]
+  handling_jobs     handling_jobs[]
+  holds             holds[]
+  inspections       inspections[]
+  invoice_lines     invoice_lines[]
+  key_custodies     key_custodies[]
+  reefer_sessions   reefer_sessions[]
+  repair_estimates  repair_estimates[]
+  truck_visit_units truck_visit_units[]
+  cargo_regimes     cargo_regimes       @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onUpdate: NoAction, map: "FK_unit_stays_cargo_regimes")
+  consignments      consignments?       @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stays_consignments")
+  yard_locations    yard_locations?     @relation(fields: [yard_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stays_yard_locations")
+  sites             sites               @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_unit_stays_sites")
+  unit_types        unit_types          @relation(fields: [unit_type_id], references: [unit_type_id], onUpdate: NoAction, map: "FK_unit_stays_unit_types")
+  yard_moves        yard_moves[]
+}
+
+model unit_types {
+  unit_type_id Int            @id(map: "PK__unit_typ__7509FBC9285FB5FA") @default(autoincrement())
+  type_code    String         @unique(map: "UQ__unit_typ__2CB4DBF5BD1D0BCB") @db.NVarChar(30)
+  type_name    String         @db.NVarChar(100)
+  category     String?        @default("CONTAINER", map: "DF__unit_type__categ__6F1576F7") @db.NVarChar(30)
+  length_ft    Int?
+  teu          Decimal?       @db.Decimal(5, 2)
+  is_reefer    Boolean?       @default(false, map: "DF__unit_type__is_re__70099B30")
+  is_active    Boolean?       @default(true, map: "DF__unit_type__is_ac__70FDBF69")
+  tariff_rules tariff_rules[]
+  unit_stays   unit_stays[]
+}
+
+model user_roles {
+  user_role_id Int       @id(map: "PK__user_rol__B8D9ABA298DC45C8") @default(autoincrement())
+  user_id      Int
+  role_id      Int
+  site_id      Int?
+  valid_from   DateTime? @default(dbgenerated("CONVERT([date],getutcdate())"), map: "DF__user_role__valid__2D47B39A") @db.Date
+  valid_to     DateTime? @db.Date
+  roles        roles     @relation(fields: [role_id], references: [role_id], onUpdate: NoAction, map: "FK_user_roles_roles")
+  sites        sites?    @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_user_roles_sites")
+  users        users     @relation(fields: [user_id], references: [user_id], onUpdate: NoAction, map: "FK_user_roles_users")
+}
+
+model user_sites {
+  user_site_id Int   @id(map: "PK__user_sit__4FD45657F8B8ADB2") @default(autoincrement())
+  user_id      Int
+  site_id      Int
+  sites        sites @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_user_sites_sites")
+  users        users @relation(fields: [user_id], references: [user_id], onUpdate: NoAction, map: "FK_user_sites_users")
+}
+
+model users {
+  user_id                                                         Int                  @id(map: "PK__users__B9BE370FC0CA60E1") @default(autoincrement())
+  user_sub                                                        String?              @db.NVarChar(100)
+  user_name                                                       String               @unique(map: "UQ__users__7C9273C43997CF36") @db.NVarChar(100)
+  email                                                           String?              @db.NVarChar(150)
+  phone                                                           String?              @db.NVarChar(30)
+  party_id                                                        Int?
+  default_site_id                                                 Int?
+  is_active                                                       Boolean?             @default(true, map: "DF__users__is_active__297722B6")
+  created_at                                                      DateTime?            @default(dbgenerated("sysutcdatetime()"), map: "DF__users__created_a__2A6B46EF")
+  approval_requests_approval_requests_decided_by_user_idTousers   approval_requests[]  @relation("approval_requests_decided_by_user_idTousers")
+  approval_requests_approval_requests_requested_by_user_idTousers approval_requests[]  @relation("approval_requests_requested_by_user_idTousers")
+  audit_entries                                                   audit_entries[]
+  cashier_shifts                                                  cashier_shifts[]
+  delegations_delegations_from_user_idTousers                     delegations[]        @relation("delegations_from_user_idTousers")
+  delegations_delegations_to_user_idTousers                       delegations[]        @relation("delegations_to_user_idTousers")
+  exception_cases                                                 exception_cases[]
+  exception_comments                                              exception_comments[]
+  holds_holds_lifted_by_user_idTousers                            holds[]              @relation("holds_lifted_by_user_idTousers")
+  holds_holds_placed_by_user_idTousers                            holds[]              @relation("holds_placed_by_user_idTousers")
+  inspections                                                     inspections[]
+  key_custodies                                                   key_custodies[]
+  notifications                                                   notifications[]
+  release_orders                                                  release_orders[]
+  saved_reports                                                   saved_reports[]
+  user_roles                                                      user_roles[]
+  user_sites                                                      user_sites[]
+  sites                                                           sites?               @relation(fields: [default_site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_users_default_site")
+  parties                                                         parties?             @relation(fields: [party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_users_parties")
+  yard_moves                                                      yard_moves[]
+}
+
+model vessel_calls {
+  vessel_call_id         Int            @id(map: "PK__vessel_c__C7F6EB76AB48EC7E") @default(autoincrement())
+  vessel_id              Int
+  site_id                Int
+  port_id                Int
+  shipping_line_party_id Int?
+  voyage_no              String         @db.NVarChar(50)
+  eta                    DateTime?
+  ata                    DateTime?
+  status                 String?        @default("EXPECTED", map: "DF__vessel_ca__statu__546180BB") @db.NVarChar(30)
+  consignments           consignments[]
+  manifests              manifests[]
+  parties                parties?       @relation(fields: [shipping_line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_vessel_calls_parties")
+  ports                  ports          @relation(fields: [port_id], references: [port_id], onUpdate: NoAction, map: "FK_vessel_calls_ports")
+  sites                  sites          @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_vessel_calls_sites")
+  vessels                vessels        @relation(fields: [vessel_id], references: [vessel_id], onUpdate: NoAction, map: "FK_vessel_calls_vessels")
+}
+
+model vessels {
+  vessel_id         Int            @id(map: "PK__vessels__A3522863C0074292") @default(autoincrement())
+  vessel_name       String         @db.NVarChar(100)
+  imo_no            String?        @db.NVarChar(30)
+  call_sign         String?        @db.NVarChar(30)
+  operator_party_id Int?
+  is_active         Boolean?       @default(true, map: "DF__vessels__is_acti__3F6663D5")
+  vessel_calls      vessel_calls[]
+  parties           parties?       @relation(fields: [operator_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_vessels_parties")
+}
+
+model visit_types {
+  visit_type_id          Int                      @id(map: "PK__visit_ty__747655B1838607B3") @default(autoincrement())
+  visit_code             String                   @unique(map: "UQ__visit_ty__6B282A413798DEDA") @db.NVarChar(30)
+  visit_name             String                   @db.NVarChar(100)
+  requires_appointment   Boolean?                 @default(false, map: "DF__visit_typ__requi__19FFD4FC")
+  is_active              Boolean?                 @default(true, map: "DF__visit_typ__is_ac__1AF3F935")
+  appointment_slot_rules appointment_slot_rules[]
+  appointments           appointments[]
+  truck_visits           truck_visits[]
+}
+
+model weighing_tickets {
+  weighing_ticket_id Int          @id(map: "PK__weighing__AF6560E88436A5D9") @default(autoincrement())
+  site_id            Int
+  truck_visit_id     Int
+  gross_weight_kg    Decimal      @db.Decimal(12, 2)
+  tare_weight_kg     Decimal?     @default(0.00, map: "DF__weighing___tare___2D12A970") @db.Decimal(12, 2)
+  net_weight_kg      Decimal      @db.Decimal(12, 2)
+  weighed_at         DateTime?    @default(dbgenerated("sysutcdatetime()"), map: "DF__weighing___weigh__2E06CDA9")
+  status             String?      @default("COMPLETED", map: "DF__weighing___statu__2EFAF1E2") @db.NVarChar(30)
+  sites              sites        @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_weighing_tickets_sites")
+  truck_visits       truck_visits @relation(fields: [truck_visit_id], references: [truck_visit_id], onUpdate: NoAction, map: "FK_weighing_tickets_visits")
+}
+
+model yard_blocks {
+  yard_block_id  Int              @id(map: "PK__yard_blo__C22CE1410B28C152") @default(autoincrement())
+  site_id        Int
+  block_code     String           @db.NVarChar(20)
+  block_name     String           @db.NVarChar(100)
+  max_bays       Int?             @default(10, map: "DF__yard_bloc__max_b__75C27486")
+  max_rows       Int?             @default(6, map: "DF__yard_bloc__max_r__76B698BF")
+  max_tiers      Int?             @default(4, map: "DF__yard_bloc__max_t__77AABCF8")
+  sites          sites            @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_yard_blocks_sites")
+  yard_locations yard_locations[]
+}
+
+model yard_levels {
+  yard_level_id Int    @id(map: "PK__yard_lev__8197615B2A16CD1C") @default(autoincrement())
+  site_id       Int
+  level_no      Int
+  level_name    String @db.NVarChar(50)
+  sites         sites  @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_yard_levels_sites")
+}
+
+model yard_locations {
+  yard_location_id                                       Int              @id(map: "PK__yard_loc__9582717161ACF40C") @default(autoincrement())
+  site_id                                                Int
+  yard_block_id                                          Int
+  parent_id                                              Int?
+  location_code                                          String           @db.NVarChar(30)
+  full_code                                              String           @unique(map: "UQ__yard_loc__224F1E74A83B390B") @db.NVarChar(50)
+  kind                                                   String?          @default("SLOT", map: "DF__yard_locat__kind__7B7B4DDC") @db.NVarChar(30)
+  is_slot                                                Boolean?         @default(true, map: "DF__yard_loca__is_sl__7C6F7215")
+  is_blocked                                             Boolean?         @default(false, map: "DF__yard_loca__is_bl__7D63964E")
+  occupied_unit_id                                       Int?
+  unit_stays                                             unit_stays[]
+  yard_blocks                                            yard_blocks      @relation(fields: [yard_block_id], references: [yard_block_id], onUpdate: NoAction, map: "FK_yard_locations_yard_blocks")
+  yard_locations                                         yard_locations?  @relation("yard_locationsToyard_locations", fields: [parent_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_yard_locations_parent")
+  other_yard_locations                                   yard_locations[] @relation("yard_locationsToyard_locations")
+  sites                                                  sites            @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_yard_locations_sites")
+  yard_moves_yard_moves_from_location_idToyard_locations yard_moves[]     @relation("yard_moves_from_location_idToyard_locations")
+  yard_moves_yard_moves_to_location_idToyard_locations   yard_moves[]     @relation("yard_moves_to_location_idToyard_locations")
+}
+
+model yard_moves {
+  yard_move_id                                               Int             @id(map: "PK__yard_mov__66E73BD53D0C7E7B") @default(autoincrement())
+  site_id                                                    Int
+  unit_stay_id                                               Int
+  from_location_id                                           Int?
+  to_location_id                                             Int
+  operator_user_id                                           Int?
+  equipment_id                                               Int?
+  move_type                                                  String?         @default("ALLOCATE", map: "DF__yard_move__move___2759D01A") @db.NVarChar(30)
+  status                                                     String?         @default("COMPLETED", map: "DF__yard_move__statu__284DF453") @db.NVarChar(30)
+  ordered_at                                                 DateTime?       @default(dbgenerated("sysutcdatetime()"), map: "DF__yard_move__order__2942188C")
+  executed_at                                                DateTime?       @default(dbgenerated("sysutcdatetime()"), map: "DF__yard_move__execu__2A363CC5")
+  equipment                                                  equipment?      @relation(fields: [equipment_id], references: [equipment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_yard_moves_equipment")
+  yard_locations_yard_moves_from_location_idToyard_locations yard_locations? @relation("yard_moves_from_location_idToyard_locations", fields: [from_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_yard_moves_from_loc")
+  users                                                      users?          @relation(fields: [operator_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_yard_moves_users")
+  sites                                                      sites           @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_yard_moves_sites")
+  yard_locations_yard_moves_to_location_idToyard_locations   yard_locations  @relation("yard_moves_to_location_idToyard_locations", fields: [to_location_id], references: [yard_location_id], onUpdate: NoAction, map: "FK_yard_moves_to_loc")
+  unit_stays                                                 unit_stays      @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_yard_moves_unit_stays")
+}
+
+model accounting_periods {
+  period_id   Int       @id(map: "PK__accounti__2323EE4401B3BC27") @default(autoincrement())
+  company_id  Int
+  period_code String    @unique(map: "UQ__accounti__04456299F2977331") @db.NVarChar(32)
+  start_date  DateTime  @db.Date
+  end_date    DateTime  @db.Date
+  status      String?   @default("OPEN", map: "DF__accountin__statu__6DEC4894") @db.NVarChar(16)
+  is_closed   Boolean?  @default(false, map: "DF__accountin__is_cl__6EE06CCD")
+  companies   companies @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_accounting_periods_companies")
+}
+
+model appointment_slot_rules {
+  rule_id             Int         @id(map: "PK__appointm__E92A929656A1207F") @default(autoincrement())
+  site_id             Int
+  visit_type_id       Int
+  slot_duration_min   Int?        @default(60, map: "DF__appointme__slot___4B622666")
+  max_trucks_per_slot Int?        @default(20, map: "DF__appointme__max_t__4C564A9F")
+  is_active           Boolean?    @default(true, map: "DF__appointme__is_ac__4D4A6ED8")
+  sites               sites       @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_appointment_slot_rules_sites")
+  visit_types         visit_types @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_appointment_slot_rules_visit_types")
+}
+
+model approval_policies {
+  approval_policy_id Int      @id(map: "PK__approval__91E6BD0C9660800F") @default(autoincrement())
+  site_id            Int
+  permission_code    String   @db.NVarChar(64)
+  min_amount         Decimal? @default(0.00, map: "DF__approval___min_a__55209ACA") @db.Decimal(18, 2)
+  max_amount         Decimal? @db.Decimal(18, 2)
+  approval_level     Int?     @default(1, map: "DF__approval___appro__5614BF03")
+  is_active          Boolean? @default(true, map: "DF__approval___is_ac__5708E33C")
+  sites              sites    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_approval_policies_sites")
+}
+
+model cargo_units {
+  cargo_unit_id  Int      @id(map: "PK__cargo_un__133C86AF45A68AF2") @default(autoincrement())
+  category       String?  @default("CONTAINER", map: "DF__cargo_uni__categ__6B44E613") @db.NVarChar(32)
+  unit_no        String   @unique(map: "UQ__cargo_un__D3A03941776DB55D") @db.NVarChar(32)
+  unit_type_code String   @db.NVarChar(16)
+  owner_party_id Int?
+  make           String?  @db.NVarChar(64)
+  model          String?  @db.NVarChar(64)
+  tare_kg        Int?
+  parties        parties? @relation(fields: [owner_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cargo_units_parties")
+}
+
+model charge_codes {
+  charge_code_id Int      @id(map: "PK__charge_c__6D89F80B6E75C0FF") @default(autoincrement())
+  charge_code    String   @unique(map: "UQ__charge_c__4C135602A19CD02C") @db.NVarChar(32)
+  charge_name    String   @db.NVarChar(128)
+  default_uom    String?  @default("DAY", map: "DF__charge_co__defau__000AF8CF") @db.NVarChar(16)
+  is_active      Boolean? @default(true, map: "DF__charge_co__is_ac__00FF1D08")
+}
+
+model consignment_lines {
+  consignment_line_id Int          @id(map: "PK__consignm__0BD37D9EB5EED401") @default(autoincrement())
+  consignment_id      Int
+  line_no             Int
+  unit_type_code      String?      @db.NVarChar(16)
+  qty_expected        Decimal?     @default(1.0, map: "DF__consignme__qty_e__658C0CBD") @db.Decimal(12, 2)
+  qty_received        Decimal?     @default(0.0, map: "DF__consignme__qty_r__668030F6") @db.Decimal(12, 2)
+  uom                 String?      @default("UNIT", map: "DF__consignment__uom__6774552F") @db.NVarChar(16)
+  description         String?      @db.NVarChar(256)
+  consignments        consignments @relation(fields: [consignment_id], references: [consignment_id], onUpdate: NoAction, map: "FK_consignment_lines_consignments")
+}
+
+model customs_exams {
+  customs_exam_id Int        @id(map: "PK__customs___F98E1C43DFC22928") @default(autoincrement())
+  site_id         Int
+  unit_stay_id    Int
+  exam_type       String?    @default("PHYSICAL", map: "DF__customs_e__exam___47C69FAC") @db.NVarChar(32)
+  status          String?    @default("REQUESTED", map: "DF__customs_e__statu__48BAC3E5") @db.NVarChar(32)
+  requested_at    DateTime?  @default(dbgenerated("sysutcdatetime()"), map: "DF__customs_e__reque__49AEE81E")
+  completed_at    DateTime?
+  officer_name    String?    @db.NVarChar(128)
+  sites           sites      @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_customs_exams_sites")
+  unit_stays      unit_stays @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_customs_exams_unit_stays")
+}
+
+model delegations {
+  delegation_id                         Int      @id(map: "PK__delegati__2FB12689F954E669") @default(autoincrement())
+  site_id                               Int
+  from_user_id                          Int
+  to_user_id                            Int
+  starts_at                             DateTime
+  ends_at                               DateTime
+  reason                                String?  @db.NVarChar(256)
+  is_active                             Boolean? @default(true, map: "DF__delegatio__is_ac__320C68B7")
+  users_delegations_from_user_idTousers users    @relation("delegations_from_user_idTousers", fields: [from_user_id], references: [user_id], onUpdate: NoAction, map: "FK_delegations_from_user")
+  sites                                 sites    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_delegations_sites")
+  users_delegations_to_user_idTousers   users    @relation("delegations_to_user_idTousers", fields: [to_user_id], references: [user_id], onUpdate: NoAction, map: "FK_delegations_to_user")
+}
+
+model device_integrations {
+  device_integration_id Int       @id(map: "PK__device_i__87BD1DBC1B5539CC") @default(autoincrement())
+  site_id               Int
+  device_type           String    @db.NVarChar(50)
+  endpoint_url          String?   @db.NVarChar(256)
+  is_active             Boolean?  @default(true, map: "DF__device_in__is_ac__090A5324")
+  created_at            DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__device_in__creat__09FE775D")
+  sites                 sites     @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_device_integrations_sites")
+}
+
+model devices {
+  device_id     Int       @id(map: "PK__devices__3B085D8BE74E63A9") @default(autoincrement())
+  site_id       Int
+  device_code   String    @unique(map: "UQ__devices__709B0F4882696AA5") @db.NVarChar(50)
+  device_name   String    @db.NVarChar(100)
+  device_kind   String?   @default("TABLET", map: "DF__devices__device___04459E07") @db.NVarChar(30)
+  public_key    String?   @db.NVarChar(Max)
+  is_active     Boolean?  @default(true, map: "DF__devices__is_acti__0539C240")
+  registered_at DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__devices__registe__062DE679")
+  revoked_at    DateTime?
+  sites         sites     @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_devices_sites")
+}
+
+model dg_lines {
+  dg_line_id           Int        @id(map: "PK__dg_lines__11F5C86813463587") @default(autoincrement())
+  unit_stay_id         Int
+  un_number            String     @db.NVarChar(16)
+  imo_class            String     @db.NVarChar(16)
+  packing_group        String?    @db.NVarChar(8)
+  proper_shipping_name String?    @db.NVarChar(256)
+  unit_stays           unit_stays @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_dg_lines_unit_stays")
+}
+
+model disbursements {
+  disbursement_id Int       @id(map: "PK__disburse__F165AB574AD169D8") @default(autoincrement())
+  site_id         Int
+  party_id        Int
+  amount          Decimal   @db.Decimal(18, 2)
+  currency        String?   @default("USD", map: "DF__disbursem__curre__338A9CD5") @db.NVarChar(8)
+  status          String?   @default("PENDING", map: "DF__disbursem__statu__347EC10E") @db.NVarChar(32)
+  created_at      DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__disbursem__creat__3572E547")
+  parties         parties   @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_disbursements_parties")
+  sites           sites     @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_disbursements_sites")
+}
+
+model document_types {
+  document_type_id  Int      @id(map: "PK__document__69F7C2B17EEA7195") @default(autoincrement())
+  doc_type_code     String   @unique(map: "UQ__document__028F125200AE34A3") @db.NVarChar(32)
+  doc_type_name     String   @db.NVarChar(128)
+  applies_to        String   @db.NVarChar(64)
+  retention_years   Int?     @default(7, map: "DF__document___reten__7226EDCC")
+  requires_approval Boolean? @default(false, map: "DF__document___requi__731B1205")
+  max_size_mb       Int?     @default(10, map: "DF__document___max_s__740F363E")
+  allowed_ext       String?  @default("PDF,JPG,PNG", map: "DF__document___allow__75035A77") @db.NVarChar(128)
+  is_active         Boolean? @default(true, map: "DF__document___is_ac__75F77EB0")
+}
+
+model documents {
+  document_id   Int       @id(map: "PK__document__9666E8AC80501B7C") @default(autoincrement())
+  site_id       Int?
+  doc_type_code String    @db.NVarChar(32)
+  entity_name   String    @db.NVarChar(64)
+  entity_id     Int
+  file_name     String    @db.NVarChar(256)
+  content_type  String?   @default("application/pdf", map: "DF__documents__conte__78D3EB5B") @db.NVarChar(64)
+  size_bytes    Int?      @default(0, map: "DF__documents__size___79C80F94")
+  sha256        String?   @db.NVarChar(128)
+  version_no    Int?      @default(1, map: "DF__documents__versi__7ABC33CD")
+  status        String?   @default("ACTIVE", map: "DF__documents__statu__7BB05806") @db.NVarChar(32)
+  created_at    DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__documents__creat__7CA47C3F")
+  sites         sites?    @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_documents_sites")
+}
+
+model exception_types {
+  exception_type_id Int      @id(map: "PK__exceptio__A39B0A36F61D2B72") @default(autoincrement())
+  type_code         String   @unique(map: "UQ__exceptio__2CB4DBF5FAB88C12") @db.NVarChar(32)
+  type_name         String   @db.NVarChar(64)
+  default_priority  String?  @default("MEDIUM", map: "DF__exception__defau__60924D76") @db.NVarChar(16)
+  is_active         Boolean? @default(true, map: "DF__exception__is_ac__618671AF")
+}
+
+model field_rules {
+  field_rule_id Int      @id(map: "PK__field_ru__10044EA90D048779") @default(autoincrement())
+  role_code     String   @db.NVarChar(50)
+  entity_name   String   @db.NVarChar(50)
+  field_name    String   @db.NVarChar(50)
+  access_level  String?  @default("READONLY", map: "DF__field_rul__acces__6B79F03D") @db.NVarChar(20)
+  is_mandatory  Boolean? @default(false, map: "DF__field_rul__is_ma__6C6E1476")
+  is_hidden     Boolean? @default(false, map: "DF__field_rul__is_hi__6D6238AF")
+  is_readonly   Boolean? @default(true, map: "DF__field_rul__is_re__6E565CE8")
+}
+
+model gl_settings {
+  gl_setting_id Int       @id(map: "PK__gl_setti__8126447A657A3A6F") @default(autoincrement())
+  company_id    Int
+  setting_key   String    @unique(map: "UQ__gl_setti__0DFAC42783CBFD04") @db.NVarChar(64)
+  setting_value String    @db.NVarChar(256)
+  description   String?   @db.NVarChar(256)
+  companies     companies @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_gl_settings_companies")
+}
+
+model handling_job_lines {
+  job_line_id       Int           @id(map: "PK__handling__3B68E235324034CA") @default(autoincrement())
+  handling_job_id   Int
+  line_no           Int
+  package_count     Int
+  uom               String?       @default("PKG", map: "DF__handling_jo__uom__5B988E2F") @db.NVarChar(16)
+  cargo_description String?       @db.NVarChar(256)
+  handling_jobs     handling_jobs @relation(fields: [handling_job_id], references: [handling_job_id], onUpdate: NoAction, map: "FK_handling_job_lines_jobs")
+}
+
+model handling_jobs {
+  handling_job_id    Int                  @id(map: "PK__handling__8A4D1B73B07BED41") @default(autoincrement())
+  site_id            Int
+  unit_stay_id       Int
+  contractor_id      Int?
+  job_type           String?              @default("STRIPPING", map: "DF__handling___job_t__57C7FD4B") @db.NVarChar(32)
+  status             String?              @default("PLANNED", map: "DF__handling___statu__58BC2184") @db.NVarChar(32)
+  started_at         DateTime?
+  completed_at       DateTime?
+  handling_job_lines handling_job_lines[]
+  labour_contractors labour_contractors?  @relation(fields: [contractor_id], references: [contractor_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_handling_jobs_contractors")
+  sites              sites                @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_handling_jobs_sites")
+  unit_stays         unit_stays           @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_handling_jobs_unit_stays")
+}
+
+model inspection_findings {
+  finding_id    Int         @id(map: "PK__inspecti__A7D52AA4F3C06775") @default(autoincrement())
+  inspection_id Int
+  area          String      @db.NVarChar(32)
+  severity      String?     @default("MEDIUM", map: "DF__inspectio__sever__379037E3") @db.NVarChar(16)
+  damage_code   String      @db.NVarChar(32)
+  remarks       String?     @db.NVarChar(256)
+  inspections   inspections @relation(fields: [inspection_id], references: [inspection_id], onUpdate: NoAction, map: "FK_inspection_findings_inspections")
+}
+
+model key_custodies {
+  key_custody_id    Int        @id(map: "PK__key_cust__0034351A7FE76E08") @default(autoincrement())
+  site_id           Int
+  unit_stay_id      Int
+  key_tag           String     @db.NVarChar(32)
+  cabinet_location  String?    @db.NVarChar(64)
+  status            String?    @default("IN_CABINET", map: "DF__key_custo__statu__3A6CA48E") @db.NVarChar(32)
+  handed_to_user_id Int?
+  updated_at        DateTime?  @default(dbgenerated("sysutcdatetime()"), map: "DF__key_custo__updat__3B60C8C7")
+  sites             sites      @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_key_custodies_sites")
+  unit_stays        unit_stays @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_key_custodies_unit_stays")
+  users             users?     @relation(fields: [handed_to_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_key_custodies_users")
+}
+
+model labour_contractors {
+  contractor_id   Int             @id(map: "PK__labour_c__F8ED501FF51DA2AD") @default(autoincrement())
+  site_id         Int
+  contractor_name String          @db.NVarChar(128)
+  phone           String?         @db.NVarChar(32)
+  contact_person  String?         @db.NVarChar(128)
+  is_active       Boolean?        @default(true, map: "DF__labour_co__is_ac__54EB90A0")
+  handling_jobs   handling_jobs[]
+  sites           sites           @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_labour_contractors_sites")
+}
+
+model location_tags {
+  location_tag_id Int    @id(map: "PK__location__9D9CE09DFC7E0296") @default(autoincrement())
+  site_id         Int
+  tag_code        String @unique(map: "UQ__location__A15AC8EB803C2B2D") @db.NVarChar(32)
+  tag_name        String @db.NVarChar(64)
+  sites           sites  @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_location_tags_sites")
+}
+
+model manifest_lines {
+  manifest_line_id Int       @id(map: "PK__manifest__C22BCE7FD67DB74D") @default(autoincrement())
+  manifest_id      Int
+  line_no          Int
+  unit_no          String    @db.NVarChar(32)
+  bl_no            String?   @db.NVarChar(64)
+  consignee_raw    String?   @db.NVarChar(128)
+  full_empty       String?   @default("F", map: "DF__manifest___full___5C02A283") @db.NVarChar(8)
+  seal_no          String?   @db.NVarChar(64)
+  gross_weight_kg  Decimal?  @db.Decimal(12, 2)
+  match_status     String?   @default("NEW", map: "DF__manifest___match__5CF6C6BC") @db.NVarChar(32)
+  manifests        manifests @relation(fields: [manifest_id], references: [manifest_id], onUpdate: NoAction, map: "FK_manifest_lines_manifests")
+}
+
+model notification_rules {
+  rule_id        Int      @id(map: "PK__notifica__E92A92961DA98189") @default(autoincrement())
+  site_id        Int
+  event_type     String   @db.NVarChar(64)
+  channel        String?  @default("EMAIL", map: "DF__notificat__chann__40E497F3") @db.NVarChar(16)
+  recipient_role String   @db.NVarChar(64)
+  is_active      Boolean? @default(true, map: "DF__notificat__is_ac__41D8BC2C")
+  sites          sites    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_notification_rules_sites")
+}
+
+model notification_templates {
+  template_id      Int      @id(map: "PK__notifica__BE44E079A60ABBA3") @default(autoincrement())
+  template_code    String   @unique(map: "UQ__notifica__F7B8A39DCB2490FC") @db.NVarChar(64)
+  channel          String?  @default("EMAIL", map: "DF__notificat__chann__3D14070F") @db.NVarChar(16)
+  subject_template String   @db.NVarChar(256)
+  body_template    String   @db.NVarChar(Max)
+  is_active        Boolean? @default(true, map: "DF__notificat__is_ac__3E082B48")
+}
+
+model payment_channels {
+  channel_id   Int      @id(map: "PK__payment___2D0861AB6C8F8044") @default(autoincrement())
+  channel_code String   @unique(map: "UQ__payment___24C383EBAF45C9A4") @db.NVarChar(32)
+  channel_name String   @db.NVarChar(64)
+  requires_ref Boolean? @default(true, map: "DF__payment_c__requi__04CFADEC")
+  is_active    Boolean? @default(true, map: "DF__payment_c__is_ac__05C3D225")
+}
+
+model portal_invitations {
+  invitation_id Int       @id(map: "PK__portal_i__94B74D7CB1D0A535") @default(autoincrement())
+  party_id      Int
+  email         String    @db.NVarChar(128)
+  role          String?   @default("CLEARING_AGENT", map: "DF__portal_inv__role__5E74FADA") @db.NVarChar(32)
+  status        String?   @default("PENDING", map: "DF__portal_in__statu__5F691F13") @db.NVarChar(32)
+  token         String?   @db.NVarChar(128)
+  expires_at    DateTime?
+  sent_at       DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__portal_in__sent___605D434C")
+  parties       parties   @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_portal_invitations_parties")
+}
+
+model print_templates {
+  print_template_id Int      @id(map: "PK__print_te__D2C0E9FF8E25068A") @default(autoincrement())
+  site_id           Int
+  template_code     String   @unique(map: "UQ__print_te__F7B8A39D703DD6AC") @db.NVarChar(64)
+  template_name     String   @db.NVarChar(128)
+  raw_content       String?  @db.NVarChar(Max)
+  is_active         Boolean? @default(true, map: "DF__print_tem__is_ac__45A94D10")
+  sites             sites    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_print_templates_sites")
+}
+
+model reefer_readings {
+  reading_id        Int             @id(map: "PK__reefer_r__8091F95A0C92D365") @default(autoincrement())
+  reefer_session_id Int
+  set_temp_c        Decimal         @db.Decimal(5, 2)
+  supply_temp_c     Decimal         @db.Decimal(5, 2)
+  return_temp_c     Decimal         @db.Decimal(5, 2)
+  power_kw          Decimal?        @default(4.5, map: "DF__reefer_re__power__6BCEF5F8") @db.Decimal(6, 2)
+  recorded_at       DateTime?       @default(dbgenerated("sysutcdatetime()"), map: "DF__reefer_re__recor__6CC31A31")
+  reefer_sessions   reefer_sessions @relation(fields: [reefer_session_id], references: [reefer_session_id], onUpdate: NoAction, map: "FK_reefer_readings_sessions")
+}
+
+model reefer_sessions {
+  reefer_session_id Int               @id(map: "PK__reefer_s__C2FDAF3B1A8501C3") @default(autoincrement())
+  site_id           Int
+  unit_stay_id      Int
+  plug_code         String            @db.NVarChar(32)
+  plugged_at        DateTime?         @default(dbgenerated("sysutcdatetime()"), map: "DF__reefer_se__plugg__670A40DB")
+  unplugged_at      DateTime?
+  target_temp_c     Decimal?          @default(-18.00, map: "DF__reefer_se__targe__67FE6514") @db.Decimal(5, 2)
+  status            String?           @default("ACTIVE", map: "DF__reefer_se__statu__68F2894D") @db.NVarChar(32)
+  reefer_readings   reefer_readings[]
+  sites             sites             @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_reefer_sessions_sites")
+  unit_stays        unit_stays        @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_reefer_sessions_unit_stays")
+}
+
+model refunds {
+  refund_id     Int       @id(map: "PK__refunds__897E9EA35718A4B9") @default(autoincrement())
+  site_id       Int
+  invoice_id    Int
+  payment_id    Int
+  refund_amount Decimal   @db.Decimal(18, 2)
+  status        String?   @default("PENDING", map: "DF__refunds__status__2FBA0BF1") @db.NVarChar(32)
+  created_at    DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__refunds__created__30AE302A")
+  invoices      invoices  @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_refunds_invoices")
+  payments      payments  @relation(fields: [payment_id], references: [payment_id], onUpdate: NoAction, map: "FK_refunds_payments")
+  sites         sites     @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_refunds_sites")
+}
+
+model release_rules {
+  release_rule_id Int      @id(map: "PK__release___B2DEAD039666CD11") @default(autoincrement())
+  site_id         Int
+  rule_code       String   @unique(map: "UQ__release___5DA4F7EFF203156D") @db.NVarChar(32)
+  description     String?  @db.NVarChar(256)
+  is_active       Boolean? @default(true, map: "DF__release_r__is_ac__4D7F7902")
+  sites           sites    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_release_rules_sites")
+}
+
+model repair_codes {
+  repair_code_id Int      @id(map: "PK__repair_c__48EB905D8F9E0F97") @default(autoincrement())
+  component_code String   @db.NVarChar(32)
+  repair_code    String   @unique(map: "UQ__repair_c__C4B1CC009653ED20") @db.NVarChar(32)
+  description    String   @db.NVarChar(256)
+  default_hours  Decimal? @default(1.0, map: "DF__repair_co__defau__74643BF9") @db.Decimal(5, 2)
+  is_active      Boolean? @default(true, map: "DF__repair_co__is_ac__75586032")
+}
+
+model repair_estimates {
+  estimate_id  Int        @id(map: "PK__repair_e__679797FF11D8ACEF") @default(autoincrement())
+  unit_stay_id Int
+  party_id     Int
+  total_hours  Decimal?   @default(0.0, map: "DF__repair_es__total__7834CCDD") @db.Decimal(6, 2)
+  total_amount Decimal?   @default(0.0, map: "DF__repair_es__total__7928F116") @db.Decimal(18, 2)
+  status       String?    @default("DRAFT", map: "DF__repair_es__statu__7A1D154F") @db.NVarChar(32)
+  created_at   DateTime?  @default(dbgenerated("sysutcdatetime()"), map: "DF__repair_es__creat__7B113988")
+  parties      parties    @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_repair_estimates_parties")
+  unit_stays   unit_stays @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_repair_estimates_unit_stays")
+}
+
+model saved_reports {
+  saved_report_id   Int      @id(map: "PK__saved_re__C80CDE0E0D725C9C") @default(autoincrement())
+  user_id           Int
+  report_code       String   @db.NVarChar(64)
+  report_name       String   @db.NVarChar(128)
+  query_params_json String?  @db.NVarChar(Max)
+  is_active         Boolean? @default(true, map: "DF__saved_rep__is_ac__4885B9BB")
+  users             users    @relation(fields: [user_id], references: [user_id], onUpdate: NoAction, map: "FK_saved_reports_users")
+}
+
+model segregation_rules {
+  rule_id          Int     @id(map: "PK__segregat__E92A929656327E78") @default(autoincrement())
+  dg_class_1       String  @db.NVarChar(16)
+  dg_class_2       String  @db.NVarChar(16)
+  segregation_code String  @db.NVarChar(16)
+  description      String? @db.NVarChar(256)
+}
+
+model service_requests {
+  service_request_id Int       @id(map: "PK__service___AED8A610A965B018") @default(autoincrement())
+  site_id            Int
+  party_id           Int
+  request_type       String    @db.NVarChar(32)
+  status             String?   @default("SUBMITTED", map: "DF__service_r__statu__6339AFF7") @db.NVarChar(32)
+  details_json       String?   @db.NVarChar(Max)
+  created_at         DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__service_r__creat__642DD430")
+  parties            parties   @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_service_requests_parties")
+  sites              sites     @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_service_requests_sites")
+}
+
+model tax_codes {
+  tax_code_id Int      @id(map: "PK__tax_code__D84DCCBA4E2F9937") @default(autoincrement())
+  tax_code    String   @unique(map: "UQ__tax_code__13E39CF65A3136CE") @db.NVarChar(32)
+  tax_name    String   @db.NVarChar(64)
+  tax_rate    Decimal? @default(18.00, map: "DF__tax_codes__tax_r__7B4643B2") @db.Decimal(6, 2)
+  is_active   Boolean? @default(true, map: "DF__tax_codes__is_ac__7C3A67EB")
+}
