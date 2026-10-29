@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireSite } from '../../middleware/siteScope';
 import { sites, users } from '../../data/admin';
-import { ALL_PERMISSIONS, ROLES } from '../../config/permissions';
+import { ALL_PERMISSIONS, ROLES } from '../../configs/permissions';
 
 const router = Router();
 

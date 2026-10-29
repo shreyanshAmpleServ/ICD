@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ALL_PERMISSIONS, ROLES, PermissionCode, Grant } from '../config/permissions';
+import { ALL_PERMISSIONS, ROLES, PermissionCode, Grant } from '../configs/permissions';
 
 /**
  * Enforces x-permission RBAC requirement per the API contract.

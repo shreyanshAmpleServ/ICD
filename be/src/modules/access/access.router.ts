@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requireSite } from '../../middleware/siteScope';
 import { requirePermission } from '../../middleware/permission';
 import { users, permissions, devices, delegations, sites } from '../../data/admin';
-import { ROLES, PermissionCode } from '../../config/permissions';
+import { ROLES, PermissionCode } from '../../configs/permissions';
 
 let roles = Object.values(ROLES).map((r, i) => ({
   roleId: i + 1,

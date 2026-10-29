@@ -2,7 +2,7 @@ import { Router } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yaml';
 import fs from 'fs';
-import { ENV } from '../config/env';
+import { ENV } from '../configs/env';
 
 const router = Router();
 

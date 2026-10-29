@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { ENV } from '../config/env';
+import { ENV } from '../configs/env';
 
 let prisma: PrismaClient | null = null;
 let isMssqlConnected = false;

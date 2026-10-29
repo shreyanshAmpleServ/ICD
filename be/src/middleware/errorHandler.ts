@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { AppError } from '../common/errors/AppError';
 import { formatZodError } from '../common/validation/validate';
-import { ENV } from '../config/env';
+import { ENV } from '../configs/env';
 
 /**
  * Global Error Handler Middleware
