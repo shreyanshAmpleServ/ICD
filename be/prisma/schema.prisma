@@ -8,19 +8,19 @@ datasource db {
 }
 
 model appointments {
-  appointment_id       Int         @id(map: "PK__appointm__A50828FC54F8AB6F") @default(autoincrement())
-  site_id              Int
-  visit_type_id        Int
-  transporter_party_id Int
-  appointment_no       String      @unique(map: "UQ__appointm__A5090472411673D3") @db.NVarChar(50)
-  truck_plate          String      @db.NVarChar(30)
-  slot_start           DateTime
-  slot_end             DateTime
-  status               String?     @default("BOOKED", map: "DF__appointme__statu__511AFFBC") @db.NVarChar(30)
-  created_at           DateTime?   @default(dbgenerated("sysutcdatetime()"), map: "DF__appointme__creat__520F23F5")
-  parties              parties     @relation(fields: [transporter_party_id], references: [party_id], onUpdate: NoAction, map: "FK_appointments_transporters")
-  sites                sites       @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_appointments_sites")
-  visit_types          visit_types @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_appointments_visit_types")
+  appointment_id           Int         @id(map: "PK__appointm__A50828FC54F8AB6F") @default(autoincrement())
+  site_id                  Int
+  visit_type_id            Int
+  transporter_party_id     Int
+  appointment_no           String      @unique(map: "UQ__appointm__A5090472411673D3") @db.NVarChar(50)
+  truck_plate              String      @db.NVarChar(30)
+  slot_start               DateTime
+  slot_end                 DateTime
+  status                   String?     @default("BOOKED", map: "DF__appointme__statu__511AFFBC") @db.NVarChar(30)
+  created_at               DateTime?   @default(dbgenerated("sysutcdatetime()"), map: "DF__appointme__creat__520F23F5")
+  appointments_parties     parties     @relation(fields: [transporter_party_id], references: [party_id], onUpdate: NoAction, map: "FK_appointments_transporters")
+  appointments_sites       sites       @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_appointments_sites")
+  appointments_visit_types visit_types @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_appointments_visit_types")
 }
 
 model approval_requests {
@@ -554,7 +554,7 @@ model sites {
   created_at                             DateTime?                @default(dbgenerated("sysutcdatetime()"), map: "DF__sites__created_a__5C37ACAD")
   updated_at                             DateTime?
   appointment_slot_rules                 appointment_slot_rules[]
-  appointments                           appointments[]
+  appointments_sites                     appointments[]
   approval_policies                      approval_policies[]
   approval_requests                      approval_requests[]
   audit_entries                          audit_entries[]
@@ -815,14 +815,14 @@ model vessels {
 }
 
 model visit_types {
-  visit_type_id          Int                      @id(map: "PK__visit_ty__747655B1838607B3") @default(autoincrement())
-  visit_code             String                   @unique(map: "UQ__visit_ty__6B282A413798DEDA") @db.NVarChar(30)
-  visit_name             String                   @db.NVarChar(100)
-  requires_appointment   Boolean?                 @default(false, map: "DF__visit_typ__requi__19FFD4FC")
-  is_active              Boolean?                 @default(true, map: "DF__visit_typ__is_ac__1AF3F935")
-  appointment_slot_rules appointment_slot_rules[]
-  appointments           appointments[]
-  truck_visits           truck_visits[]
+  visit_type_id            Int                      @id(map: "PK__visit_ty__747655B1838607B3") @default(autoincrement())
+  visit_code               String                   @unique(map: "UQ__visit_ty__6B282A413798DEDA") @db.NVarChar(30)
+  visit_name               String                   @db.NVarChar(100)
+  requires_appointment     Boolean?                 @default(false, map: "DF__visit_typ__requi__19FFD4FC")
+  is_active                Boolean?                 @default(true, map: "DF__visit_typ__is_ac__1AF3F935")
+  appointment_slot_rules   appointment_slot_rules[]
+  appointments_visit_types appointments[]
+  truck_visits             truck_visits[]
 }
 
 model weighing_tickets {
