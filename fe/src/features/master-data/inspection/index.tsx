@@ -15,7 +15,7 @@ type Tpl = (typeof seedTpl)[number];
 export function InspectionView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('templates');
-  const [tpls, setTpls] = useEditable<Tpl>('inspTpl', seedTpl, () => inspectionApi.getInspectionTemplates());
+  const [tpls, setTpls] = useEditable<Tpl>('inspTpl', [], () => inspectionApi.getInspectionTemplates());
   const { data: damageData } = useQ<any[]>(['admin', 'damageCodes'], () => inspectionApi.getDamageCodes());
   const damageCodes = (Array.isArray(damageData) && damageData.length > 0) ? damageData : seedDamageCodes;
   const [sel, setSel] = useState(3);

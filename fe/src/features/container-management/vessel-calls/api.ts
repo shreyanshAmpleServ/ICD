@@ -1,13 +1,12 @@
 import { api } from '@/api/client';
-import { vesselCalls } from '@/mock/core';
 
 export const vesselCallsApi = {
   getVesselCalls: async () => {
     try {
-      const res = await api.get<any[]>('/vessel-calls');
-      return res && res.length > 0 ? res : vesselCalls;
+      const res = await api.get<any>('/vessel-calls');
+      return Array.isArray(res) ? res : (res?.items || []);
     } catch {
-      return vesselCalls;
+      return [];
     }
   },
 

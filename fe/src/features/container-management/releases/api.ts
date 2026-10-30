@@ -1,22 +1,21 @@
 import { api } from '@/api/client';
-import { allReleaseOrders, releaseOrder } from '@/mock/cargo';
 
 export const releasesApi = {
   getReleases: async () => {
     try {
-      const res = await api.get<any[]>('/releases');
-      return res && res.length > 0 ? res : allReleaseOrders;
+      const res = await api.get<any>('/releases');
+      return Array.isArray(res) ? res : (res?.items || []);
     } catch {
-      return allReleaseOrders;
+      return [];
     }
   },
 
   getReleaseDetail: async (releaseOrderId: string | number) => {
     try {
       const res = await api.get<any>(`/releases/${releaseOrderId}`);
-      return res || releaseOrder(Number(releaseOrderId));
+      return res?.item || res || null;
     } catch {
-      return releaseOrder(Number(releaseOrderId));
+      return null;
     }
   },
 
@@ -25,10 +24,10 @@ export const releasesApi = {
   },
 
   revalidateRelease: async (releaseOrderId: string | number, body?: any) => {
-    return api.post<any>(`/releases/${releaseOrderId}/revalidate`, body);
+    return api.post<any>(`/releases/${releaseOrderId}:revalidate`, body);
   },
 
   cancelRelease: async (releaseOrderId: string | number, body?: any) => {
-    return api.post<any>(`/releases/${releaseOrderId}/cancel`, body);
+    return api.post<any>(`/releases/${releaseOrderId}:cancel`, body);
   }
 };

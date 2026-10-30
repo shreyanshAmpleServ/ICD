@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowDown, ArrowUp, DoorOpen, Pencil, Plus } from 'lucide-react';
 import { Button, DataTable, Panel, Pill, Tabs, useToast } from '@/ds/components';
 import { useSession } from '@/app/session';
-import { SRC, checkpoints as seedCps, gates as seedGates, visitTypes as seedVts, type Gate } from '@/mock/admin';
+import { SRC, visitTypes as seedVts, type Gate } from '@/mock/admin';
 import { AuditNote, ListPanel, SetupPage, Split, YesNo, useEditable } from '../shared/AdminKit';
 import { gatesApi } from './api';
 import { LaneDrawer } from './components/LaneDrawer';
@@ -21,14 +21,14 @@ export function GatesView() {
   const { site } = useSession();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('visits');
-  const [gates, setGates] = useEditable<Gate>('gates', seedGates, () => gatesApi.getGates());
-  const [cps, setCps] = useEditable('checkpoints', seedCps, () => gatesApi.getCheckpoints());
-  const [vts, setVts] = useEditable<VT>('visitTypes', seedVts, () => gatesApi.getVisitTypes());
+  const [gates, setGates] = useEditable<Gate>('gates', [], () => gatesApi.getGates());
+  const [cps, setCps] = useEditable<any>('checkpoints', [], () => gatesApi.getCheckpoints());
+  const [vts, setVts] = useEditable<VT>('visitTypes', [], () => gatesApi.getVisitTypes());
   const siteGates = gates.filter((g) => g.siteId === site.siteId);
   const [gateId, setGateId] = useState<number | null>(null);
   const [vtId, setVtId] = useState<number>(2);
   const [lane, setLane] = useState<{ gate: Gate; lane?: Lane } | null>(null);
-  const [cpEdit, setCpEdit] = useState<(typeof seedCps)[number] | null>(null);
+  const [cpEdit, setCpEdit] = useState<any>(null);
   const gate = siteGates.find((g) => g.gateId === gateId) ?? siteGates[0];
   const vt = vts.find((v) => v.visitTypeId === vtId) ?? vts[0];
 
@@ -72,7 +72,7 @@ export function GatesView() {
                     };
                     gatesApi.createGate(newGate).then((g) => {
                       if (g?.gateId) setGates((all) => [...all, g]);
-                    }).catch(() => {});
+                    }).catch(() => { });
                     toast('Gate added');
                   }}
                 >
@@ -146,7 +146,7 @@ export function GatesView() {
             vt={vt}
             cps={cps}
             onSave={(nv) => {
-              if (nv.visitTypeId) gatesApi.updateVisitType(Number(nv.visitTypeId), nv).catch(() => {});
+              if (nv.visitTypeId) gatesApi.updateVisitType(Number(nv.visitTypeId), nv).catch(() => { });
               setVts((all) => all.map((x) => (x.visitTypeId === nv.visitTypeId ? nv : x)));
               toast('Visit type saved');
             }}
@@ -162,7 +162,7 @@ export function GatesView() {
           onClose={() => setLane(null)}
           onSave={(l) => {
             const updatedLanes = lane.lane ? lane.gate.lanes!.map((x) => (x.gateLaneId === l.gateLaneId ? l : x)) : [...(lane.gate.lanes ?? []), l];
-            if (lane.gate.gateId) gatesApi.updateGate(Number(lane.gate.gateId), { lanes: updatedLanes }).catch(() => {});
+            if (lane.gate.gateId) gatesApi.updateGate(Number(lane.gate.gateId), { lanes: updatedLanes }).catch(() => { });
             setGates((all) => all.map((g) => (g.gateId !== lane.gate.gateId ? g : { ...g, lanes: updatedLanes })));
             toast(lane.lane ? 'Lane saved' : 'Lane added');
           }}
@@ -175,8 +175,8 @@ export function GatesView() {
         onClose={() => setCpEdit(null)}
         setCpEdit={setCpEdit}
         onSave={(c) => {
-          if (c.checkpointId) gatesApi.updateCheckpoint(Number(c.checkpointId), c).catch(() => {});
-          setCps((all) => all.map((x) => (x.checkpointId === c.checkpointId ? c : x)));
+          if (c.checkpointId) gatesApi.updateCheckpoint(Number(c.checkpointId), c).catch(() => { });
+          setCps((all: any[]) => all.map((x: any) => (x.checkpointId === c.checkpointId ? c : x)));
           toast('Checkpoint saved');
         }}
       />

@@ -21,8 +21,8 @@ type Channel = (typeof seedChannels)[number];
 export function FinanceView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('periods');
-  const [periods, setPeriods] = useEditable<Period>('periods', seedPeriods, () => financeApi.getAccountingPeriods());
-  const [charges, setCharges] = useEditable<Charge>('charges', seedCharges, () => financeApi.getChargeCodes());
+  const [periods, setPeriods] = useEditable<Period>('periods', [], () => financeApi.getAccountingPeriods());
+  const [charges, setCharges] = useEditable<Charge>('charges', [], () => financeApi.getChargeCodes());
   const { data: taxData } = useQ<any[]>(['admin', 'taxCodes'], () => financeApi.getTaxCodes());
   const { data: channelData } = useQ<Channel[]>(['admin', 'paymentChannels'], () => financeApi.getPaymentChannels());
   const taxCodes = (Array.isArray(taxData) && taxData.length > 0) ? taxData : seedTaxCodes;

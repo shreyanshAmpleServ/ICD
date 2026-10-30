@@ -32,7 +32,7 @@ import {
 } from '@/ds/components';
 import { ROLES } from '@/app/roles';
 import { SITES } from '@/app/session';
-import { SRC, type User, delegations as seedDelegations, permissions } from '@/mock/admin';
+import { SRC, type User, permissions } from '@/mock/admin';
 import { AuditNote, EditDrawer, ListPanel, SetupPage, Split } from '../shared/AdminKit';
 import { usersApi, type CreateUserData } from './api';
 import { AddUserModal } from './components/AddUserModal';
@@ -86,7 +86,7 @@ export function UsersView() {
 
   const roles = rolesData && rolesData.length ? rolesData : ROLES;
   const users = usersData ?? [];
-  const delegations: any[] = delegationsData ?? seedDelegations;
+  const delegations: any[] = delegationsData ?? [];
 
   const roleName = (c: string) => roles.find((r) => r.code === c)?.name ?? c;
   const hasApproval = (code: string) =>

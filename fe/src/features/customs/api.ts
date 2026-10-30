@@ -1,31 +1,30 @@
 import { api } from '@/api/client';
-import { allCustomsRefs, exams as seedExams } from '@/mock/cargo';
 
 export const customsApi = {
   getCustoms: async () => {
     try {
-      const res = await api.get<any[]>('/customs/refs');
-      return res && res.length > 0 ? res : allCustomsRefs;
+      const res = await api.get<any>('/customs/refs');
+      return Array.isArray(res) ? res : (res?.items || []);
     } catch {
-      return allCustomsRefs;
+      return [];
     }
   },
 
   getCustomsRefs: async () => {
     try {
-      const res = await api.get<any[]>('/customs/refs');
-      return res && res.length > 0 ? res : allCustomsRefs;
+      const res = await api.get<any>('/customs/refs');
+      return Array.isArray(res) ? res : (res?.items || []);
     } catch {
-      return allCustomsRefs;
+      return [];
     }
   },
 
   getExams: async () => {
     try {
-      const res = await api.get<any[]>('/exams');
-      return res && res.length > 0 ? res : seedExams;
+      const res = await api.get<any>('/exams');
+      return Array.isArray(res) ? res : (res?.items || []);
     } catch {
-      return seedExams;
+      return [];
     }
   },
 

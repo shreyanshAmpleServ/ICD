@@ -8,7 +8,7 @@ import {
   StatusPill, Tabs, Textarea, UnitNo, fmtD, fmtDT, useToast,
 } from '@/ds/components';
 import { REF_TYPE_NAME } from '@/mock/control';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { api } from '@/api/client';
 import { consignment, parties, partyName, unitsOf, vesselCalls } from '@/mock/core';
 import { allCustomsRefs, documentsOf, linesOf, releasesFor } from '@/mock/cargo';
@@ -26,7 +26,9 @@ export function ConsignmentDetail() {
   const id = Number(consignmentId);
   const nav = useNavigate();
   const toast = useToast();
-  const { data: c } = useQ(['consignment', id], () => delay(consignment(id)));
+  const { data: c } = useQ(['consignment', id], () =>
+    api.get<any>(`/consignments/${id}`).then((r) => r?.item || r || null).catch(() => null)
+  );
   const [tab, setTab] = useState<TabId>('units');
   const [edit, setEdit] = useState(false);
   const [refOpen, setRefOpen] = useState(false);

@@ -26,10 +26,10 @@ const AUTH: Record<string, string> = { CUSTOMS: 'Customs (TRA)', PORT: 'Port aut
 export function RulesView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('holds');
-  const [holds, setHolds] = useEditable<HT>('holdTypes', holdTypesSeed, () => rulesApi.getHoldTypes());
-  const [rules, setRules] = useEditable<Rule>('releaseRules', seedRules, () => rulesApi.getReleaseRules());
-  const [pols, setPols] = useEditable<Pol>('policies', seedPolicies, () => rulesApi.getApprovalPolicies());
-  const [excs, setExcs] = useEditable<Exc>('excTypes', seedExc, () => rulesApi.getExceptionTypes());
+  const [holds, setHolds] = useEditable<HT>('holdTypes', [], () => rulesApi.getHoldTypes());
+  const [rules, setRules] = useEditable<Rule>('releaseRules', [], () => rulesApi.getReleaseRules());
+  const [pols, setPols] = useEditable<Pol>('policies', [], () => rulesApi.getApprovalPolicies());
+  const [excs, setExcs] = useEditable<Exc>('excTypes', [], () => rulesApi.getExceptionTypes());
   const [ht, setHt] = useState<HT | null>(null);
   const [pol, setPol] = useState<Pol | null>(null);
   const [exc, setExc] = useState<Exc | null>(null);

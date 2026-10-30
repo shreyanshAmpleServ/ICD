@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Wand2 } from 'lucide-react';
 import { Button, Empty, Panel, Select, useToast } from '@/ds/components';
 import { useSession, SITES } from '@/app/session';
-import { SRC, blockedSlots as seedBlocked, sites, yardNodes, type YardNode } from '@/mock/admin';
+import { SRC, blockedSlots as seedBlocked, sites, type YardNode } from '@/mock/admin';
 import { AuditNote, SetupPage, useEditable, useDynamicSites } from '../shared/AdminKit';
 import { yardApi } from './api';
 import { TreeNode } from './components/TreeNode';
@@ -18,7 +18,7 @@ export function YardDesignerView() {
   const toast = useToast();
   const { options: dynamicSiteOptions } = useDynamicSites();
   const [siteId, setSiteId] = useState(sessionSite.siteId);
-  const [nodes, setNodes] = useEditable<YardNode>('yard', yardNodes, () => yardApi.getYardLocations(siteId));
+  const [nodes, setNodes] = useEditable<YardNode>('yard', [], () => yardApi.getYardLocations(siteId));
   const [blocked, setBlocked] = useState<Record<string, string>>(seedBlocked);
   const [selId, setSelId] = useState<number | null>(null);
   const [open, setOpen] = useState<Record<number, boolean>>({});

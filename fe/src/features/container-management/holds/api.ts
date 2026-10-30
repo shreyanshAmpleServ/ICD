@@ -1,13 +1,12 @@
 import { api } from '@/api/client';
-import { holds as seedHolds } from '@/mock/control';
 
 export const holdsApi = {
   getHolds: async () => {
     try {
-      const res = await api.get<any[]>('/holds');
-      return res && res.length > 0 ? res : seedHolds;
+      const res = await api.get<any>('/holds');
+      return Array.isArray(res) ? res : (res?.items || []);
     } catch {
-      return seedHolds;
+      return [];
     }
   },
 
@@ -16,6 +15,6 @@ export const holdsApi = {
   },
 
   liftHold: async (holdId: string | number, body: any) => {
-    return api.post<any>(`/holds/${holdId}/lift`, body);
+    return api.post<any>(`/holds/${holdId}:lift`, body);
   }
 };

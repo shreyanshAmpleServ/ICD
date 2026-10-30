@@ -1,6 +1,6 @@
 import { api } from '@/api/client';
-import { users as seedUsers, delegations as seedDelegations, type User } from '@/mock/admin';
-import { ROLES, type Role } from '@/app/roles';
+import { type User } from '@/mock/admin';
+import { type Role } from '@/app/roles';
 
 export interface UserQueryParams {
   q?: string;
@@ -41,10 +41,8 @@ export const usersApi = {
       const queryStr = qp.toString();
       const endpoint = queryStr ? `/users?${queryStr}` : '/users';
       const res = await api.get<any>(endpoint);
-      return res?.items ?? (Array.isArray(res) ? res : seedUsers);
-    } catch {
-      return seedUsers;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
 
   getUser: async (userId: number): Promise<User | null> => {
@@ -82,16 +80,14 @@ export const usersApi = {
   getRoles: async (): Promise<Role[]> => {
     try {
       const res = await api.get<any>('/roles');
-      const list = res?.items ?? (Array.isArray(res) ? res : ROLES);
+      const list = res?.items ?? (Array.isArray(res) ? res : []);
       return list.map((r: any) => ({
         code: r.code || r.roleCode,
         name: r.name || r.roleName,
         external: !!r.external,
         grants: r.grants || {},
       }));
-    } catch {
-      return ROLES;
-    }
+    } catch { return []; }
   },
 
   updateRolePermissions: async (roleIdOrCode: string | number, grants: any) => {
@@ -110,10 +106,8 @@ export const usersApi = {
   getDelegations: async () => {
     try {
       const res = await api.get<any>('/delegations');
-      return res?.items ?? (Array.isArray(res) ? res : seedDelegations);
-    } catch {
-      return seedDelegations;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
 
   createDelegation: async (data: any) => {

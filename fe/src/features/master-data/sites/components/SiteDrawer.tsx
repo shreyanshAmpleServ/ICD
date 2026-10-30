@@ -14,6 +14,7 @@ interface SiteDrawerProps {
 }
 
 export function SiteDrawer({ open, onClose, site, onSave, isNew }: SiteDrawerProps) {
+  if (!site) return null;
   const { options: calendarOptions } = useDynamicCalendars();
   const [s, setS] = useState(site);
   const set = (p: Partial<Site>) => setS((x) => ({ ...x, ...p }));

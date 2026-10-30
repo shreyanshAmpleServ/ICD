@@ -10,9 +10,9 @@ import {
 } from '@/ds/components';
 import { FLOW } from '@/ds/status';
 import { useSession } from '@/app/session';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { consignment, partyName, stay } from '@/mock/core';
+import { consignment, partyName } from '@/mock/core';
 import { evaluate, holdTypeName, holdTypes, holdsOf } from '@/mock/control';
 import { at } from '@/mock/gen';
 
@@ -23,7 +23,15 @@ type TabId = 'overview' | 'timeline' | 'holds' | 'charges' | 'documents';
 
 export function UnitCard() {
   const { unitStayId } = useParams();
-  const { data: s } = useQ(['unit', unitStayId], () => delay(stay(Number(unitStayId))));
+  const qc = useQueryClient();
+  const { data: s } = useQ(['unit', unitStayId], async () => {
+    try {
+      const res = await api.get<any>(`/units/${unitStayId}`);
+      return res?.data || res?.item || res || null;
+    } catch {
+      return null;
+    }
+  });
   const [tab, setTab] = useState<TabId>('overview');
   const [holdOpen, setHoldOpen] = useState(false);
   const { can } = useSession();
@@ -161,14 +169,19 @@ export function UnitCard() {
               { key: 'ref', header: 'Authority ref.', render: (h) => h.authorityRef ?? '—' },
               { key: 'reason', header: 'Reason', render: (h) => h.reason },
               { key: 'placed', header: 'Placed', render: (h) => <span className="small">{fmtDT(h.placedAt)}<br /><span className="faint">{h.placedBy}</span></span> },
-              { key: 'act', header: '', render: (h) => h.status === 'ACTIVE' ? <Button size="sm" perm="customs.hold.lift" onClick={async () => {
-                try {
-                  await api.post(`/holds/${h.holdId}:lift`, { reason: 'Lifted from unit card' });
-                  toast('Hold lifted');
-                } catch (e: any) {
-                  toast('Failed to lift hold');
-                }
-              }}>Lift</Button> : <span className="xs faint">{h.liftReason}</span> },
+              {
+                key: 'act', header: '', render: (h) => h.status === 'ACTIVE' ? <Button size="sm" perm="customs.hold.lift" onClick={async () => {
+                  try {
+                    await api.post(`/holds/${h.holdId}:lift`, { reason: 'Lifted from unit card' });
+                    qc.invalidateQueries({ queryKey: ['unit', String(unitStayId)] });
+                    qc.invalidateQueries({ queryKey: ['units'] });
+                    qc.invalidateQueries({ queryKey: ['holds'] });
+                    toast('Hold lifted');
+                  } catch (e: any) {
+                    toast('Failed to lift hold');
+                  }
+                }}>Lift</Button> : <span className="xs faint">{h.liftReason}</span>
+              },
             ]} />
           </Panel>
         )}

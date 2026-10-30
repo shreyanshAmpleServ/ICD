@@ -1,22 +1,21 @@
 import { api } from '@/api/client';
-import { manifests, sampleManifestLines } from '@/mock/cargo';
 
 export const manifestsApi = {
   getManifests: async () => {
     try {
-      const res = await api.get<any[]>('/manifests');
-      return res && res.length > 0 ? res : manifests;
+      const res = await api.get<any>('/manifests');
+      return Array.isArray(res) ? res : (res?.items || []);
     } catch {
-      return manifests;
+      return [];
     }
   },
 
   getManifestLines: async (manifestId: string | number) => {
     try {
-      const res = await api.get<any[]>(`/manifests/${manifestId}/lines`);
-      return res && res.length > 0 ? res : sampleManifestLines;
+      const res = await api.get<any>(`/manifests/${manifestId}/lines`);
+      return Array.isArray(res) ? res : (res?.items || []);
     } catch {
-      return sampleManifestLines;
+      return [];
     }
   },
 

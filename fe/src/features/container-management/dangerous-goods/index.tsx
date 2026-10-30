@@ -7,8 +7,8 @@ import {
 } from '@/ds/components';
 import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { allStays, type Stay } from '@/mock/core';
-import { IMO_CLASSES, SEG_DEMO, dgLines as seed, segregationWarnings, type DgRow } from '@/mock/cargo';
+import { type Stay } from '@/mock/core';
+import { IMO_CLASSES, SEG_DEMO, segregationWarnings, type DgRow } from '@/mock/cargo';
 
 export { dangerousGoodsApi } from './api';
 
@@ -20,14 +20,14 @@ export function DangerousGoods() {
   const qc = useQueryClient();
   const toast = useToast();
   const { data: dbDgLines } = useQ(['dg-lines'], () =>
-    api.get<{ items: DgRow[] }>('/dg-lines').then((r) => r.items).catch(() => seed)
+    api.get<any>('/dg-lines').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
   const { data: dbUnits } = useQ(['units-dg'], () =>
-    api.get<{ items: Stay[] }>('/units').then((r) => r.items).catch(() => allStays)
+    api.get<any>('/units').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
 
-  const lines = dbDgLines && dbDgLines.length > 0 ? dbDgLines : seed;
-  const stayPool = dbUnits && dbUnits.length > 0 ? dbUnits : allStays;
+  const lines = Array.isArray(dbDgLines) ? dbDgLines : [];
+  const stayPool = Array.isArray(dbUnits) ? dbUnits : [];
 
   const [search, setSearch] = useState('');
   const [edit, setEdit] = useState<Stay | null>(null);

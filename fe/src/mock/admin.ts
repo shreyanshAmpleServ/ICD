@@ -120,17 +120,27 @@ export const blockedSlots: Record<string, string> = {
 /* ------------------------------------------------------------------ gates */
 export type Gate = S<'Gate'> & { siteId: number };
 export const gates: Gate[] = [
-  { gateId: 1, siteId: 1, gateCode: 'OG1', gateName: 'Main gate (outer)', gateKind: 'OUTER', isActive: true, lanes: [
-    { gateLaneId: 11, laneCode: 'In 1', direction: 'IN', isActive: true }, { gateLaneId: 12, laneCode: 'In 2', direction: 'IN', isActive: true },
-    { gateLaneId: 13, laneCode: 'Out 1', direction: 'OUT', isActive: true }, { gateLaneId: 14, laneCode: 'Out 2', direction: 'OUT', isActive: false }] },
-  { gateId: 2, siteId: 1, gateCode: 'IG1', gateName: 'Inner gate (yard)', gateKind: 'INNER', isActive: true, lanes: [
-    { gateLaneId: 21, laneCode: 'Inner A', direction: 'BOTH', isActive: true }] },
-  { gateId: 3, siteId: 1, gateCode: 'WB1', gateName: 'Weighbridge', gateKind: 'WEIGHBRIDGE', isActive: true, lanes: [
-    { gateLaneId: 31, laneCode: 'Scale 1', direction: 'BOTH', isActive: true }] },
-  { gateId: 4, siteId: 2, gateCode: 'VG1', gateName: 'Vehicle yard gate', gateKind: 'OUTER', isActive: true, lanes: [
-    { gateLaneId: 41, laneCode: 'In', direction: 'IN', isActive: true }, { gateLaneId: 42, laneCode: 'Out', direction: 'OUT', isActive: true }] },
-  { gateId: 5, siteId: 3, gateCode: 'KG1', gateName: 'Warehouse gate', gateKind: 'OUTER', isActive: true, lanes: [
-    { gateLaneId: 51, laneCode: 'Lane 1', direction: 'BOTH', isActive: true }] },
+  {
+    gateId: 1, siteId: 1, gateCode: 'OG1', gateName: 'Main gate (outer)', gateKind: 'OUTER', isActive: true, lanes: [
+      { gateLaneId: 11, laneCode: 'In 1', direction: 'IN', isActive: true }, { gateLaneId: 12, laneCode: 'In 2', direction: 'IN', isActive: true },
+      { gateLaneId: 13, laneCode: 'Out 1', direction: 'OUT', isActive: true }, { gateLaneId: 14, laneCode: 'Out 2', direction: 'OUT', isActive: false }]
+  },
+  {
+    gateId: 2, siteId: 1, gateCode: 'IG1', gateName: 'Inner gate (yard)', gateKind: 'INNER', isActive: true, lanes: [
+      { gateLaneId: 21, laneCode: 'Inner A', direction: 'BOTH', isActive: true }]
+  },
+  {
+    gateId: 3, siteId: 1, gateCode: 'WB1', gateName: 'Weighbridge', gateKind: 'WEIGHBRIDGE', isActive: true, lanes: [
+      { gateLaneId: 31, laneCode: 'Scale 1', direction: 'BOTH', isActive: true }]
+  },
+  {
+    gateId: 4, siteId: 2, gateCode: 'VG1', gateName: 'Vehicle yard gate', gateKind: 'OUTER', isActive: true, lanes: [
+      { gateLaneId: 41, laneCode: 'In', direction: 'IN', isActive: true }, { gateLaneId: 42, laneCode: 'Out', direction: 'OUT', isActive: true }]
+  },
+  {
+    gateId: 5, siteId: 3, gateCode: 'KG1', gateName: 'Warehouse gate', gateKind: 'OUTER', isActive: true, lanes: [
+      { gateLaneId: 51, laneCode: 'Lane 1', direction: 'BOTH', isActive: true }]
+  },
 ];
 export const checkpoints: S<'Checkpoint'>[] = [
   { checkpointId: 1, checkpointCode: 'OUTER_IN', checkpointName: 'Outer gate in', checkpointKind: 'OUTER_IN', gateId: 1, isActive: true },
@@ -201,7 +211,7 @@ export const CUSTOMS_REF_NAME: Record<string, string> = {
 };
 
 /* ------------------------------------------------------------------ masters */
-type Truck = S<'Truck'> & { localNote?: string; gateBlocked?: boolean };
+export type Truck = S<'Truck'> & { localNote?: string; gateBlocked?: boolean };
 const tr = (truckId: number, plateNo: string, transporterPartyId: number, makeModel: string, axleCount: number, tareKg: number, f: Partial<Truck> = {}): Truck => ({
   truckId, plateNo: plateNo.replace(/\s/g, ''), plateDisplay: plateNo, vehicleKind: 'TRUCK', transporterPartyId, countryCode: 'TZ', makeModel, axleCount, tareKg,
   source: 'NG', syncStatus: 'SYNCED', ngRefId: `NG-T${5000 + truckId}`, isActive: true, ...f,
@@ -218,7 +228,7 @@ export const trucks: Truck[] = [
   tr(9, 'T 233 DSW', 7, 'Howo trailer', 0, 6100, { vehicleKind: 'TRAILER' }),
   tr(10, 'T 880 DFF', 7, 'Volvo FMX', 3, 9600, { source: 'LOCAL', syncStatus: 'PROVISIONAL', ngRefId: undefined, localNote: 'Created at gate while NG was unreachable' }),
 ];
-type Driver = S<'Driver'> & { localNote?: string };
+export type Driver = S<'Driver'> & { localNote?: string };
 const dr = (driverId: number, driverName: string, licenceNo: string, licenceExpiry: string, transporterPartyId: number, f: Partial<Driver> = {}): Driver => ({
   driverId, driverName, licenceNo, licenceClass: 'E', licenceExpiry, licenceCountry: 'TZ', phone: `+255 7${String(54 + driverId).padStart(2, '0')} ${300 + driverId * 7} ${100 + driverId * 11}`,
   transporterPartyId, source: 'NG', syncStatus: 'SYNCED', ngRefId: `NG-D${7000 + driverId}`, licenceValid: Date.parse(licenceExpiry) > Date.parse(day(0)), isActive: true, ...f,
@@ -410,30 +420,38 @@ const it = (itemCode: string, itemName: string, area: S<'InspectionItem'>['area'
   inspectionItemId: ++iid, itemCode, itemName, area, inputType, isMandatory: m === 1, sortOrder,
 });
 export const inspectionTemplates: (S<'InspectionTemplate'> & { fixedFields?: string[] })[] = [
-  { inspectionTemplateId: 1, templateCode: 'CONT_GATE_IN', templateName: 'Container gate-in survey', category: 'CONTAINER', inspectionKind: 'GATE_IN', versionNo: 1, minPhotos: 4, items: [
-    it('DOORS', 'Doors, hinges and locking bars', 'DOORS', 'OK_DAMAGE', 1, 10), it('WALL_LEFT', 'Left side wall', 'WALLS', 'OK_DAMAGE', 1, 20),
-    it('WALL_RIGHT', 'Right side wall', 'WALLS', 'OK_DAMAGE', 1, 30), it('FRONT', 'Front wall', 'WALLS', 'OK_DAMAGE', 1, 40),
-    it('ROOF', 'Roof', 'ROOF', 'OK_DAMAGE', 1, 50), it('CORNERS', 'Corner posts and castings', 'CORNERS', 'OK_DAMAGE', 1, 60),
-    it('UNDER', 'Cross members / understructure', 'UNDERCARRIAGE', 'OK_DAMAGE', 0, 70), it('FLOOR', 'Floor (empty units)', 'FLOOR', 'OK_DAMAGE', 0, 80),
-    it('INTERIOR', 'Interior clean and dry (empty units)', 'INTERIOR', 'YES_NO', 0, 90), it('SEAL', 'Seal present and intact', 'SEAL', 'YES_NO', 1, 100),
-    it('PLACARDS', 'Hazard placards correct', 'OTHER', 'YES_NO', 0, 110)] },
-  { inspectionTemplateId: 2, templateCode: 'CONT_GATE_OUT', templateName: 'Container gate-out check', category: 'CONTAINER', inspectionKind: 'GATE_OUT', versionNo: 1, minPhotos: 2, items: [
-    it('DOORS', 'Doors and locking bars', 'DOORS', 'OK_DAMAGE', 1, 10), it('SIDES', 'Side walls', 'WALLS', 'OK_DAMAGE', 1, 20),
-    it('ROOF', 'Roof', 'ROOF', 'OK_DAMAGE', 0, 30), it('SEAL', 'Seal matches release', 'SEAL', 'YES_NO', 1, 40)] },
-  { inspectionTemplateId: 3, templateCode: 'VEH_GATE_IN', templateName: 'Vehicle gate-in inspection', category: 'VEHICLE', inspectionKind: 'GATE_IN', versionNo: 2, minPhotos: 6,
+  {
+    inspectionTemplateId: 1, templateCode: 'CONT_GATE_IN', templateName: 'Container gate-in survey', category: 'CONTAINER', inspectionKind: 'GATE_IN', versionNo: 1, minPhotos: 4, items: [
+      it('DOORS', 'Doors, hinges and locking bars', 'DOORS', 'OK_DAMAGE', 1, 10), it('WALL_LEFT', 'Left side wall', 'WALLS', 'OK_DAMAGE', 1, 20),
+      it('WALL_RIGHT', 'Right side wall', 'WALLS', 'OK_DAMAGE', 1, 30), it('FRONT', 'Front wall', 'WALLS', 'OK_DAMAGE', 1, 40),
+      it('ROOF', 'Roof', 'ROOF', 'OK_DAMAGE', 1, 50), it('CORNERS', 'Corner posts and castings', 'CORNERS', 'OK_DAMAGE', 1, 60),
+      it('UNDER', 'Cross members / understructure', 'UNDERCARRIAGE', 'OK_DAMAGE', 0, 70), it('FLOOR', 'Floor (empty units)', 'FLOOR', 'OK_DAMAGE', 0, 80),
+      it('INTERIOR', 'Interior clean and dry (empty units)', 'INTERIOR', 'YES_NO', 0, 90), it('SEAL', 'Seal present and intact', 'SEAL', 'YES_NO', 1, 100),
+      it('PLACARDS', 'Hazard placards correct', 'OTHER', 'YES_NO', 0, 110)]
+  },
+  {
+    inspectionTemplateId: 2, templateCode: 'CONT_GATE_OUT', templateName: 'Container gate-out check', category: 'CONTAINER', inspectionKind: 'GATE_OUT', versionNo: 1, minPhotos: 2, items: [
+      it('DOORS', 'Doors and locking bars', 'DOORS', 'OK_DAMAGE', 1, 10), it('SIDES', 'Side walls', 'WALLS', 'OK_DAMAGE', 1, 20),
+      it('ROOF', 'Roof', 'ROOF', 'OK_DAMAGE', 0, 30), it('SEAL', 'Seal matches release', 'SEAL', 'YES_NO', 1, 40)]
+  },
+  {
+    inspectionTemplateId: 3, templateCode: 'VEH_GATE_IN', templateName: 'Vehicle gate-in inspection', category: 'VEHICLE', inspectionKind: 'GATE_IN', versionNo: 2, minPhotos: 6,
     fixedFields: ['Odometer (km)', 'Fuel level (E, 1/4, 1/2, 3/4, F)', 'Battery OK', 'Personal effects found'], items: [
-    it('FRONT', 'Front and bumper', 'EXTERIOR', 'OK_DAMAGE', 1, 10), it('REAR', 'Rear and bumper', 'EXTERIOR', 'OK_DAMAGE', 1, 20),
-    it('LEFT', 'Left side', 'EXTERIOR', 'OK_DAMAGE', 1, 30), it('RIGHT', 'Right side', 'EXTERIOR', 'OK_DAMAGE', 1, 40),
-    it('ROOF', 'Roof', 'ROOF', 'OK_DAMAGE', 1, 50), it('GLASS', 'Windscreen, windows, mirrors', 'EXTERIOR', 'OK_DAMAGE', 1, 60),
-    it('LIGHTS', 'Lights', 'EXTERIOR', 'OK_DAMAGE', 1, 70), it('TYRES', 'Tyres and wheels', 'EXTERIOR', 'OK_DAMAGE', 1, 80),
-    it('SPARE', 'Spare wheel present', 'ACCESSORIES', 'YES_NO', 1, 90), it('INTERIOR', 'Seats and interior', 'CABIN', 'OK_DAMAGE', 1, 100),
-    it('WARNINGS', 'Dashboard warning lights on', 'CABIN', 'YES_NO', 0, 110), it('STARTS', 'Engine starts and runs', 'ENGINE', 'YES_NO', 1, 120),
-    it('TOOLS', 'Jack and tools present', 'ACCESSORIES', 'YES_NO', 0, 130), it('RADIO', 'Radio / screen present', 'ACCESSORIES', 'YES_NO', 0, 140),
-    it('MATS', 'Floor mats present', 'ACCESSORIES', 'YES_NO', 0, 150), it('DOCS', 'Documents found in vehicle', 'DOCUMENTS', 'YES_NO', 0, 160)] },
-  { inspectionTemplateId: 4, templateCode: 'VEH_GATE_OUT', templateName: 'Vehicle gate-out check', category: 'VEHICLE', inspectionKind: 'GATE_OUT', versionNo: 1, minPhotos: 4,
+      it('FRONT', 'Front and bumper', 'EXTERIOR', 'OK_DAMAGE', 1, 10), it('REAR', 'Rear and bumper', 'EXTERIOR', 'OK_DAMAGE', 1, 20),
+      it('LEFT', 'Left side', 'EXTERIOR', 'OK_DAMAGE', 1, 30), it('RIGHT', 'Right side', 'EXTERIOR', 'OK_DAMAGE', 1, 40),
+      it('ROOF', 'Roof', 'ROOF', 'OK_DAMAGE', 1, 50), it('GLASS', 'Windscreen, windows, mirrors', 'EXTERIOR', 'OK_DAMAGE', 1, 60),
+      it('LIGHTS', 'Lights', 'EXTERIOR', 'OK_DAMAGE', 1, 70), it('TYRES', 'Tyres and wheels', 'EXTERIOR', 'OK_DAMAGE', 1, 80),
+      it('SPARE', 'Spare wheel present', 'ACCESSORIES', 'YES_NO', 1, 90), it('INTERIOR', 'Seats and interior', 'CABIN', 'OK_DAMAGE', 1, 100),
+      it('WARNINGS', 'Dashboard warning lights on', 'CABIN', 'YES_NO', 0, 110), it('STARTS', 'Engine starts and runs', 'ENGINE', 'YES_NO', 1, 120),
+      it('TOOLS', 'Jack and tools present', 'ACCESSORIES', 'YES_NO', 0, 130), it('RADIO', 'Radio / screen present', 'ACCESSORIES', 'YES_NO', 0, 140),
+      it('MATS', 'Floor mats present', 'ACCESSORIES', 'YES_NO', 0, 150), it('DOCS', 'Documents found in vehicle', 'DOCUMENTS', 'YES_NO', 0, 160)]
+  },
+  {
+    inspectionTemplateId: 4, templateCode: 'VEH_GATE_OUT', templateName: 'Vehicle gate-out check', category: 'VEHICLE', inspectionKind: 'GATE_OUT', versionNo: 1, minPhotos: 4,
     fixedFields: ['Odometer (km)', 'Fuel level'], items: [
-    it('EXTERIOR', 'Exterior unchanged since gate-in', 'EXTERIOR', 'OK_DAMAGE', 1, 10), it('INTERIOR', 'Interior unchanged since gate-in', 'CABIN', 'OK_DAMAGE', 1, 20),
-    it('ACCESSORIES', 'Accessories as recorded at gate-in', 'ACCESSORIES', 'YES_NO', 1, 30), it('KEYS', 'Keys handed to collector', 'ACCESSORIES', 'YES_NO', 1, 40)] },
+      it('EXTERIOR', 'Exterior unchanged since gate-in', 'EXTERIOR', 'OK_DAMAGE', 1, 10), it('INTERIOR', 'Interior unchanged since gate-in', 'CABIN', 'OK_DAMAGE', 1, 20),
+      it('ACCESSORIES', 'Accessories as recorded at gate-in', 'ACCESSORIES', 'YES_NO', 1, 30), it('KEYS', 'Keys handed to collector', 'ACCESSORIES', 'YES_NO', 1, 40)]
+  },
 ];
 export const damageCodes: S<'DamageCode'>[] = ([
   ['DENT', 'Dent', 'ANY'], ['HOLE', 'Hole', 'ANY'], ['CUT', 'Cut / tear', 'ANY'], ['BENT', 'Bent', 'ANY'], ['BROKEN', 'Broken', 'ANY'],

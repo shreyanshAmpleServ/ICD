@@ -4,7 +4,7 @@ import {
   Banner, Button, DataTable, Panel, Pill, SearchInput, Tabs, useToast, type Col,
 } from '@/ds/components';
 import { parties } from '@/mock/core';
-import { commodities as seedCommodities, drivers as seedDrivers, equipment as seedEquipment, ports as seedPorts, trucks as seedTrucks, vessels as seedVessels } from '@/mock/admin';
+import type { Truck, Driver } from '@/mock/admin';
 import { AuditNote, SetupPage, SourcePill, YesNo, useEditable } from '../shared/AdminKit';
 import { useQ } from '@/api/query';
 import { mastersApi } from './api';
@@ -16,8 +16,6 @@ import { MatchModal } from './components/MatchModal';
 export { mastersApi } from './api';
 
 type Tab = 'trucks' | 'drivers' | 'vessels' | 'ports' | 'commodities' | 'equipment';
-type Truck = (typeof seedTrucks)[number];
-type Driver = (typeof seedDrivers)[number];
 const pname = (id?: number | null) => parties.find((p) => p.partyId === id)?.partyName ?? '—';
 const daysTo = (d?: string | null) => (d ? Math.ceil((Date.parse(d) - Date.now()) / 86400000) : null);
 
@@ -25,18 +23,18 @@ export function MastersView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('trucks');
   const [q, setQ] = useState('');
-  const [trucks, setTrucks] = useEditable<Truck>('trucks', seedTrucks, () => mastersApi.getTrucks());
-  const [drivers, setDrivers] = useEditable<Driver>('drivers', seedDrivers, () => mastersApi.getDrivers());
+  const [trucks, setTrucks] = useEditable<Truck>('trucks', [], () => mastersApi.getTrucks());
+  const [drivers, setDrivers] = useEditable<Driver>('drivers', [], () => mastersApi.getDrivers());
 
   const { data: vesselData } = useQ<any[]>(['admin', 'vessels'], () => mastersApi.getVessels());
   const { data: portData } = useQ<any[]>(['admin', 'ports'], () => mastersApi.getPorts());
   const { data: commData } = useQ<any[]>(['admin', 'commodities'], () => mastersApi.getCommodities());
   const { data: eqData } = useQ<any[]>(['admin', 'equipment'], () => mastersApi.getEquipment());
 
-  const vessels = (Array.isArray(vesselData) && vesselData.length > 0) ? vesselData : seedVessels;
-  const ports = (Array.isArray(portData) && portData.length > 0) ? portData : seedPorts;
-  const commodities = (Array.isArray(commData) && commData.length > 0) ? commData : seedCommodities;
-  const equipment = (Array.isArray(eqData) && eqData.length > 0) ? eqData : seedEquipment;
+  const vessels = Array.isArray(vesselData) ? vesselData : [];
+  const ports = Array.isArray(portData) ? portData : [];
+  const commodities = Array.isArray(commData) ? commData : [];
+  const equipment = Array.isArray(eqData) ? eqData : [];
 
   const [truck, setTruck] = useState<Truck | null>(null);
   const [driver, setDriver] = useState<Driver | null>(null);
@@ -65,8 +63,8 @@ export function MastersView() {
           icon={<RefreshCw />}
           perm="admin.config.manage"
           onClick={() => {
-            mastersApi.runSync('truck').catch(() => {});
-            mastersApi.runSync('driver').catch(() => {});
+            mastersApi.runSync('truck').catch(() => { });
+            mastersApi.runSync('driver').catch(() => { });
             toast('Sync from NG started');
           }}
         >
@@ -96,8 +94,8 @@ export function MastersView() {
             onRow={setTruck}
             cols={[
               { key: 'p', header: 'Plate', render: (t) => <span className="unitno unitno-sm">{t.plateDisplay}</span> },
-              { key: 'k', header: 'Kind', render: (t) => <span className="small">{{ TRUCK: 'Truck', TRAILER: 'Trailer', CAR_CARRIER: 'Car carrier' }[t.vehicleKind ?? 'TRUCK']}</span> },
-              { key: 't', header: 'Transporter', render: (t) => pname(t.transporterPartyId) },
+              { key: 'k', header: 'Kind', render: (t) => <span className="small">{({ TRUCK: 'Truck', TRAILER: 'Trailer', CAR_CARRIER: 'Car carrier' } as Record<string, string>)[t.vehicleKind ?? 'TRUCK']}</span> },
+              { key: 't', header: 'Transporter', render: (t: any) => t.transporterName || pname(t.transporterPartyId) },
               { key: 'm', header: 'Make and model', render: (t) => <span className="small">{t.makeModel}</span> },
               { key: 'tare', header: 'Tare', num: true, render: (t) => `${t.tareKg?.toLocaleString()} kg` },
               { key: 's', header: 'Source', render: (t) => <SourcePill source={t.source} sync={t.syncStatus} /> },
@@ -124,7 +122,7 @@ export function MastersView() {
                 { key: 'n', header: 'Driver', render: (d) => <strong>{d.driverName}</strong> },
                 { key: 'l', header: 'Licence', render: (d) => <span className="adm-cond">{d.licenceNo} <span className="faint">· class {d.licenceClass} · {d.licenceCountry}</span></span> },
                 { key: 'e', header: 'Licence expiry', render: (d) => <LicenceState expiry={d.licenceExpiry} /> },
-                { key: 't', header: 'Transporter', render: (d) => pname(d.transporterPartyId) },
+                { key: 't', header: 'Transporter', render: (d: any) => d.transporterName || pname(d.transporterPartyId) },
                 { key: 'ph', header: 'Phone', render: (d) => <span className="small">{d.phone}</span> },
                 { key: 's', header: 'Source', render: (d) => <SourcePill source={d.source} sync={d.syncStatus} /> },
               ] satisfies Col<Driver>[]}
@@ -144,7 +142,7 @@ export function MastersView() {
               { key: 'i', header: 'IMO number', render: (v) => <span className="adm-cond">{v.imoNo}</span> },
               { key: 'c', header: 'Call sign', render: (v) => <span className="adm-cond">{v.callSign}</span> },
               { key: 'f', header: 'Flag', render: (v) => v.flagCountry },
-              { key: 'o', header: 'Operator', render: (v) => pname(v.operatorPartyId) },
+              { key: 'o', header: 'Operator', render: (v: any) => v.operatorName || pname(v.operatorPartyId) },
               { key: 's', header: 'Source', render: () => <SourcePill source="NG" /> },
             ]}
           />
@@ -188,7 +186,7 @@ export function MastersView() {
         <LocalTable
           title="Yard equipment"
           addLabel="Add equipment"
-          rows={equipment}
+          rows={equipment.filter((e) => !q || (e.equipmentName ?? '').toUpperCase().includes(q.toUpperCase()) || (e.equipmentCode ?? '').toUpperCase().includes(q.toUpperCase()))}
           rowKey={(e) => e.equipmentId!}
           toolbar={toolbar()}
           cols={[
@@ -218,7 +216,7 @@ export function MastersView() {
             ['Tare (kg)', truck.tareKg?.toLocaleString()],
           ]}
           onSave={(note, flag) => {
-            if (truck.truckId) mastersApi.updateTruck(Number(truck.truckId), { localNote: note, gateBlocked: flag }).catch(() => {});
+            if (truck.truckId) mastersApi.updateTruck(Number(truck.truckId), { localNote: note, gateBlocked: flag }).catch(() => { });
             setTrucks((all) => all.map((t) => (t.truckId === truck.truckId ? { ...t, localNote: note, gateBlocked: flag } : t)));
             toast('Local notes saved');
           }}
@@ -244,7 +242,7 @@ export function MastersView() {
             ['Transporter', pname(driver.transporterPartyId)],
           ]}
           onSave={(note) => {
-            if (driver.driverId) mastersApi.updateDriver(Number(driver.driverId), { localNote: note }).catch(() => {});
+            if (driver.driverId) mastersApi.updateDriver(Number(driver.driverId), { localNote: note }).catch(() => { });
             setDrivers((all) => all.map((d) => (d.driverId === driver.driverId ? { ...d, localNote: note } : d)));
             toast('Local notes saved');
           }}

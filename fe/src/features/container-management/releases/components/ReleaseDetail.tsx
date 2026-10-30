@@ -9,10 +9,10 @@ import {
   StatusPill, Textarea, Timeline, UnitNo, fmtD, fmtDT, fmtT, useToast, type Cond, type TLItem,
 } from '@/ds/components';
 import { useSession } from '@/app/session';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { consignment, partyName } from '@/mock/core';
 import { at, day } from '@/mock/gen';
-import { RO_KIND, allApprovals, checksFor, hoursUntil, raiseApproval, releaseOrder, type RO } from '@/mock/cargo';
+import { RO_KIND, allApprovals, checksFor, hoursUntil, raiseApproval, type RO } from '@/mock/cargo';
 import { Countdown, Evidence, QrCode } from '@/features/container-management/shared';
 
 /* GET /release-orders/{id}, :evaluate, :approve, :revalidate, :cancel.
@@ -37,7 +37,12 @@ export function ReleaseDetail() {
   const toast = useToast();
   const qc = useQueryClient();
   const { can } = useSession();
-  const { data: seed } = useQ(['release-order', releaseOrderId], () => delay(releaseOrder(Number(releaseOrderId))));
+  const { data: seed } = useQ(['release-order', releaseOrderId], () =>
+    api.get<any>(`/release-orders/${releaseOrderId}`)
+      .catch(() => api.get<any>(`/releases/${releaseOrderId}`))
+      .then((r) => r?.item || r?.data || r || null)
+      .catch(() => null)
+  );
   const [patch, setPatch] = useState<Partial<RO>>({});
   const [evaluatedAt, setEvaluatedAt] = useState(at(0.2));
   const [approveOpen, setApproveOpen] = useState(false);
@@ -154,7 +159,7 @@ export function ReleaseDetail() {
             qc.invalidateQueries({ queryKey: ['release-order', releaseOrderId] });
             qc.invalidateQueries({ queryKey: ['release-orders'] });
             qc.invalidateQueries({ queryKey: ['units'] });
-          } catch (e) {}
+          } catch (e) { }
           const to = at(-50);
           setPatch((p) => ({ ...p, status: 'APPROVED', approvedAt: at(0), approvedBy: 'Doc & clearance · Neema M.', validFrom: at(0), validTo: to, paidThrough: to, qrToken: `Q${r.releaseOrderId}${(r.releaseNo ?? '').slice(-4)}`, validityHistory: [{ changeKind: 'INITIAL', newValidTo: to, changedAt: at(0) }] }));
           toast(`Release approved: ${r.releaseNo}`);
@@ -166,7 +171,7 @@ export function ReleaseDetail() {
             await api.post(`/release-orders/${r.releaseOrderId}:revalidate`);
             qc.invalidateQueries({ queryKey: ['release-order', releaseOrderId] });
             qc.invalidateQueries({ queryKey: ['release-orders'] });
-          } catch (e) {}
+          } catch (e) { }
           setPatch((p) => ({ ...p, status: (r.unitsOut ?? 0) > 0 ? 'PARTLY_USED' : 'APPROVED', validTo: to, paidThrough: to, qrToken: r.qrToken ?? `Q${r.releaseOrderId}R`, validityHistory: [...(r.validityHistory ?? []), { changeKind: 'REVALIDATED', oldValidTo: r.validTo, newValidTo: to, reason, changedAt: at(0) }] }));
           toast(`Release revalidated to ${fmtD(to)}`);
         }} />
@@ -176,7 +181,7 @@ export function ReleaseDetail() {
             await api.post(`/release-orders/${r.releaseOrderId}:cancel`);
             qc.invalidateQueries({ queryKey: ['release-order', releaseOrderId] });
             qc.invalidateQueries({ queryKey: ['release-orders'] });
-          } catch (e) {}
+          } catch (e) { }
           setPatch((p) => ({ ...p, status: 'CANCELLED' }));
           setCancelOpen(false);
           toast('Release order cancelled');

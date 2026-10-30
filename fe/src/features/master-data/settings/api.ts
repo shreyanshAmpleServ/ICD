@@ -1,14 +1,11 @@
 import { api } from '@/api/client';
-import { fieldRules as seedRules, holidays as seedHol } from '@/mock/admin';
 
 export const settingsApi = {
   getFieldRules: async () => {
     try {
       const res = await api.get<any>('/field-rules');
-      return res?.items ?? (Array.isArray(res) ? res : seedRules);
-    } catch {
-      return seedRules;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   createFieldRule: async (data: any) => {
     return api.post<any>('/field-rules', data);
@@ -24,10 +21,8 @@ export const settingsApi = {
   getHolidays: async (calendarId = 1) => {
     try {
       const res = await api.get<any>(`/calendars/${calendarId}/holidays`);
-      return res?.items ?? (Array.isArray(res) ? res : seedHol);
-    } catch {
-      return seedHol;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   addHoliday: async (calendarId: number, data: any) => {
     return api.post<any>(`/calendars/${calendarId}/holidays`, data);

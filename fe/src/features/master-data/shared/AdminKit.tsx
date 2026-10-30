@@ -5,7 +5,7 @@ import {
   Banner, Button, Drawer, Field, Page, PageHeader, Panel, Pill, SearchInput, Textarea, cx,
 } from '@/ds/components';
 import type { Grant } from '@/app/roles';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import type { Source } from '@/mock/admin';
 import { adminApi } from '../api';
 import './admin.css';
@@ -145,29 +145,29 @@ export function GrantChip({ g }: { g: Grant | null | undefined }) {
 /** Read from API (with fallback to seed data), then keep local edits for the session. */
 export function useEditable<T>(
   key: string,
-  src: T[],
+  _src: T[],
   fetcher?: () => Promise<T[] | { items: T[] } | any>
 ) {
   const { data, refetch } = useQ<T[]>(['admin', key], async () => {
     if (fetcher) {
       try {
         const res = await fetcher();
-        if (Array.isArray(res)) return (res.length > 0 ? res : src) as T[];
+        if (Array.isArray(res)) return res as T[];
         if (res && Array.isArray((res as any).items)) {
-          return ((res as any).items.length > 0 ? (res as any).items : src) as T[];
+          return (res as any).items as T[];
         }
         if (res && typeof res === 'object') return res as T[];
-        return src;
+        return [];
       } catch (err) {
         console.warn(`[useEditable:${key}] Error fetching live data:`, err);
-        return src;
+        return [];
       }
     }
-    return delay(src);
+    return [];
   });
   const [over, setOver] = useState<T[] | null>(null);
-  const rows: T[] = over ?? (Array.isArray(data) ? data : ((data as any)?.items ?? src));
-  const update = (fn: (r: T[]) => T[]) => setOver(fn(over ?? (Array.isArray(data) ? data : ((data as any)?.items ?? src))));
+  const rows: T[] = over ?? (Array.isArray(data) ? data : ((data as any)?.items ?? []));
+  const update = (fn: (r: T[]) => T[]) => setOver(fn(over ?? (Array.isArray(data) ? data : ((data as any)?.items ?? []))));
   return [rows, update, !data, refetch] as const;
 }
 

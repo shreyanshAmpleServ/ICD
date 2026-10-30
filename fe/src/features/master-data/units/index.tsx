@@ -17,7 +17,7 @@ export function UnitTypesView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('types');
   const [cat, setCat] = useState<Cat>('CONTAINER');
-  const [types, setTypes] = useEditable<UT>('unitTypes', seedTypes, () => unitTypesApi.getUnitTypes());
+  const [types, setTypes] = useEditable<UT>('unitTypes', [], () => unitTypesApi.getUnitTypes());
   const { data: identityRulesData } = useQ<any>(['admin', 'identityRules'], () => unitTypesApi.getIdentityRules());
   const { data: cargoRegimesData } = useQ<any>(['admin', 'cargoRegimes'], () => unitTypesApi.getCargoRegimes());
   const identityRules = (Array.isArray(identityRulesData) && identityRulesData.length > 0) ? identityRulesData : seedRules;

@@ -1,14 +1,11 @@
 import { api } from '@/api/client';
-import { documentTypes as seedDocs, numberSequences as seedSeq } from '@/mock/admin';
 
 export const documentsApi = {
   getNumberSequences: async () => {
     try {
       const res = await api.get<any>('/number-sequences');
-      return res?.items ?? (Array.isArray(res) ? res : seedSeq);
-    } catch {
-      return seedSeq;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   updateNumberSequence: async (id: number, data: any) => {
     return api.patch<any>(`/number-sequences/${id}`, data);
@@ -16,10 +13,8 @@ export const documentsApi = {
   getDocumentTypes: async () => {
     try {
       const res = await api.get<any>('/document-types');
-      return res?.items ?? (Array.isArray(res) ? res : seedDocs);
-    } catch {
-      return seedDocs;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   createDocumentType: async (data: any) => {
     return api.post<any>('/document-types', data);

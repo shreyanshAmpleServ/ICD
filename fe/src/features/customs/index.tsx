@@ -10,10 +10,10 @@ import {
   StatusPill, Tabs, Textarea, UnitNo, fmtT, useToast,
 } from '@/ds/components';
 import { REF_TYPE_NAME } from '@/mock/control';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { allStays, consignment, unitsOf } from '@/mock/core';
 import { at, day } from '@/mock/gen';
-import { EXAM_BAYS, allCustomsRefs, examsWaiting, exams as seedExams, hoursUntil, type ExamRow } from '@/mock/cargo';
+import { EXAM_BAYS, hoursUntil, type ExamRow } from '@/mock/cargo';
 import { CustomsRefDrawer } from './components/CustomsRefDrawer';
 
 export { customsApi } from './api';
@@ -25,14 +25,18 @@ const unitNoOf = (id?: number | null) => allStays.find((s) => s.unitStayId === i
 
 export function Customs() {
   const [tab, setTab] = useState<TabId>('refs');
-  const { data: refsSeed = [] } = useQ(['customs-refs'], () => delay(allCustomsRefs));
-  const { data: dbExams = [] } = useQ(['customs-exams'], () => api.get<{ items: ExamRow[] }>('/exams').then(r => r.items || []).catch(() => seedExams));
+  const { data: refsSeed = [] } = useQ(['customs-refs'], () =>
+    api.get<any>('/customs/refs').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbExams = [] } = useQ(['customs-exams'], () =>
+    api.get<any>('/exams').then(r => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
   const [added, setAdded] = useState<S<'CustomsRef'>[]>([]);
   const [lastEffect, setLastEffect] = useState<{ ref: string; n: number; cons?: string } | null>(null);
   const [refOpen, setRefOpen] = useState(false);
   const [localExams, setLocalExams] = useState<ExamRow[] | null>(null);
-  const [waiting, setWaiting] = useState<ExamRow[]>(examsWaiting);
-  const exams = localExams ?? (dbExams.length > 0 ? dbExams : seedExams);
+  const [waiting, setWaiting] = useState<ExamRow[]>([]);
+  const exams = localExams ?? (Array.isArray(dbExams) ? dbExams : []);
   const setExams = (fn: any) => setLocalExams(typeof fn === 'function' ? fn(exams) : fn);
   const refs = [...added, ...refsSeed];
   const bonds = refs.filter((r) => r.refTypeCode === 'TRANSIT_BOND' || r.refTypeCode === 'TRANSIT_DECL');
@@ -95,7 +99,7 @@ function Refs({ refs, added, onAdd }: { refs: S<'CustomsRef'>[]; added: S<'Custo
       cols={[
         { key: 't', header: 'Type', render: (r) => <strong className="small">{REF_TYPE_NAME[r.refTypeCode] ?? r.refTypeCode}</strong> },
         { key: 'n', header: 'Number', render: (r) => <ReferenceCell refNo={r.refNo} /> },
-        { key: 'on', header: 'Applies to', render: (r) => r.unitStayId ? <UnitNo no={unitNoOf(r.unitStayId) ?? '—'} to={`/units/${r.unitStayId}`} /> : <Link className="small" to={`/consignments/${r.consignmentId}`}>{consignment(r.consignmentId)?.refNo}</Link> },
+        { key: 'on', header: 'Applies to', render: (r: any) => r.unitStayId ? <UnitNo no={r.unitNo || (unitNoOf(r.unitStayId) ?? '—')} to={`/units/${r.unitStayId}`} /> : <Link className="small" to={`/consignments/${r.consignmentId}`}>{r.consignmentRef || consignment(r.consignmentId)?.refNo || `Consignment #${r.consignmentId}`}</Link> },
         { key: 'd', header: 'Date', render: (r) => <DateCell value={r.refDate} /> },
         { key: 'v', header: 'Valid to', render: (r) => <DateCell value={r.validTo} /> },
         { key: 'a', header: 'Amount', num: true, render: (r) => <MoneyCell amount={r.amount} currency={r.amountCurrency || 'USD'} /> },
@@ -166,7 +170,7 @@ function ScheduleExam({ ex, exams, onClose, onDone }: { ex: ExamRow | null; exam
         try {
           await api.post('/exams', { unitStayId: Number(unit), bay, scheduledTime: time, examType: type });
           qc.invalidateQueries({ queryKey: ['customs-exams'] });
-        } catch (e) {}
+        } catch (e) { }
         onDone({ ...(ex ?? {}), examId: ex?.examId ?? 700 + exams.length, unitStayId: Number(unit), unitNo: s?.cargoUnit?.unitNo || (s as any)?.unitNo || 'UNIT', bay, examType: type, authority: 'CUSTOMS', status: 'SCHEDULED', scheduledAt: `${day(0)}T${time}:00+03:00`, noticeRef: ex?.noticeRef });
         toast(`Exam scheduled at ${bay}, ${time}. Move order created.`); onClose();
       }}>Schedule exam</Button></>}>
@@ -196,7 +200,7 @@ function RecordResult({ ex, onClose, onDone }: { ex: ExamRow; onClose: () => voi
           await api.post(`/exams/${ex.examId}:complete`, { outcome: result });
           qc.invalidateQueries({ queryKey: ['customs-exams'] });
           qc.invalidateQueries({ queryKey: ['units'] });
-        } catch (e) {}
+        } catch (e) { }
         onDone(result);
         toast('Exam result recorded');
         onClose();
@@ -237,15 +241,17 @@ function Bonds({ bonds }: { bonds: S<'CustomsRef'>[] }) {
           { key: 'd', header: 'Destination', render: (r) => <span className="small">{consignment(r.consignmentId)?.destinationCountry ?? '—'}</span> },
           { key: 'u', header: 'Units still here', num: true, render: (r) => unitsOf(r.consignmentId ?? 0).filter((s) => s.physicalStatus === 'IN_YARD').length },
           { key: 'a', header: 'Amount', num: true, render: (r) => <MoneyCell amount={r.amount} currency={r.amountCurrency || 'USD'} /> },
-          { key: 'v', header: 'Valid to', render: (r) => {
-            const h = hoursUntil((r.validTo ?? '') + 'T23:59:00+03:00');
-            return (
-              <span className="small row" style={{ gap: 6 }}>
-                <DateCell value={r.validTo} />
-                {r.status === 'ACTIVE' && (h < 0 ? <Pill tone="stop">Ended</Pill> : h < 24 * 7 ? <Pill tone="wait" icon={<Timer />}>{Math.ceil(h / 24)} days left</Pill> : null)}
-              </span>
-            );
-          } },
+          {
+            key: 'v', header: 'Valid to', render: (r) => {
+              const h = hoursUntil((r.validTo ?? '') + 'T23:59:00+03:00');
+              return (
+                <span className="small row" style={{ gap: 6 }}>
+                  <DateCell value={r.validTo} />
+                  {r.status === 'ACTIVE' && (h < 0 ? <Pill tone="stop">Ended</Pill> : h < 24 * 7 ? <Pill tone="wait" icon={<Timer />}>{Math.ceil(h / 24)} days left</Pill> : null)}
+                </span>
+              );
+            }
+          },
           { key: 's', header: 'Status', render: (r) => <StatusCell value={r.status} track="customs" /> },
           { key: 'x', header: '', render: (r) => r.status === 'ACTIVE' && hoursUntil((r.validTo ?? '') + 'T23:59:00+03:00') < 24 * 7 ? <Button size="sm" perm="customs.ref.edit" onClick={() => toast('Reminder sent to the agent')}>Remind agent</Button> : null },
         ]}

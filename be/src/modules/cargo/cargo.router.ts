@@ -300,4 +300,49 @@ router.get(
   }
 );
 
+// ------------------------------------------------------------------ Dangerous Goods (Global 🌐)
+router.get(
+  "/dg-lines",
+  requireSite(false),
+  requirePermission("consignment.view"),
+  async (req, res) => {
+    try {
+      const items = await cargoService.getDgLines();
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+router.get(
+  "/units/:unitStayId/dg-lines",
+  requireSite(false),
+  requirePermission("consignment.view"),
+  async (req, res) => {
+    try {
+      const all = await cargoService.getDgLines();
+      const items = all.filter((l: any) => String(l.unitStayId) === req.params.unitStayId);
+      res.json({ items, total: items.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+router.put(
+  "/units/:unitStayId/dg-lines",
+  requireSite(false),
+  requirePermission("consignment.edit", "DO"),
+  async (req, res) => {
+    try {
+      const lines = Array.isArray(req.body) ? req.body : [req.body];
+      const saved = await cargoService.saveDgLines(req.params.unitStayId, lines);
+      res.json({ items: saved, total: saved.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
 export const cargoRouter = router;

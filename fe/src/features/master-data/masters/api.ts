@@ -1,60 +1,89 @@
 import { api } from '@/api/client';
-import { commodities as seedCommodities, drivers as seedDrivers, equipment as seedEquipment, ports as seedPorts, trucks as seedTrucks, vessels as seedVessels } from '@/mock/admin';
 
 export const mastersApi = {
   getTrucks: async () => {
     try {
       const res = await api.get<any>('/trucks');
-      return res?.items ?? (Array.isArray(res) ? res : seedTrucks);
+      return res?.items ?? (Array.isArray(res) ? res : []);
     } catch {
-      return seedTrucks;
+      return [];
     }
   },
   updateTruck: async (id: number, data: any) => {
     return api.patch<any>(`/trucks/${id}`, data);
   },
+  createTruck: async (data: any) => {
+    return api.post<any>('/trucks', data);
+  },
   getDrivers: async () => {
     try {
       const res = await api.get<any>('/drivers');
-      return res?.items ?? (Array.isArray(res) ? res : seedDrivers);
+      return res?.items ?? (Array.isArray(res) ? res : []);
     } catch {
-      return seedDrivers;
+      return [];
     }
   },
   updateDriver: async (id: number, data: any) => {
     return api.patch<any>(`/drivers/${id}`, data);
   },
+  createDriver: async (data: any) => {
+    return api.post<any>('/drivers', data);
+  },
   getVessels: async () => {
     try {
       const res = await api.get<any>('/vessels');
-      return res?.items ?? (Array.isArray(res) ? res : seedVessels);
+      return res?.items ?? (Array.isArray(res) ? res : []);
     } catch {
-      return seedVessels;
+      return [];
     }
+  },
+  updateVessel: async (id: number, data: any) => {
+    return api.patch<any>(`/vessels/${id}`, data);
+  },
+  createVessel: async (data: any) => {
+    return api.post<any>('/vessels', data);
   },
   getPorts: async () => {
     try {
       const res = await api.get<any>('/ports');
-      return res?.items ?? (Array.isArray(res) ? res : seedPorts);
+      return res?.items ?? (Array.isArray(res) ? res : []);
     } catch {
-      return seedPorts;
+      return [];
     }
+  },
+  createPort: async (data: any) => {
+    return api.post<any>('/ports', data);
+  },
+  updatePort: async (id: number, data: any) => {
+    return api.patch<any>(`/ports/${id}`, data);
   },
   getCommodities: async () => {
     try {
       const res = await api.get<any>('/commodities');
-      return res?.items ?? (Array.isArray(res) ? res : seedCommodities);
+      return res?.items ?? (Array.isArray(res) ? res : []);
     } catch {
-      return seedCommodities;
+      return [];
     }
+  },
+  createCommodity: async (data: any) => {
+    return api.post<any>('/commodities', data);
+  },
+  updateCommodity: async (id: number, data: any) => {
+    return api.patch<any>(`/commodities/${id}`, data);
   },
   getEquipment: async () => {
     try {
       const res = await api.get<any>('/equipment');
-      return res?.items ?? (Array.isArray(res) ? res : seedEquipment);
+      return res?.items ?? (Array.isArray(res) ? res : []);
     } catch {
-      return seedEquipment;
+      return [];
     }
+  },
+  createEquipment: async (data: any) => {
+    return api.post<any>('/equipment', data);
+  },
+  updateEquipment: async (id: number, data: any) => {
+    return api.patch<any>(`/equipment/${id}`, data);
   },
   runSync: async (entityKind: string) => {
     return api.post<any>('/sync/run', { entityKind });

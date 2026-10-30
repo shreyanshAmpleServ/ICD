@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Banner, Button, Panel, Tabs, useToast } from '@/ds/components';
-import { SRC, fieldRules as seedRules, holidays as seedHol, type FieldRule } from '@/mock/admin';
+import { SRC, holidays as seedHol, type FieldRule } from '@/mock/admin';
 import { AuditNote, SetupPage, useEditable } from '../shared/AdminKit';
 import { settingsApi } from './api';
 import { FieldRulesMatrix } from './components/FieldRulesMatrix';
@@ -17,8 +17,8 @@ type Hol = (typeof seedHol)[number];
 export function SettingsView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('fields');
-  const [rules, setRules] = useEditable<FieldRule>('fieldRules', seedRules, () => settingsApi.getFieldRules());
-  const [hols, setHols] = useEditable<Hol>('holidays', seedHol, () => settingsApi.getHolidays());
+  const [rules, setRules] = useEditable<FieldRule>('fieldRules', [], () => settingsApi.getFieldRules());
+  const [hols, setHols] = useEditable<Hol>('holidays', [], () => settingsApi.getHolidays());
   const [add, setAdd] = useState(false);
   const [addHol, setAddHol] = useState(false);
   const usedRoles = [...new Set(rules.map((r) => r.roleCode))];

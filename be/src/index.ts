@@ -1,3 +1,4 @@
+(BigInt.prototype as any).toJSON = function() { return Number(this); };
 import { initPrisma } from './configs/prisma';
 import { startServer } from './server';
 

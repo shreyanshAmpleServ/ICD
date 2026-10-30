@@ -12,7 +12,7 @@ import {
 import { useSession } from '@/app/session';
 import { useQ, delay } from '@/api/query';
 import { allStays } from '@/mock/core';
-import { holdTypeName, holdTypes, holds as seedHolds } from '@/mock/control';
+import { holdTypeName, holdTypes } from '@/mock/control';
 import { at } from '@/mock/gen';
 import { ME, raiseApproval } from '@/mock/cargo';
 import { Evidence, UnitPicker } from '@/features/container-management/shared';
@@ -25,12 +25,14 @@ export { holdsApi } from './api';
 type HoldRow = S<'Hold'> & { liftRequest?: string };
 type St = 'ACTIVE' | 'LIFTED' | 'all';
 const AUTH: Record<string, string> = { CUSTOMS: 'Customs (TRA)', SHIPPING_LINE: 'Shipping line', ICD: 'Depot (ICD)', OTHER_GOVT: 'Other government' };
-const typeOf = (c: string) => holdTypes.find((h) => h.holdCode === c)!;
+const typeOf = (c: string): any => holdTypes.find((h) => h.holdCode === c) || { authority: 'CUSTOMS', holdName: c, holdCode: c };
 
 export function Holds() {
-  const { data: seed = [] } = useQ(['holds'], () => delay(seedHolds));
+  const { data: seed = [] } = useQ(['holds'], () =>
+    api.get<any>('/holds').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
   const [local, setLocal] = useState<HoldRow[] | null>(null);
-  const rows0: HoldRow[] = local ?? seed;
+  const rows0: HoldRow[] = local ?? (Array.isArray(seed) ? seed : []);
   const [st, setSt] = useState<St>('ACTIVE');
   const [type, setType] = useState('ALL');
   const [auth, setAuth] = useState('ALL');

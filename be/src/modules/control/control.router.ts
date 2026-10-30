@@ -389,7 +389,7 @@ router.patch(
 );
 
 router.get(
-  "/release-orders",
+  ["/release-orders", "/releases"],
   requireSite(false),
   requirePermission("consignment.view"),
   async (req, res) => {
@@ -403,7 +403,7 @@ router.get(
 );
 
 router.post(
-  "/release-orders",
+  ["/release-orders", "/releases"],
   requireSite(false),
   requirePermission("release.issue", "DO"),
   async (req, res) => {
@@ -417,7 +417,7 @@ router.post(
 );
 
 router.get(
-  "/release-orders/:releaseOrderId",
+  ["/release-orders/:releaseOrderId", "/releases/:releaseOrderId"],
   requireSite(false),
   requirePermission("consignment.view"),
   async (req, res) => {

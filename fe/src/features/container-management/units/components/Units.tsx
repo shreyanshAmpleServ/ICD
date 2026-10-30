@@ -10,7 +10,6 @@ import { FLOW } from '@/ds/status';
 import { useSession } from '@/app/session';
 import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { consignments, staysAt } from '@/mock/core';
 
 /* GET /units with filters. The quick filters are the questions people ask
    most: what is held, what can leave, what is about to start costing money. */
@@ -27,10 +26,10 @@ export function Units() {
   const [addOpen, setAddOpen] = useState(false);
 
   const { data: dbUnits = [] } = useQ(['units', site.siteId], () =>
-    api.get<{ items: any[] }>('/units').then((r) => r.items).catch(() => staysAt(site.siteId))
+    api.get<any>('/units').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
 
-  const data = dbUnits.length > 0 ? dbUnits : staysAt(site.siteId);
+  const data = Array.isArray(dbUnits) ? dbUnits : [];
 
   const counts = useMemo(() => ({
     held: data.filter((s: any) => (s.activeHoldCount ?? s.unitSummary?.activeHoldCount ?? 0) > 0).length,
@@ -212,9 +211,9 @@ function AddExpectedUnitDrawer({
   const [submitting, setSubmitting] = useState(false);
 
   const { data: dbConsignments = [] } = useQ(['consignments'], () =>
-    api.get<{ items: any[] }>('/consignments').then((r) => r.items).catch(() => consignments)
+    api.get<any>('/consignments').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
-  const consList = dbConsignments.length > 0 ? dbConsignments : consignments;
+  const consList = Array.isArray(dbConsignments) ? dbConsignments : [];
 
   const handleSubmit = async () => {
     if (!unitNo.trim()) return;

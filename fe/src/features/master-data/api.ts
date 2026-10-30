@@ -1,20 +1,12 @@
 import { api } from '@/api/client';
-import {
-  users, sites, gates, unitTypes, trucks, drivers, vessels, ports, commodities, equipment,
-  releaseRules, inspectionTemplates, damageCodes, integrations, syncStates, outbox, models, fieldRules,
-  holdTypesSeed, approvalPolicies, exceptionTypes, periods, chargeCodes, taxCodes, paymentChannels,
-  numberSequences, documentTypes, notificationTemplates, notificationRules, printTemplates, countryPacks, company
-} from '@/mock/admin';
 
 export const adminApi = {
   // 1. Company & Sites
   getCompany: async (id = 1) => {
     try {
       const res = await api.get<any>(`/companies/${id}`);
-      return res || company;
-    } catch {
-      return company;
-    }
+      return res || null;
+    } catch { return []; }
   },
   updateCompany: async (id: number, data: any) => {
     return api.patch<any>(`/companies/${id}`, data);
@@ -22,10 +14,8 @@ export const adminApi = {
   getSites: async () => {
     try {
       const res = await api.get<any>('/sites');
-      return res?.items ?? (Array.isArray(res) ? res : sites);
-    } catch {
-      return sites;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   createSite: async (data: any) => {
     return api.post<any>('/sites', data);
@@ -36,10 +26,8 @@ export const adminApi = {
   getPacks: async () => {
     try {
       const res = await api.get<any>('/country-packs');
-      return res?.items ?? (Array.isArray(res) ? res : countryPacks);
-    } catch {
-      return countryPacks;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
 
   // 2. Yard Designer
@@ -63,10 +51,8 @@ export const adminApi = {
   getGates: async () => {
     try {
       const res = await api.get<any>('/gates');
-      return res?.items ?? (Array.isArray(res) ? res : gates);
-    } catch {
-      return gates;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   createGate: async (data: any) => {
     return api.post<any>('/gates', data);
@@ -101,10 +87,8 @@ export const adminApi = {
   getUnitTypes: async () => {
     try {
       const res = await api.get<any>('/unit-types');
-      return res?.items ?? (Array.isArray(res) ? res : unitTypes);
-    } catch {
-      return unitTypes;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   createUnitType: async (data: any) => {
     return api.post<any>('/unit-types', data);
@@ -133,24 +117,15 @@ export const adminApi = {
   getMasters: async () => {
     try {
       const [t, d, v, p, c, eq] = await Promise.all([
-        api.get<any>('/trucks').catch(() => ({ items: trucks })),
-        api.get<any>('/drivers').catch(() => ({ items: drivers })),
-        api.get<any>('/vessels').catch(() => ({ items: vessels })),
-        api.get<any>('/ports').catch(() => ({ items: ports })),
-        api.get<any>('/commodities').catch(() => ({ items: commodities })),
-        api.get<any>('/equipment').catch(() => ({ items: equipment })),
+        api.get<any>('/trucks').catch(() => ({ items: [] })),
+        api.get<any>('/drivers').catch(() => ({ items: [] })),
+        api.get<any>('/vessels').catch(() => ({ items: [] })),
+        api.get<any>('/ports').catch(() => ({ items: [] })),
+        api.get<any>('/commodities').catch(() => ({ items: [] })),
+        api.get<any>('/equipment').catch(() => ({ items: [] })),
       ]);
-      return {
-        trucks: t?.items ?? (Array.isArray(t) ? t : trucks),
-        drivers: d?.items ?? (Array.isArray(d) ? d : drivers),
-        vessels: v?.items ?? (Array.isArray(v) ? v : vessels),
-        ports: p?.items ?? (Array.isArray(p) ? p : ports),
-        commodities: c?.items ?? (Array.isArray(c) ? c : commodities),
-        equipment: eq?.items ?? (Array.isArray(eq) ? eq : equipment),
-      };
-    } catch {
-      return { trucks, drivers, vessels, ports, commodities, equipment };
-    }
+      return { trucks: t?.items ?? (Array.isArray(t) ? t : []), drivers: d?.items ?? (Array.isArray(d) ? d : []), vessels: v?.items ?? (Array.isArray(v) ? v : []), ports: p?.items ?? (Array.isArray(p) ? p : []), commodities: c?.items ?? (Array.isArray(c) ? c : []), equipment: eq?.items ?? (Array.isArray(eq) ? eq : []) };
+    } catch { return { trucks: [], drivers: [], vessels: [], ports: [], commodities: [], equipment: [] }; }
   },
   createTruck: async (data: any) => api.post<any>('/trucks', data),
   updateTruck: async (id: number, data: any) => api.patch<any>(`/trucks/${id}`, data),
@@ -163,10 +138,8 @@ export const adminApi = {
   getUsers: async () => {
     try {
       const res = await api.get<any>('/users');
-      return res?.items ?? (Array.isArray(res) ? res : users);
-    } catch {
-      return users;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   createUser: async (data: any) => {
     return api.post<any>('/users', data);
@@ -201,20 +174,13 @@ export const adminApi = {
   getRules: async () => {
     try {
       const [h, r, p, e] = await Promise.all([
-        api.get<any>('/hold-types').catch(() => ({ items: holdTypesSeed })),
-        api.get<any>('/release-rules').catch(() => ({ items: releaseRules })),
-        api.get<any>('/approval-policies').catch(() => ({ items: approvalPolicies })),
-        api.get<any>('/exception-types').catch(() => ({ items: exceptionTypes })),
+        api.get<any>('/hold-types').catch(() => ({ items: [] })),
+        api.get<any>('/release-rules').catch(() => ({ items: [] })),
+        api.get<any>('/approval-policies').catch(() => ({ items: [] })),
+        api.get<any>('/exception-types').catch(() => ({ items: [] })),
       ]);
-      return {
-        holds: h?.items ?? (Array.isArray(h) ? h : holdTypesSeed),
-        rules: r?.items ?? (Array.isArray(r) ? r : releaseRules),
-        policies: p?.items ?? (Array.isArray(p) ? p : approvalPolicies),
-        exceptions: e?.items ?? (Array.isArray(e) ? e : exceptionTypes),
-      };
-    } catch {
-      return { holds: holdTypesSeed, rules: releaseRules, policies: approvalPolicies, exceptions: exceptionTypes };
-    }
+      return { holds: h?.items ?? (Array.isArray(h) ? h : []), rules: r?.items ?? (Array.isArray(r) ? r : []), policies: p?.items ?? (Array.isArray(p) ? p : []), exceptions: e?.items ?? (Array.isArray(e) ? e : []) };
+    } catch { return { holds: [], rules: [], policies: [], exceptions: [] }; }
   },
   createHoldType: async (data: any) => api.post<any>('/hold-types', data),
   updateReleaseRule: async (id: number, data: any) => api.patch<any>(`/release-rules/${id}`, data),
@@ -225,10 +191,8 @@ export const adminApi = {
   getChecklists: async () => {
     try {
       const res = await api.get<any>('/inspection-templates');
-      return res?.items ?? (Array.isArray(res) ? res : inspectionTemplates);
-    } catch {
-      return inspectionTemplates;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   saveChecklist: async (data: any) => {
     return api.post<any>('/inspection-templates', data);
@@ -236,10 +200,8 @@ export const adminApi = {
   getDamageCodes: async () => {
     try {
       const res = await api.get<any>('/damage-codes');
-      return res?.items ?? (Array.isArray(res) ? res : damageCodes);
-    } catch {
-      return damageCodes;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   createDamageCode: async (data: any) => {
     return api.post<any>('/damage-codes', data);
@@ -249,22 +211,14 @@ export const adminApi = {
   getFinanceSetup: async () => {
     try {
       const [per, chg, tax, pay, gl] = await Promise.all([
-        api.get<any>('/accounting-periods').catch(() => ({ items: periods })),
-        api.get<any>('/charge-codes').catch(() => ({ items: chargeCodes })),
-        api.get<any>('/tax-codes').catch(() => ({ items: taxCodes })),
-        api.get<any>('/payment-channels').catch(() => ({ items: paymentChannels })),
+        api.get<any>('/accounting-periods').catch(() => ({ items: [] })),
+        api.get<any>('/charge-codes').catch(() => ({ items: [] })),
+        api.get<any>('/tax-codes').catch(() => ({ items: [] })),
+        api.get<any>('/payment-channels').catch(() => ({ items: [] })),
         api.get<any>('/gl-settings').catch(() => ({ items: [] })),
       ]);
-      return {
-        periods: per?.items ?? (Array.isArray(per) ? per : periods),
-        charges: chg?.items ?? (Array.isArray(chg) ? chg : chargeCodes),
-        taxCodes: tax?.items ?? (Array.isArray(tax) ? tax : taxCodes),
-        paymentChannels: pay?.items ?? (Array.isArray(pay) ? pay : paymentChannels),
-        glSettings: gl?.items ?? (Array.isArray(gl) ? gl : []),
-      };
-    } catch {
-      return { periods, charges: chargeCodes, taxCodes, paymentChannels, glSettings: [] };
-    }
+      return { periods: per?.items ?? (Array.isArray(per) ? per : []), charges: chg?.items ?? (Array.isArray(chg) ? chg : []), taxCodes: tax?.items ?? (Array.isArray(tax) ? tax : []), paymentChannels: pay?.items ?? (Array.isArray(pay) ? pay : []), glSettings: gl?.items ?? (Array.isArray(gl) ? gl : []) };
+    } catch { return { periods: [], charges: [], taxCodes: [], paymentChannels: [], glSettings: [] }; }
   },
   closePeriod: async (key: string, reason?: string) => {
     return api.post<any>(`/accounting-periods/${key}:close`, { reason });
@@ -277,18 +231,12 @@ export const adminApi = {
   getNotifications: async () => {
     try {
       const [tpl, rules, print] = await Promise.all([
-        api.get<any>('/notification-templates').catch(() => ({ items: notificationTemplates })),
-        api.get<any>('/notification-rules').catch(() => ({ items: notificationRules })),
-        api.get<any>('/print-templates').catch(() => ({ items: printTemplates })),
+        api.get<any>('/notification-templates').catch(() => ({ items: [] })),
+        api.get<any>('/notification-rules').catch(() => ({ items: [] })),
+        api.get<any>('/print-templates').catch(() => ({ items: [] })),
       ]);
-      return {
-        templates: tpl?.items ?? (Array.isArray(tpl) ? tpl : notificationTemplates),
-        rules: rules?.items ?? (Array.isArray(rules) ? rules : notificationRules),
-        printTemplates: print?.items ?? (Array.isArray(print) ? print : printTemplates),
-      };
-    } catch {
-      return { templates: notificationTemplates, rules: notificationRules, printTemplates };
-    }
+      return { templates: tpl?.items ?? (Array.isArray(tpl) ? tpl : []), rules: rules?.items ?? (Array.isArray(rules) ? rules : []), printTemplates: print?.items ?? (Array.isArray(print) ? print : []) };
+    } catch { return { templates: [], rules: [], printTemplates: [] }; }
   },
   updateNotificationTemplate: async (id: number, data: any) => {
     return api.patch<any>(`/notification-templates/${id}`, data);
@@ -298,10 +246,8 @@ export const adminApi = {
   getNumberSequences: async () => {
     try {
       const res = await api.get<any>('/number-sequences');
-      return res?.items ?? (Array.isArray(res) ? res : numberSequences);
-    } catch {
-      return numberSequences;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   updateNumberSequence: async (id: number, data: any) => {
     return api.patch<any>(`/number-sequences/${id}`, data);
@@ -309,10 +255,8 @@ export const adminApi = {
   getDocumentTypes: async () => {
     try {
       const res = await api.get<any>('/document-types');
-      return res?.items ?? (Array.isArray(res) ? res : documentTypes);
-    } catch {
-      return documentTypes;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   createDocumentType: async (data: any) => {
     return api.post<any>('/document-types', data);
@@ -339,28 +283,22 @@ export const adminApi = {
   getIntegrations: async () => {
     try {
       const res = await api.get<any>('/device-integrations');
-      return res?.items ?? (Array.isArray(res) ? res : integrations);
-    } catch {
-      return integrations;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
 
   // 13. Sync & Outbox
   getSyncStatus: async () => {
     try {
       const res = await api.get<any>('/sync/status');
-      return res?.items ?? (Array.isArray(res) ? res : syncStates);
-    } catch {
-      return syncStates;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   getOutbox: async () => {
     try {
       const res = await api.get<any>('/sync/outbox');
-      return res?.items ?? (Array.isArray(res) ? res : outbox);
-    } catch {
-      return outbox;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   runSync: async (entityName: string) => {
     return api.post<any>(`/sync/${entityName}:run`, {});
@@ -370,10 +308,8 @@ export const adminApi = {
   getModels: async () => {
     try {
       const res = await api.get<any>('/models');
-      return res?.items ?? (Array.isArray(res) ? res : models);
-    } catch {
-      return models;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   activateModel: async (modelVersionId: number, reason?: string) => {
     return api.post<any>(`/models/${modelVersionId}:activate`, { reason });
@@ -383,10 +319,8 @@ export const adminApi = {
   getFieldRules: async () => {
     try {
       const res = await api.get<any>('/field-rules');
-      return res?.items ?? (Array.isArray(res) ? res : fieldRules);
-    } catch {
-      return fieldRules;
-    }
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch { return []; }
   },
   createFieldRule: async (data: any) => {
     return api.post<any>('/field-rules', data);

@@ -12,7 +12,7 @@ import { useQ } from '@/api/query';
 import { api } from '@/api/client';
 import { parties, vesselCalls } from '@/mock/core';
 import { iso6346 } from '@/mock/gen';
-import { ISO_TYPE, UNIT_TYPES, manifests, sampleManifestLines, type MLine, type ManifestRow } from '@/mock/cargo';
+import { ISO_TYPE, UNIT_TYPES, sampleManifestLines, type MLine, type ManifestRow } from '@/mock/cargo';
 
 export { manifestsApi } from './api';
 
@@ -32,9 +32,9 @@ const validCd = (u: string) => /^[A-Z]{4}\d{7}$/.test(u) && iso6346(u.slice(0, 1
 export function Manifests() {
   const [view, setView] = useState<View>('import');
   const { data: dbManifests } = useQ(['manifests'], () =>
-    api.get<{ items: ManifestRow[] }>('/manifests').then((r) => r.items).catch(() => manifests)
+    api.get<any>('/manifests').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
-  const past = dbManifests && dbManifests.length > 0 ? dbManifests : manifests;
+  const past = Array.isArray(dbManifests) ? dbManifests : [];
   return (
     <Page>
       <PageHeader title="Manifest import" ms="M1" sub="Load the line's discharge list or CUSCAR/COPRAR file to create consignments and expected units" />
@@ -94,9 +94,9 @@ function Wizard() {
   const toast = useToast();
   const [step, setStep] = useState<Step>('upload');
   const { data: dbVesselCalls } = useQ(['vessel-calls'], () =>
-    api.get<{ items: any[] }>('/vessel-calls').then((r) => r.items).catch(() => vesselCalls)
+    api.get<any>('/vessel-calls').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
-  const calls = dbVesselCalls && dbVesselCalls.length > 0 ? dbVesselCalls : vesselCalls;
+  const calls = Array.isArray(dbVesselCalls) ? dbVesselCalls : [];
   const [vc, setVc] = useState(String(calls[0]?.vesselCallId || '1'));
   const [fmt, setFmt] = useState<'EXCEL' | 'EDI'>('EXCEL');
   const [file, setFile] = useState<string | null>(null);
@@ -230,11 +230,13 @@ function Wizard() {
               { key: 'bl', header: 'BL', render: (l) => <span className="unitno">{l.blNo}</span> },
               { key: 'c', header: 'Consignee', render: (l) => <span className="small">{l.consigneeRaw}{provisional.includes(l.consigneeRaw!) && <div><Pill tone="wait">Provisional party</Pill></div>}</span> },
               { key: 'cm', header: 'Cargo', render: (l) => <span className="xs muted">{l.commodityRaw}<br />{Number(l.grossWeightKg).toLocaleString()} kg</span> },
-              { key: 's', header: 'Check', render: (l) => <LineFix l={l} fixed={fixed} patch={patch} onProvisional={(name) => {
-                setProvisional((p) => [...p, name]);
-                setLines((ls) => ls.map((x) => (x.consigneeRaw === name && x.issue === 'UNKNOWN_CONSIGNEE' ? { ...x, matchStatus: 'NEW', errorText: undefined, issue: undefined } : x)));
-                toast(`Provisional party created: ${name}`);
-              }} /> },
+              {
+                key: 's', header: 'Check', render: (l) => <LineFix l={l} fixed={fixed} patch={patch} onProvisional={(name) => {
+                  setProvisional((p) => [...p, name]);
+                  setLines((ls) => ls.map((x) => (x.consigneeRaw === name && x.issue === 'UNKNOWN_CONSIGNEE' ? { ...x, matchStatus: 'NEW', errorText: undefined, issue: undefined } : x)));
+                  toast(`Provisional party created: ${name}`);
+                }} />
+              },
             ]} />
           </Panel>
           <div className="row-wrap" style={{ justifyContent: 'flex-end' }}>

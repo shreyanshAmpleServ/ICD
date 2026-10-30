@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, MapPin, Pencil, Plus, Power } from 'lucide-react';
 import { Banner, Button, DL, DataTable, Panel, Pill, useToast } from '@/ds/components';
-import { FACILITY_NAME, SRC, calendars, company as seedCompany, countryPacks, sites as seedSites, type CountryPack, type Site } from '@/mock/admin';
+import { FACILITY_NAME, SRC, calendars, type CountryPack, type Site } from '@/mock/admin';
 import { AuditNote, ListPanel, SetupPage, Split, VerifyPill, useEditable } from '../shared/AdminKit';
 import { useQ } from '@/api/query';
 import { sitesApi } from './api';
@@ -16,10 +16,10 @@ const SIGN: Record<string, string> = { SCREEN: 'On screen', PAPER: 'Paper only',
 
 export function SitesView() {
   const toast = useToast();
-  const [sites, setSites] = useEditable<Site>('sites', seedSites, () => sitesApi.getSites());
-  const [packs, setPacks] = useEditable<CountryPack>('packs', countryPacks, () => sitesApi.getPacks());
+  const [sites, setSites] = useEditable<Site>('sites', [], () => sitesApi.getSites());
+  const [packs, setPacks] = useEditable<CountryPack>('packs', [], () => sitesApi.getPacks());
   const { data: compRes } = useQ<any>(['admin', 'company'], () => sitesApi.getCompany());
-  const [company, setCompany] = useState(seedCompany);
+  const [company, setCompany] = useState<any>(compRes || null);
 
   useEffect(() => {
     if (compRes) {
@@ -48,8 +48,8 @@ export function SitesView() {
             selected={sel}
             onSelect={setSel}
             items={[
-              { id: 'company', lead: <Building2 size={18} />, title: company.tradingName ?? company.legalName, sub: 'Company · ' + company.baseCurrency },
-              ...sites.map((s) => ({ id: s.siteId!, lead: <MapPin size={18} />, title: `${s.siteCode} · ${s.siteName}`, sub: s.facilities.join(', '), aside: s.isActive ? undefined : <Pill>Inactive</Pill> })),
+              { id: 'company', lead: <Building2 size={18} />, title: company ? (company.tradingName ?? company.legalName) : 'Company', sub: 'Company · ' + (company?.baseCurrency ?? 'USD') },
+              ...sites.map((s) => ({ id: s.siteId!, lead: <MapPin size={18} />, title: `${s.siteCode} · ${s.siteName}`, sub: (s.facilities || []).join(', '), aside: s.isActive ? undefined : <Pill>Inactive</Pill> })),
             ]}
           />
         }
@@ -61,20 +61,24 @@ export function SitesView() {
               sub="Printed on invoices, receipts and gate passes"
               actions={<Button size="sm" icon={<Pencil />} perm="admin.site.manage" onClick={() => setEdit('company')}>Edit company</Button>}
             >
-              <DL cols items={[
-                ['Legal name', company.legalName], ['Trading name', company.tradingName], ['Company code', company.companyCode],
-                ['TIN', <span key="t" className="adm-cond strong">{company.taxId}</span>], ['VRN (VAT number)', <span key="v" className="adm-cond strong">{company.vatNo}</span>],
-                ['Base currency', company.baseCurrency], ['Country', 'Tanzania'], ['Address', `${company.addressLine1}, ${company.addressLine2}, ${company.city}`],
-                ['Phone', company.phone], ['Email', company.email],
-              ]} />
+              {company && (
+                <DL cols items={[
+                  ['Legal name', company.legalName], ['Trading name', company.tradingName], ['Company code', company.companyCode],
+                  ['TIN', <span key="t" className="adm-cond strong">{company.taxId}</span>], ['VRN (VAT number)', <span key="v" className="adm-cond strong">{company.vatNo}</span>],
+                  ['Base currency', company.baseCurrency], ['Country', 'Tanzania'], ['Address', `${company.addressLine1 || ''}, ${company.addressLine2 || ''}, ${company.city || ''}`],
+                  ['Phone', company.phone], ['Email', company.email],
+                ]} />
+              )}
             </Panel>
             <Panel flush title="Country packs" sub="A pack brings regimes, customs reference types, authority holds and tax codes for one country">
               <DataTable rows={packs} rowKey={(p) => p.packCode} cols={[
                 { key: 'n', header: 'Pack', render: (p) => <><strong>{p.packName}</strong><div className="xs faint">{p.packCode} · version {p.version}</div></> },
                 { key: 'c', header: 'Contains', render: (p) => <span className="small">{p.contents}</span> },
                 { key: 's', header: 'Status', render: (p) => p.isActive ? <Pill tone="go">Active</Pill> : <span className="row-wrap"><Pill>Inactive</Pill>{p.verify && <VerifyPill />}</span> },
-                { key: 'a', header: '', render: (p) => p.isActive ? <span className="xs faint">In use by 3 sites</span>
-                  : <Button size="sm" icon={<Power />} perm="admin.site.manage" onClick={() => setPackOpen(p)}>Activate pack</Button> },
+                {
+                  key: 'a', header: '', render: (p) => p.isActive ? <span className="xs faint">In use by 3 sites</span>
+                    : <Button size="sm" icon={<Power />} perm="admin.site.manage" onClick={() => setPackOpen(p)}>Activate pack</Button>
+                },
               ]} />
             </Panel>
             <AuditNote />
@@ -115,17 +119,19 @@ export function SitesView() {
         )}
       </Split>
 
-      <CompanyDrawer
-        open={edit === 'company'}
-        onClose={() => setEdit(null)}
-        company={company}
-        setCompany={setCompany}
-        onSave={(reason) => {
-          sitesApi.updateCompany(1, { ...company, reason }).catch(() => {});
-          setCompany({ ...company });
-          toast('Company saved');
-        }}
-      />
+      {company && (
+        <CompanyDrawer
+          open={edit === 'company'}
+          onClose={() => setEdit(null)}
+          company={company}
+          setCompany={setCompany}
+          onSave={(reason) => {
+            sitesApi.updateCompany(1, { ...company, reason }).catch(() => { });
+            setCompany({ ...company });
+            toast('Company saved');
+          }}
+        />
+      )}
 
       {site && (
         <SiteDrawer
@@ -134,7 +140,7 @@ export function SitesView() {
           onClose={() => setEdit(null)}
           site={site}
           onSave={(s) => {
-            if (s.siteId) sitesApi.updateSite(Number(s.siteId), s).catch(() => {});
+            if (s.siteId) sitesApi.updateSite(Number(s.siteId), s).catch(() => { });
             setSites((all) => all.map((x) => (x.siteId === s.siteId ? s : x)));
             toast('Site saved');
           }}
@@ -153,7 +159,7 @@ export function SitesView() {
           isActive: true, gates: 0, slots: 0, addressLine1: '', city: ''
         }}
         onSave={(s) => {
-          sitesApi.createSite(s).catch(() => {});
+          sitesApi.createSite(s).catch(() => { });
           setSites((all) => [...all, s]);
           setSel(s.siteId ?? 'company');
           toast('Site added');

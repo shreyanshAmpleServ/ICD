@@ -29,7 +29,7 @@ const tplKey = (t: Tpl) => t.notificationTemplateId!;
 export function NotificationsView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('templates');
-  const [tpls, setTpls] = useEditable<Tpl>('notifTpl', seedTpl, () => notificationsApi.getNotificationTemplates());
+  const [tpls, setTpls] = useEditable<Tpl>('notifTpl', [], () => notificationsApi.getNotificationTemplates());
   const { data: rulesData } = useQ<any[]>(['admin', 'notificationRules'], () => notificationsApi.getNotificationRules());
   const { data: printData } = useQ<any[]>(['admin', 'printTemplates'], () => notificationsApi.getPrintTemplates());
   const notificationRules = Array.isArray(rulesData) && rulesData.length > 0 ? rulesData : seedRules;

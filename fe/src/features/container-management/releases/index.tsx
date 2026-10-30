@@ -5,9 +5,10 @@ import {
   Button, Chips, CommonTable, DateCell, Kpi, MoneyCell, Page, PageHeader,
   PartyCell, ReferenceCell, StatusCell
 } from '@/ds/components';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
+import { api } from '@/api/client';
 import { consignment, partyName } from '@/mock/core';
-import { RO_KIND, allReleaseOrders, hoursUntil, type RO } from '@/mock/cargo';
+import { RO_KIND, hoursUntil, type RO } from '@/mock/cargo';
 import { RequestRelease } from './components/RequestRelease';
 import { Countdown } from '@/features/container-management/shared';
 
@@ -28,8 +29,10 @@ export function Releases() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [, bump] = useState(0);
-  const { data = [] } = useQ(['release-orders'], () => delay(allReleaseOrders));
-  const list = data;
+  const { data: dbData = [] } = useQ(['release-orders'], () =>
+    api.get<any>('/release-orders').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const list = Array.isArray(dbData) ? dbData : [];
   const count = (k: Quick) => list.filter((r) => GROUP[k].includes(r.status)).length;
   const rows = list.filter((r) => (quick === 'all' || GROUP[quick].includes(r.status)) && (!q || (r.releaseNo ?? '').includes(q.toUpperCase()) || (consignment(r.consignmentId)?.refNo ?? '').includes(q.toUpperCase()) || (r.collectorName ?? '').toUpperCase().includes(q.toUpperCase())));
   const expSoon = list.filter((r) => GROUP.valid.includes(r.status) && hoursUntil(r.validTo) < 24).length;
@@ -88,8 +91,8 @@ export function Releases() {
               header: 'Consignment',
               render: (r) => (
                 <div className="stack" style={{ gap: 2 }}>
-                  <span className="small">{consignment(r.consignmentId)?.refNo ?? '—'}</span>
-                  <div className="xs faint">{partyName(consignment(r.consignmentId)?.consigneePartyId)}</div>
+                  <span className="small">{r.consignmentRef || (consignment(r.consignmentId)?.refNo ?? '—')}</span>
+                  <div className="xs faint">{r.requestedByPartyName || partyName(consignment(r.consignmentId)?.consigneePartyId)}</div>
                 </div>
               )
             },

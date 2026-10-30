@@ -9,7 +9,7 @@ import {
 } from '@/ds/components';
 import { useQ, delay } from '@/api/query';
 import { api } from '@/api/client';
-import { allStays, consignments, parties, partyName, vesselCalls } from '@/mock/core';
+import { allStays, consignments, parties, partyName } from '@/mock/core';
 import { hoursUntil, manifests } from '@/mock/cargo';
 import { Countdown, Progress } from '@/features/container-management/shared';
 
@@ -27,7 +27,10 @@ export function VesselCalls() {
   const [quick, setQuick] = useState<Quick>('all');
   const [sel, setSel] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const { data = [] } = useQ(['vessel-calls'], () => delay(vesselCalls));
+  const { data: dbData = [] } = useQ(['vessel-calls'], () =>
+    api.get<any>('/vessel-calls').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const data = Array.isArray(dbData) ? dbData : [];
   const rows = [...data].sort((a, b) => Date.parse(b.eta ?? '') - Date.parse(a.eta ?? '')).filter((v) => quick === 'all' || (quick === 'export') === isExport(v));
   const v = data.find((x) => x.vesselCallId === sel);
   const nextExport = data.find((x) => isExport(x) && x.status === 'EXPECTED');

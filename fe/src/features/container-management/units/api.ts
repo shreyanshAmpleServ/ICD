@@ -1,23 +1,21 @@
 import { api } from '@/api/client';
-import { staysAt, stay } from '@/mock/core';
 
 export const unitsApi = {
   getUnits: async (siteId?: string | number) => {
-    const sId = Number(siteId) || 1;
     try {
-      const res = await api.get<any[]>(siteId ? `/units?siteId=${siteId}` : '/units');
-      return res && res.length > 0 ? res : staysAt(sId);
+      const res = await api.get<any>(siteId ? `/units?siteId=${siteId}` : '/units');
+      return Array.isArray(res) ? res : (res?.items || []);
     } catch {
-      return staysAt(sId);
+      return [];
     }
   },
 
   getUnitDetail: async (unitStayId: string | number) => {
     try {
       const res = await api.get<any>(`/units/${unitStayId}`);
-      return res || stay(Number(unitStayId));
+      return res?.item || res || null;
     } catch {
-      return stay(Number(unitStayId));
+      return null;
     }
   }
 };

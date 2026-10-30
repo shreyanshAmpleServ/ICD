@@ -8,7 +8,7 @@ import {
 } from '@/ds/components';
 import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { allStays, consignments, parties, partyName, vesselCalls } from '@/mock/core';
+import { allStays, parties, partyName, vesselCalls } from '@/mock/core';
 import { Progress } from '@/features/container-management/shared';
 
 export { consignmentsApi } from './api';
@@ -33,14 +33,14 @@ export function Consignments() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const { data: dbConsignments = [] } = useQ(['consignments'], () =>
-    api.get<{ items: any[] }>('/consignments').then((r) => r.items).catch(() => consignments)
+    api.get<any>('/consignments').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
   const { data: dbVesselCalls = [] } = useQ(['vessel-calls'], () =>
-    api.get<{ items: any[] }>('/vessel-calls').then((r) => r.items).catch(() => vesselCalls)
+    api.get<any>('/vessel-calls').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
 
-  const data = dbConsignments.length > 0 ? dbConsignments : consignments;
-  const calls = dbVesselCalls.length > 0 ? dbVesselCalls : vesselCalls;
+  const data = Array.isArray(dbConsignments) ? dbConsignments : [];
+  const calls = Array.isArray(dbVesselCalls) ? dbVesselCalls : [];
 
   const held = useMemo(() => new Set(allStays.filter((s) => (s.activeHoldCount ?? 0) > 0).map((s) => s.consignmentId)), []);
 
