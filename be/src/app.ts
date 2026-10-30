@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import { ENV } from './configs/env';
 import { apiRouter } from './routes';
 import { errorHandler, notFoundHandler } from './middlewares';
+import { responseEnhancer } from './utils';
 
 export function createApp(): Application {
   const app = express();
@@ -18,6 +19,9 @@ export function createApp(): Application {
   // Body Parsing
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
+
+  // Response Enhancer (reusable res.success, res.created, res.error handlers)
+  app.use(responseEnhancer);
 
   // HTTP Request Logging
   app.use(morgan('dev'));

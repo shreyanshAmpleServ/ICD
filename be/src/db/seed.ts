@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 
+import { seedPortalData } from '../scripts/seed-portal';
+
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -754,6 +756,9 @@ export async function seedDatabase() {
       is_read: false
     }
   });
+
+  // 16. Customer Portal Data Seed
+  await seedPortalData();
 
   console.log('🎉 Full database seeding finished successfully! All tables seeded in MSSQL ICD_New.');
 }

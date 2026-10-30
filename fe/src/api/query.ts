@@ -115,9 +115,17 @@ function resolveEndpoint(key: QueryKey): string | null {
     case 'release-order':
       return param ? `/release-orders/${param}` : null;
     case 'portal-units':
-      return '/units';
+      return param ? `/portal/units?partyId=${param}` : '/portal/units';
     case 'portal-invoices':
-      return '/invoices';
+      return param ? `/portal/invoices?partyId=${param}` : '/portal/invoices';
+    case 'portal-documents':
+      return param ? `/portal/documents?partyId=${param}` : '/portal/documents';
+    case 'portal-appointments':
+      return param ? `/portal/appointments?partyId=${param}` : '/portal/appointments';
+    case 'portal-requests':
+      return param ? `/portal/requests?partyId=${param}` : '/portal/requests';
+    case 'portal-summary':
+      return param ? `/portal/summary?partyId=${param}` : '/portal/summary';
     case 'admin':
       return resolveAdminEndpoint(String(param));
     default:
