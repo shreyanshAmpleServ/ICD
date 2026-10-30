@@ -123,26 +123,13 @@ export class PortalController {
       const stayDelegate = (prisma as any).unit_stay || (prisma as any).unit_stays;
       const dbStays = await stayDelegate.findMany({
         where: {
-          OR: [
-            {
-              unit_stay_consignments: {
-                OR: [
-                  { agent_party_id: partyId },
-                  { consignee_party_id: partyId },
-                  { bill_to_party_id: partyId },
-                ],
-              },
-            },
-            {
-              unit_stays_consignments: {
-                OR: [
-                  { agent_party_id: partyId },
-                  { consignee_party_id: partyId },
-                  { bill_to_party_id: partyId },
-                ],
-              },
-            },
-          ],
+          unit_stay_consignments: {
+            OR: [
+              { agent_party_id: partyId },
+              { consignee_party_id: partyId },
+              { bill_to_party_id: partyId },
+            ],
+          },
           physical_status: { not: "DEPARTED" },
         },
         include: {
@@ -150,7 +137,7 @@ export class PortalController {
           unit_stay_consignments: true,
           unit_stay_cargo_units: {
             include: {
-              unit_types: true,
+              cargo_unit_unit_types: true,
             },
           },
           unit_stay_holds: true,
@@ -159,7 +146,7 @@ export class PortalController {
       });
 
       const items = (dbStays || []).map((u: any) => {
-        const holdsList = u.unit_stay_holds || u.holds || [];
+        const holdsList = u.unit_stay_holds || [];
         const activeHolds = holdsList.filter(
           (h: any) => h.status === "ACTIVE",
         ).length;
@@ -172,13 +159,13 @@ export class PortalController {
             )
           : 4;
 
-        const cUnit = u.unit_stay_cargo_units || u.cargo_unit;
-        const unitNo = cUnit?.unit_no || u.unit_no || `CONT-${u.unit_stay_id}`;
-        const unitType = cUnit?.unit_types || u.unit_stays_unit_types;
-        const category = cUnit?.unit_category || unitType?.category || "CONTAINER";
+        const cUnit = u.unit_stay_cargo_units;
+        const unitNo = cUnit?.unit_no || `CONT-${u.unit_stay_id}`;
+        const unitType = cUnit?.cargo_unit_unit_types;
+        const category = cUnit?.unit_category || unitType?.unit_category || "CONTAINER";
         const typeCode = unitType?.type_code || "40HC";
-        const loc = u.unit_stay_yard_locations || u.unit_stays_yard_locations;
-        const consign = u.unit_stay_consignments || u.unit_stays_consignments;
+        const loc = u.unit_stay_yard_locations;
+        const consign = u.unit_stay_consignments;
 
         return {
           unitStayId: Number(u.unit_stay_id),
@@ -382,7 +369,7 @@ export class PortalController {
   public getRequests = async (req: Request, res: Response) => {
     const partyId = req.query.partyId
       ? parseInt(String(req.query.partyId), 10)
-      : DEFAULT_PORTAL_PARTY;
+      : undefined;
     const params = parsePaginationParams(req.query);
     const prisma = getPrisma();
 
@@ -397,7 +384,7 @@ export class PortalController {
     try {
       const srDelegate = (prisma as any).service_request || (prisma as any).service_requests;
       const dbReqs = await srDelegate.findMany({
-        where: { party_id: partyId },
+        where: partyId ? { party_id: partyId } : {},
         include: { parties: true },
         orderBy: { service_request_id: "desc" },
       });
@@ -480,30 +467,17 @@ export class PortalController {
       const [dbStays, dbInvoices] = await Promise.all([
         stayDelegate.findMany({
           where: {
-            OR: [
-              {
-                unit_stay_consignments: {
-                  OR: [
-                    { agent_party_id: partyId },
-                    { consignee_party_id: partyId },
-                    { bill_to_party_id: partyId },
-                  ],
-                },
-              },
-              {
-                unit_stays_consignments: {
-                  OR: [
-                    { agent_party_id: partyId },
-                    { consignee_party_id: partyId },
-                    { bill_to_party_id: partyId },
-                  ],
-                },
-              },
-            ],
+            unit_stay_consignments: {
+              OR: [
+                { agent_party_id: partyId },
+                { consignee_party_id: partyId },
+                { bill_to_party_id: partyId },
+              ],
+            },
             physical_status: { not: "DEPARTED" },
           },
           include: {
-            unit_stay_cargo_units: { include: { unit_types: true } },
+            unit_stay_cargo_units: { include: { cargo_unit_unit_types: true } },
             unit_stay_holds: true,
           },
           take: 500,
@@ -514,21 +488,26 @@ export class PortalController {
         }),
       ]);
 
-      const units = (dbStays || []).map((u: any) => ({
-        unitStayId: Number(u.unit_stay_id),
-        cargoUnit: {
-          cargoUnitId: Number(u.cargo_unit_id || u.unit_stay_id),
-          category: u.cargo_unit?.unit_category || u.cargo_unit?.unit_types?.category || "CONTAINER",
-          unitNo: u.cargo_unit?.unit_no || u.unit_no || `CONT-${u.unit_stay_id}`,
-          unitTypeCode: u.cargo_unit?.unit_types?.type_code || "40HC",
-        },
-        physicalStatus: u.physical_status,
-        customsStatus: u.customs_status,
-        releaseStatus: u.release_status,
-        billingStatus: u.billing_status,
-        activeHoldCount: (u.holds || []).filter((h: any) => h.status === "ACTIVE")
-          .length,
-      }));
+      const units = (dbStays || []).map((u: any) => {
+        const cUnit = u.unit_stay_cargo_units;
+        const uType = cUnit?.cargo_unit_unit_types;
+        return {
+          unitStayId: Number(u.unit_stay_id),
+          cargoUnit: {
+            cargoUnitId: Number(u.cargo_unit_id || u.unit_stay_id),
+            category: cUnit?.unit_category || uType?.unit_category || "CONTAINER",
+            unitNo: cUnit?.unit_no || `CONT-${u.unit_stay_id}`,
+            unitTypeCode: uType?.type_code || "40HC",
+          },
+          physicalStatus: u.physical_status,
+          customsStatus: u.customs_status,
+          releaseStatus: u.release_status,
+          billingStatus: u.billing_status,
+          activeHoldCount: (u.unit_stay_holds || []).filter(
+            (h: any) => h.status === "ACTIVE",
+          ).length,
+        };
+      });
 
       const plainMap = new Map<number, Plain>(
         units.map((s: any) => [s.unitStayId, plainStatus(s)]),
@@ -706,6 +685,57 @@ export class PortalController {
         },
         "Customer service request submitted successfully in database",
       );
+    } catch (err: any) {
+      return sendError(res, err.message, 500);
+    }
+  };
+
+  public respondToRequest = async (req: Request, res: Response) => {
+    const id = parseInt(req.params.serviceRequestId, 10);
+    const prisma = getPrisma();
+    if (!prisma) {
+      return sendError(res, "Database unavailable", 500);
+    }
+    try {
+      const srDelegate = (prisma as any).service_request || (prisma as any).service_requests;
+      const existing = await srDelegate.findFirst({
+        where: { service_request_id: id },
+      });
+      if (!existing) {
+        return sendError(res, "Service request not found", 404);
+      }
+      let detailsObj: any = {};
+      try {
+        detailsObj = JSON.parse(existing.details_json || existing.payload_json || "{}");
+      } catch {}
+
+      const nextStatus = req.body.status || "IN_REVIEW";
+      const messages = detailsObj.messages || [];
+      if (req.body.message || req.body.reply || req.body.text) {
+        messages.push({
+          from: "staff",
+          who: req.body.userName || req.body.who || "Grace P.",
+          at: new Date().toISOString(),
+          text: req.body.message || req.body.reply || req.body.text,
+        });
+      }
+      detailsObj.messages = messages;
+      detailsObj.status = nextStatus;
+
+      const updated = await srDelegate.update({
+        where: { service_request_id: id },
+        data: {
+          status: nextStatus,
+          details_json: JSON.stringify(detailsObj),
+          payload_json: JSON.stringify(detailsObj),
+        },
+      });
+
+      return sendSuccess(res, {
+        serviceRequestId: id,
+        status: updated.status,
+        messages,
+      });
     } catch (err: any) {
       return sendError(res, err.message, 500);
     }

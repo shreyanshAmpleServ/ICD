@@ -59,6 +59,36 @@ router.get(
 );
 
 router.get(
+  "/service-requests",
+  requireSite(false),
+  asyncHandler(portalController.getRequests),
+);
+
+router.get(
+  "/service-requests/:serviceRequestId",
+  requireSite(false),
+  asyncHandler(portalController.getRequests),
+);
+
+router.post(
+  "/service-requests",
+  requireSite(false),
+  asyncHandler(portalController.submitRequest),
+);
+
+router.post(
+  "/service-requests/:serviceRequestId/respond",
+  requireSite(false),
+  asyncHandler(portalController.respondToRequest),
+);
+
+router.post(
+  "/service-requests/:serviceRequestId:respond",
+  requireSite(false),
+  asyncHandler(portalController.respondToRequest),
+);
+
+router.get(
   "/portal/summary",
   requireSite(false),
   requirePermission("consignment.view"),

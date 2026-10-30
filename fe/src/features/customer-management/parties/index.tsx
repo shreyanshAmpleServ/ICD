@@ -5,10 +5,11 @@ import {
   Button, Chips, DataTable, Empty, Money, Page, PageHeader, Panel, Pill,
   SearchInput, Tag,
 } from '@/ds/components';
-import { useQ, delay } from '@/api/query';
-import { allStays, consignments, parties } from '@/mock/core';
+import { useQ } from '@/api/query';
+import { allStays, consignments } from '@/mock/core';
 import { balanceOf } from '@/mock/insight';
 import { PartyDetailView } from './components/PartyDetailView';
+import { partiesApi } from './api';
 
 export { partiesApi } from './api';
 export { PartyDetailView as PartyDetail, PartyDetailView };
@@ -38,13 +39,16 @@ export function PartiesView() {
   const nav = useNavigate();
   const [q, setQ] = useState('');
   const [role, setRole] = useState<Role>('all');
-  const { data = [] } = useQ(['parties'], () => delay(parties));
-  const counts = useMemo(() => new Map(data.map((p) => [p.partyId!, openUnits(p.partyId!)])), [data]);
-  const rows = data.filter((p) => {
+  const { data = [] } = useQ(['parties'], () => partiesApi.getParties());
+  const counts = useMemo(
+    () => new Map(data.map((p: any) => [p.partyId!, p.openUnits ?? openUnits(p.partyId!)])),
+    [data]
+  );
+  const rows = data.filter((p: any) => {
     if (q && !(p.partyName + p.partyCode + (p.taxId ?? '')).toLowerCase().includes(q.toLowerCase())) return false;
     if (role === 'provisional') return p.syncStatus !== 'SYNCED';
     if (role === 'blocked') return p.creditStatus === 'BLOCKED';
-    return role === 'all' || p.roles.includes(role);
+    return role === 'all' || (p.roles && p.roles.includes(role));
   });
 
   return (
@@ -79,21 +83,21 @@ export function PartiesView() {
               { id: 'CLEARING_AGENT', label: 'Clearing agents' },
               { id: 'SHIPPING_LINE', label: 'Shipping lines' },
               { id: 'TRANSPORTER', label: 'Transporters' },
-              { id: 'provisional', label: 'Provisional', count: data.filter((p) => p.syncStatus !== 'SYNCED').length },
-              { id: 'blocked', label: 'Credit stopped', count: data.filter((p) => p.creditStatus === 'BLOCKED').length },
+              { id: 'provisional', label: 'Provisional', count: data.filter((p: any) => p.syncStatus !== 'SYNCED').length },
+              { id: 'blocked', label: 'Credit stopped', count: data.filter((p: any) => p.creditStatus === 'BLOCKED').length },
             ]}
           />
         </div>
         <DataTable
           rows={rows}
-          rowKey={(p) => p.partyId!}
-          onRow={(p) => nav(`/parties/${p.partyId}`)}
+          rowKey={(p: any) => p.partyId!}
+          onRow={(p: any) => nav(`/parties/${p.partyId}`)}
           empty={<Empty title="No parties match">Clear the search, or add a provisional party if it is new.</Empty>}
           cols={[
             {
               key: 'n',
               header: 'Name',
-              render: (p) => (
+              render: (p: any) => (
                 <span>
                   <strong>{p.partyName}</strong>
                   <div className="xs faint">
@@ -106,9 +110,9 @@ export function PartiesView() {
             {
               key: 'r',
               header: 'Roles',
-              render: (p) => (
+              render: (p: any) => (
                 <span className="row-wrap" style={{ gap: 4 }}>
-                  {p.roles.map((r) => (
+                  {(p.roles || []).map((r: string) => (
                     <Tag key={r}>{roleText(r)}</Tag>
                   ))}
                 </span>
@@ -117,14 +121,14 @@ export function PartiesView() {
             {
               key: 'c',
               header: 'Credit',
-              render: (p) => (
+              render: (p: any) => (
                 <span>
                   <Pill tone={CREDIT[p.creditStatus ?? 'CASH'][0]}>{CREDIT[p.creditStatus ?? 'CASH'][1]}</Pill>
-                  {p.creditLimit && (
+                  {p.creditLimit && Number(p.creditLimit) > 0 ? (
                     <div className="xs faint">
-                      limit {p.creditCurrency} {Number(p.creditLimit).toLocaleString()}
+                      limit {p.creditCurrency || 'USD'} {Number(p.creditLimit).toLocaleString()}
                     </div>
-                  )}
+                  ) : null}
                 </span>
               ),
             },
@@ -133,7 +137,7 @@ export function PartiesView() {
               header: 'Balance (USD)',
               num: true,
               perm: 'billing.invoice.view',
-              render: (p) => {
+              render: (p: any) => {
                 const b = balanceOf(p.partyId!);
                 return b ? <Money amount={b} /> : <span className="faint">—</span>;
               },
@@ -142,12 +146,12 @@ export function PartiesView() {
               key: 'u',
               header: 'Open units',
               num: true,
-              render: (p) => counts.get(p.partyId!) || <span className="faint">—</span>,
+              render: (p: any) => counts.get(p.partyId!) || <span className="faint">—</span>,
             },
             {
               key: 's',
               header: 'NG record',
-              render: (p) =>
+              render: (p: any) =>
                 p.syncStatus === 'SYNCED' ? (
                   <span className="small">{p.ngRefId}</span>
                 ) : (

@@ -10,18 +10,18 @@ export class DevicesController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const dbInts = await prisma.device_integrations.findMany({
+      const dbInts = await (prisma as any).device_integrations.findMany({
         orderBy: { device_integration_id: "asc" },
       });
 
-      const items = (dbInts || []).map((i) => ({
+      const items = (dbInts || []).map((i: any) => ({
         deviceIntegrationId: i.device_integration_id,
-        integrationKind: i.device_type,
+        integrationKind: i.integration_kind || i.device_type,
         lane: "Main Gate In 1",
-        vendor: "Hikvision",
-        model: "iDS-TCM403-BI",
-        laneMode: "ASSISTED",
-        endpointUrl: i.endpoint_url,
+        vendor: i.vendor || "Hikvision",
+        model: i.model || "iDS-TCM403-BI",
+        laneMode: i.lane_mode || "ASSISTED",
+        endpointUrl: i.endpoint_url || "http://10.160.5.101:8081/anpr/lane1",
         isActive: i.is_active ?? true,
         health: "OK",
       }));
@@ -40,25 +40,27 @@ export class DevicesController {
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const deviceType = req.body.integrationKind || req.body.deviceType || "ANPR";
-      const endpointUrl = req.body.endpointUrl || "http://10.160.5.101:8081/anpr/lane1";
 
-      const created = await prisma.device_integrations.create({
+      const created = await (prisma as any).device_integrations.create({
         data: {
           site_id: siteId,
-          device_type: deviceType,
-          endpoint_url: endpointUrl,
+          integration_kind: deviceType,
+          vendor: req.body.vendor || "Hikvision",
+          model: req.body.model || "iDS-TCM403",
+          lane_mode: req.body.laneMode || "ASSISTED",
           is_active: req.body.isActive ?? true,
+          createdby: "system",
         },
       });
 
       return sendCreated(res, {
         deviceIntegrationId: created.device_integration_id,
-        integrationKind: created.device_type,
+        integrationKind: created.integration_kind,
         lane: req.body.lane || "Main Gate In 1",
-        vendor: req.body.vendor || "Hikvision",
-        model: req.body.model || "iDS-TCM403",
-        laneMode: req.body.laneMode || "ASSISTED",
-        endpointUrl: created.endpoint_url,
+        vendor: created.vendor,
+        model: created.model,
+        laneMode: created.lane_mode,
+        endpointUrl: req.body.endpointUrl || "http://10.160.5.101:8081/anpr/lane1",
         isActive: created.is_active,
         health: "OK",
       });
@@ -74,7 +76,7 @@ export class DevicesController {
     }
     try {
       const id = parseInt(req.params.deviceIntegrationId, 10);
-      const item = await prisma.device_integrations.findUnique({
+      const item = await (prisma as any).device_integrations.findUnique({
         where: { device_integration_id: id },
       });
 
@@ -82,12 +84,12 @@ export class DevicesController {
 
       return sendSuccess(res, {
         deviceIntegrationId: item.device_integration_id,
-        integrationKind: item.device_type,
+        integrationKind: item.integration_kind || item.device_type,
         lane: "Main Gate In 1",
-        vendor: "Hikvision",
-        model: "iDS-TCM403-BI",
-        laneMode: "ASSISTED",
-        endpointUrl: item.endpoint_url,
+        vendor: item.vendor || "Hikvision",
+        model: item.model || "iDS-TCM403-BI",
+        laneMode: item.lane_mode || "ASSISTED",
+        endpointUrl: item.endpoint_url || "http://10.160.5.101:8081/anpr/lane1",
         isActive: item.is_active,
         health: "OK",
       });
@@ -103,18 +105,16 @@ export class DevicesController {
     }
     try {
       const id = parseInt(req.params.deviceIntegrationId, 10);
-      const updated = await prisma.device_integrations.update({
+      const updated = await (prisma as any).device_integrations.update({
         where: { device_integration_id: id },
         data: {
-          endpoint_url: req.body.endpointUrl,
           is_active: req.body.isActive,
         },
       });
 
       return sendSuccess(res, {
         deviceIntegrationId: updated.device_integration_id,
-        integrationKind: updated.device_type,
-        endpointUrl: updated.endpoint_url,
+        integrationKind: updated.integration_kind,
         isActive: updated.is_active,
       });
     } catch (err: any) {
@@ -145,17 +145,17 @@ export class DevicesController {
     }
     try {
       // Query recent truck visits and gate activity to construct real device reads
-      const visits = await prisma.truck_visits.findMany({
+      const visits = await (prisma as any).truck_visits.findMany({
         take: 10,
         orderBy: { truck_visit_id: "desc" },
-        include: { trucks: true },
+        include: { m_truck_truck_visit_truck_idTom_truck: true },
       });
 
-      const items = (visits || []).map((v, idx) => ({
-        deviceReadId: v.truck_visit_id,
+      const items = (visits || []).map((v: any, idx: number) => ({
+        deviceReadId: Number(v.truck_visit_id),
         integrationKind: idx % 2 === 0 ? "ANPR" : "CONTAINER_OCR",
         payload: {
-          plateNo: v.trucks?.plate_no || "T 124 DFH",
+          plateNo: v.m_truck_truck_visit_truck_idTom_truck?.plate_no || "T 124 DFH",
           confidence: 0.98,
         },
         status: "MATCHED",

@@ -5,3 +5,4 @@ export * from './cfs.controller';
 export * from './reefers.controller';
 export * from './repairs.controller';
 export * from './devices.controller';
+export * from './parties.controller';

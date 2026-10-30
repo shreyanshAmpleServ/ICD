@@ -29,22 +29,22 @@ export class UnitsController {
     }
 
     try {
-      const dbTypes = await prisma.m_unit_type.findMany({
+      const dbTypes = await (prisma as any).unit_types.findMany({
         orderBy: { unit_type_id: 'asc' },
       });
 
-      const mapped = dbTypes.map((u) => ({
-        unitTypeId: u.unit_type_id,
+      const mapped = dbTypes.map((u: any) => ({
+        unitTypeId: Number(u.unit_type_id),
         typeCode: u.type_code,
         typeName: u.type_name,
-        category: u.unit_category,
+        category: u.unit_category || u.category,
         lengthFt: u.length_ft,
-        teu: String(u.teu || 1.0),
+        teu: String(u.teu_factor || u.teu || 1.0),
         isReefer: Boolean(u.is_reefer),
         isActive: Boolean(u.is_active),
       }));
 
-      const result = paginateArray(mapped, params, (u) => u.unitTypeId);
+      const result = paginateArray(mapped, params, (u: any) => u.unitTypeId);
       return sendSuccess(res, result, 'Unit types retrieved successfully from database');
     } catch (err: any) {
       return sendError(res, err.message, 500);
@@ -60,13 +60,13 @@ export class UnitsController {
     }
 
     try {
-      const created = await prisma.m_unit_type.create({
+      const created = await (prisma as any).unit_types.create({
         data: {
           type_code: body.typeCode || body.unitTypeCode || `UT-${Date.now()}`,
           type_name: body.typeName || 'Standard Container',
           unit_category: body.category || 'CONTAINER',
           length_ft: body.lengthFt ? Number(body.lengthFt) : 40,
-          teu: body.teu ? Number(body.teu) : 2.0,
+          teu_factor: body.teu ? Number(body.teu) : 2.0,
           is_reefer: Boolean(body.isReefer),
           is_active: true,
           createdby: 'system',
@@ -76,12 +76,12 @@ export class UnitsController {
       return sendCreated(
         res,
         {
-          unitTypeId: created.unit_type_id,
+          unitTypeId: Number(created.unit_type_id),
           typeCode: created.type_code,
           typeName: created.type_name,
-          category: created.unit_category,
+          category: created.unit_category || created.category,
           lengthFt: created.length_ft,
-          teu: String(created.teu),
+          teu: String(created.teu_factor || created.teu),
           isReefer: created.is_reefer,
           isActive: created.is_active,
         },
@@ -101,7 +101,7 @@ export class UnitsController {
     }
 
     try {
-      const dbType = await prisma.m_unit_type.findFirst({
+      const dbType = await (prisma as any).unit_types.findFirst({
         where: isNaN(Number(idOrCode))
           ? { type_code: idOrCode }
           : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] },
@@ -114,12 +114,12 @@ export class UnitsController {
       return sendSuccess(
         res,
         {
-          unitTypeId: dbType.unit_type_id,
+          unitTypeId: Number(dbType.unit_type_id),
           typeCode: dbType.type_code,
           typeName: dbType.type_name,
-          category: dbType.unit_category,
+          category: dbType.unit_category || dbType.category,
           lengthFt: dbType.length_ft,
-          teu: String(dbType.teu),
+          teu: String(dbType.teu_factor || dbType.teu),
           isReefer: dbType.is_reefer,
           isActive: dbType.is_active,
         },
@@ -140,7 +140,7 @@ export class UnitsController {
     }
 
     try {
-      const existing = await prisma.m_unit_type.findFirst({
+      const existing = await (prisma as any).unit_types.findFirst({
         where: isNaN(Number(idOrCode))
           ? { type_code: idOrCode }
           : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] },
@@ -150,7 +150,7 @@ export class UnitsController {
         throw new NotFoundError('Unit type', idOrCode);
       }
 
-      const updated = await prisma.m_unit_type.update({
+      const updated = await (prisma as any).unit_types.update({
         where: { unit_type_id: existing.unit_type_id },
         data: {
           type_name: req.body.typeName ?? existing.type_name,
@@ -242,12 +242,18 @@ export class UnitsController {
 
     try {
       const [units, invoices] = await Promise.all([
-        prisma.cargo_unit.findMany({
-          where: { unit_no: { contains: q } },
-          include: { unit_stay: true },
+        (prisma as any).unit_stays.findMany({
+          where: {
+            unit_stay_cargo_units: {
+              unit_no: { contains: q },
+            },
+          },
+          include: {
+            unit_stay_cargo_units: true,
+          },
           take: 10,
         }),
-        prisma.invoice.findMany({
+        (prisma as any).invoices.findMany({
           where: { invoice_no: { contains: q } },
           take: 10,
         }),
@@ -257,18 +263,18 @@ export class UnitsController {
         {
           entity: 'UNIT',
           label: 'Units',
-          hits: units.map((u) => ({
-            id: u.unit_stay?.[0]?.unit_stay_id || u.cargo_unit_id,
-            title: u.unit_no,
-            status: u.unit_stay?.[0]?.physical_status || 'IN_YARD',
-            to: `/units/${u.unit_stay?.[0]?.unit_stay_id || u.cargo_unit_id}`,
+          hits: units.map((u: any) => ({
+            id: Number(u.unit_stay_id),
+            title: u.unit_stay_cargo_units?.unit_no || `CONT-${u.unit_stay_id}`,
+            status: u.physical_status,
+            to: `/units/${u.unit_stay_id}`,
           })),
         },
         {
           entity: 'INVOICE',
           label: 'Invoices',
-          hits: invoices.map((i) => ({
-            id: i.invoice_id,
+          hits: invoices.map((i: any) => ({
+            id: Number(i.invoice_id),
             title: i.invoice_no,
             status: i.status,
             to: `/invoices/${i.invoice_id}`,
@@ -293,8 +299,93 @@ export class UnitsController {
   public getUnits = async (req: Request, res: Response) => {
     const params = parsePaginationParams(req.query);
     try {
-      const items = await cargoService.getUnits(req.query);
-      const paginated = paginateArray(items, params, (s: any) => s.unitStayId);
+      const dbStays = await (prisma as any).unit_stays.findMany({
+        where: {
+          ...(category
+            ? {
+              unit_stay_cargo_units: {
+                unit_category: String(category),
+              },
+            }
+            : {}),
+          ...(status ? { physical_status: String(status) } : {}),
+          ...(customsStatus ? { customs_status: String(customsStatus) } : {}),
+          ...(searchQ
+            ? {
+              OR: [
+                { unit_stay_cargo_units: { unit_no: { contains: String(searchQ) } } },
+                { seal_no: { contains: String(searchQ) } },
+              ],
+            }
+            : {}),
+        },
+        include: {
+          unit_stay_cargo_units: {
+            include: {
+              cargo_unit_unit_types: true,
+            },
+          },
+          unit_stay_yard_locations: true,
+          unit_stay_consignments: true,
+          unit_stay_cargo_regimes: true,
+          unit_stay_holds: true,
+        },
+        orderBy: { unit_stay_id: 'desc' },
+      });
+
+      const mapped = dbStays.map((u: any) => {
+        const activeHolds = (u.unit_stay_holds || []).filter((h: any) => h.status === 'ACTIVE').length;
+        const dwell = u.gated_in_at
+          ? Math.max(1, Math.floor((Date.now() - new Date(u.gated_in_at).getTime()) / 86400000))
+          : 4;
+        const cUnit = u.unit_stay_cargo_units;
+        const uType = cUnit?.cargo_unit_unit_types;
+        const unitNo = cUnit?.unit_no || `CONT-${u.unit_stay_id}`;
+        const cat = cUnit?.unit_category || uType?.unit_category || 'CONTAINER';
+        const typeCode = uType?.type_code || '40HC';
+
+        return {
+          unitStayId: Number(u.unit_stay_id),
+          siteId: u.site_id,
+          consignmentId: u.consignment_id ? Number(u.consignment_id) : null,
+          cargoUnit: {
+            cargoUnitId: Number(u.unit_stay_id),
+            category: cat,
+            unitNo,
+            unitTypeCode: typeCode,
+            isoType: typeCode,
+            tareWeightKg: Number(uType?.default_tare_kg || 3800),
+          },
+          physicalStatus: u.physical_status,
+          flow: u.flow,
+          fullEmpty: u.full_empty,
+          customsStatus: u.customs_status,
+          releaseStatus: u.release_status,
+          billingStatus: u.billing_status,
+          sealNo: u.seal_no,
+          grossWeightKg: Number(u.gross_weight_kg || 0),
+          activeHoldCount: activeHolds,
+          currentLocation: u.unit_stay_yard_locations
+            ? {
+              locationId: u.unit_stay_yard_locations.yard_location_id,
+              fullCode: u.unit_stay_yard_locations.full_code,
+              zone: u.unit_stay_yard_locations.full_code.split('-')[0] || 'A',
+            }
+            : undefined,
+          unitSummary: {
+            unitNo,
+            category: cat,
+            activeHoldCount: activeHolds,
+            releaseStatus: u.release_status,
+            physicalStatus: u.physical_status,
+            dwellDays: dwell,
+            consignmentRef: u.unit_stay_consignments?.ref_no,
+          },
+          arrivedAt: (u.gated_in_at || u.createdate)?.toISOString(),
+        };
+      });
+
+      const paginated = paginateArray(mapped, params, (s: any) => s.unitStayId);
       return sendSuccess(res, paginated, 'Units retrieved successfully from database');
     } catch (err: any) {
       return sendError(res, err.message, 500);
@@ -311,36 +402,38 @@ export class UnitsController {
 
     try {
       const typeCode = body.isoType || body.unitTypeCode || '40HC';
-      const uType = await prisma.m_unit_type.findFirst({ where: { type_code: typeCode } });
+      const uType = await (prisma as any).unit_types.findFirst({ where: { type_code: typeCode } });
       const typeId = uType?.unit_type_id || 2;
-      const unitNo = (body.unitNo || `NEWU${Date.now().toString().slice(-7)}`).toUpperCase();
+      const unitNo = body.unitNo || `NEWU${Date.now().toString().slice(-7)}`;
 
-      let cargoUnit = await prisma.cargo_unit.findFirst({ where: { unit_no: unitNo } });
-      if (!cargoUnit) {
-        cargoUnit = await prisma.cargo_unit.create({
+      let cUnit = await (prisma as any).cargo_units.findFirst({
+        where: { unit_no: unitNo },
+      });
+      if (!cUnit) {
+        cUnit = await (prisma as any).cargo_units.create({
           data: {
+            unit_category: body.category || 'CONTAINER',
             unit_no: unitNo,
             unit_type_id: typeId,
-            unit_category: body.category || 'CONTAINER',
-            tare_kg: 3800,
             createdby: 'system',
           },
         });
       }
 
-      const created = await prisma.unit_stay.create({
+      const created = await (prisma as any).unit_stays.create({
         data: {
           site_id: body.siteId || 1,
-          cargo_unit_id: cargoUnit.cargo_unit_id,
-          consignment_id: body.consignmentId || null,
+          cargo_unit_id: cUnit.cargo_unit_id,
+          consignment_id: body.consignmentId ? Number(body.consignmentId) : null,
           cargo_regime_id: body.cargoRegimeId || 1,
           flow: body.flow || 'IMPORT',
           full_empty: body.fullEmpty || 'F',
           physical_status: body.physicalStatus || 'EXPECTED',
-          customs_status: body.customsStatus || 'PENDING',
+          customs_status: body.customsStatus || 'NOT_LODGED',
           release_status: body.releaseStatus || 'NONE',
           seal_no: body.sealNo || 'SEAL-001',
           gross_weight_kg: body.grossWeightKg ? Number(body.grossWeightKg) : 24000,
+          gated_in_at: new Date(),
           createdby: 'system',
         },
       });
@@ -348,8 +441,8 @@ export class UnitsController {
       return sendCreated(
         res,
         {
-          unitStayId: created.unit_stay_id,
-          unitNo: cargoUnit.unit_no,
+          unitStayId: Number(created.unit_stay_id),
+          unitNo,
           siteId: created.site_id,
           physicalStatus: created.physical_status,
           flow: created.flow,
@@ -365,11 +458,70 @@ export class UnitsController {
   public getUnitById = async (req: Request, res: Response) => {
     const idOrUnitNo = req.params.unitStayId;
     try {
-      const u = await cargoService.getUnit(idOrUnitNo);
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+            OR: [
+              { unit_stay_id: Number(idOrUnitNo) },
+              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+            ],
+          }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+        include: {
+          unit_stay_cargo_units: {
+            include: {
+              cargo_unit_unit_types: true,
+            },
+          },
+          unit_stay_yard_locations: true,
+          unit_stay_consignments: true,
+          unit_stay_cargo_regimes: true,
+          unit_stay_holds: true,
+        },
+      });
+
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
-      return sendSuccess(res, u, 'Unit stay retrieved successfully from database');
+
+      const activeHolds = (u.unit_stay_holds || []).filter((h: any) => h.status === 'ACTIVE').length;
+      const cUnit = u.unit_stay_cargo_units;
+      const uType = cUnit?.cargo_unit_unit_types;
+      const unitNo = cUnit?.unit_no || `CONT-${u.unit_stay_id}`;
+      const cat = cUnit?.unit_category || uType?.unit_category || 'CONTAINER';
+      const typeCode = uType?.type_code || '40HC';
+
+      const stay = {
+        unitStayId: Number(u.unit_stay_id),
+        siteId: u.site_id,
+        consignmentId: u.consignment_id ? Number(u.consignment_id) : null,
+        cargoUnit: {
+          cargoUnitId: Number(u.unit_stay_id),
+          category: cat,
+          unitNo,
+          unitTypeCode: typeCode,
+          isoType: typeCode,
+        },
+        physicalStatus: u.physical_status,
+        flow: u.flow,
+        fullEmpty: u.full_empty,
+        customsStatus: u.customs_status,
+        releaseStatus: u.release_status,
+        billingStatus: u.billing_status,
+        sealNo: u.seal_no,
+        grossWeightKg: Number(u.gross_weight_kg || 0),
+        activeHoldCount: activeHolds,
+        currentLocation: u.unit_stay_yard_locations
+          ? {
+            locationId: u.unit_stay_yard_locations.yard_location_id,
+            fullCode: u.unit_stay_yard_locations.full_code,
+          }
+          : undefined,
+        gatedInAt: (u.gated_in_at || u.createdate)?.toISOString(),
+      };
+
+      return sendSuccess(res, stay, 'Unit stay retrieved successfully from database');
     } catch (err: any) {
       if (err instanceof NotFoundError) throw err;
       return sendError(res, err.message, 500);
@@ -385,18 +537,23 @@ export class UnitsController {
     }
 
     try {
-      const id = Number(idOrUnitNo);
-      const u = await prisma.unit_stay.findFirst({
-        where: isNaN(id)
-          ? { cargo_unit: { unit_no: idOrUnitNo } }
-          : { OR: [{ unit_stay_id: id }, { cargo_unit: { unit_no: idOrUnitNo } }] },
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+            OR: [
+              { unit_stay_id: Number(idOrUnitNo) },
+              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+            ],
+          }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
       });
 
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
 
-      const updated = await prisma.unit_stay.update({
+      const updated = await (prisma as any).unit_stays.update({
         where: { unit_stay_id: u.unit_stay_id },
         data: {
           ...(req.body.physicalStatus ? { physical_status: req.body.physicalStatus } : {}),
@@ -417,22 +574,37 @@ export class UnitsController {
   public getUnitTimeline = async (req: Request, res: Response) => {
     const idOrUnitNo = req.params.unitStayId;
     try {
-      const u = (await cargoService.getUnit(idOrUnitNo)) as any;
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+            OR: [
+              { unit_stay_id: Number(idOrUnitNo) },
+              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+            ],
+          }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+        include: {
+          unit_stay_cargo_units: true,
+        },
+      });
+
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
 
+      const unitNo = u.unit_stay_cargo_units?.unit_no || `CONT-${u.unit_stay_id}`;
       const timeline = [
         {
           eventType: 'MANIFEST_IMPORTED',
-          occurredAt: u.arrivedAt || new Date().toISOString(),
+          occurredAt: (u.gated_in_at || u.createdate)?.toISOString() || new Date().toISOString(),
           summary: 'Manifest record verified and loaded into ICD system',
           user: 'SYSTEM',
         },
         {
           eventType: 'GATE_IN',
-          occurredAt: u.gatedInAt || u.arrivedAt || new Date().toISOString(),
-          summary: `Unit ${u.cargoUnit?.unitNo || u.unitNo} gated into depot`,
+          occurredAt: (u.gated_in_at || u.createdate)?.toISOString() || new Date().toISOString(),
+          summary: `Unit ${unitNo} gated into depot`,
           user: 'Gate Officer',
         },
         {
@@ -446,8 +618,8 @@ export class UnitsController {
       return sendSuccess(
         res,
         {
-          unitStayId: u.unitStayId,
-          unitNo: u.cargoUnit?.unitNo || u.unitNo,
+          unitStayId: Number(u.unit_stay_id),
+          unitNo,
           events: timeline,
         },
         'Unit timeline retrieved successfully'
@@ -468,34 +640,39 @@ export class UnitsController {
     }
 
     try {
-      const id = Number(idOrUnitNo);
-      const u = await prisma.unit_stay.findFirst({
-        where: isNaN(id)
-          ? { cargo_unit: { unit_no: idOrUnitNo } }
-          : { OR: [{ unit_stay_id: id }, { cargo_unit: { unit_no: idOrUnitNo } }] },
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+            OR: [
+              { unit_stay_id: Number(idOrUnitNo) },
+              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+            ],
+          }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
       });
 
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
 
-      const holds = await prisma.hold.findMany({
+      const holds = await (prisma as any).holds.findMany({
         where: { unit_stay_id: u.unit_stay_id },
-        include: { m_hold_type: true },
+        include: { hold_types: true },
         orderBy: { hold_id: 'desc' },
       });
 
-      const mapped = holds.map((h) => ({
-        holdId: h.hold_id,
-        unitStayId: h.unit_stay_id,
-        holdTypeCode: h.m_hold_type?.hold_code || 'HOLD',
+      const mapped = holds.map((h: any) => ({
+        holdId: Number(h.hold_id),
+        unitStayId: Number(h.unit_stay_id),
+        holdTypeCode: h.hold_types?.type_code || `HOLD_${h.hold_type_id}`,
         reason: h.reason,
         status: h.status,
         placedAt: h.placed_at?.toISOString(),
         liftedAt: h.lifted_at?.toISOString(),
       }));
 
-      const paginated = paginateArray(mapped, params, (h) => h.holdId);
+      const paginated = paginateArray(mapped, params, (h: any) => h.holdId);
       return sendSuccess(res, paginated, 'Unit holds retrieved successfully from database');
     } catch (err: any) {
       if (err instanceof NotFoundError) throw err;
@@ -512,31 +689,58 @@ export class UnitsController {
     }
 
     try {
-      const id = Number(idOrUnitNo);
-      const u = await prisma.unit_stay.findFirst({
-        where: isNaN(id)
-          ? { cargo_unit: { unit_no: idOrUnitNo } }
-          : { OR: [{ unit_stay_id: id }, { cargo_unit: { unit_no: idOrUnitNo } }] },
-        include: { m_yard_location: true, cargo_unit: true },
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+            OR: [
+              { unit_stay_id: Number(idOrUnitNo) },
+              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+            ],
+          }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+        include: {
+          unit_stay_cargo_units: true,
+          unit_stay_yard_locations: true,
+        },
       });
 
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
 
+      const moves = await (prisma as any).yard_moves.findMany({
+        where: { unit_stay_id: u.unit_stay_id },
+        include: {
+          m_yard_location_yard_move_from_location_idTom_yard_location: true,
+          m_yard_location_yard_move_to_location_idTom_yard_location: true,
+        },
+        orderBy: { yard_move_id: 'desc' },
+      });
+
       return sendSuccess(
         res,
         {
-          unitStayId: u.unit_stay_id,
-          unitNo: u.cargo_unit?.unit_no || `UNIT-${u.unit_stay_id}`,
-          moves: [
-            {
-              fromLocation: 'GATE_IN_LANE_1',
-              toLocation: u.m_yard_location?.full_code || 'A-01-01-1',
-              movedAt: u.gated_in_at?.toISOString() || new Date().toISOString(),
-              movedBy: 'Terminal Yard Operator',
-            },
-          ],
+          unitStayId: Number(u.unit_stay_id),
+          unitNo: u.unit_stay_cargo_units?.unit_no || `CONT-${u.unit_stay_id}`,
+          moves: moves.length > 0
+            ? moves.map((m: any) => ({
+              yardMoveId: Number(m.yard_move_id),
+              moveType: m.move_kind || 'RELOCATE',
+              status: 'COMPLETED',
+              fromLocation: m.m_yard_location_yard_move_from_location_idTom_yard_location?.full_code,
+              toLocation: m.m_yard_location_yard_move_to_location_idTom_yard_location?.full_code,
+              orderedAt: m.occurred_at?.toISOString(),
+              executedAt: m.occurred_at?.toISOString(),
+            }))
+            : [
+              {
+                fromLocation: 'GATE_IN_LANE_1',
+                toLocation: u.unit_stay_yard_locations?.full_code || 'A-01-01-1',
+                movedAt: (u.gated_in_at || u.createdate)?.toISOString() || new Date().toISOString(),
+                movedBy: 'Terminal Yard Operator',
+              },
+            ],
         },
         'Unit history retrieved successfully from database'
       );

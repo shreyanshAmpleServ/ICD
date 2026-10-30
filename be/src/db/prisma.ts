@@ -30,8 +30,8 @@ export async function initPrisma(): Promise<{ prisma: PrismaClient | null; isCon
   }
 }
 
-export function getPrisma(): PrismaClient | null {
-  return prisma;
+export function getPrisma(): (PrismaClient & Record<string, any>) | null {
+  return prisma as any;
 }
 
 export function isDbLive(): boolean {

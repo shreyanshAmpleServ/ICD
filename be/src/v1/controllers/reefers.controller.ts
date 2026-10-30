@@ -9,21 +9,26 @@ export class ReefersController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const dbReefers = await prisma.reefer_sessions.findMany({
+      const dbReefers = await (prisma as any).reefer_sessions.findMany({
         include: {
-          unit_stays: true,
-          reefer_readings: { orderBy: { recorded_at: "desc" }, take: 10 },
+          reefer_session_unit_stays: {
+            include: {
+              unit_stay_cargo_units: true,
+            },
+          },
+          reefer_session_yard_locations: true,
+          reefer_session_readings: { orderBy: { read_at: "desc" }, take: 10 },
         },
         orderBy: { reefer_session_id: "desc" },
       });
 
-      const items = (dbReefers || []).map((r) => {
-        const readings = (r.reefer_readings || []).map((rd) => ({
-          recordedAt: rd.recorded_at?.toISOString() || new Date().toISOString(),
+      const items = (dbReefers || []).map((r: any) => {
+        const readings = (r.reefer_session_readings || []).map((rd: any) => ({
+          recordedAt: rd.read_at?.toISOString() || new Date().toISOString(),
           supplyTempC: Number(rd.supply_temp_c ?? -17.9),
           returnTempC: Number(rd.return_temp_c ?? -17.4),
           ambientTempC: 30.5,
-          powerKw: Number(rd.power_kw ?? 4.8),
+          powerKw: rd.power_on ? 4.8 : 0.0,
         }));
         if (readings.length === 0) {
           readings.push({
@@ -35,13 +40,13 @@ export class ReefersController {
           });
         }
         return {
-          reeferSessionId: r.reefer_session_id,
-          unitStayId: r.unit_stay_id,
-          unitNo: r.unit_stays?.unit_no || "CMAU 773120 1",
-          plugNo: r.plug_code || "R-01",
+          reeferSessionId: Number(r.reefer_session_id),
+          unitStayId: Number(r.unit_stay_id),
+          unitNo: r.reefer_session_unit_stays?.unit_stay_cargo_units?.unit_no || "CMAU 773120 1",
+          plugNo: r.reefer_session_yard_locations?.full_code || `R-${r.plug_location_id || "01"}`,
           pluggedAt: r.plugged_at?.toISOString() || new Date(Date.now() - 360 * 60000).toISOString(),
           unpluggedAt: r.unplugged_at?.toISOString() || undefined,
-          setTempC: Number(r.target_temp_c ?? -18),
+          setTempC: Number(r.set_temp_c ?? -18),
           readings,
           alarm: undefined,
         };
@@ -59,28 +64,27 @@ export class ReefersController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const siteId = Number(req.siteId || req.body.siteId) || 1;
       const unitStayId = Number(req.body.unitStayId) || 5001;
-      const plugCode = req.body.plugCode || req.body.plugNo || "R-01";
       const targetTempC = req.body.targetTempC ? Number(req.body.targetTempC) : -18.0;
 
-      const created = await prisma.reefer_sessions.create({
+      const created = await (prisma as any).reefer_sessions.create({
         data: {
-          site_id: siteId,
           unit_stay_id: unitStayId,
-          plug_code: plugCode,
-          target_temp_c: targetTempC,
+          plug_location_id: req.body.plugLocationId || 1,
+          set_temp_c: targetTempC,
           plugged_at: new Date(),
+          plugged_by_sub: "system",
+          createdby: "system",
         },
       });
 
       return sendCreated(res, {
-        reeferSessionId: created.reefer_session_id,
-        unitStayId: created.unit_stay_id,
+        reeferSessionId: Number(created.reefer_session_id),
+        unitStayId: Number(created.unit_stay_id),
         unitNo: req.body.unitNo || "MSKU 882014 9",
-        plugCode: created.plug_code,
+        plugCode: req.body.plugCode || req.body.plugNo || "R-01",
         pluggedAt: created.plugged_at?.toISOString(),
-        targetTempC: Number(created.target_temp_c),
+        targetTempC: Number(created.set_temp_c),
         status: "ACTIVE",
       });
     } catch (err: any) {
@@ -95,29 +99,34 @@ export class ReefersController {
     }
     try {
       const id = parseInt(req.params.reeferSessionId, 10);
-      const r = await prisma.reefer_sessions.findUnique({
+      const r = await (prisma as any).reefer_sessions.findUnique({
         where: { reefer_session_id: id },
         include: {
-          unit_stays: true,
-          reefer_readings: { orderBy: { recorded_at: "desc" }, take: 10 },
+          reefer_session_unit_stays: {
+            include: {
+              unit_stay_cargo_units: true,
+            },
+          },
+          reefer_session_yard_locations: true,
+          reefer_session_readings: { orderBy: { read_at: "desc" }, take: 10 },
         },
       });
 
       if (!r) return sendError(res, "Reefer session not found", 404);
 
       return sendSuccess(res, {
-        reeferSessionId: r.reefer_session_id,
-        unitStayId: r.unit_stay_id,
-        unitNo: r.unit_stays?.unit_no,
-        plugNo: r.plug_code,
+        reeferSessionId: Number(r.reefer_session_id),
+        unitStayId: Number(r.unit_stay_id),
+        unitNo: r.reefer_session_unit_stays?.unit_stay_cargo_units?.unit_no,
+        plugNo: r.reefer_session_yard_locations?.full_code || `R-${r.plug_location_id || "01"}`,
         pluggedAt: r.plugged_at?.toISOString(),
         unpluggedAt: r.unplugged_at?.toISOString(),
-        setTempC: Number(r.target_temp_c),
-        readings: (r.reefer_readings || []).map((rd) => ({
-          recordedAt: rd.recorded_at?.toISOString(),
+        setTempC: Number(r.set_temp_c),
+        readings: (r.reefer_session_readings || []).map((rd: any) => ({
+          recordedAt: rd.read_at?.toISOString(),
           supplyTempC: Number(rd.supply_temp_c),
           returnTempC: Number(rd.return_temp_c),
-          powerKw: Number(rd.power_kw),
+          powerKw: rd.power_on ? 4.8 : 0.0,
         })),
       });
     } catch (err: any) {
@@ -132,10 +141,11 @@ export class ReefersController {
     }
     try {
       const id = parseInt(req.params.reeferSessionId, 10);
-      const updated = await prisma.reefer_sessions.update({
+      const updated = await (prisma as any).reefer_sessions.update({
         where: { reefer_session_id: id },
         data: {
           unplugged_at: new Date(),
+          unplugged_by_sub: "system",
         },
       });
       return sendSuccess(res, { success: true, session: updated });
@@ -151,18 +161,18 @@ export class ReefersController {
     }
     try {
       const sessionId = parseInt(req.params.reeferSessionId, 10);
-      const dbReadings = await prisma.reefer_readings.findMany({
+      const dbReadings = await (prisma as any).reefer_readings.findMany({
         where: { reefer_session_id: sessionId },
-        orderBy: { recorded_at: "desc" },
+        orderBy: { read_at: "desc" },
       });
 
-      const items = (dbReadings || []).map((rd) => ({
-        readingId: rd.reading_id,
-        setTempC: -18.0,
+      const items = (dbReadings || []).map((rd: any) => ({
+        readingId: Number(rd.reefer_reading_id),
+        setTempC: Number(rd.set_temp_c ?? -18.0),
         supplyTempC: Number(rd.supply_temp_c ?? -17.9),
         returnTempC: Number(rd.return_temp_c ?? -17.4),
-        powerKw: Number(rd.power_kw ?? 4.8),
-        recordedAt: rd.recorded_at?.toISOString(),
+        powerKw: rd.power_on ? 4.8 : 0.0,
+        recordedAt: rd.read_at?.toISOString(),
       }));
 
       return sendSuccess(res, { items, total: items.length, nextCursor: null });
@@ -178,24 +188,25 @@ export class ReefersController {
     }
     try {
       const sessionId = parseInt(req.params.reeferSessionId, 10);
-      const created = await prisma.reefer_readings.create({
+      const created = await (prisma as any).reefer_readings.create({
         data: {
           reefer_session_id: sessionId,
           set_temp_c: req.body.setTempC ? Number(req.body.setTempC) : -18.0,
           supply_temp_c: req.body.supplyTempC ? Number(req.body.supplyTempC) : -17.8,
           return_temp_c: req.body.returnTempC ? Number(req.body.returnTempC) : -17.2,
-          power_kw: req.body.powerKw ? Number(req.body.powerKw) : 4.8,
-          recorded_at: new Date(),
+          power_on: true,
+          read_at: new Date(),
+          createdby: "system",
         },
       });
 
       return sendCreated(res, {
-        readingId: created.reading_id,
-        setTempC: req.body.setTempC || -18.0,
+        readingId: Number(created.reefer_reading_id),
+        setTempC: Number(created.set_temp_c),
         supplyTempC: Number(created.supply_temp_c),
         returnTempC: Number(created.return_temp_c),
-        powerKw: Number(created.power_kw),
-        recordedAt: created.recorded_at?.toISOString(),
+        powerKw: 4.8,
+        recordedAt: created.read_at?.toISOString(),
       });
     } catch (err: any) {
       return sendError(res, err.message, 500);

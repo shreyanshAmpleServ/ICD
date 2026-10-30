@@ -45,6 +45,9 @@ export async function initPrisma(): Promise<{ prisma: PrismaClient | null; isCon
     p.handling_job_lines = p.handling_job_line;
     p.appointment_slot_rules = p.m_appointment_slot_rule;
     p.device_integrations = p.m_device_integration;
+    p.device_reads = p.device_read;
+    p.devices = p.m_device;
+    p.cargo_units = p.cargo_unit;
     p.truck_visits = p.truck_visit;
     p.sites = p.m_site;
     p.roles = p.m_role;
@@ -67,8 +70,8 @@ export async function initPrisma(): Promise<{ prisma: PrismaClient | null; isCon
   }
 }
 
-export function getPrisma(): PrismaClient | null {
-  return prisma;
+export function getPrisma(): (PrismaClient & Record<string, any>) | null {
+  return prisma as any;
 }
 
 export function isDbLive(): boolean {

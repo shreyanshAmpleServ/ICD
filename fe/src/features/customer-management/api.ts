@@ -1,14 +1,13 @@
 import { api } from '@/api/client';
-import { parties } from '@/mock/core';
 import { serviceRequests, portalUnits } from '@/mock/insight';
 
 export const customersApi = {
   getParties: async () => {
     try {
-      const res = await api.get<any[]>('/parties');
-      return res && res.length > 0 ? res : parties;
+      const res = await api.get<any>('/parties');
+      return Array.isArray(res) ? res : (res?.items ?? res?.data ?? []);
     } catch {
-      return parties;
+      return [];
     }
   },
 
@@ -16,7 +15,7 @@ export const customersApi = {
     try {
       return await api.get<any>(`/parties/${partyId}`);
     } catch {
-      return parties.find((p) => String(p.partyId) === String(partyId));
+      return null;
     }
   },
 
