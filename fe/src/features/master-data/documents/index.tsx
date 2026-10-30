@@ -17,8 +17,8 @@ const RESET: Record<string, string> = { NEVER: 'Never', YEARLY: 'Every 1 January
 export function DocumentsView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('numbers');
-  const [seqs, setSeqs] = useEditable<Seq>('seqs', seedSeq);
-  const [docs, setDocs] = useEditable<Doc>('docTypes', seedDocs);
+  const [seqs, setSeqs] = useEditable<Seq>('seqs', seedSeq, () => documentsApi.getNumberSequences());
+  const [docs, setDocs] = useEditable<Doc>('docTypes', seedDocs, () => documentsApi.getDocumentTypes());
   const [seq, setSeq] = useState<Seq | null>(null);
   const [doc, setDoc] = useState<Doc | null>(null);
 

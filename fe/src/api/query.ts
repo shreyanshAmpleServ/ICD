@@ -109,7 +109,13 @@ function resolveEndpoint(key: QueryKey): string | null {
     case 'service-requests':
       return '/service-requests';
     case 'dg-lines':
-      return '/dg-classes';
+      return '/dg-lines';
+    case 'customs-exams':
+      return '/exams';
+    case 'vessel-call':
+      return param ? `/vessel-calls/${param}` : null;
+    case 'manifest':
+      return param ? `/manifests/${param}` : null;
     case 'release-orders':
       return '/release-orders';
     case 'release-order':

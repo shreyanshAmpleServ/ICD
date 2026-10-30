@@ -174,6 +174,22 @@ export const adminApi = {
   updateUser: async (id: number, data: any) => {
     return api.patch<any>(`/users/${id}`, data);
   },
+  getRoles: async () => {
+    try {
+      const res = await api.get<any>('/roles');
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch {
+      return [];
+    }
+  },
+  getPermissions: async () => {
+    try {
+      const res = await api.get<any>('/permissions');
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch {
+      return [];
+    }
+  },
   grantRole: async (userId: number, data: any) => {
     return api.post<any>(`/users/${userId}/roles`, data);
   },

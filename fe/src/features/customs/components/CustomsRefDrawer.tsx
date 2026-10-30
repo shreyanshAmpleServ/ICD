@@ -1,24 +1,30 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, Landmark } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Landmark } from 'lucide-react';
 import type { S } from '@/api/types';
-import { Banner, Button, Drawer, Field, Input, Segmented, Select, StatusPill, UnitNo, useToast } from '@/ds/components';
-import { allStays, consignments, consignment } from '@/mock/core';
+import { Banner, Button, Drawer, Field, Input, Segmented, Select, useToast } from '@/ds/components';
+import { allStays, consignments } from '@/mock/core';
 import { REF_TYPES } from '@/mock/cargo';
 import { day } from '@/mock/gen';
 import { Evidence } from '@/features/container-management/shared';
+import { useQ, delay } from '@/api/query';
+import { api } from '@/api/client';
 
-/* POST /customs/refs. The fields follow the reference type: bonds have an
-   amount and a validity, transit declarations a validity. Types that set a
-   customs status (entry, exam notice, release) say what they will change
-   before you save. */
 let nextId = 100;
 export function CustomsRefDrawer({ open, onClose, consignmentId, onSaved }: {
   open: boolean; onClose: () => void; consignmentId?: number;
   onSaved?: (r: S<'CustomsRef'>, affected: number[], sets?: string) => void;
 }) {
   const toast = useToast();
+  const qc = useQueryClient();
+  const { data: dbConsignments = [] } = useQ(['consignments'], () => delay(consignments));
+  const { data: dbUnits = [] } = useQ(['units'], () => delay(allStays));
+
+  const allCons = dbConsignments.length ? dbConsignments : consignments;
+  const allStaysPool = dbUnits.length ? dbUnits : allStays;
+
   const [type, setType] = useState('CUSTOMS_RELEASE');
-  const [cid, setCid] = useState<number>(consignmentId ?? 104);
+  const [cid, setCid] = useState<number>(consignmentId ?? (allCons[0]?.consignmentId || 104));
   const [scope, setScope] = useState<'all' | 'one'>('all');
   const [unitId, setUnitId] = useState<number | null>(null);
   const [refNo, setRefNo] = useState('');
@@ -30,7 +36,7 @@ export function CustomsRefDrawer({ open, onClose, consignmentId, onSaved }: {
   const [tried, setTried] = useState(false);
   const t = REF_TYPES.find((x) => x.code === type)!;
   const effCid = consignmentId ?? cid;
-  const units = useMemo(() => allStays.filter((s) => s.consignmentId === effCid && s.physicalStatus !== 'DEPARTED'), [effCid]);
+  const units = useMemo(() => allStaysPool.filter((s) => s.consignmentId === effCid && s.physicalStatus !== 'DEPARTED'), [allStaysPool, effCid]);
   const unitScope = t.attachTo === 'unit' || (t.attachTo === 'either' && scope === 'one');
   const affected = !t.sets ? [] : unitScope ? units.filter((s) => s.unitStayId === (unitId ?? units[0]?.unitStayId)) : units;
   const changing = affected.filter((s) => s.customsStatus !== t.sets);
@@ -41,7 +47,7 @@ export function CustomsRefDrawer({ open, onClose, consignmentId, onSaved }: {
   };
   const ok = !errs.refNo && !errs.amount && !errs.validTo;
 
-  const save = () => {
+  const save = async () => {
     setTried(true);
     if (!ok) return;
     const r: S<'CustomsRef'> = {
@@ -49,6 +55,24 @@ export function CustomsRefDrawer({ open, onClose, consignmentId, onSaved }: {
       ...(unitScope ? { unitStayId: unitId ?? units[0]?.unitStayId } : { consignmentId: effCid }),
       ...(t.hasValidity ? { validTo } : {}), ...(t.hasAmount ? { amount: Number(amount).toFixed(2), amountCurrency: cur } : {}),
     };
+
+    try {
+      await api.post('/customs/refs', {
+        consignmentId: effCid,
+        unitStayId: unitScope ? (unitId ?? units[0]?.unitStayId) : undefined,
+        refTypeCode: type,
+        refNo: refNo.trim().toUpperCase(),
+        refDate,
+        validTo: t.hasValidity ? validTo : undefined,
+        amount: t.hasAmount ? Number(amount) : undefined,
+        amountCurrency: cur,
+        sets: t.sets,
+      });
+      qc.invalidateQueries({ queryKey: ['customs-refs'] });
+      qc.invalidateQueries({ queryKey: ['units'] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
+    } catch (e) {}
+
     onSaved?.(r, changing.map((s) => s.unitStayId!), t.sets);
     toast(`${t.name} recorded${changing.length && t.sets === 'CLEARED' ? `: ${changing.length} unit${changing.length === 1 ? '' : 's'} cleared` : ''}`);
     onClose();
@@ -65,7 +89,7 @@ export function CustomsRefDrawer({ open, onClose, consignmentId, onSaved }: {
         <div className="form-grid">
           {!consignmentId && (
             <Field label="Consignment" required span={2}>
-              <Select value={String(cid)} onChange={(e) => { setCid(Number(e.target.value)); setUnitId(null); }} options={consignments.map((c) => [String(c.consignmentId), `${c.refNo} · ${c.cargoDescription}`])} />
+              <Select value={String(cid)} onChange={(e) => { setCid(Number(e.target.value)); setUnitId(null); }} options={allCons.map((c) => [String(c.consignmentId), `${c.refNo} · ${c.cargoDescription || 'Cargo'}`])} />
             </Field>
           )}
           {t.attachTo === 'either' && (
@@ -75,41 +99,30 @@ export function CustomsRefDrawer({ open, onClose, consignmentId, onSaved }: {
           )}
           {unitScope && (
             <Field label="Unit" required span={2}>
-              <Select value={String(unitId ?? units[0]?.unitStayId ?? '')} onChange={(e) => setUnitId(Number(e.target.value))} options={units.map((s) => [String(s.unitStayId), `${s.cargoUnit.unitNo} · ${s.cargoUnit.unitTypeCode}`])} />
+              <Select value={String(unitId ?? units[0]?.unitStayId ?? '')} onChange={(e) => setUnitId(Number(e.target.value))} options={units.map((s) => [String(s.unitStayId), `${s.cargoUnit?.unitNo || (s as any).unitNo} · ${s.cargoUnit?.unitTypeCode || '40HC'}`])} />
             </Field>
           )}
-          <Field label="Reference number" required error={tried && errs.refNo}>
-            <Input value={refNo} onChange={(e) => setRefNo(e.target.value)} placeholder={{ ENTRY_NO: 'TZDL-26-…', EXAM_NOTICE: 'EXN/DSM/26/…', TRANSIT_DECL: 'T1-DSM-26-…', TRANSIT_BOND: 'BND-…', CUSTOMS_RELEASE: 'REL-DSM-26-…', EXPORT_ENTRY: 'TZEX-26-…' }[type]} />
+          <Field label="Reference number" required error={tried && errs.refNo} span={2}>
+            <Input value={refNo} onChange={(e) => setRefNo(e.target.value.toUpperCase())} placeholder={(t as any).placeholder || 'e.g. REF-12345'} />
           </Field>
           <Field label="Reference date" required><Input type="date" value={refDate} onChange={(e) => setRefDate(e.target.value)} /></Field>
-          {t.hasValidity && <Field label="Valid to" required error={tried && errs.validTo} hint="You will be warned 7 days before it ends"><Input type="date" value={validTo} onChange={(e) => setValidTo(e.target.value)} /></Field>}
+          {t.hasValidity && <Field label="Valid to" required error={tried && errs.validTo}><Input type="date" value={validTo} min={refDate} onChange={(e) => setValidTo(e.target.value)} /></Field>}
           {t.hasAmount && (
-            <Field label="Bond amount" required error={tried && errs.amount}>
-              <div className="row"><Select aria-label="Currency" value={cur} onChange={(e) => setCur(e.target.value)} options={['USD', 'TZS']} style={{ width: 90 }} /><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" /></div>
-            </Field>
+            <>
+              <Field label="Bond amount" required error={tried && errs.amount}><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" /></Field>
+              <Field label="Currency"><Select value={cur} onChange={(e) => setCur(e.target.value)} options={['USD', 'TZS', 'EUR']} /></Field>
+            </>
           )}
         </div>
-        <Field label="Evidence" hint={`${t.evidence}. Kept with the reference for audit.`}><Evidence value={file} onChange={setFile} fileName={`${t.name}.pdf`} /></Field>
-
         {t.sets && (
-          affected.length === 0 ? <Banner title="No units to update">This consignment has no units on site yet. The status is set when they gate in.</Banner> : (
-            <div className="stack" style={{ gap: 8 }}>
-              <Banner tone={t.sets === 'CLEARED' ? 'go' : 'customs'} title={changing.length ? `Saving sets ${changing.length} unit${changing.length === 1 ? '' : 's'} to "${t.sets === 'CLEARED' ? 'Cleared' : t.sets === 'UNDER_EXAM' ? 'Under exam' : 'Lodged'}"` : 'All units already have this customs status'}>
-                {t.sets === 'CLEARED' ? 'The customs condition then passes for release. Holds placed by customs still need lifting on their own.' : 'Release stays blocked until customs releases the units.'}
-              </Banner>
-              <div style={{ maxHeight: 200, overflow: 'auto' }}>
-                {changing.slice(0, 30).map((s) => (
-                  <div key={s.unitStayId} className="row small" style={{ padding: '4px 0' }}>
-                    <span style={{ minWidth: 150 }}><UnitNo no={s.cargoUnit.unitNo} category={s.cargoUnit.category} /></span>
-                    <StatusPill value={s.customsStatus} track="customs" /><ArrowRight size={14} /><StatusPill value={t.sets} track="customs" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
+          <Banner tone={t.sets === 'CLEARED' ? 'go' : 'wait'} title={`Sets customs status to ${t.sets.toLowerCase()}`}>
+            {affected.length === 0 ? 'No units on this consignment.' : affected.length === 1 ? `Unit ${affected[0].cargoUnit?.unitNo || (affected[0] as any).unitNo} customs status changes from ${affected[0].customsStatus ?? 'pending'} to ${t.sets}.` : `All ${affected.length} units on this consignment change to ${t.sets}.`}
+          </Banner>
         )}
-        {!consignmentId && <p className="xs faint">Attached to {consignment(effCid)?.refNo}.</p>}
+        <Field label="Attach document (optional)" hint="PDF or photo of the customs paperwork"><Evidence value={file} onChange={setFile} fileName={`${refNo || 'Customs-doc'}.pdf`} /></Field>
       </div>
     </Drawer>
   );
 }
+
+export default CustomsRefDrawer;

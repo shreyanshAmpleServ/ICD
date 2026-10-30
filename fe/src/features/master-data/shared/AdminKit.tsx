@@ -7,6 +7,7 @@ import {
 import type { Grant } from '@/app/roles';
 import { useQ, delay } from '@/api/query';
 import type { Source } from '@/mock/admin';
+import { adminApi } from '../api';
 import './admin.css';
 
 /* Shared building blocks for the Setup screens. Every setup page has the
@@ -141,13 +142,61 @@ export function GrantChip({ g }: { g: Grant | null | undefined }) {
   return <span className={`adm-g adm-g-${g}`} title={title}>{g}</span>;
 }
 
-/** Read from the mock API, then keep local edits for the session. */
-export function useEditable<T>(key: string, src: T[]) {
-  const { data } = useQ(['admin', key], () => delay(src));
+/** Read from API (with fallback to seed data), then keep local edits for the session. */
+export function useEditable<T>(
+  key: string,
+  src: T[],
+  fetcher?: () => Promise<T[] | { items: T[] } | any>
+) {
+  const { data, refetch } = useQ<T[]>(['admin', key], async () => {
+    if (fetcher) {
+      try {
+        const res = await fetcher();
+        if (Array.isArray(res)) return (res.length > 0 ? res : src) as T[];
+        if (res && Array.isArray((res as any).items)) {
+          return ((res as any).items.length > 0 ? (res as any).items : src) as T[];
+        }
+        if (res && typeof res === 'object') return res as T[];
+        return src;
+      } catch (err) {
+        console.warn(`[useEditable:${key}] Error fetching live data:`, err);
+        return src;
+      }
+    }
+    return delay(src);
+  });
   const [over, setOver] = useState<T[] | null>(null);
-  const rows = over ?? data ?? [];
-  const update = (fn: (r: T[]) => T[]) => setOver(fn(over ?? data ?? src));
-  return [rows, update, !data] as const;
+  const rows: T[] = over ?? (Array.isArray(data) ? data : ((data as any)?.items ?? src));
+  const update = (fn: (r: T[]) => T[]) => setOver(fn(over ?? (Array.isArray(data) ? data : ((data as any)?.items ?? src))));
+  return [rows, update, !data, refetch] as const;
+}
+
+export function useDynamicSites() {
+  const { data } = useQ(['admin', 'dynamic-sites'], () => adminApi.getSites());
+  const sites = Array.isArray(data) && data.length > 0 ? data : [];
+  const options = sites.map((s: any) => [String(s.siteId), `${s.siteCode} · ${s.siteName}`] as [string, string]);
+  return { sites, options };
+}
+
+export function useDynamicRoles() {
+  const { data } = useQ(['admin', 'dynamic-roles'], () => adminApi.getRoles());
+  const roles = Array.isArray(data) && data.length > 0 ? data : [];
+  const options = roles.map((r: any) => [r.code ?? r.roleCode, r.name ?? r.roleName] as [string, string]);
+  return { roles, options };
+}
+
+export function useDynamicUnitTypes() {
+  const { data } = useQ(['admin', 'dynamic-unit-types'], () => adminApi.getUnitTypes());
+  const unitTypes = Array.isArray(data) && data.length > 0 ? data : [];
+  const options = unitTypes.map((u: any) => [u.typeCode ?? u.code, `${u.typeCode ?? u.code} · ${u.typeName ?? u.name}`] as [string, string]);
+  return { unitTypes, options };
+}
+
+export function useDynamicCalendars() {
+  const { data } = useQ(['admin', 'dynamic-calendars'], () => adminApi.getCalendars());
+  const calendars = Array.isArray(data) && data.length > 0 ? data : [];
+  const options = calendars.map((c: any) => [String(c.calendarId), c.calendarName] as [string, string]);
+  return { calendars, options };
 }
 
 export function SeedBanner({ children }: { children: ReactNode }) {

@@ -4,7 +4,7 @@ import { Button, Chips, DataTable, Panel, Pill, Tabs, useToast } from '@/ds/comp
 import { ROLES } from '@/app/roles';
 import { SRC, notificationRules as seedRules, notificationTemplates as seedTpl, printTemplates as seedPrint } from '@/mock/admin';
 import { AuditNote, ListPanel, SetupPage, Split, YesNo, useEditable } from '../shared/AdminKit';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { notificationsApi } from './api';
 import { TemplateEditor } from './components/TemplateEditor';
 import { PrintTab } from './components/PrintTab';
@@ -29,9 +29,9 @@ const tplKey = (t: Tpl) => t.notificationTemplateId!;
 export function NotificationsView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('templates');
-  const [tpls, setTpls] = useEditable<Tpl>('notifTpl', seedTpl);
-  const { data: rulesData } = useQ<any[]>(['admin', 'notificationRules'], () => delay(seedRules));
-  const { data: printData } = useQ<any[]>(['admin', 'printTemplates'], () => delay(seedPrint));
+  const [tpls, setTpls] = useEditable<Tpl>('notifTpl', seedTpl, () => notificationsApi.getNotificationTemplates());
+  const { data: rulesData } = useQ<any[]>(['admin', 'notificationRules'], () => notificationsApi.getNotificationRules());
+  const { data: printData } = useQ<any[]>(['admin', 'printTemplates'], () => notificationsApi.getPrintTemplates());
   const notificationRules = Array.isArray(rulesData) && rulesData.length > 0 ? rulesData : seedRules;
   const printTemplates = Array.isArray(printData) && printData.length > 0 ? printData : seedPrint;
 

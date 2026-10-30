@@ -1,6 +1,6 @@
 import { Check, Field, Input, Select } from '@/ds/components';
 import { ROLES } from '@/app/roles';
-import { EditDrawer, hrs } from '../../shared/AdminKit';
+import { EditDrawer, hrs, useDynamicRoles } from '../../shared/AdminKit';
 import type { exceptionTypes as seedExc } from '@/mock/admin';
 
 type Exc = (typeof seedExc)[number];
@@ -13,7 +13,9 @@ interface ExceptionDrawerProps {
 }
 
 export function ExceptionDrawer({ exc, onClose, onSave, setExc }: ExceptionDrawerProps) {
+  const { options: roleOptions } = useDynamicRoles();
   if (!exc) return null;
+  const roleChoices = roleOptions.length > 0 ? roleOptions : ROLES.filter((r) => !r.external).map((r) => [r.code, r.name] as [string, string]);
 
   return (
     <EditDrawer
@@ -39,14 +41,14 @@ export function ExceptionDrawer({ exc, onClose, onSave, setExc }: ExceptionDrawe
           <Select
             value={exc.defaultRoleCode ?? ''}
             onChange={(e) => setExc({ ...exc, defaultRoleCode: e.target.value })}
-            options={ROLES.filter((r) => !r.external).map((r) => [r.code, r.name])}
+            options={roleChoices}
           />
         </Field>
         <Field label="Escalates to">
           <Select
             value={exc.escalationRoleCode ?? ''}
             onChange={(e) => setExc({ ...exc, escalationRoleCode: e.target.value })}
-            options={ROLES.filter((r) => !r.external).map((r) => [r.code, r.name])}
+            options={roleChoices}
           />
         </Field>
       </div>

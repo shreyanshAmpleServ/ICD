@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check, Field, Input, Segmented, Select } from '@/ds/components';
-import { EditDrawer } from '../../shared/AdminKit';
-import { FACILITY_NAME, calendars, type Site } from '@/mock/admin';
+import { EditDrawer, useDynamicCalendars } from '../../shared/AdminKit';
+import { FACILITY_NAME, calendars as fallbackCalendars, type Site } from '@/mock/admin';
 
 const FACILITIES = ['ICD', 'ICDV', 'CFS', 'EMPTY_DEPOT', 'WAREHOUSE'] as const;
 
@@ -14,9 +14,11 @@ interface SiteDrawerProps {
 }
 
 export function SiteDrawer({ open, onClose, site, onSave, isNew }: SiteDrawerProps) {
+  const { options: calendarOptions } = useDynamicCalendars();
   const [s, setS] = useState(site);
   const set = (p: Partial<Site>) => setS((x) => ({ ...x, ...p }));
   const codeOk = /^[A-Z0-9]{3,8}$/.test(s.siteCode);
+  const calOpts = calendarOptions.length > 0 ? calendarOptions : fallbackCalendars.map((c) => [String(c.calendarId), c.calendarName] as [string, string]);
 
   return (
     <EditDrawer
@@ -51,7 +53,7 @@ export function SiteDrawer({ open, onClose, site, onSave, isNew }: SiteDrawerPro
           <Input value={s.regulatorLicenceNo ?? ''} onChange={(e) => set({ regulatorLicenceNo: e.target.value })} />
         </Field>
         <Field label="Calendar">
-          <Select value={String(s.calendarId)} onChange={(e) => set({ calendarId: Number(e.target.value) })} options={calendars.map((c) => [String(c.calendarId), c.calendarName])} />
+          <Select value={String(s.calendarId)} onChange={(e) => set({ calendarId: Number(e.target.value) })} options={calOpts} />
         </Field>
         <Field label="Offline gate limit (minutes)" hint="0 turns offline gate entry off">
           <Input type="number" min={0} max={240} value={s.offlineGateLimitMin} onChange={(e) => set({ offlineGateLimitMin: Number(e.target.value) })} />

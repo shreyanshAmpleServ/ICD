@@ -65,6 +65,7 @@ const commentsStore: Record<string, any[]> = {
 };
 
 import { getPrisma, isDbLive } from "../../db/prisma";
+import { cargoService } from "../cargo/cargo.service";
 
 // ------------------------------------------------------------------ 1. Customs (Site-scoped)
 router.get(
@@ -81,55 +82,12 @@ router.get(
   requireSite(false),
   requirePermission("consignment.view"),
   async (req, res) => {
-    const { consignmentId, status } = req.query;
-    let items = customsRefs as any[];
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbRefs = await prisma.customs_refs.findMany({
-            include: {
-              consignments: true,
-              unit_stays: true,
-            },
-            orderBy: { customs_ref_id: "desc" },
-          });
-
-          if (dbRefs && dbRefs.length > 0) {
-            const mapped = dbRefs.map((r) => ({
-              customsRefId: r.customs_ref_id,
-              consignmentId: r.consignment_id,
-              consignmentRef: r.consignments?.ref_no || "BL-DAR-2026-9901",
-              unitStayId: r.unit_stay_id,
-              unitNo: r.unit_stays?.unit_no,
-              refType: r.ref_type || "TANSAD",
-              refTypeCode: r.ref_type || "TANSAD",
-              refNo: r.ref_no,
-              status: r.status || "CLEARED",
-              registeredAt:
-                r.lodged_at?.toISOString() || new Date().toISOString(),
-              clearedAt: r.cleared_at?.toISOString(),
-            }));
-
-            const dbRefNos = new Set(mapped.map((m) => m.refNo));
-            items = [
-              ...mapped,
-              ...customsRefs.filter((c) => !dbRefNos.has(c.refNo)),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Customs Refs API] DB query fallback:", err.message);
-        }
-      }
+    try {
+      const items = await cargoService.getCustomsRefs(req.query);
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
-
-    if (consignmentId)
-      items = items.filter(
-        (c) => String(c.consignmentId) === String(consignmentId),
-      );
-    if (status) items = items.filter((c) => c.status === status);
-    res.json({ items, total: items.length, nextCursor: null });
   },
 );
 
@@ -137,20 +95,13 @@ router.post(
   "/customs/refs",
   requireSite(false),
   requirePermission("customs.ref.edit", "DO"),
-  (req, res) => {
-    const newRef = {
-      customsRefId: customsRefs.length + 101,
-      siteId: 1,
-      consignmentId: req.body.consignmentId || 101,
-      refType: req.body.refType || "TANSAD",
-      refNo: req.body.refNo || `TZ-CUST-2026-${Date.now()}`,
-      status: "ACTIVE",
-      registeredAt: new Date().toISOString(),
-      logInst: 1,
-      ...req.body,
-    };
-    customsRefs.push(newRef as any);
-    res.status(201).json(newRef);
+  async (req, res) => {
+    try {
+      const newRef = await cargoService.createCustomsRef(req.body);
+      res.status(201).json(newRef);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -202,8 +153,13 @@ router.get(
   "/exams",
   requireSite(false),
   requirePermission("consignment.view"),
-  (req, res) => {
-    res.json({ items: exams, total: exams.length, nextCursor: null });
+  async (req, res) => {
+    try {
+      const items = await cargoService.getCustomsExams();
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -211,20 +167,13 @@ router.post(
   "/exams",
   requireSite(false),
   requirePermission("customs.exam.record", "DO"),
-  (req, res) => {
-    const newExam = {
-      examId: exams.length + 301,
-      unitStayId: req.body.unitStayId || 5001,
-      examType: req.body.examType || "PHYSICAL",
-      examBay: req.body.examBay || "EXAM-BAY-1",
-      status: "SCHEDULED",
-      scheduledAt: new Date().toISOString(),
-      officerName: req.body.officerName || "TRA Inspector",
-      logInst: 1,
-      ...req.body,
-    };
-    exams.push(newExam as any);
-    res.status(201).json(newExam);
+  async (req, res) => {
+    try {
+      const newExam = await cargoService.createCustomsExam(req.body);
+      res.status(201).json(newExam);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -232,15 +181,13 @@ router.post(
   "/exams/:examId([0-9a-zA-Z_.-]+):complete",
   requireSite(false),
   requirePermission("customs.exam.record", "DO"),
-  (req, res) => {
-    const exam = (exams as any[]).find(
-      (e) => String(e.examId) === req.params.examId,
-    );
-    if (!exam) return res.status(404).json({ error: "Exam not found" });
-    exam.status = "COMPLETED";
-    exam.completedAt = new Date().toISOString();
-    exam.outcome = req.body.outcome || "CLEARED";
-    res.json({ success: true, exam });
+  async (req, res) => {
+    try {
+      const result = await cargoService.completeCustomsExam(req.params.examId, req.body);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -310,53 +257,12 @@ router.get(
   requireSite(false),
   requirePermission("consignment.view"),
   async (req, res) => {
-    const { status, unitStayId } = req.query;
-    let items = holds as any[];
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbHolds = await prisma.holds.findMany({
-            include: {
-              unit_stays: true,
-              users_holds_placed_by_user_idTousers: true,
-            },
-            orderBy: { hold_id: "desc" },
-          });
-
-          if (dbHolds && dbHolds.length > 0) {
-            const mapped = dbHolds.map((h) => ({
-              holdId: h.hold_id,
-              unitStayId: h.unit_stay_id,
-              unitNo: h.unit_stays?.unit_no || "MSKU 882014 9",
-              holdType: h.hold_type,
-              holdTypeCode: h.hold_type,
-              authorityRef: `AUTH-${h.hold_type}`,
-              reason: h.reason,
-              status: h.status || "ACTIVE",
-              placedAt: h.placed_at?.toISOString() || new Date().toISOString(),
-              placedBy:
-                h.users_holds_placed_by_user_idTousers?.user_name ||
-                "Ashok Kumar",
-            }));
-
-            const dbIds = new Set(mapped.map((m) => m.holdId));
-            items = [
-              ...mapped,
-              ...holds.filter((h) => (h.holdId ? !dbIds.has(h.holdId) : true)),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Holds API] DB query fallback:", err.message);
-        }
-      }
+    try {
+      const items = await cargoService.getHolds(req.query);
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
-
-    if (status) items = items.filter((h) => h.status === status);
-    if (unitStayId)
-      items = items.filter((h) => String(h.unitStayId) === String(unitStayId));
-    res.json({ items, total: items.length, nextCursor: null });
   },
 );
 
@@ -364,21 +270,13 @@ router.post(
   ["/holds", "/holds:place"],
   requireSite(false),
   requirePermission("customs.hold.place", "DO"),
-  (req, res) => {
-    const newHold = {
-      holdId: holds.length + 701,
-      unitStayId: req.body.unitStayId || 5001,
-      holdTypeCode: req.body.holdTypeCode || "CUSTOMS",
-      status: "ACTIVE",
-      placedAt: new Date().toISOString(),
-      placedBy: req.user?.username || "Customs Officer",
-      reason: req.body.reason || "Verification hold",
-      authorityRef: req.body.authorityRef || "HOLD-REF-2026",
-      logInst: 1,
-      ...req.body,
-    };
-    holds.push(newHold as any);
-    res.status(201).json(newHold);
+  async (req, res) => {
+    try {
+      const placed = await cargoService.placeHold(req.body, req.user?.username);
+      res.status(201).json(Array.isArray(placed) ? placed[0] : placed);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -386,12 +284,15 @@ router.get(
   "/holds/:holdId",
   requireSite(false),
   requirePermission("consignment.view"),
-  (req, res) => {
-    const h = (holds as any[]).find(
-      (x) => String(x.holdId) === req.params.holdId,
-    );
-    if (!h) return res.status(404).json({ error: "Hold not found" });
-    res.json(h);
+  async (req, res) => {
+    try {
+      const holds = await cargoService.getHolds({});
+      const h = holds.find((x: any) => String(x.holdId) === req.params.holdId);
+      if (!h) return res.status(404).json({ error: "Hold not found" });
+      res.json(h);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -399,16 +300,13 @@ router.post(
   "/holds/:holdId([0-9a-zA-Z_.-]+):lift",
   requireSite(false),
   requirePermission("customs.hold.lift", "DO"),
-  (req, res) => {
-    const h = (holds as any[]).find(
-      (x) => String(x.holdId) === req.params.holdId,
-    );
-    if (!h) return res.status(404).json({ error: "Hold not found" });
-    h.status = "LIFTED";
-    h.liftedAt = new Date().toISOString();
-    h.liftedBy = req.user?.username || "Customs Supervisor";
-    h.liftReason = req.body.reason || "Inspection completed and cleared";
-    res.json({ success: true, hold: h });
+  async (req, res) => {
+    try {
+      const result = await cargoService.liftHold(req.params.holdId, req.body, req.user?.username);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -495,61 +393,12 @@ router.get(
   requireSite(false),
   requirePermission("consignment.view"),
   async (req, res) => {
-    const { status, consignmentId } = req.query;
-    let items = releaseOrders as any[];
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbRos = await prisma.release_orders.findMany({
-            include: {
-              consignments: true,
-              parties: true,
-              users: true,
-            },
-            orderBy: { release_order_id: "desc" },
-          });
-
-          if (dbRos && dbRos.length > 0) {
-            const mapped = dbRos.map((ro) => ({
-              releaseOrderId: ro.release_order_id,
-              releaseOrderNo: ro.release_no,
-              releaseNo: ro.release_no,
-              consignmentId: ro.consignment_id,
-              consignmentRef: ro.consignments?.ref_no || "BL-DAR-2026-9901",
-              status: ro.status || "APPROVED",
-              requestedBy: ro.parties?.party_name || "Bollore Logistics",
-              approvedBy: ro.users?.user_name || "Ashok Kumar",
-              issuedAt: ro.issued_at?.toISOString() || new Date().toISOString(),
-              expiresAt:
-                ro.expires_at?.toISOString() ||
-                new Date(Date.now() + 72 * 3600000).toISOString(),
-            }));
-
-            const dbRefs = new Set(mapped.map((m) => m.releaseNo));
-            items = [
-              ...mapped,
-              ...releaseOrders.filter(
-                (r) =>
-                  !dbRefs.has(
-                    (r as any).releaseOrderNo || (r as any).releaseNo,
-                  ),
-              ),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Release Orders API] DB query fallback:", err.message);
-        }
-      }
+    try {
+      const items = await cargoService.getReleaseOrders(req.query);
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
-
-    if (status) items = items.filter((r) => r.status === status);
-    if (consignmentId)
-      items = items.filter(
-        (r) => String(r.consignmentId) === String(consignmentId),
-      );
-    res.json({ items, total: items.length, nextCursor: null });
   },
 );
 
@@ -557,21 +406,13 @@ router.post(
   "/release-orders",
   requireSite(false),
   requirePermission("release.issue", "DO"),
-  (req, res) => {
-    const newRo = {
-      releaseOrderId: releaseOrders.length + 801,
-      releaseOrderNo: `RO-DAR1-26-0${releaseOrders.length + 1943}`,
-      consignmentId: req.body.consignmentId || 101,
-      status: "APPROVED",
-      issuedAt: new Date().toISOString(),
-      validTo: new Date(Date.now() + 172800000).toISOString(),
-      qrToken: `RO-QR-${Date.now()}`,
-      units: req.body.units || [],
-      logInst: 1,
-      ...req.body,
-    };
-    releaseOrders.push(newRo as any);
-    res.status(201).json(newRo);
+  async (req, res) => {
+    try {
+      const newRo = await cargoService.createReleaseOrder(req.body, req.user?.username);
+      res.status(201).json(newRo);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -579,14 +420,14 @@ router.get(
   "/release-orders/:releaseOrderId",
   requireSite(false),
   requirePermission("consignment.view"),
-  (req, res) => {
-    const ro = (releaseOrders as any[]).find(
-      (r) =>
-        String(r.releaseOrderId) === req.params.releaseOrderId ||
-        r.releaseOrderNo === req.params.releaseOrderId,
-    );
-    if (!ro) return res.status(404).json({ error: "Release order not found" });
-    res.json(ro);
+  async (req, res) => {
+    try {
+      const ro = await cargoService.getReleaseOrder(req.params.releaseOrderId);
+      if (!ro) return res.status(404).json({ error: "Release order not found" });
+      res.json(ro);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -594,10 +435,9 @@ router.get(
   "/release-qr/:qrToken",
   requireSite(false),
   requirePermission("gate.visit.checkout"),
-  (req, res) => {
-    const ro = (releaseOrders as any[]).find(
-      (r) => r.qrToken === req.params.qrToken,
-    );
+  async (req, res) => {
+    const list = await cargoService.getReleaseOrders({});
+    const ro = list[0];
     res.json({
       qrToken: req.params.qrToken,
       isValid: true,
@@ -632,15 +472,13 @@ router.post(
   "/release-orders/:releaseOrderId([0-9a-zA-Z_.-]+):approve",
   requireSite(false),
   requirePermission("release.issue", "DO"),
-  (req, res) => {
-    const ro = (releaseOrders as any[]).find(
-      (r) => String(r.releaseOrderId) === req.params.releaseOrderId,
-    );
-    if (!ro) return res.status(404).json({ error: "Release order not found" });
-    ro.status = "APPROVED";
-    ro.approvedAt = new Date().toISOString();
-    ro.approvedBy = req.user?.username || "Release Officer";
-    res.json({ success: true, releaseOrder: ro });
+  async (req, res) => {
+    try {
+      const ro = await cargoService.approveReleaseOrder(req.params.releaseOrderId, req.user?.username);
+      res.json({ success: true, releaseOrder: ro });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -648,13 +486,13 @@ router.post(
   "/release-orders/:releaseOrderId([0-9a-zA-Z_.-]+):cancel",
   requireSite(false),
   requirePermission("release.issue", "DO"),
-  (req, res) => {
-    const ro = (releaseOrders as any[]).find(
-      (r) => String(r.releaseOrderId) === req.params.releaseOrderId,
-    );
-    if (!ro) return res.status(404).json({ error: "Release order not found" });
-    ro.status = "CANCELLED";
-    res.json({ success: true, releaseOrder: ro });
+  async (req, res) => {
+    try {
+      const ro = await cargoService.cancelReleaseOrder(req.params.releaseOrderId);
+      res.json({ success: true, releaseOrder: ro });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -662,18 +500,17 @@ router.post(
   "/release-orders/:releaseOrderId([0-9a-zA-Z_.-]+):revalidate",
   requireSite(false),
   requirePermission("release.issue", "DO"),
-  (req, res) => {
-    const ro = (releaseOrders as any[]).find(
-      (r) => String(r.releaseOrderId) === req.params.releaseOrderId,
-    );
-    if (!ro) return res.status(404).json({ error: "Release order not found" });
-    ro.validTo = new Date(Date.now() + 172800000).toISOString();
-    ro.status = "APPROVED";
-    res.json({
-      success: true,
-      releaseOrder: ro,
-      message: "Validity extended by 48 hours.",
-    });
+  async (req, res) => {
+    try {
+      const ro = await cargoService.revalidateReleaseOrder(req.params.releaseOrderId);
+      res.json({
+        success: true,
+        releaseOrder: ro,
+        message: "Validity extended by 48 hours.",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 
@@ -1181,41 +1018,12 @@ router.get(
   requireSite(false),
   requirePermission("consignment.view"),
   async (req, res) => {
-    let items: any[] = [];
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbDg = await prisma.dg_lines.findMany({
-            include: {
-              unit_stays: true,
-            },
-            orderBy: { dg_line_id: "desc" },
-          });
-
-          if (dbDg && dbDg.length > 0) {
-            items = dbDg.map((dg) => ({
-              unitDgLineId: dg.dg_line_id,
-              dgLineId: dg.dg_line_id,
-              unitStayId: dg.unit_stay_id,
-              unitNo: dg.unit_stays?.unit_no || "MSKU 882014 9",
-              unNo: dg.un_number.replace(/^UN\s*/, ""),
-              unNumber: dg.un_number,
-              imoClass: dg.imo_class,
-              packingGroup: dg.packing_group || "II",
-              properShippingName:
-                dg.proper_shipping_name || "HAZARDOUS MATERIAL",
-              emergencyContact: "+255 22 286 0011 (Chemtrec TZ)",
-            }));
-          }
-        } catch (err: any) {
-          console.warn("[DG API] DB query fallback:", err.message);
-        }
-      }
+    try {
+      const items = await cargoService.getDgLines();
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
-
-    res.json({ items, total: items.length, nextCursor: null });
   },
 );
 

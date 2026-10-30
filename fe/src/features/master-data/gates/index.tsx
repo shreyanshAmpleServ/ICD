@@ -21,9 +21,9 @@ export function GatesView() {
   const { site } = useSession();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('visits');
-  const [gates, setGates] = useEditable<Gate>('gates', seedGates);
-  const [cps, setCps] = useEditable('checkpoints', seedCps);
-  const [vts, setVts] = useEditable<VT>('visitTypes', seedVts);
+  const [gates, setGates] = useEditable<Gate>('gates', seedGates, () => gatesApi.getGates());
+  const [cps, setCps] = useEditable('checkpoints', seedCps, () => gatesApi.getCheckpoints());
+  const [vts, setVts] = useEditable<VT>('visitTypes', seedVts, () => gatesApi.getVisitTypes());
   const siteGates = gates.filter((g) => g.siteId === site.siteId);
   const [gateId, setGateId] = useState<number | null>(null);
   const [vtId, setVtId] = useState<number>(2);
@@ -122,7 +122,7 @@ export function GatesView() {
               { key: 'n', header: 'Name', render: (c) => <strong>{c.checkpointName}</strong> },
               { key: 'k', header: 'Kind', render: (c) => <span className="small">{c.checkpointKind.replace('_', ' ').toLowerCase()}</span> },
               { key: 'g', header: 'At gate', render: (c) => gates.find((g) => g.gateId === c.gateId)?.gateName ?? '—' },
-              { key: 'u', header: 'Used by', render: (c) => <span className="small">{vts.filter((v) => v.checkpoints.some((x) => x.checkpointCode === c.checkpointCode)).length} visit types</span> },
+              { key: 'u', header: 'Used by', render: (c) => <span className="small">{vts.filter((v) => (v.checkpoints ?? []).some((x) => x.checkpointCode === c.checkpointCode)).length} visit types</span> },
               { key: 'a', header: 'Active', render: (c) => <YesNo v={c.isActive} /> },
             ]}
           />
@@ -137,7 +137,7 @@ export function GatesView() {
               selected={vt.visitTypeId}
               onSelect={(id) => setVtId(Number(id))}
               actions={<Button size="sm" icon={<Plus />} perm="admin.gate.configure" onClick={() => toast('Visit type added')}>Add</Button>}
-              items={vts.map((v) => ({ id: v.visitTypeId!, title: v.visitTypeName, sub: `${v.checkpoints.length} checkpoints${v.requiresAppointment ? ' · appointment' : ''}` }))}
+              items={vts.map((v) => ({ id: v.visitTypeId!, title: v.visitTypeName, sub: `${(v.checkpoints ?? []).length} checkpoints${v.requiresAppointment ? ' · appointment' : ''}` }))}
             />
           }
         >

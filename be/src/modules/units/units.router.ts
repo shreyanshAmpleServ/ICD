@@ -7,6 +7,7 @@ import { allStays } from "../../data/core";
 import { holdsOf } from "../../data/control";
 import { search } from "../../data/search";
 import { getPrisma, isDbLive } from "../../db/prisma";
+import { cargoService } from "../cargo/cargo.service";
 import {
   NotFoundError,
   asyncHandler,
@@ -201,121 +202,7 @@ router.get(
   requireSite(false),
   requirePermission("consignment.view"),
   asyncHandler(async (req, res) => {
-    const {
-      category,
-      status,
-      customsStatus,
-      location,
-      search: searchQ,
-    } = req.query;
-    let items = allStays;
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbStays = await prisma.unit_stays.findMany({
-            include: {
-              unit_types: true,
-              yard_locations: true,
-              consignments: true,
-              cargo_regimes: true,
-              holds: true,
-            },
-            orderBy: { unit_stay_id: "desc" },
-          });
-
-          if (dbStays && dbStays.length > 0) {
-            const mapped = dbStays.map((u) => {
-              const activeHolds = (u.holds || []).filter(
-                (h) => h.status === "ACTIVE",
-              ).length;
-              const dwell = u.arrived_at
-                ? Math.max(
-                    1,
-                    Math.floor(
-                      (Date.now() - new Date(u.arrived_at).getTime()) /
-                        86400000,
-                    ),
-                  )
-                : 4;
-              return {
-                unitStayId: u.unit_stay_id,
-                siteId: u.site_id,
-                consignmentId: u.consignment_id,
-                cargoUnit: {
-                  cargoUnitId: u.unit_stay_id,
-                  category: u.unit_types?.category || "CONTAINER",
-                  unitNo: u.unit_no,
-                  unitTypeCode: u.unit_types?.type_code || "40HC",
-                  isoType: u.unit_types?.type_code || "40HC",
-                  tareWeightKg: 3800,
-                },
-                physicalStatus: u.physical_status,
-                flow: u.flow,
-                fullEmpty: u.full_empty,
-                customsStatus: u.customs_status,
-                releaseStatus: u.release_status,
-                billingStatus: u.billing_status,
-                sealNo: u.seal_no,
-                grossWeightKg: Number(u.gross_weight_kg || 0),
-                activeHoldCount: activeHolds,
-                currentLocation: u.yard_locations
-                  ? {
-                      locationId: u.yard_locations.yard_location_id,
-                      fullCode: u.yard_locations.full_code,
-                      zone: u.yard_locations.full_code.split("-")[0] || "A",
-                    }
-                  : undefined,
-                unitSummary: {
-                  unitNo: u.unit_no,
-                  category: u.unit_types?.category || "CONTAINER",
-                  activeHoldCount: activeHolds,
-                  releaseStatus: u.release_status,
-                  physicalStatus: u.physical_status,
-                  dwellDays: dwell,
-                  consignmentRef: u.consignments?.ref_no,
-                },
-                arrivedAt: u.arrived_at?.toISOString(),
-              };
-            });
-
-            const dbIds = new Set(mapped.map((m) => m.cargoUnit.unitNo));
-            items = [
-              ...mapped,
-              ...allStays.filter((s) => !dbIds.has(s.cargoUnit.unitNo)),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Units API] DB query fallback to memory:", err.message);
-        }
-      }
-    }
-
-    if (category) {
-      items = items.filter((s) => s.cargoUnit?.category === category);
-    }
-    if (status) {
-      items = items.filter((s) => s.physicalStatus === status);
-    }
-    if (customsStatus) {
-      items = items.filter((s) => s.customsStatus === customsStatus);
-    }
-    if (location) {
-      items = items.filter((s) =>
-        s.currentLocation?.fullCode?.startsWith(String(location)),
-      );
-    }
-    if (searchQ) {
-      const q = String(searchQ).toLowerCase();
-      items = items.filter(
-        (s) =>
-          s.cargoUnit?.unitNo.toLowerCase().includes(q) ||
-          s.sealNo?.toLowerCase().includes(q) ||
-          s.currentLocation?.fullCode?.toLowerCase().includes(q),
-      );
-    }
-
+    const items = await cargoService.getUnits(req.query);
     const paginationParams = parsePaginationParams(req.query);
     const paginated = paginateArray(
       items,
@@ -330,30 +217,10 @@ router.post(
   "/units",
   requireSite(false),
   requirePermission("consignment.edit", "DO"),
-  (req, res) => {
-    const newStay = {
-      unitStayId: allStays.length + 5001,
-      siteId: 1,
-      consignmentId: req.body.consignmentId || 101,
-      cargoUnit: {
-        cargoUnitId: allStays.length + 5001,
-        category: req.body.category || "CONTAINER",
-        unitNo: req.body.unitNo || `NEWU${Date.now().toString().slice(-7)}`,
-        isoType: req.body.isoType || "40HC",
-        tareWeightKg: req.body.tareWeightKg || 3800,
-      },
-      physicalStatus: "EXPECTED",
-      flow: req.body.flow || "IMPORT",
-      sealNo: req.body.sealNo || "SEAL-001",
-      customsStatus: "PENDING",
-      releaseStatus: "PENDING_CHARGES",
-      gatedInAt: new Date().toISOString(),
-      logInst: 1,
-      ...req.body,
-    };
-    allStays.push(newStay as any);
+  asyncHandler(async (req, res) => {
+    const newStay = await cargoService.createUnit(req.body);
     res.status(201).json(newStay);
-  },
+  }),
 );
 
 router.get(
@@ -361,12 +228,7 @@ router.get(
   requireSite(false),
   requirePermission("consignment.view"),
   asyncHandler(async (req, res) => {
-    const stay = allStays.find(
-      (x) =>
-        String(x.unitStayId) === req.params.unitStayId ||
-        x.cargoUnit?.unitNo.toUpperCase() ===
-          req.params.unitStayId.toUpperCase(),
-    );
+    const stay = await cargoService.getUnit(req.params.unitStayId);
     if (!stay) {
       throw new NotFoundError("Unit stay", req.params.unitStayId);
     }
@@ -379,18 +241,10 @@ router.patch(
   requireSite(false),
   requirePermission("consignment.edit", "DO"),
   asyncHandler(async (req, res) => {
-    const stay = allStays.find(
-      (x) =>
-        String(x.unitStayId) === req.params.unitStayId ||
-        x.cargoUnit?.unitNo.toUpperCase() ===
-          req.params.unitStayId.toUpperCase(),
-    );
+    const stay = await cargoService.updateUnit(req.params.unitStayId, req.body);
     if (!stay) {
       throw new NotFoundError("Unit stay", req.params.unitStayId);
     }
-    Object.assign(stay, req.body, {
-      logInst: ((stay as any).logInst || 1) + 1,
-    });
     res.json(stay);
   }),
 );
@@ -400,54 +254,11 @@ router.get(
   requireSite(false),
   requirePermission("consignment.view"),
   asyncHandler(async (req, res) => {
-    const stay = allStays.find(
-      (x) =>
-        String(x.unitStayId) === req.params.unitStayId ||
-        x.cargoUnit?.unitNo.toUpperCase() ===
-          req.params.unitStayId.toUpperCase(),
-    );
-    if (!stay) {
+    const timeline = await cargoService.getUnitTimeline(req.params.unitStayId);
+    if (!timeline) {
       throw new NotFoundError("Unit stay", req.params.unitStayId);
     }
-
-    const timeline = [
-      {
-        eventType: "MANIFEST_IMPORTED",
-        occurredAt: "2026-10-01T08:00:00Z",
-        summary: "Manifest received from shipping line",
-        user: "SYSTEM",
-      },
-      {
-        eventType: "DISCHARGE_CONFIRMED",
-        occurredAt: "2026-10-03T14:30:00Z",
-        summary: "Container discharged at Port of Dar es Salaam",
-        user: "PORT_EDI",
-      },
-      {
-        eventType: "GATE_IN",
-        occurredAt: stay.gatedInAt || "2026-10-04T09:15:00Z",
-        summary: "Gate in pass issued to truck T 124 DFH",
-        user: "Rose A.",
-      },
-      {
-        eventType: "YARD_PLACEMENT",
-        occurredAt: "2026-10-04T09:45:00Z",
-        summary: `Placed into yard slot ${stay.currentLocation?.fullCode || "A-02-04-2"}`,
-        user: "Ibrahim N.",
-      },
-      {
-        eventType: "CUSTOMS_STATUS",
-        occurredAt: "2026-10-05T11:00:00Z",
-        summary: `Customs status updated to ${stay.customsStatus}`,
-        user: "Rehema K.",
-      },
-    ];
-
-    res.json({
-      unitStayId: stay.unitStayId,
-      unitNo: stay.cargoUnit?.unitNo,
-      events: timeline,
-    });
+    res.json(timeline);
   }),
 );
 
@@ -470,16 +281,7 @@ router.get(
   requireSite(false),
   requirePermission("consignment.view"),
   asyncHandler(async (req, res) => {
-    const stay = allStays.find(
-      (x) =>
-        String(x.unitStayId) === req.params.unitStayId ||
-        x.cargoUnit?.unitNo.toUpperCase() ===
-          req.params.unitStayId.toUpperCase(),
-    );
-    if (!stay) {
-      throw new NotFoundError("Unit stay", req.params.unitStayId);
-    }
-    const holds = holdsOf(stay.unitStayId || 0);
+    const holds = await cargoService.getHolds({ unitStayId: req.params.unitStayId });
     const params = parsePaginationParams(req.query);
     const paginated = paginateArray(holds, params);
     res.json(paginated);
@@ -491,12 +293,7 @@ router.get(
   requireSite(false),
   requirePermission("consignment.view"),
   asyncHandler(async (req, res) => {
-    const stay = allStays.find(
-      (x) =>
-        String(x.unitStayId) === req.params.unitStayId ||
-        x.cargoUnit?.unitNo.toUpperCase() ===
-          req.params.unitStayId.toUpperCase(),
-    );
+    const stay = await cargoService.getUnit(req.params.unitStayId);
     if (!stay) {
       throw new NotFoundError("Unit stay", req.params.unitStayId);
     }

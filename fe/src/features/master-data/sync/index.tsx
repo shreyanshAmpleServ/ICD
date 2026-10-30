@@ -19,8 +19,8 @@ export function SyncView() {
   const { phase } = useSession();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('sync');
-  const [sync, setSync] = useEditable<Sync>('sync', seedSync);
-  const [ob, setOb] = useEditable<Ob>('outbox', seedOutbox);
+  const [sync, setSync] = useEditable<Sync>('sync', seedSync, () => syncApi.getSyncStatus());
+  const [ob, setOb] = useEditable<Ob>('outbox', seedOutbox, () => syncApi.getOutbox());
   const [running, setRunning] = useState<string | null>(null);
   const [f, setF] = useState<'all' | 'problem' | 'PENDING' | 'SENT'>('problem');
   const t = phase === 2 ? tab : tab === 'edi' ? 'sync' : tab;

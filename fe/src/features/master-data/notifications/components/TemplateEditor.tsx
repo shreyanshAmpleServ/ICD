@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Languages } from 'lucide-react';
 import { Banner, Button, Field, Input, Panel, Pill, Segmented, Textarea } from '@/ds/components';
 import { SAMPLE_VALUES, notificationTemplates as seedTpl } from '@/mock/admin';
@@ -20,30 +20,38 @@ export function TemplateEditor({
   onAddSw: () => void;
 }) {
   const [x, setX] = useState(t);
+  useEffect(() => {
+    setX(t);
+  }, [t]);
+
   const [sample, setSample] = useState(true);
   const dirty = JSON.stringify(x) !== JSON.stringify(t);
-  const unknown = [...(x.body + (x.subject ?? '')).matchAll(/\{\{([a-z_]+)\}\}/g)]
+
+  const bodyText = x?.body ?? (x as any)?.bodyTemplate ?? '';
+  const subjectText = x?.subject ?? (x as any)?.subjectTemplate ?? '';
+
+  const unknown = [...(bodyText + subjectText).matchAll(/\{\{([a-z_]+)\}\}/g)]
     .map((m) => m[1])
     .filter((k) => SAMPLE_VALUES[k] === undefined);
-  const smsLen = renderTemplateText(x.body).length;
+  const smsLen = renderTemplateText(bodyText).length;
   const seg = Math.ceil(smsLen / 160);
   const preview: ReactNode =
     x.channel === 'SMS' || x.channel === 'WHATSAPP' ? (
       <div className="adm-sms">
-        <Filled text={x.body} sample={sample} />
+        <Filled text={bodyText} sample={sample} />
       </div>
     ) : (
       <div className="adm-email">
         <div className="h">
           <strong>
-            <Filled text={x.subject ?? ''} sample={sample} />
+            <Filled text={subjectText} sample={sample} />
           </strong>
           {x.channel === 'EMAIL' && (
             <div className="xs faint">From Mlimani ICD &lt;noreply@mlimani-icd.example&gt;</div>
           )}
         </div>
         <div className="b">
-          <Filled text={x.body} sample={sample} />
+          <Filled text={bodyText} sample={sample} />
         </div>
       </div>
     );
@@ -87,7 +95,7 @@ export function TemplateEditor({
               }
               error={unknown.length ? `Unknown placeholder: ${unknown.map((u) => `{{${u}}}`).join(', ')}` : undefined}
             >
-              <Textarea rows={6} value={x.body} onChange={(e) => setX({ ...x, body: e.target.value })} />
+              <Textarea rows={6} value={bodyText} onChange={(e) => setX({ ...x, body: e.target.value })} />
             </Field>
             <div className="field">
               <label>Placeholders you can use</label>
@@ -98,7 +106,7 @@ export function TemplateEditor({
                     type="button"
                     className="tag"
                     style={{ cursor: 'pointer', background: 'var(--paper)' }}
-                    onClick={() => setX({ ...x, body: `${x.body} {{${k}}}` })}
+                    onClick={() => setX({ ...x, body: `${bodyText} {{${k}}}` })}
                   >
                     {`{{${k}}}`}
                   </button>

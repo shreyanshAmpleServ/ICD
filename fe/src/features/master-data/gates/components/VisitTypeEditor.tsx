@@ -15,7 +15,7 @@ interface VisitTypeEditorProps {
 export function VisitTypeEditor({ vt, cps, onSave }: VisitTypeEditorProps) {
   const [v, setV] = useState(vt);
   const [add, setAdd] = useState('');
-  const seq = v.checkpoints;
+  const seq = v.checkpoints ?? [];
   const dirty = JSON.stringify(v) !== JSON.stringify(vt);
   const setSeq = (s: VT['checkpoints']) => setV({ ...v, checkpoints: s.map((x, i) => ({ ...x, seqNo: i + 1 })) });
   const move = (i: number, d: -1 | 1) => {

@@ -29,7 +29,7 @@ export function Releases() {
   const [open, setOpen] = useState(false);
   const [, bump] = useState(0);
   const { data = [] } = useQ(['release-orders'], () => delay(allReleaseOrders));
-  const list = data.length ? allReleaseOrders : data;
+  const list = data;
   const count = (k: Quick) => list.filter((r) => GROUP[k].includes(r.status)).length;
   const rows = list.filter((r) => (quick === 'all' || GROUP[quick].includes(r.status)) && (!q || (r.releaseNo ?? '').includes(q.toUpperCase()) || (consignment(r.consignmentId)?.refNo ?? '').includes(q.toUpperCase()) || (r.collectorName ?? '').toUpperCase().includes(q.toUpperCase())));
   const expSoon = list.filter((r) => GROUP.valid.includes(r.status) && hoursUntil(r.validTo) < 24).length;

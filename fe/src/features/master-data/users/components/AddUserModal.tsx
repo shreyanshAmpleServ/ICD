@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Banner, Field, Input, Segmented, Select } from '@/ds/components';
-import { EditDrawer } from '../../shared/AdminKit';
+import { EditDrawer, useDynamicRoles, useDynamicSites } from '../../shared/AdminKit';
 import { ROLES } from '@/app/roles';
 import { SITES } from '@/app/session';
 import type { CreateUserData } from '../api';
@@ -12,6 +12,8 @@ interface AddUserModalProps {
 }
 
 export function AddUserModal({ open, onClose, onSave }: AddUserModalProps) {
+  const { options: roleOptions } = useDynamicRoles();
+  const { options: siteOptions } = useDynamicSites();
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [title, setTitle] = useState('');
@@ -131,7 +133,7 @@ export function AddUserModal({ open, onClose, onSave }: AddUserModalProps) {
             onChange={(e) => setRoleCode(e.target.value)}
             options={[
               ['NONE', 'None (grant after user is added)'],
-              ...ROLES.filter((r) => !r.external).map((r) => [r.code, r.name] as [string, string]),
+              ...(roleOptions.length > 0 ? roleOptions : ROLES.filter((r) => !r.external).map((r) => [r.code, r.name] as [string, string])),
             ]}
           />
         </Field>
@@ -142,7 +144,7 @@ export function AddUserModal({ open, onClose, onSave }: AddUserModalProps) {
               onChange={(e) => setSiteId(e.target.value)}
               options={[
                 ['ALL', 'All sites'],
-                ...SITES.map((s) => [String(s.siteId), `${s.siteCode} · ${s.siteName}`] as [string, string]),
+                ...(siteOptions.length > 0 ? siteOptions : SITES.map((s) => [String(s.siteId), `${s.siteCode} · ${s.siteName}`] as [string, string])),
               ]}
             />
           </Field>

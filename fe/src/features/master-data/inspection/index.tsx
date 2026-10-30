@@ -3,7 +3,7 @@ import { Car, Container, Plus } from 'lucide-react';
 import { Button, Chips, DataTable, Panel, Pill, Tabs, useToast } from '@/ds/components';
 import { SRC, damageCodes as seedDamageCodes, inspectionTemplates as seedTpl } from '@/mock/admin';
 import { ListPanel, SetupPage, Split, useEditable } from '../shared/AdminKit';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { inspectionApi } from './api';
 import { ChecklistEditor } from './components/ChecklistEditor';
 
@@ -15,8 +15,8 @@ type Tpl = (typeof seedTpl)[number];
 export function InspectionView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('templates');
-  const [tpls, setTpls] = useEditable<Tpl>('inspTpl', seedTpl);
-  const { data: damageData } = useQ<any[]>(['admin', 'damageCodes'], () => delay(seedDamageCodes));
+  const [tpls, setTpls] = useEditable<Tpl>('inspTpl', seedTpl, () => inspectionApi.getInspectionTemplates());
+  const { data: damageData } = useQ<any[]>(['admin', 'damageCodes'], () => inspectionApi.getDamageCodes());
   const damageCodes = (Array.isArray(damageData) && damageData.length > 0) ? damageData : seedDamageCodes;
   const [sel, setSel] = useState(3);
   const [dcat, setDcat] = useState<'ALL' | 'CONTAINER' | 'VEHICLE'>('ALL');
@@ -51,7 +51,7 @@ export function InspectionView() {
                 id: t.inspectionTemplateId,
                 lead: t.category === 'VEHICLE' ? <Car size={18} /> : <Container size={18} />,
                 title: t.templateName,
-                sub: `Version ${t.versionNo} · ${t.items.length} items`,
+                sub: `Version ${t.versionNo} · ${(t.items ?? []).length} items`,
               }))}
             />
           }

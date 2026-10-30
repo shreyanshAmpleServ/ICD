@@ -5,7 +5,7 @@ import {
   SRC, chargeCodes as seedCharges, glSettings, paymentChannels as seedChannels, periods as seedPeriods, taxCodes as seedTaxCodes,
 } from '@/mock/admin';
 import { AuditNote, SeedBanner, SetupPage, VerifyPill, YesNo, label, useEditable } from '../shared/AdminKit';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { financeApi } from './api';
 import { PeriodDrawer } from './components/PeriodDrawer';
 import { ChargeMapDrawer } from './components/ChargeMapDrawer';
@@ -21,10 +21,10 @@ type Channel = (typeof seedChannels)[number];
 export function FinanceView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('periods');
-  const [periods, setPeriods] = useEditable<Period>('periods', seedPeriods);
-  const [charges, setCharges] = useEditable<Charge>('charges', seedCharges);
-  const { data: taxData } = useQ<any[]>(['admin', 'taxCodes'], () => delay(seedTaxCodes));
-  const { data: channelData } = useQ<Channel[]>(['admin', 'paymentChannels'], () => delay(seedChannels));
+  const [periods, setPeriods] = useEditable<Period>('periods', seedPeriods, () => financeApi.getAccountingPeriods());
+  const [charges, setCharges] = useEditable<Charge>('charges', seedCharges, () => financeApi.getChargeCodes());
+  const { data: taxData } = useQ<any[]>(['admin', 'taxCodes'], () => financeApi.getTaxCodes());
+  const { data: channelData } = useQ<Channel[]>(['admin', 'paymentChannels'], () => financeApi.getPaymentChannels());
   const taxCodes = (Array.isArray(taxData) && taxData.length > 0) ? taxData : seedTaxCodes;
   const paymentChannels: Channel[] = (Array.isArray(channelData) && channelData.length > 0) ? (channelData as Channel[]) : seedChannels;
 

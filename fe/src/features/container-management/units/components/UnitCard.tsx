@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRightLeft, BadgeCheck, Calculator, Camera, ClipboardCheck, FileText, MapPin, Printer, ShieldAlert, Snowflake, Flame,
 } from 'lucide-react';
@@ -10,6 +11,7 @@ import {
 import { FLOW } from '@/ds/status';
 import { useSession } from '@/app/session';
 import { useQ, delay } from '@/api/query';
+import { api } from '@/api/client';
 import { consignment, partyName, stay } from '@/mock/core';
 import { evaluate, holdTypeName, holdTypes, holdsOf } from '@/mock/control';
 import { at } from '@/mock/gen';
@@ -28,10 +30,16 @@ export function UnitCard() {
   const toast = useToast();
 
   if (!s) return <Page><Empty title="Loading unit" /></Page>;
-  const u = s.cargoUnit;
-  const cons = consignment(s.consignmentId);
-  const hs = holdsOf(s.unitStayId!);
-  const active = hs.filter((h) => h.status === 'ACTIVE');
+  const u = s.cargoUnit || {
+    unitNo: (s as any).unitNo || `UNIT-${unitStayId}`,
+    category: 'CONTAINER' as const,
+    unitTypeCode: '40HC',
+    make: '',
+    model: '',
+  };
+  const cons = (s as any).consignments || consignment(s.consignmentId);
+  const hs = (s as any).holds && (s as any).holds.length > 0 ? (s as any).holds : holdsOf(s.unitStayId!);
+  const active = hs.filter((h: any) => h.status === 'ACTIVE');
   const checks = evaluate(s, 'PREVIEW');
   const failed = checks.filter((c) => c.result === 'FAIL');
   const canLeave = failed.length === 0 && s.releaseStatus === 'APPROVED';
@@ -39,7 +47,7 @@ export function UnitCard() {
 
   const timeline: TLItem[] = [
     s.nextAction ? { at: at(-3.5), title: 'Next: ' + s.nextAction, tone: 'wait' } : null,
-    ...active.map((h) => ({ at: h.placedAt!, title: `Hold placed: ${holdTypeName(h.holdTypeCode)}`, detail: h.reason, by: h.placedBy, tone: 'stop' as const })),
+    ...active.map((h: any) => ({ at: h.placedAt || new Date().toISOString(), title: `Hold placed: ${holdTypeName(h.holdTypeCode)}`, detail: h.reason, by: h.placedBy || 'Operations', tone: 'stop' as const })),
     s.customsStatus === 'UNDER_EXAM' ? { at: at(30), title: 'Customs: under examination', detail: 'Examination notice EXN/DSM/26/04418 recorded', by: 'Doc & clearance · Rehema K.', tone: 'customs' as const } : null,
     { at: at(52), title: 'Release requested by Kilele Clearing & Forwarding', detail: 'RO-DAR1-26-01942 · collector Baraka Mwita', tone: 'wait' as const },
     s.gatedInAt ? { at: new Date(Date.parse(s.gatedInAt) + 3600_000 * 0.6).toISOString(), title: `Placed at ${s.currentLocation?.fullCode ?? 'yard'}`, detail: 'Move by RS-01 · suggested slot 1 of 3', by: 'Yard · Ibrahim N.' } : null,
@@ -147,13 +155,20 @@ export function UnitCard() {
 
         {tab === 'holds' && (
           <Panel flush title="Holds" actions={<Button size="sm" icon={<ShieldAlert />} perm="customs.hold.place" level="REQ" onClick={() => setHoldOpen(true)}>Place hold</Button>}>
-            <DataTable rows={hs} rowKey={(h) => h.holdId!} empty={<Empty title="No holds on this unit">Holds stop the gate, the release or moves depending on their type.</Empty>} cols={[
+            <DataTable<any> rows={hs} rowKey={(h) => h.holdId!} empty={<Empty title="No holds on this unit">Holds stop the gate, the release or moves depending on their type.</Empty>} cols={[
               { key: 'type', header: 'Hold', render: (h) => <strong>{holdTypeName(h.holdTypeCode)}</strong> },
               { key: 'status', header: 'Status', render: (h) => h.status === 'ACTIVE' ? <HoldPill count={1} /> : <StatusPill value={h.status} /> },
               { key: 'ref', header: 'Authority ref.', render: (h) => h.authorityRef ?? '—' },
               { key: 'reason', header: 'Reason', render: (h) => h.reason },
               { key: 'placed', header: 'Placed', render: (h) => <span className="small">{fmtDT(h.placedAt)}<br /><span className="faint">{h.placedBy}</span></span> },
-              { key: 'act', header: '', render: (h) => h.status === 'ACTIVE' ? <Button size="sm" perm="customs.hold.lift" onClick={() => toast('Hold lifted')}>Lift</Button> : <span className="xs faint">{h.liftReason}</span> },
+              { key: 'act', header: '', render: (h) => h.status === 'ACTIVE' ? <Button size="sm" perm="customs.hold.lift" onClick={async () => {
+                try {
+                  await api.post(`/holds/${h.holdId}:lift`, { reason: 'Lifted from unit card' });
+                  toast('Hold lifted');
+                } catch (e: any) {
+                  toast('Failed to lift hold');
+                }
+              }}>Lift</Button> : <span className="xs faint">{h.liftReason}</span> },
             ]} />
           </Panel>
         )}
@@ -181,24 +196,55 @@ export function UnitCard() {
         )}
       </div>
 
-      <PlaceHold open={holdOpen} onClose={() => setHoldOpen(false)} unitNo={u.unitNo} />
+      <PlaceHold open={holdOpen} onClose={() => setHoldOpen(false)} unitNo={u.unitNo} unitStayId={Number(unitStayId)} />
     </Page>
   );
 }
 
-function PlaceHold({ open, onClose, unitNo }: { open: boolean; onClose: () => void; unitNo: string }) {
+function PlaceHold({ open, onClose, unitNo, unitStayId }: { open: boolean; onClose: () => void; unitNo: string; unitStayId: number }) {
+  const qc = useQueryClient();
   const [type, setType] = useState('LINE');
+  const [authorityRef, setAuthorityRef] = useState('');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
   const ht = holdTypes.find((h) => h.holdCode === type)!;
   const blocks = [ht.blocksGateOut && 'gate out', ht.blocksRelease && 'release', ht.blocksMove && 'moves', ht.blocksStuffing && 'stuffing'].filter(Boolean);
+
+  const handleSubmit = async () => {
+    if (!reason.trim()) return;
+    setSubmitting(true);
+    try {
+      await api.post('/holds', {
+        unitStayId,
+        holdTypeCode: type,
+        authorityRef: authorityRef.trim() || undefined,
+        reason: reason.trim(),
+      });
+      qc.invalidateQueries({ queryKey: ['unit', String(unitStayId)] });
+      qc.invalidateQueries({ queryKey: ['units'] });
+      qc.invalidateQueries({ queryKey: ['holds'] });
+      toast('Hold placed successfully');
+      onClose();
+    } catch (err: any) {
+      toast(err?.message || 'Failed to place hold');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Drawer open={open} onClose={onClose} title={`Place a hold on ${unitNo}`}
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<ShieldAlert />} onClick={() => { onClose(); toast('Hold placed'); }}>Place hold</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose} disabled={submitting}>Cancel</Button><Button variant="primary" icon={<ShieldAlert />} disabled={submitting || !reason.trim()} onClick={handleSubmit}>{submitting ? 'Placing...' : 'Place hold'}</Button></>}>
       <div className="stack">
         <Field label="Hold type" required><Select value={type} onChange={(e) => setType(e.target.value)} options={holdTypes.map((h) => [h.holdCode, h.holdName])} /></Field>
         <Banner tone="wait">This hold stops {blocks.join(', ')}.{ht.liftNeedsApproval ? ' Lifting it needs approval.' : ''}</Banner>
-        <Field label="Authority reference" hint="Customs or line reference, if any"><input className="input" /></Field>
-        <Field label="Reason" required><Textarea placeholder="What happened and what clears it" /></Field>
+        <Field label="Authority reference" hint="Customs or line reference, if any">
+          <input className="input" value={authorityRef} onChange={(e) => setAuthorityRef(e.target.value)} />
+        </Field>
+        <Field label="Reason" required>
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="What happened and what clears it" />
+        </Field>
         <Field label="Evidence" hint={ht.liftNeedsEvidence ? 'Required to lift this hold later' : 'Optional'}><Button icon={<Camera />}>Attach file or photo</Button></Field>
         <p className="xs faint">Everyone who can see this unit sees the hold at once. Gate screens refuse the unit while it is active.</p>
       </div>

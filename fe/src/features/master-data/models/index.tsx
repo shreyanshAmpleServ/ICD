@@ -15,7 +15,7 @@ const CODES = ['YARD_ALLOC', 'DWELL', 'OCCUPANCY'];
 export function ModelsView() {
   const { phase } = useSession();
   const toast = useToast();
-  const [ms, setMs] = useEditable<Model>('models', seedModels);
+  const [ms, setMs] = useEditable<Model>('models', seedModels, () => modelsApi.getModels());
   const [act, setAct] = useState<Model | null>(null);
 
   return (

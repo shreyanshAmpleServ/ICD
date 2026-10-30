@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { cargoService } from "../cargo/cargo.service";
 import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
 import {
@@ -201,7 +202,7 @@ router.get(
       if (prisma) {
         try {
           const dbAppts = await prisma.appointments.findMany({
-            include: { visit_types: true, parties: true },
+            include: { appointments_visit_types: true, appointments_parties: true },
             orderBy: { appointment_id: "desc" },
           });
           if (dbAppts && dbAppts.length > 0) {
@@ -219,7 +220,7 @@ router.get(
                 hour: slotStartDate.getHours(),
                 slotStart: slotStartDate.toISOString(),
                 slotEnd: slotEndDate.toISOString(),
-                visitTypeCode: a.visit_types?.visit_code || "IMPORT_PICKUP",
+                visitTypeCode: (a as any).appointments_visit_types?.visit_code || "IMPORT_PICKUP",
                 plateNo: a.truck_plate || "T 118 DPE",
                 partyId: a.transporter_party_id || 1,
                 driverName: "Juma Ramadhani",
@@ -899,12 +900,14 @@ router.put(
   "/units/:unitStayId/dg-lines",
   requireSite(false),
   requirePermission("dg.manage", "DO"),
-  (req, res) => {
-    res.json({
-      success: true,
-      unitStayId: req.params.unitStayId,
-      dgLines: req.body,
-    });
+  async (req, res) => {
+    try {
+      const lines = Array.isArray(req.body) ? req.body : [req.body];
+      const saved = await cargoService.saveDgLines(req.params.unitStayId, lines);
+      res.json({ success: true, unitStayId: req.params.unitStayId, dgLines: saved });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   },
 );
 

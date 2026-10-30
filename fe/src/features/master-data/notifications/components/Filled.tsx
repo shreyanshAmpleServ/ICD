@@ -1,8 +1,8 @@
 import { SAMPLE_VALUES } from '@/mock/admin';
 
 /** Highlight {{placeholders}}; unknown ones in red. */
-export function Filled({ text, sample }: { text: string; sample: boolean }) {
-  const parts = text.split(/(\{\{[a-z_]+\}\})/g);
+export function Filled({ text, sample }: { text?: string | null; sample: boolean }) {
+  const parts = (text ?? '').split(/(\{\{[a-z_]+\}\})/g);
   return (
     <>
       {parts.map((p, i) => {
@@ -16,5 +16,5 @@ export function Filled({ text, sample }: { text: string; sample: boolean }) {
   );
 }
 
-export const renderTemplateText = (t: string) =>
-  t.replace(/\{\{([a-z_]+)\}\}/g, (_, k: string) => SAMPLE_VALUES[k] ?? `{{${k}}}`);
+export const renderTemplateText = (t?: string | null) =>
+  (t ?? '').replace(/\{\{([a-z_]+)\}\}/g, (_, k: string) => SAMPLE_VALUES[k] ?? `{{${k}}}`);

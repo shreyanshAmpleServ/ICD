@@ -4,7 +4,7 @@ import { Building2, MapPin, Pencil, Plus, Power } from 'lucide-react';
 import { Banner, Button, DL, DataTable, Panel, Pill, useToast } from '@/ds/components';
 import { FACILITY_NAME, SRC, calendars, company as seedCompany, countryPacks, sites as seedSites, type CountryPack, type Site } from '@/mock/admin';
 import { AuditNote, ListPanel, SetupPage, Split, VerifyPill, useEditable } from '../shared/AdminKit';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { sitesApi } from './api';
 import { CompanyDrawer } from './components/CompanyDrawer';
 import { SiteDrawer } from './components/SiteDrawer';
@@ -16,9 +16,9 @@ const SIGN: Record<string, string> = { SCREEN: 'On screen', PAPER: 'Paper only',
 
 export function SitesView() {
   const toast = useToast();
-  const [sites, setSites] = useEditable<Site>('sites', seedSites);
-  const [packs, setPacks] = useEditable<CountryPack>('packs', countryPacks);
-  const { data: compRes } = useQ<any>(['admin', 'company'], () => delay(seedCompany));
+  const [sites, setSites] = useEditable<Site>('sites', seedSites, () => sitesApi.getSites());
+  const [packs, setPacks] = useEditable<CountryPack>('packs', countryPacks, () => sitesApi.getPacks());
+  const { data: compRes } = useQ<any>(['admin', 'company'], () => sitesApi.getCompany());
   const [company, setCompany] = useState(seedCompany);
 
   useEffect(() => {

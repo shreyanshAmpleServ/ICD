@@ -6,7 +6,7 @@ import {
 import { parties } from '@/mock/core';
 import { commodities as seedCommodities, drivers as seedDrivers, equipment as seedEquipment, ports as seedPorts, trucks as seedTrucks, vessels as seedVessels } from '@/mock/admin';
 import { AuditNote, SetupPage, SourcePill, YesNo, useEditable } from '../shared/AdminKit';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { mastersApi } from './api';
 import { LicenceState } from './components/LicenceState';
 import { LocalTable } from './components/LocalTable';
@@ -25,13 +25,13 @@ export function MastersView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('trucks');
   const [q, setQ] = useState('');
-  const [trucks, setTrucks] = useEditable<Truck>('trucks', seedTrucks);
-  const [drivers, setDrivers] = useEditable<Driver>('drivers', seedDrivers);
+  const [trucks, setTrucks] = useEditable<Truck>('trucks', seedTrucks, () => mastersApi.getTrucks());
+  const [drivers, setDrivers] = useEditable<Driver>('drivers', seedDrivers, () => mastersApi.getDrivers());
 
-  const { data: vesselData } = useQ<any[]>(['admin', 'vessels'], () => delay(seedVessels));
-  const { data: portData } = useQ<any[]>(['admin', 'ports'], () => delay(seedPorts));
-  const { data: commData } = useQ<any[]>(['admin', 'commodities'], () => delay(seedCommodities));
-  const { data: eqData } = useQ<any[]>(['admin', 'equipment'], () => delay(seedEquipment));
+  const { data: vesselData } = useQ<any[]>(['admin', 'vessels'], () => mastersApi.getVessels());
+  const { data: portData } = useQ<any[]>(['admin', 'ports'], () => mastersApi.getPorts());
+  const { data: commData } = useQ<any[]>(['admin', 'commodities'], () => mastersApi.getCommodities());
+  const { data: eqData } = useQ<any[]>(['admin', 'equipment'], () => mastersApi.getEquipment());
 
   const vessels = (Array.isArray(vesselData) && vesselData.length > 0) ? vesselData : seedVessels;
   const ports = (Array.isArray(portData) && portData.length > 0) ? portData : seedPorts;

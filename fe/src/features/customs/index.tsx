@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '@/api/client';
 import { CalendarPlus, ClipboardCheck, Landmark, Timer } from 'lucide-react';
 import type { S } from '@/api/types';
 import {
@@ -24,11 +26,14 @@ const unitNoOf = (id?: number | null) => allStays.find((s) => s.unitStayId === i
 export function Customs() {
   const [tab, setTab] = useState<TabId>('refs');
   const { data: refsSeed = [] } = useQ(['customs-refs'], () => delay(allCustomsRefs));
+  const { data: dbExams = [] } = useQ(['customs-exams'], () => api.get<{ items: ExamRow[] }>('/exams').then(r => r.items || []).catch(() => seedExams));
   const [added, setAdded] = useState<S<'CustomsRef'>[]>([]);
   const [lastEffect, setLastEffect] = useState<{ ref: string; n: number; cons?: string } | null>(null);
   const [refOpen, setRefOpen] = useState(false);
-  const [exams, setExams] = useState<ExamRow[]>(seedExams);
+  const [localExams, setLocalExams] = useState<ExamRow[] | null>(null);
   const [waiting, setWaiting] = useState<ExamRow[]>(examsWaiting);
+  const exams = localExams ?? (dbExams.length > 0 ? dbExams : seedExams);
+  const setExams = (fn: any) => setLocalExams(typeof fn === 'function' ? fn(exams) : fn);
   const refs = [...added, ...refsSeed];
   const bonds = refs.filter((r) => r.refTypeCode === 'TRANSIT_BOND' || r.refTypeCode === 'TRANSIT_DECL');
   const expiring = bonds.filter((r) => r.status === 'ACTIVE' && r.validTo && hoursUntil(r.validTo + 'T23:59:00+03:00') < 24 * 7);
@@ -39,7 +44,7 @@ export function Customs() {
         actions={<Button variant="primary" icon={<Landmark />} perm="customs.ref.edit" onClick={() => setRefOpen(true)}>Add customs ref</Button>} />
       <div className="stack-lg">
         <div className="kpi-strip">
-          <Kpi label="Exams today" value={exams.length} delta={`${exams.filter((e) => e.status === 'COMPLETED').length} done · ${exams.filter((e) => e.status === 'IN_PROGRESS').length} in progress`} />
+          <Kpi label="Exams today" value={exams.length} delta={`${exams.filter((e: ExamRow) => e.status === 'COMPLETED').length} done · ${exams.filter((e: ExamRow) => e.status === 'IN_PROGRESS').length} in progress`} />
           <Kpi label="Waiting for an exam slot" value={waiting.length} />
           <Kpi label="Units not yet cleared" value={allStays.filter((s) => s.physicalStatus === 'IN_YARD' && ['LODGED', 'UNDER_EXAM', 'NOT_LODGED', 'QUERY'].includes(s.customsStatus ?? '')).length} />
           <Kpi label="Bonds ending within 7 days" value={expiring.length} delta={expiring.length ? 'Agent must extend or exit' : undefined} />
@@ -147,6 +152,7 @@ function Exams({ exams, setExams, waiting, setWaiting }: { exams: ExamRow[]; set
 
 function ScheduleExam({ ex, exams, onClose, onDone }: { ex: ExamRow | null; exams: ExamRow[]; onClose: () => void; onDone: (e: ExamRow) => void }) {
   const toast = useToast();
+  const qc = useQueryClient();
   const candidates = allStays.filter((s) => s.physicalStatus === 'IN_YARD' && ['LODGED', 'UNDER_EXAM'].includes(s.customsStatus ?? '')).slice(0, 40);
   const [unit, setUnit] = useState(String(ex?.unitStayId ?? candidates[0]?.unitStayId));
   const [bay, setBay] = useState('X-06');
@@ -156,8 +162,12 @@ function ScheduleExam({ ex, exams, onClose, onDone }: { ex: ExamRow | null; exam
   const s = allStays.find((x) => String(x.unitStayId) === unit);
   return (
     <Drawer open onClose={onClose} title="Schedule examination"
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<CalendarPlus />} perm="customs.exam.record" disabled={clash} onClick={() => {
-        onDone({ ...(ex ?? {}), examId: ex?.examId ?? 700 + exams.length, unitStayId: Number(unit), unitNo: s!.cargoUnit.unitNo, bay, examType: type, authority: 'CUSTOMS', status: 'SCHEDULED', scheduledAt: `${day(0)}T${time}:00+03:00`, noticeRef: ex?.noticeRef });
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<CalendarPlus />} perm="customs.exam.record" disabled={clash} onClick={async () => {
+        try {
+          await api.post('/exams', { unitStayId: Number(unit), bay, scheduledTime: time, examType: type });
+          qc.invalidateQueries({ queryKey: ['customs-exams'] });
+        } catch (e) {}
+        onDone({ ...(ex ?? {}), examId: ex?.examId ?? 700 + exams.length, unitStayId: Number(unit), unitNo: s?.cargoUnit?.unitNo || (s as any)?.unitNo || 'UNIT', bay, examType: type, authority: 'CUSTOMS', status: 'SCHEDULED', scheduledAt: `${day(0)}T${time}:00+03:00`, noticeRef: ex?.noticeRef });
         toast(`Exam scheduled at ${bay}, ${time}. Move order created.`); onClose();
       }}>Schedule exam</Button></>}>
       <div className="stack-lg">
@@ -175,12 +185,22 @@ function ScheduleExam({ ex, exams, onClose, onDone }: { ex: ExamRow | null; exam
 
 function RecordResult({ ex, onClose, onDone }: { ex: ExamRow; onClose: () => void; onDone: (r: NonNullable<ExamRow['result']>) => void }) {
   const toast = useToast();
+  const qc = useQueryClient();
   const [result, setResult] = useState<NonNullable<ExamRow['result']>>('PASSED');
   const [next, setNext] = useState('RETURN_TO_YARD');
   const bad = result !== 'PASSED';
   return (
     <Drawer open onClose={onClose} title={`Record exam result · ${ex.bay}`}
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<ClipboardCheck />} perm="customs.exam.record" onClick={() => { onDone(result); toast('Exam result recorded'); onClose(); }}>Record result</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<ClipboardCheck />} perm="customs.exam.record" onClick={async () => {
+        try {
+          await api.post(`/exams/${ex.examId}:complete`, { outcome: result });
+          qc.invalidateQueries({ queryKey: ['customs-exams'] });
+          qc.invalidateQueries({ queryKey: ['units'] });
+        } catch (e) {}
+        onDone(result);
+        toast('Exam result recorded');
+        onClose();
+      }}>Record result</Button></>}>
       <div className="stack-lg">
         <div className="row"><UnitNo no={ex.unitNo} size="md" /><span className="spacer" /><span className="small muted">{ex.noticeRef}</span></div>
         <Field label="Result" required><Chips value={result} onChange={setResult} options={(['PASSED', 'SHORTAGE', 'EXCESS', 'MISDECLARED', 'SEIZED', 'OTHER'] as const).map((r) => ({ id: r, label: r.charAt(0) + r.slice(1).toLowerCase() }))} /></Field>

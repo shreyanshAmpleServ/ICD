@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Flame, Plus, Settings2, Trash2, TriangleAlert } from 'lucide-react';
 import {
   Banner, Button, Check, CommonTable, Drawer, Field, Input, Kpi, Page, PageHeader, Panel, Pill, ReferenceCell, Select, UnitNo, useToast,
@@ -16,6 +17,7 @@ export { dangerousGoodsApi } from './api';
 const className = (c: string) => IMO_CLASSES.find(([k]) => k === c)?.[1] ?? '';
 
 export function DangerousGoods() {
+  const qc = useQueryClient();
   const toast = useToast();
   const { data: dbDgLines } = useQ(['dg-lines'], () =>
     api.get<{ items: DgRow[] }>('/dg-lines').then((r) => r.items).catch(() => seed)
@@ -24,8 +26,7 @@ export function DangerousGoods() {
     api.get<{ items: Stay[] }>('/units').then((r) => r.items).catch(() => allStays)
   );
 
-  const [local, setLocal] = useState<DgRow[] | null>(null);
-  const lines = local ?? (dbDgLines && dbDgLines.length > 0 ? dbDgLines : seed);
+  const lines = dbDgLines && dbDgLines.length > 0 ? dbDgLines : seed;
   const stayPool = dbUnits && dbUnits.length > 0 ? dbUnits : allStays;
 
   const [search, setSearch] = useState('');
@@ -40,16 +41,29 @@ export function DangerousGoods() {
   const warnings = useMemo(() => segregationWarnings(lines), [lines]);
   const flagged = new Set(warnings.flatMap((w) => [w.a.unitStayId, w.b.unitStayId]));
   const candidates = stayPool.filter(
-    (s) => s.physicalStatus !== 'DEPARTED' && s.cargoUnit?.category === 'CONTAINER' && s.fullEmpty === 'F' && !units.includes(s)
+    (s) => s.physicalStatus !== 'DEPARTED' && (s.cargoUnit?.category === 'CONTAINER' || (s as any).unitNo) && !units.includes(s)
   );
+
+  const handleSave = async (unitStayId: number, rowsToSave: DgRow[]) => {
+    try {
+      await api.put(`/units/${unitStayId}/dg-lines`, rowsToSave);
+      toast('DG lines saved');
+      qc.invalidateQueries({ queryKey: ['dg-lines'] });
+      qc.invalidateQueries({ queryKey: ['units-dg'] });
+      qc.invalidateQueries({ queryKey: ['units'] });
+    } catch (err: any) {
+      toast(err?.message || 'Failed to save DG lines');
+    }
+  };
 
   const filteredUnits = useMemo(() => {
     if (!search) return units;
     const q = search.toUpperCase();
     return units.filter((u) => {
       const dgForUnit = lines.filter((l) => l.unitStayId === u.unitStayId);
+      const unitNo = u.cargoUnit?.unitNo || (u as any).unitNo || '';
       return (
-        u.cargoUnit?.unitNo?.toUpperCase().includes(q) ||
+        unitNo.toUpperCase().includes(q) ||
         u.currentLocation?.fullCode?.toUpperCase().includes(q) ||
         dgForUnit.some((l) => l.unNo?.includes(q) || l.properShippingName?.toUpperCase().includes(q) || l.imoClass?.includes(q))
       );
@@ -82,7 +96,7 @@ export function DangerousGoods() {
                 header: 'Unit',
                 render: (w) => (
                   <ReferenceCell
-                    refNo={<UnitNo no={w.a.cargoUnit?.unitNo || `UNIT-${w.a.unitStayId}`} to={`/units/${w.a.unitStayId}`} />}
+                    refNo={<UnitNo no={w.a.cargoUnit?.unitNo || (w.a as any).unitNo || `UNIT-${w.a.unitStayId}`} to={`/units/${w.a.unitStayId}`} />}
                     sub={`Class ${w.ca} · ${w.a.currentLocation?.fullCode ?? 'In yard'}`}
                   />
                 )
@@ -92,7 +106,7 @@ export function DangerousGoods() {
                 header: 'Too close to',
                 render: (w) => (
                   <ReferenceCell
-                    refNo={<UnitNo no={w.b.cargoUnit?.unitNo || `UNIT-${w.b.unitStayId}`} to={`/units/${w.b.unitStayId}`} />}
+                    refNo={<UnitNo no={w.b.cargoUnit?.unitNo || (w.b as any).unitNo || `UNIT-${w.b.unitStayId}`} to={`/units/${w.b.unitStayId}`} />}
                     sub={`Class ${w.cb} · ${w.b.currentLocation?.fullCode ?? 'In yard'}`}
                   />
                 )
@@ -110,7 +124,7 @@ export function DangerousGoods() {
               {
                 key: 'x',
                 header: '',
-                render: (w) => <Button size="sm" perm="yard.allocate" onClick={() => toast(`Move order created for ${w.b.cargoUnit?.unitNo}`)}>Plan move</Button>
+                render: (w) => <Button size="sm" perm="yard.allocate" onClick={() => toast(`Move order created for ${w.b.cargoUnit?.unitNo || (w.b as any).unitNo}`)}>Plan move</Button>
               },
             ]}
           />
@@ -131,7 +145,7 @@ export function DangerousGoods() {
               header: 'Unit',
               render: (s) => (
                 <div className="row" style={{ gap: 8 }}>
-                  <UnitNo no={s.cargoUnit?.unitNo || `UNIT-${s.unitStayId}`} to={`/units/${s.unitStayId}`} />
+                  <UnitNo no={s.cargoUnit?.unitNo || (s as any).unitNo || `UNIT-${s.unitStayId}`} to={`/units/${s.unitStayId}`} />
                   {flagged.has(s.unitStayId) && <Pill tone="stop" icon={<TriangleAlert />}>Segregation</Pill>}
                 </div>
               )
@@ -184,32 +198,33 @@ export function DangerousGoods() {
           ]}
         />
       </div>
-      {edit && <EditDg stay={edit} candidates={units.includes(edit) ? undefined : candidates} lines={lines.filter((l) => l.unitStayId === edit.unitStayId)} onClose={() => setEdit(null)}
-        onSave={(id, ls) => setLocal([...lines.filter((l) => l.unitStayId !== id), ...ls])} />}
+      {edit && <EditDg stay={edit} stayPool={stayPool} candidates={units.includes(edit) ? undefined : candidates} lines={lines.filter((l) => l.unitStayId === edit.unitStayId)} onClose={() => setEdit(null)}
+        onSave={handleSave} />}
     </Page>
   );
 }
 
 let nextDg = 5000;
-function EditDg({ stay, candidates, lines, onClose, onSave }: { stay: Stay; candidates?: Stay[]; lines: DgRow[]; onClose: () => void; onSave: (unitStayId: number, l: DgRow[]) => void }) {
-  const toast = useToast();
+function EditDg({ stay, candidates, lines, stayPool, onClose, onSave }: { stay: Stay; candidates?: Stay[]; lines: DgRow[]; stayPool: Stay[]; onClose: () => void; onSave: (unitStayId: number, l: DgRow[]) => Promise<void> | void }) {
   const [unit, setUnit] = useState(stay.unitStayId!);
   const blank = (): DgRow => ({ unitDgLineId: ++nextDg, unitStayId: unit, unNo: '', imoClass: '3', properShippingName: '', packingGroup: 'II', marinePollutant: false });
   const [rows, setRows] = useState<DgRow[]>(lines.length ? lines.map((l) => ({ ...l })) : [blank()]);
   const [tried, setTried] = useState(false);
   const set = (i: number, p: Partial<DgRow>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const bad = rows.some((r) => !/^\d{4}$/.test(r.unNo) || !r.properShippingName.trim() || (r.imoClass === '3' && !r.flashpointC));
-  const s = allStays.find((x) => x.unitStayId === unit)!;
+  const s = stayPool.find((x) => x.unitStayId === unit) || stay;
+  const unitNoDisplay = s?.cargoUnit?.unitNo || (s as any)?.unitNo || `UNIT-${unit}`;
+
   return (
     <Drawer open onClose={onClose} wide title="DG lines"
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" perm="dg.manage" onClick={() => { setTried(true); if (bad) return; onSave(unit, rows.map((r) => ({ ...r, unitStayId: unit }))); toast('DG lines saved'); onClose(); }}>Save DG lines</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" perm="dg.manage" onClick={async () => { setTried(true); if (bad) return; await onSave(unit, rows.map((r) => ({ ...r, unitStayId: unit }))); onClose(); }}>Save DG lines</Button></>}>
       <div className="stack-lg">
         {candidates ? (
-          <Field label="Unit" required><Select value={String(unit)} onChange={(e) => setUnit(Number(e.target.value))} options={candidates.slice(0, 60).map((c) => [String(c.unitStayId), `${c.cargoUnit.unitNo} · ${c.currentLocation?.fullCode ?? 'expected'}`])} /></Field>
-        ) : <div className="row"><UnitNo no={s.cargoUnit.unitNo} size="md" /><span className="spacer" /><span className="unitno">{s.currentLocation?.fullCode}</span></div>}
+          <Field label="Unit" required><Select value={String(unit)} onChange={(e) => setUnit(Number(e.target.value))} options={candidates.slice(0, 60).map((c) => [String(c.unitStayId), `${c.cargoUnit?.unitNo || (c as any).unitNo || c.unitStayId} · ${c.currentLocation?.fullCode ?? 'expected'}`])} /></Field>
+        ) : <div className="row"><UnitNo no={unitNoDisplay} size="md" /><span className="spacer" /><span className="unitno">{s?.currentLocation?.fullCode}</span></div>}
         <Banner>Saving re-checks segregation for this unit and plans placement away from incompatible classes. Placards must match the declared classes.</Banner>
         {rows.map((r, i) => (
-          <Panel key={r.unitDgLineId} title={`Line ${i + 1}`} actions={rows.length > 1 && <Button size="sm" variant="ghost" icon={<Trash2 />} aria-label={`Remove line ${i + 1}`} onClick={() => setRows((x) => x.filter((_, j) => j !== i))} />}>
+          <Panel key={r.unitDgLineId || (r as any).dgLineId || i} title={`Line ${i + 1}`} actions={rows.length > 1 && <Button size="sm" variant="ghost" icon={<Trash2 />} aria-label={`Remove line ${i + 1}`} onClick={() => setRows((x) => x.filter((_, j) => j !== i))} />}>
             <div className="form-grid">
               <Field label="UN number" required error={tried && !/^\d{4}$/.test(r.unNo) && 'Four digits'}><Input inputMode="numeric" maxLength={4} value={r.unNo} onChange={(e) => set(i, { unNo: e.target.value })} placeholder="1263" /></Field>
               <Field label="IMO class" required><Select value={r.imoClass} onChange={(e) => set(i, { imoClass: e.target.value })} options={IMO_CLASSES.map(([k, n]) => [k, `${k} · ${n}`])} /></Field>

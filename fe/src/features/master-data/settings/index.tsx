@@ -17,8 +17,8 @@ type Hol = (typeof seedHol)[number];
 export function SettingsView() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('fields');
-  const [rules, setRules] = useEditable<FieldRule>('fieldRules', seedRules);
-  const [hols, setHols] = useEditable<Hol>('holidays', seedHol);
+  const [rules, setRules] = useEditable<FieldRule>('fieldRules', seedRules, () => settingsApi.getFieldRules());
+  const [hols, setHols] = useEditable<Hol>('holidays', seedHol, () => settingsApi.getHolidays());
   const [add, setAdd] = useState(false);
   const [addHol, setAddHol] = useState(false);
   const usedRoles = [...new Set(rules.map((r) => r.roleCode))];

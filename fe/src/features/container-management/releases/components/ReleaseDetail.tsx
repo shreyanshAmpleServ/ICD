@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '@/api/client';
 import { BadgeCheck, CalendarClock, CircleX, Printer, RefreshCw, ShieldCheck } from 'lucide-react';
 import type { S } from '@/api/types';
 import {
@@ -33,6 +35,7 @@ function adjust(c: S<'ReleaseCheck'>, r: RO, overridden: boolean): Cond {
 export function ReleaseDetail() {
   const { releaseOrderId } = useParams();
   const toast = useToast();
+  const qc = useQueryClient();
   const { can } = useSession();
   const { data: seed } = useQ(['release-order', releaseOrderId], () => delay(releaseOrder(Number(releaseOrderId))));
   const [patch, setPatch] = useState<Partial<RO>>({});
@@ -145,12 +148,39 @@ export function ReleaseDetail() {
       </div>
 
       <ApproveDrawer open={approveOpen} onClose={() => setApproveOpen(false)} r={r} failing={blockingApproval} notOverridable={notOverridable} pending={pendingOverride} canOverride={can('release.exception.approve', 'REQ')}
-        onApprove={() => { const to = at(-50); setPatch((p) => ({ ...p, status: 'APPROVED', approvedAt: at(0), approvedBy: 'Doc & clearance · Neema M.', validFrom: at(0), validTo: to, paidThrough: to, qrToken: `Q${r.releaseOrderId}${(r.releaseNo ?? '').slice(-4)}`, validityHistory: [{ changeKind: 'INITIAL', newValidTo: to, changedAt: at(0) }] })); toast(`Release approved: ${r.releaseNo}`); }}
+        onApprove={async () => {
+          try {
+            await api.post(`/release-orders/${r.releaseOrderId}:approve`);
+            qc.invalidateQueries({ queryKey: ['release-order', releaseOrderId] });
+            qc.invalidateQueries({ queryKey: ['release-orders'] });
+            qc.invalidateQueries({ queryKey: ['units'] });
+          } catch (e) {}
+          const to = at(-50);
+          setPatch((p) => ({ ...p, status: 'APPROVED', approvedAt: at(0), approvedBy: 'Doc & clearance · Neema M.', validFrom: at(0), validTo: to, paidThrough: to, qrToken: `Q${r.releaseOrderId}${(r.releaseNo ?? '').slice(-4)}`, validityHistory: [{ changeKind: 'INITIAL', newValidTo: to, changedAt: at(0) }] }));
+          toast(`Release approved: ${r.releaseNo}`);
+        }}
         onOverride={(reason) => { const a = raiseApproval({ permissionCode: 'release.exception.approve', entityName: 'release_order', entityId: r.releaseOrderId!, summary: `Approve ${r.releaseNo} with charges unpaid`, reason, amount: amount.total, amountCurrency: amount.currency }); setOverrideReq(a.requestNo!); toast(`Override requested: ${a.requestNo}`); }} />
       <Revalidate open={revalOpen} onClose={() => setRevalOpen(false)} r={r} units={per.length}
-        onDone={(to, reason) => { setPatch((p) => ({ ...p, status: (r.unitsOut ?? 0) > 0 ? 'PARTLY_USED' : 'APPROVED', validTo: to, paidThrough: to, qrToken: r.qrToken ?? `Q${r.releaseOrderId}R`, validityHistory: [...(r.validityHistory ?? []), { changeKind: 'REVALIDATED', oldValidTo: r.validTo, newValidTo: to, reason, changedAt: at(0) }] })); toast(`Release revalidated to ${fmtD(to)}`); }} />
+        onDone={async (to, reason) => {
+          try {
+            await api.post(`/release-orders/${r.releaseOrderId}:revalidate`);
+            qc.invalidateQueries({ queryKey: ['release-order', releaseOrderId] });
+            qc.invalidateQueries({ queryKey: ['release-orders'] });
+          } catch (e) {}
+          setPatch((p) => ({ ...p, status: (r.unitsOut ?? 0) > 0 ? 'PARTLY_USED' : 'APPROVED', validTo: to, paidThrough: to, qrToken: r.qrToken ?? `Q${r.releaseOrderId}R`, validityHistory: [...(r.validityHistory ?? []), { changeKind: 'REVALIDATED', oldValidTo: r.validTo, newValidTo: to, reason, changedAt: at(0) }] }));
+          toast(`Release revalidated to ${fmtD(to)}`);
+        }} />
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title={`Cancel ${r.releaseNo}?`}
-        footer={<><Button variant="ghost" onClick={() => setCancelOpen(false)}>Keep order</Button><Button variant="danger" perm="release.issue" onClick={() => { setPatch((p) => ({ ...p, status: 'CANCELLED' })); setCancelOpen(false); toast('Release order cancelled'); }}>Cancel order</Button></>}>
+        footer={<><Button variant="ghost" onClick={() => setCancelOpen(false)}>Keep order</Button><Button variant="danger" perm="release.issue" onClick={async () => {
+          try {
+            await api.post(`/release-orders/${r.releaseOrderId}:cancel`);
+            qc.invalidateQueries({ queryKey: ['release-order', releaseOrderId] });
+            qc.invalidateQueries({ queryKey: ['release-orders'] });
+          } catch (e) {}
+          setPatch((p) => ({ ...p, status: 'CANCELLED' }));
+          setCancelOpen(false);
+          toast('Release order cancelled');
+        }}>Cancel order</Button></>}>
         <div className="stack">
           <p className="small">The QR stops working at once. Units already out stay out; paid storage is not refunded automatically.</p>
           <Field label="Reason" required><Textarea placeholder="For example: customer asked to change the collector" /></Field>

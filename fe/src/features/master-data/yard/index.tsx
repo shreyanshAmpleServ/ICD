@@ -3,7 +3,7 @@ import { Plus, Wand2 } from 'lucide-react';
 import { Button, Empty, Panel, Select, useToast } from '@/ds/components';
 import { useSession, SITES } from '@/app/session';
 import { SRC, blockedSlots as seedBlocked, sites, yardNodes, type YardNode } from '@/mock/admin';
-import { AuditNote, SetupPage, useEditable } from '../shared/AdminKit';
+import { AuditNote, SetupPage, useEditable, useDynamicSites } from '../shared/AdminKit';
 import { yardApi } from './api';
 import { TreeNode } from './components/TreeNode';
 import { NodeDetail } from './components/NodeDetail';
@@ -16,14 +16,17 @@ export { yardApi } from './api';
 export function YardDesignerView() {
   const { site: sessionSite } = useSession();
   const toast = useToast();
+  const { options: dynamicSiteOptions } = useDynamicSites();
   const [siteId, setSiteId] = useState(sessionSite.siteId);
-  const [nodes, setNodes] = useEditable<YardNode>('yard', yardNodes);
+  const [nodes, setNodes] = useEditable<YardNode>('yard', yardNodes, () => yardApi.getYardLocations(siteId));
   const [blocked, setBlocked] = useState<Record<string, string>>(seedBlocked);
   const [selId, setSelId] = useState<number | null>(null);
   const [open, setOpen] = useState<Record<number, boolean>>({});
   const [gen, setGen] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [tagsOpen, setTagsOpen] = useState(false);
+
+  const siteOptions = dynamicSiteOptions.length > 0 ? dynamicSiteOptions : SITES.map((s) => [String(s.siteId), `${s.siteCode} · ${s.siteName}`] as [string, string]);
 
   const siteNodes = nodes.filter((n) => n.siteId === siteId);
   const roots = siteNodes.filter((n) => !n.parentId);
@@ -53,7 +56,7 @@ export function YardDesignerView() {
               setSiteId(Number(e.target.value));
               setSelId(null);
             }}
-            options={SITES.map((s) => [String(s.siteId), `${s.siteCode} · ${s.siteName}`])}
+            options={siteOptions}
           />
           <Button
             variant="primary"

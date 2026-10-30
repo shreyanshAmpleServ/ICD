@@ -22,8 +22,8 @@ export function DevicesView() {
   const { phase } = useSession();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('devices');
-  const [devs, setDevs] = useEditable<Dev>('devices', seedDevices);
-  const [ints, setInts] = useEditable<Int>('integrations', seedInt);
+  const [devs, setDevs] = useEditable<Dev>('devices', seedDevices, () => devicesApi.getDevices());
+  const [ints, setInts] = useEditable<Int>('integrations', seedInt, () => devicesApi.getIntegrations());
   const [revoke, setRevoke] = useState<Dev | null>(null);
   const [reg, setReg] = useState(false);
   const [cfg, setCfg] = useState<Int | null>(null);

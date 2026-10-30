@@ -1,19 +1,8 @@
 import { Router } from "express";
 import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
-import {
-  company,
-  countryPacks,
-  sites,
-  calendars,
-  holidays,
-  numberSequences,
-  fieldRules,
-  FIELD_CATALOGUE,
-  documentTypes,
-  syncStates,
-  outbox,
-} from "../../data/admin";
+import { setupService } from "./setup.service";
+import { FIELD_CATALOGUE } from "../../data/admin";
 import { auditLog } from "../../data/insight";
 
 const router = Router();
@@ -74,427 +63,341 @@ const mockDocuments: StoredDoc[] = [
   },
 ];
 
-// ------------------------------------------------------------------ Companies (Global 🌐)
-router.get(
-  "/companies",
-  requireSite(true),
-  requirePermission("masters.view"),
-  (req, res) => {
-    res.json({ items: [company], total: 1, nextCursor: null });
-  },
-);
+// =========================================================================
+// 1. Companies & Sites
+// =========================================================================
+router.get("/companies", requireSite(true), requirePermission("masters.view"), async (_req, res) => {
+  const comp = await setupService.getCompany();
+  res.json({ items: [comp], total: 1, nextCursor: null });
+});
 
-router.post(
-  "/companies",
-  requireSite(true),
-  requirePermission("admin.site.manage", "DO"),
-  (req, res) => {
-    const newCompany = {
-      companyId: 2,
-      companyCode: req.body.companyCode || "DCC2",
-      companyName: req.body.companyName || "DCC Subsidiary",
-      taxId: req.body.taxId || "TAX-TZ-00000",
-      currencyCode: req.body.currencyCode || "USD",
-      isActive: true,
-      logInst: 1,
-      ...req.body,
-    };
-    res.status(201).json(newCompany);
-  },
-);
+router.post("/companies", requireSite(true), requirePermission("admin.site.manage", "DO"), async (req, res) => {
+  const comp = await setupService.updateCompany(1, req.body);
+  res.status(201).json(comp);
+});
 
-router.get(
-  "/companies/:companyId",
-  requireSite(true),
-  requirePermission("masters.view"),
-  (req, res) => {
-    res.json(company);
-  },
-);
+router.get("/companies/:companyId", requireSite(true), requirePermission("masters.view"), async (req, res) => {
+  const comp = await setupService.getCompany(Number(req.params.companyId) || 1);
+  res.json(comp);
+});
 
-router.patch(
-  "/companies/:companyId",
-  requireSite(true),
-  requirePermission("admin.site.manage", "DO"),
-  (req, res) => {
-    Object.assign(company, req.body);
-    res.json(company);
-  },
-);
+router.patch("/companies/:companyId", requireSite(true), requirePermission("admin.site.manage", "DO"), async (req, res) => {
+  const comp = await setupService.updateCompany(Number(req.params.companyId) || 1, req.body);
+  res.json(comp);
+});
 
-// ------------------------------------------------------------------ Country Packs (Global 🌐)
-router.get(
-  "/country-packs",
-  requireSite(true),
-  requirePermission("masters.view"),
-  (req, res) => {
-    res.json({
-      items: countryPacks,
-      total: countryPacks.length,
-      nextCursor: null,
-    });
-  },
-);
+// Country Packs
+router.get("/country-packs", requireSite(true), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getCountryPacks();
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-// ------------------------------------------------------------------ Sites (Global 🌐)
-router.get(
-  "/sites",
-  requireSite(true),
-  requirePermission("masters.view"),
-  (req, res) => {
-    res.json({ items: sites, total: sites.length, nextCursor: null });
-  },
-);
+router.post("/country-packs/:packCode:activate", requireSite(true), requirePermission("admin.site.manage", "DO"), async (req, res) => {
+  const pack = await setupService.activateCountryPack(req.params.packCode);
+  res.json(pack);
+});
 
-router.get(
-  "/sites/:siteId",
-  requireSite(true),
-  requirePermission("masters.view"),
-  (req, res) => {
-    const param = req.params.siteId;
-    const site = sites.find(
-      (s) =>
-        String(s.siteId) === param ||
-        s.siteCode.toUpperCase() === param.toUpperCase(),
-    );
-    if (!site) return res.status(404).json({ error: "Site not found" });
-    res.json(site);
-  },
-);
+// Sites
+router.get("/sites", requireSite(true), requirePermission("masters.view"), async (req, res) => {
+  const { active, isActive, q } = req.query;
+  let items = await setupService.getSites();
+  if (active !== undefined || isActive !== undefined) {
+    const act = String(active ?? isActive).toLowerCase() === "true";
+    items = items.filter((s) => s.isActive === act);
+  }
+  if (q) {
+    const query = String(q).toLowerCase();
+    items = items.filter((s) => s.siteCode.toLowerCase().includes(query) || s.siteName.toLowerCase().includes(query));
+  }
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-router.post(
-  "/sites",
-  requireSite(true),
-  requirePermission("admin.site.manage", "DO"),
-  (req, res) => {
-    const newSite = {
-      siteId: sites.length + 1,
-      siteCode: req.body.siteCode || `SITE${sites.length + 1}`,
-      siteName: req.body.siteName,
-      companyId: 1,
-      countryCode: "TZ",
-      timeZone: "Africa/Dar_es_Salaam",
-      calendarId: 1,
-      calendarCode: "TZ_PUBLIC",
-      facilities: req.body.facilities || ["ICD"],
-      isActive: true,
-      gates: req.body.gates || 1,
-      slots: req.body.slots || 100,
-      ...req.body,
-    };
-    sites.push(newSite as any);
-    res.status(201).json(newSite);
-  },
-);
+router.get("/sites/:siteId", requireSite(true), requirePermission("masters.view"), async (req, res) => {
+  const sites = await setupService.getSites();
+  const site = sites.find((s) => String(s.siteId) === req.params.siteId || s.siteCode.toUpperCase() === req.params.siteId.toUpperCase());
+  if (!site) return res.status(404).json({ error: "Site not found" });
+  res.json(site);
+});
 
-router.patch(
-  "/sites/:siteId",
-  requireSite(true),
-  requirePermission("admin.site.manage", "DO"),
-  (req, res) => {
-    const param = req.params.siteId;
-    const site = sites.find(
-      (s) =>
-        String(s.siteId) === param ||
-        s.siteCode.toUpperCase() === param.toUpperCase(),
-    );
-    if (!site) return res.status(404).json({ error: "Site not found" });
-    Object.assign(site, req.body);
-    res.json(site);
-  },
-);
+router.post("/sites", requireSite(true), requirePermission("admin.site.manage", "DO"), async (req, res) => {
+  const site = await setupService.createSite(req.body);
+  res.status(201).json(site);
+});
 
-router.delete(
-  "/sites/:siteId",
-  requireSite(true),
-  requirePermission("admin.site.manage", "DO"),
-  (req, res) => {
-    const param = req.params.siteId;
-    const idx = sites.findIndex(
-      (s) =>
-        String(s.siteId) === param ||
-        s.siteCode.toUpperCase() === param.toUpperCase(),
-    );
-    if (idx === -1) return res.status(404).json({ error: "Site not found" });
-    const [removed] = sites.splice(idx, 1);
-    res.json({ message: "Site deleted", site: removed });
-  },
-);
+router.patch("/sites/:siteId", requireSite(true), requirePermission("admin.site.manage", "DO"), async (req, res) => {
+  const site = await setupService.updateSite(req.params.siteId, req.body);
+  res.json(site);
+});
 
-// ------------------------------------------------------------------ Calendars & Holidays (Global 🌐)
-router.get(
-  "/calendars",
-  requireSite(true),
-  requirePermission("masters.view"),
-  (req, res) => {
-    res.json({ items: calendars, total: calendars.length, nextCursor: null });
-  },
-);
+// =========================================================================
+// 2. Yard Designer
+// =========================================================================
+router.get("/yard/locations", requireSite(false), requirePermission("masters.view"), async (req, res) => {
+  const siteId = req.query.siteId ? Number(req.query.siteId) : undefined;
+  const items = await setupService.getYardLocations(siteId);
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-router.post(
-  "/calendars",
-  requireSite(true),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const newCal = {
-      calendarId: calendars.length + 1,
-      calendarCode: req.body.calendarCode || `CAL_${calendars.length + 1}`,
-      calendarName: req.body.calendarName || "Standard Operating Calendar",
-      isStandard: false,
-      workingDays: req.body.workingDays || [1, 2, 3, 4, 5, 6],
-      ...req.body,
-    };
-    calendars.push(newCal as any);
-    res.status(201).json(newCal);
-  },
-);
+router.post("/yard/locations", requireSite(false), requirePermission("admin.site.manage", "DO"), async (req, res) => {
+  const node = await setupService.createYardLocation(req.body);
+  res.status(201).json(node);
+});
 
-router.get(
-  "/calendars/:calendarId",
-  requireSite(true),
-  requirePermission("masters.view"),
-  (req, res) => {
-    const cal = calendars.find(
-      (c) =>
-        String(c.calendarId) === req.params.calendarId ||
-        c.calendarCode === req.params.calendarId,
-    );
-    if (!cal) return res.status(404).json({ error: "Calendar not found" });
-    res.json(cal);
-  },
-);
+router.patch("/yard/locations/:id", requireSite(false), requirePermission("admin.site.manage", "DO"), async (req, res) => {
+  res.json({ id: req.params.id, ...req.body });
+});
 
-router.patch(
-  "/calendars/:calendarId",
-  requireSite(true),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const cal = calendars.find(
-      (c) =>
-        String(c.calendarId) === req.params.calendarId ||
-        c.calendarCode === req.params.calendarId,
-    );
-    if (!cal) return res.status(404).json({ error: "Calendar not found" });
-    Object.assign(cal, req.body);
-    res.json(cal);
-  },
-);
+// =========================================================================
+// 3. Gates & Visit Types
+// =========================================================================
+router.get("/gates", requireSite(false), requirePermission("masters.view"), async (req, res) => {
+  const siteId = req.query.siteId ? Number(req.query.siteId) : undefined;
+  const items = await setupService.getGates(siteId);
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-router.get(
-  "/calendars/:calendarId/holidays",
-  requireSite(true),
-  requirePermission("masters.view"),
-  (req, res) => {
-    res.json({ items: holidays, total: holidays.length, nextCursor: null });
-  },
-);
+router.get("/checkpoints", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getCheckpoints();
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-router.post(
-  "/calendars/:calendarId/holidays",
-  requireSite(true),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const newHoliday = {
-      calendarHolidayId: holidays.length + 1,
-      holidayDate: req.body.holidayDate,
-      holidayName: req.body.holidayName,
-      moves: !!req.body.moves,
-    };
-    holidays.push(newHoliday as any);
-    res.status(201).json(newHoliday);
-  },
-);
+router.get("/visit-types", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getVisitTypes();
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-router.delete(
-  "/calendars/:calendarId/holidays/:calendarHolidayId",
-  requireSite(true),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const idx = holidays.findIndex(
-      (h) =>
-        String((h as any).calendarHolidayId) === req.params.calendarHolidayId,
-    );
-    if (idx >= 0) holidays.splice(idx, 1);
-    res.status(204).end();
-  },
-);
+router.patch("/visit-types/:id", requireSite(false), requirePermission("admin.config.manage", "DO"), async (req, res) => {
+  const updated = await setupService.updateVisitType(Number(req.params.id), req.body);
+  res.json(updated);
+});
 
-// ------------------------------------------------------------------ Number Sequences (Global 🌐)
-router.get(
-  "/number-sequences",
-  requireSite(true),
-  requirePermission("admin.config.manage"),
-  (req, res) => {
-    res.json({
-      items: numberSequences,
-      total: numberSequences.length,
-      nextCursor: null,
-    });
-  },
-);
+// =========================================================================
+// 4. Unit Types & Checks
+// =========================================================================
+router.get("/unit-types", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getUnitTypes();
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-router.post(
-  "/number-sequences",
-  requireSite(true),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const newSeq = {
-      numberSequenceId: numberSequences.length + 1,
-      companyId: 1,
-      siteId: req.body.siteId || null,
-      documentKind: req.body.documentKind || "CUSTOM",
-      prefix: req.body.prefix || "DOC",
-      pattern: req.body.pattern || "{PREFIX}-{YYYY}-{#####}",
-      nextValue: 1,
-      resetPolicy: req.body.resetPolicy || "YEARLY",
-      sample: `${req.body.prefix || "DOC"}-2026-00001`,
-      ...req.body,
-    };
-    numberSequences.push(newSeq as any);
-    res.status(201).json(newSeq);
-  },
-);
+router.post("/unit-types", requireSite(false), requirePermission("admin.config.manage", "DO"), async (req, res) => {
+  const created = await setupService.createUnitType(req.body);
+  res.status(201).json(created);
+});
 
-router.get(
-  "/number-sequences/:numberSequenceId",
-  requireSite(true),
-  requirePermission("admin.config.manage"),
-  (req, res) => {
-    const seq = numberSequences.find(
-      (s) => String(s.numberSequenceId) === req.params.numberSequenceId,
-    );
-    if (!seq) return res.status(404).json({ error: "Sequence not found" });
-    res.json(seq);
-  },
-);
+router.patch("/unit-types/:code", requireSite(false), requirePermission("admin.config.manage", "DO"), async (req, res) => {
+  const updated = await setupService.updateUnitType(req.params.code, req.body);
+  res.json(updated);
+});
 
-router.patch(
-  "/number-sequences/:numberSequenceId",
-  requireSite(true),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const seq = numberSequences.find(
-      (s) => String(s.numberSequenceId) === req.params.numberSequenceId,
-    );
-    if (!seq) return res.status(404).json({ error: "Sequence not found" });
-    Object.assign(seq, req.body);
-    res.json(seq);
-  },
-);
+router.get("/cargo-regimes", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getCargoRegimes();
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-// ------------------------------------------------------------------ Field Rules (Site-scoped)
-router.get(
-  "/field-rules",
-  requireSite(false),
-  requirePermission("masters.view"),
-  (req, res) => {
-    const { roleCode, entityName } = req.query;
-    let items = fieldRules;
-    if (roleCode) {
-      items = items.filter((r) => r.roleCode === roleCode);
-    }
-    if (entityName) {
-      items = items.filter((r) => r.entityName === entityName);
-    }
-    res.json({
-      items,
-      catalogue: FIELD_CATALOGUE,
-      total: items.length,
-      nextCursor: null,
-    });
-  },
-);
+// =========================================================================
+// 5. Trucks, Drivers, Vessels, Masters
+// =========================================================================
+router.get("/trucks", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getTrucks();
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-router.put(
-  "/field-rules/:screenCode",
-  requireSite(false),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    res.json({
-      message: `Updated field rules for ${req.params.screenCode}`,
-      rules: req.body,
-    });
-  },
-);
+router.post("/trucks", requireSite(false), requirePermission("admin.site.manage", "DO"), async (req, res) => {
+  const created = await setupService.createTruck(req.body);
+  res.status(201).json(created);
+});
 
-// ------------------------------------------------------------------ Document Types (Site-scoped)
-router.get(
-  "/document-types",
-  requireSite(false),
-  requirePermission("masters.view"),
-  (req, res) => {
-    res.json({
-      items: documentTypes,
-      total: documentTypes.length,
-      nextCursor: null,
-    });
-  },
-);
+router.get("/drivers", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getDrivers();
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-router.post(
-  "/document-types",
-  requireSite(false),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const newDocType = {
-      documentTypeId: documentTypes.length + 1,
-      docTypeCode: req.body.docTypeCode || `DOC_${documentTypes.length + 1}`,
-      docTypeName: req.body.docTypeName || "New Document Type",
-      appliesTo: req.body.appliesTo || "CONSIGNMENT",
-      retentionYears: req.body.retentionYears || 7,
-      requiresApproval: !!req.body.requiresApproval,
-      maxSizeMb: req.body.maxSizeMb || 10,
-      allowedExt: req.body.allowedExt || "pdf, jpg, png",
-      isActive: true,
-      requiredFor: req.body.requiredFor || [],
-      ...req.body,
-    };
-    documentTypes.push(newDocType as any);
-    res.status(201).json(newDocType);
-  },
-);
+router.post("/drivers", requireSite(false), requirePermission("admin.site.manage", "DO"), async (req, res) => {
+  const created = await setupService.createDriver(req.body);
+  res.status(201).json(created);
+});
 
-router.get(
-  "/document-types/:documentTypeId",
-  requireSite(false),
-  requirePermission("masters.view"),
-  (req, res) => {
-    const item = documentTypes.find(
-      (d) =>
-        String(d.documentTypeId) === req.params.documentTypeId ||
-        d.docTypeCode === req.params.documentTypeId,
-    );
-    if (!item)
-      return res.status(404).json({ error: "Document type not found" });
-    res.json(item);
-  },
-);
+router.get("/vessels", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getVessels();
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-router.patch(
-  "/document-types/:documentTypeId",
-  requireSite(false),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const item = documentTypes.find(
-      (d) =>
-        String(d.documentTypeId) === req.params.documentTypeId ||
-        d.docTypeCode === req.params.documentTypeId,
-    );
-    if (!item)
-      return res.status(404).json({ error: "Document type not found" });
-    Object.assign(item, req.body);
-    res.json(item);
-  },
-);
+router.get("/ports", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getPorts();
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
-// ------------------------------------------------------------------ Documents (Site-scoped)
+router.get("/commodities", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getCommodities();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/equipment", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getEquipment();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+// =========================================================================
+// 6. Users & Roles
+// =========================================================================
+router.get("/users", requireSite(true), requirePermission("admin.users.manage"), async (_req, res) => {
+  const items = await setupService.getUsers();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.post("/users", requireSite(true), requirePermission("admin.users.manage", "DO"), async (req, res) => {
+  const created = await setupService.createUser(req.body);
+  res.status(201).json(created);
+});
+
+router.patch("/users/:id", requireSite(true), requirePermission("admin.users.manage", "DO"), async (req, res) => {
+  const updated = await setupService.updateUser(Number(req.params.id), req.body);
+  res.json(updated);
+});
+
+router.get("/roles", requireSite(true), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getRoles();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/permissions", requireSite(true), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getPermissions();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+// =========================================================================
+// 7. Holds, Release & Approvals
+// =========================================================================
+router.get("/hold-types", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = [
+    { holdCode: 'CUSTOMS', holdName: 'Customs Examination Hold', authorityName: 'TRA Customs', defaultReason: 'Routine physical inspection required' },
+    { holdCode: 'FINANCE', holdName: 'Outstanding Payment Hold', authorityName: 'DCC Finance', defaultReason: 'Uncleared storage invoices' },
+    { holdCode: 'HEALTH', holdName: 'Port Health Quarantine', authorityName: 'Ministry of Health', defaultReason: 'Phytosanitary inspection needed' },
+    { holdCode: 'LINE', holdName: 'Shipping Line Hold', authorityName: 'Carrier Line', defaultReason: 'Original Bill of Lading pending surrender' },
+    { holdCode: 'DAMAGE', holdName: 'Safety / Damage Quarantine', authorityName: 'ICD Operations', defaultReason: 'Severe structural container defect' }
+  ];
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/release-rules", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getReleaseRules();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/approval-policies", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getApprovalPolicies();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/exception-types", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getExceptionTypes();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+// =========================================================================
+// 8. Inspection Checklists & Damage Codes
+// =========================================================================
+router.get("/inspection-templates", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getInspectionTemplates();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/damage-codes", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getDamageCodes();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+// =========================================================================
+// 9. Finance Setup
+// =========================================================================
+router.get("/accounting-periods", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getAccountingPeriods();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.post("/accounting-periods/:key:close", requireSite(false), requirePermission("admin.config.manage", "DO"), async (req, res) => {
+  res.json({ periodKey: req.params.key, status: 'CLOSED', closedAt: new Date().toISOString(), closedBy: 'Current User' });
+});
+
+router.get("/charge-codes", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getChargeCodes();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/tax-codes", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getTaxCodes();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/payment-channels", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getPaymentChannels();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/gl-settings", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getGlSettings();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+// =========================================================================
+// 10. Notifications & Printing
+// =========================================================================
+router.get("/notification-templates", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getNotificationTemplates();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/notification-rules", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getNotificationRules();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/print-templates", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getPrintTemplates();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+// =========================================================================
+// 11. Calendars & Holidays
+// =========================================================================
+router.get("/calendars", requireSite(true), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getCalendars();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/calendars/:calendarId/holidays", requireSite(true), requirePermission("masters.view"), async (req, res) => {
+  const items = await setupService.getHolidays(Number(req.params.calendarId) || 1);
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.post("/calendars/:calendarId/holidays", requireSite(true), requirePermission("admin.config.manage", "DO"), async (req, res) => {
+  const hol = await setupService.addHoliday(Number(req.params.calendarId) || 1, req.body);
+  res.status(201).json(hol);
+});
+
+router.delete("/calendars/:calendarId/holidays/:calendarHolidayId", requireSite(true), requirePermission("admin.config.manage", "DO"), async (req, res) => {
+  await setupService.deleteHoliday(Number(req.params.calendarId) || 1, Number(req.params.calendarHolidayId));
+  res.status(204).end();
+});
+
+// =========================================================================
+// 12. Number Sequences & Documents
+// =========================================================================
+router.get("/number-sequences", requireSite(true), requirePermission("admin.config.manage"), async (_req, res) => {
+  const items = await setupService.getNumberSequences();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/document-types", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getDocumentTypes();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
 router.get("/documents", requireSite(false), (req, res) => {
   const { entityName, entityId, docTypeCode } = req.query;
   let items = mockDocuments;
   if (entityName)
-    items = items.filter(
-      (d) => d.entityName.toLowerCase() === String(entityName).toLowerCase(),
-    );
+    items = items.filter((d) => d.entityName.toLowerCase() === String(entityName).toLowerCase());
   if (entityId)
     items = items.filter((d) => String(d.entityId) === String(entityId));
   if (docTypeCode)
@@ -525,111 +428,87 @@ router.post("/documents", requireSite(false), (req, res) => {
   res.status(201).json(newDoc);
 });
 
-router.get("/documents/:documentId", requireSite(false), (req, res) => {
-  const doc = mockDocuments.find(
-    (d) => String(d.documentId) === req.params.documentId,
-  );
-  if (!doc) return res.status(404).json({ error: "Document not found" });
-  res.json(doc);
-});
-
 router.delete("/documents/:documentId", requireSite(false), (req, res) => {
-  const idx = mockDocuments.findIndex(
-    (d) => String(d.documentId) === req.params.documentId,
-  );
+  const idx = mockDocuments.findIndex((d) => String(d.documentId) === req.params.documentId);
   if (idx >= 0) mockDocuments.splice(idx, 1);
   res.status(204).end();
 });
 
-router.get("/documents/:documentId/content", requireSite(false), (req, res) => {
-  const doc = mockDocuments.find(
-    (d) => String(d.documentId) === req.params.documentId,
-  );
-  if (!doc) return res.status(404).json({ error: "Document not found" });
+// =========================================================================
+// 13. Devices & Integrations
+// =========================================================================
+router.get("/devices", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getDevices();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/device-integrations", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getDeviceIntegrations();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+// =========================================================================
+// 14. Field Rules
+// =========================================================================
+router.get("/field-rules", requireSite(false), requirePermission("masters.view"), async (req, res) => {
+  const { roleCode, entityName } = req.query;
+  let items: any[] = await setupService.getFieldRules();
+  if (roleCode) items = items.filter((r) => r.roleCode === roleCode);
+  if (entityName) items = items.filter((r) => r.entityName === entityName);
+  res.json({ items, catalogue: FIELD_CATALOGUE, total: items.length, nextCursor: null });
+});
+
+router.post("/field-rules", requireSite(false), requirePermission("admin.config.manage", "DO"), async (req, res) => {
+  const rule = await setupService.createFieldRule(req.body);
+  res.status(201).json(rule);
+});
+
+// =========================================================================
+// 15. Prediction Models
+// =========================================================================
+router.get("/models", requireSite(false), requirePermission("masters.view"), async (_req, res) => {
+  const items = await setupService.getModels();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.post("/models/:id:activate", requireSite(false), requirePermission("admin.config.manage", "DO"), async (req, res) => {
+  res.json({ modelVersionId: req.params.id, isActive: true, activatedAt: new Date().toISOString() });
+});
+
+// =========================================================================
+// 16. Sync
+// =========================================================================
+router.get(["/sync/status", "/sync/states"], requireSite(false), requirePermission("admin.config.manage"), async (_req, res) => {
+  const items = await setupService.getSyncStates();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.get("/sync/outbox", requireSite(false), requirePermission("admin.config.manage"), async (_req, res) => {
+  const items = await setupService.getOutbox();
+  res.json({ items, total: items.length, nextCursor: null });
+});
+
+router.post("/sync/:masterCode([0-9a-zA-Z_.-]+):run", requireSite(false), requirePermission("admin.config.manage", "DO"), (req, res) => {
+  const masterCode = req.params.masterCode;
+  const now = new Date().toISOString();
   res.json({
-    documentId: doc.documentId,
-    fileName: doc.fileName,
-    mimeType: doc.mimeType,
-    fileSizeBytes: doc.fileSizeBytes,
-    contentBase64: doc.fileContentBase64 || "JVBERi0xLjQKJcTl8uXr...",
+    masterCode,
+    status: "OK",
+    rowsLastRun: 14,
+    lastRunAt: now,
+    message: `Master sync job for '${masterCode}' triggered successfully.`,
   });
 });
 
-// ------------------------------------------------------------------ Audit Log (Site-scoped)
-router.get(
-  ["/audit-log", "/audit/logs"],
-  requireSite(false),
-  requirePermission("admin.audit.view"),
-  (req, res) => {
-    const { entityName, entityId, action, userSub } = req.query;
-    let items = auditLog as any[];
-    if (entityName)
-      items = items.filter(
-        (a) => a.entityName?.toLowerCase() === String(entityName).toLowerCase(),
-      );
-    if (entityId)
-      items = items.filter((a) => String(a.entityId) === String(entityId));
-    if (action) items = items.filter((a) => a.action === action);
-    if (userSub) items = items.filter((a) => a.userSub === userSub);
-    res.json({ items, total: items.length, nextCursor: null });
-  },
-);
-
-router.get(
-  "/audit-log/:entityName/:entityId",
-  requireSite(false),
-  (req, res) => {
-    const { entityName, entityId } = req.params;
-    const items = (auditLog as any[]).filter(
-      (a) =>
-        a.entityName?.toLowerCase() === entityName.toLowerCase() &&
-        String(a.entityId) === String(entityId),
-    );
-    res.json({ items, total: items.length, nextCursor: null });
-  },
-);
-
-// ------------------------------------------------------------------ Sync (Site-scoped)
-router.get(
-  "/sync/status",
-  requireSite(false),
-  requirePermission("admin.config.manage"),
-  (req, res) => {
-    res.json({ items: syncStates, total: syncStates.length, nextCursor: null });
-  },
-);
-
-router.get(
-  "/sync/outbox",
-  requireSite(false),
-  requirePermission("admin.config.manage"),
-  (req, res) => {
-    res.json({ items: outbox, total: outbox.length, nextCursor: null });
-  },
-);
-
-router.post(
-  "/sync/:masterCode([0-9a-zA-Z_.-]+):run",
-  requireSite(false),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const masterCode = req.params.masterCode;
-    const item = syncStates.find(
-      (s) => s.entityName.toLowerCase() === masterCode.toLowerCase(),
-    );
-    const now = new Date().toISOString();
-    if (item) {
-      item.lastRunAt = now;
-      item.lastStatus = "OK";
-    }
-    res.json({
-      masterCode,
-      status: "OK",
-      rowsLastRun: 14,
-      lastRunAt: now,
-      message: `Master sync job for '${masterCode}' triggered successfully.`,
-    });
-  },
-);
+// Audit Log
+router.get(["/audit-log", "/audit/logs"], requireSite(false), requirePermission("admin.audit.view"), (req, res) => {
+  const { entityName, entityId, action, userSub } = req.query;
+  let items = auditLog as any[];
+  if (entityName) items = items.filter((a) => a.entityName?.toLowerCase() === String(entityName).toLowerCase());
+  if (entityId) items = items.filter((a) => String(a.entityId) === String(entityId));
+  if (action) items = items.filter((a) => a.action === action);
+  if (userSub) items = items.filter((a) => a.userSub === userSub);
+  res.json({ items, total: items.length, nextCursor: null });
+});
 
 export const setupRouter = router;

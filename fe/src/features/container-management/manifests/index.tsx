@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check as CheckIcon, FileSpreadsheet, FileUp, Play, RotateCcw, Undo2, UserPlus, Wand2 } from 'lucide-react';
 import type { S } from '@/api/types';
 import {
@@ -89,9 +90,14 @@ function Past({ rows }: { rows: ManifestRow[] }) {
 }
 
 function Wizard() {
+  const qc = useQueryClient();
   const toast = useToast();
   const [step, setStep] = useState<Step>('upload');
-  const [vc, setVc] = useState('14');
+  const { data: dbVesselCalls } = useQ(['vessel-calls'], () =>
+    api.get<{ items: any[] }>('/vessel-calls').then((r) => r.items).catch(() => vesselCalls)
+  );
+  const calls = dbVesselCalls && dbVesselCalls.length > 0 ? dbVesselCalls : vesselCalls;
+  const [vc, setVc] = useState(String(calls[0]?.vesselCallId || '1'));
   const [fmt, setFmt] = useState<'EXCEL' | 'EDI'>('EXCEL');
   const [file, setFile] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -99,6 +105,12 @@ function Wizard() {
   const [filter, setFilter] = useState<'all' | 'fix' | 'ok'>('fix');
   const [provisional, setProvisional] = useState<string[]>([]);
   const [result, setResult] = useState<S<'ManifestApplyResult'> & { consignments: number } | null>(null);
+
+  useEffect(() => {
+    if (calls.length > 0 && !calls.some(c => String(c.vesselCallId) === vc)) {
+      setVc(String(calls[0].vesselCallId));
+    }
+  }, [calls, vc]);
 
   useEffect(() => {
     if (step !== 'parsing') return;
@@ -122,12 +134,35 @@ function Wizard() {
     { label: 'Result', state: step === 'result' ? 'current' : 'todo' },
   ];
 
-  const apply = (skipOpen: boolean) => {
+  const apply = async (skipOpen: boolean) => {
     const skipped = skipOpen ? open : [];
-    setLines((ls) => ls.map((l) => (skipped.includes(l) ? { ...l, matchStatus: 'IGNORED' } : l.matchStatus === 'MATCHED' ? l : { ...l, matchStatus: 'CREATED' })));
+    const updatedLines = lines.map((l) => (skipped.includes(l) ? { ...l, matchStatus: 'IGNORED' as const } : l.matchStatus === 'MATCHED' ? l : { ...l, matchStatus: 'CREATED' as const }));
+    setLines(updatedLines);
+
+    try {
+      const createdMan = await api.post<any>('/manifests', {
+        manifestNo: `MAN-${Date.now().toString().slice(-6)}`,
+        vesselCallId: Number(vc),
+        fileName: file || 'discharge_list.xlsx',
+        format: fmt,
+        items: updatedLines,
+      });
+
+      if (createdMan?.manifestId) {
+        await api.post(`/manifests/${createdMan.manifestId}:apply`, {});
+      }
+      qc.invalidateQueries({ queryKey: ['manifests'] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
+      qc.invalidateQueries({ queryKey: ['units'] });
+    } catch (err: any) {
+      console.warn('Manifest apply API warning:', err);
+    }
+
     setResult({
-      created: ready.filter((l) => l.matchStatus === 'NEW').length, matched: ready.filter((l) => l.matchStatus === 'MATCHED').length,
-      skipped: skipped.length + lines.filter((l) => l.matchStatus === 'IGNORED').length, consignments: blCount,
+      created: ready.filter((l) => l.matchStatus === 'NEW').length,
+      matched: ready.filter((l) => l.matchStatus === 'MATCHED').length,
+      skipped: skipped.length + lines.filter((l) => l.matchStatus === 'IGNORED').length,
+      consignments: blCount,
       errors: skipped.map((l) => ({ lineNo: l.lineNo!, message: l.errorText ?? 'Not fixed' })),
     });
     setStep('result');
@@ -144,7 +179,7 @@ function Wizard() {
           <div className="stack-lg">
             <div className="form-grid">
               <Field label="Vessel call" required>
-                <Select value={vc} onChange={(e) => setVc(e.target.value)} options={vesselCalls.map((v) => [String(v.vesselCallId), `${v.vesselName} ${v.voyageNo} · ${v.status?.toLowerCase()}`])} />
+                <Select value={vc} onChange={(e) => setVc(e.target.value)} options={calls.map((v) => [String(v.vesselCallId), `${v.vesselName} ${v.voyageNo} · ${(v.status || '').toLowerCase()}`])} />
               </Field>
               <Field label="File format"><Segmented value={fmt} onChange={setFmt} options={[{ id: 'EXCEL', label: 'Excel' }, { id: 'EDI', label: 'EDI' }]} /></Field>
               <Field label="Mapping profile" hint="Which columns mean what, saved per line"><Select options={fmt === 'EXCEL' ? ['Southern Cross Lines discharge list v3', 'Blue Meridian Line (standard)', 'Generic Excel'] : ['CUSCAR D.95B', 'COPRAR D.00B']} /></Field>

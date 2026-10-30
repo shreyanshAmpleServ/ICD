@@ -1,6 +1,6 @@
 import { Field, Input, Select } from '@/ds/components';
 import { SITES } from '@/app/session';
-import { EditDrawer } from '../../shared/AdminKit';
+import { EditDrawer, useDynamicSites } from '../../shared/AdminKit';
 
 const KIND: Record<string, string> = {
   TABLET: 'Gate tablet',
@@ -18,6 +18,7 @@ export function RegisterDeviceModal({
   onClose: () => void;
   onSave: () => void;
 }) {
+  const { options: siteOptions } = useDynamicSites();
   return (
     <EditDrawer
       open={open}
@@ -35,7 +36,7 @@ export function RegisterDeviceModal({
           <Select options={Object.entries(KIND)} />
         </Field>
         <Field label="Site">
-          <Select options={SITES.map((s) => [String(s.siteId), s.siteCode])} />
+          <Select options={siteOptions.length > 0 ? siteOptions : SITES.map((s) => [String(s.siteId), s.siteCode])} />
         </Field>
         <Field label="Where / who">
           <Input placeholder="e.g. Outer gate In 3" />

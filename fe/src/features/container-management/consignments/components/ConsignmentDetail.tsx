@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { BadgeCheck, FileText, Landmark, Pencil, Ship, Upload } from 'lucide-react';
 import type { S } from '@/api/types';
 import {
@@ -8,6 +9,7 @@ import {
 } from '@/ds/components';
 import { REF_TYPE_NAME } from '@/mock/control';
 import { useQ, delay } from '@/api/query';
+import { api } from '@/api/client';
 import { consignment, parties, partyName, unitsOf, vesselCalls } from '@/mock/core';
 import { allCustomsRefs, documentsOf, linesOf, releasesFor } from '@/mock/cargo';
 import { regimeName, refTypeName } from '../index';
@@ -33,18 +35,65 @@ export function ConsignmentDetail() {
   const [cleared, setCleared] = useState<Record<number, string>>({});
   const [, bump] = useState(0);
 
-  const units = useMemo(() => unitsOf(id).map((s) => (cleared[s.unitStayId!] ? { ...s, customsStatus: cleared[s.unitStayId!] as S<'UnitStay'>['customsStatus'] } : s)), [id, cleared]);
+  const baseUnits = useMemo(() => {
+    if ((c as any)?.units && (c as any).units.length > 0) {
+      return (c as any).units.map((u: any) => ({
+        unitStayId: u.unitStayId,
+        unitNo: u.unitNo,
+        cargoUnit: {
+          unitNo: u.unitNo,
+          category: u.category || 'CONTAINER',
+          unitTypeCode: u.unitTypeCode || '40HC',
+        },
+        currentLocation: { fullCode: u.location || 'In yard' },
+        physicalStatus: u.physicalStatus || 'ON_SITE',
+        customsStatus: u.customsStatus || 'PENDING',
+        releaseStatus: u.releaseStatus || 'PENDING_CHARGES',
+        billingStatus: u.billingStatus || 'UNBILLED',
+        activeHoldCount: u.activeHoldCount || 0,
+        sealNo: u.sealNo || 'SEAL-01',
+        freeUntil: u.freeUntil || new Date(Date.now() + 5 * 86400000).toISOString(),
+        accruedCharges: { total: 0 },
+      }));
+    }
+    return unitsOf(id);
+  }, [c, id]);
+
+  const units = useMemo(() => baseUnits.map((s: any) => (cleared[s.unitStayId!] ? { ...s, customsStatus: cleared[s.unitStayId!] as S<'UnitStay'>['customsStatus'] } : s)), [baseUnits, cleared]);
+
   if (!c) {
     return <Page><Empty title={consignment(id) === undefined && Number.isFinite(id) ? 'Loading consignment' : 'Consignment not found'} action={<Link to="/consignments">Back to consignments</Link>} /></Page>;
   }
-  const vc = vesselCalls.find((v) => v.vesselCallId === c.vesselCallId);
-  const refs = [...newRefs, ...allCustomsRefs.filter((r) => r.consignmentId === id || units.some((u) => u.unitStayId === r.unitStayId))];
+
+  const vc = (c as any).vesselName
+    ? {
+        vesselName: (c as any).vesselName,
+        voyageNo: (c as any).voyageNo,
+        portCallRef: (c as any).portCallRef || 'PC-2601',
+        status: (c as any).status || 'ALONGSIDE',
+        ata: new Date().toISOString(),
+        eta: new Date().toISOString(),
+        dischargeCompletedAt: null,
+      }
+    : vesselCalls.find((v) => v.vesselCallId === c.vesselCallId);
+
+  const refs = [...newRefs, ...allCustomsRefs.filter((r) => r.consignmentId === id || units.some((u: any) => u.unitStayId === r.unitStayId))];
   const ros = releasesFor(id);
-  const lines = linesOf(id);
+  const lines = (c as any)?.lines && (c as any).lines.length > 0 ? (c as any).lines.map((l: any) => ({
+    consignmentLineId: l.consignmentLineId,
+    lineNo: l.lineNo,
+    unitTypeCode: l.commodityCode || l.packageType || '40HC',
+    description: l.goodsDescription || 'General Merchandise',
+    qtyExpected: l.packageCount || 1,
+    uom: l.packageType || 'PK',
+    qtyReceived: l.packageCount || 1,
+    qtyDelivered: 0,
+    weightKg: l.grossWeightKg || 25000,
+  })) : linesOf(id);
   const docs = documentsOf(id);
-  const held = units.filter((u) => (u.activeHoldCount ?? 0) > 0);
-  const notCleared = units.filter((u) => u.physicalStatus !== 'DEPARTED' && !['CLEARED', 'NOT_REQUIRED'].includes(u.customsStatus ?? ''));
-  const accrued = units.reduce((n, u) => n + (u.physicalStatus === 'DEPARTED' ? 0 : Number(u.accruedCharges?.total ?? 0)), 0);
+  const held = units.filter((u: any) => (u.activeHoldCount ?? 0) > 0);
+  const notCleared = units.filter((u: any) => u.physicalStatus !== 'DEPARTED' && !['CLEARED', 'NOT_REQUIRED'].includes(u.customsStatus ?? ''));
+  const accrued = units.reduce((n: number, u: any) => n + (u.physicalStatus === 'DEPARTED' ? 0 : Number(u.accruedCharges?.total ?? 0)), 0);
 
   return (
     <Page>
@@ -121,11 +170,11 @@ export function ConsignmentDetail() {
 
           {tab === 'units' && (
             <Panel flush>
-              <DataTable rows={units} rowKey={(s) => s.unitStayId!} onRow={(s) => nav(`/units/${s.unitStayId}`)}
+              <DataTable<any> rows={units} rowKey={(s) => s.unitStayId!} onRow={(s) => nav(`/units/${s.unitStayId}`)}
                 empty={<Empty title="No units yet">Units appear when the manifest is applied or when they gate in.</Empty>}
                 cols={[
-                  { key: 'no', header: 'Unit', render: (s) => <UnitNo no={s.cargoUnit.unitNo} category={s.cargoUnit.category} to={`/units/${s.unitStayId}`} /> },
-                  { key: 'type', header: 'Type', render: (s) => <span className="small">{s.cargoUnit.unitTypeCode}{s.cargoUnit.make && <div className="xs faint">{s.cargoUnit.make} {s.cargoUnit.model}</div>}</span> },
+                  { key: 'no', header: 'Unit', render: (s) => <UnitNo no={s.cargoUnit?.unitNo || s.unitNo} category={s.cargoUnit?.category} to={`/units/${s.unitStayId}`} /> },
+                  { key: 'type', header: 'Type', render: (s) => <span className="small">{s.cargoUnit?.unitTypeCode || '40HC'}{s.cargoUnit?.make && <div className="xs faint">{s.cargoUnit.make} {s.cargoUnit.model}</div>}</span> },
                   { key: 'tracks', header: 'Status', render: (s) => <span className="row"><MiniTracks s={s} /><StatusPill value={s.physicalStatus} track="physical" /><HoldPill count={s.activeHoldCount ?? 0} /></span> },
                   { key: 'customs', header: 'Customs', render: (s) => <span className="row"><StatusPill value={s.customsStatus} track="customs" />{cleared[s.unitStayId!] && <span className="xs" style={{ color: 'var(--go)' }}>just now</span>}</span> },
                   { key: 'release', header: 'Release', render: (s) => <StatusPill value={s.releaseStatus} track="release" /> },
@@ -139,11 +188,11 @@ export function ConsignmentDetail() {
 
           {tab === 'lines' && (
             <Panel flush sub="What the BL or booking says is coming, against what has arrived" title="Consignment lines">
-              <DataTable rows={lines} rowKey={(l) => l.consignmentLineId!} cols={[
+              <DataTable<any> rows={lines} rowKey={(l) => l.consignmentLineId!} cols={[
                 { key: 'n', header: '#', render: (l) => l.lineNo },
                 { key: 't', header: 'Unit type', render: (l) => <strong>{l.unitTypeCode}</strong> },
                 { key: 'd', header: 'Description', render: (l) => <span className="small">{l.description ?? '—'}</span> },
-                { key: 'e', header: 'Expected', num: true, render: (l) => `${l.qtyExpected} ${l.uom.toLowerCase()}` },
+                { key: 'e', header: 'Expected', num: true, render: (l) => `${l.qtyExpected} ${l.uom?.toLowerCase() || 'pk'}` },
                 { key: 'r', header: 'Received', num: true, render: (l) => l.qtyReceived },
                 { key: 'o', header: 'Delivered', num: true, render: (l) => l.qtyDelivered },
                 { key: 'w', header: 'Weight', num: true, render: (l) => (l.weightKg && Number(l.weightKg) ? `${Number(l.weightKg).toLocaleString()} kg` : '—') },
@@ -156,7 +205,7 @@ export function ConsignmentDetail() {
               <DataTable rows={refs} rowKey={(r) => r.customsRefId!} empty={<Empty title="No customs references yet">Add the entry number when the agent lodges it.</Empty>} cols={[
                 { key: 't', header: 'Type', render: (r) => <strong className="small">{REF_TYPE_NAME[r.refTypeCode] ?? r.refTypeCode}</strong> },
                 { key: 'n', header: 'Number', render: (r) => <span className="unitno">{r.refNo}</span> },
-                { key: 'on', header: 'On', render: (r) => r.unitStayId ? <UnitNo no={units.find((u) => u.unitStayId === r.unitStayId)?.cargoUnit.unitNo ?? String(r.unitStayId)} /> : <span className="small muted">Whole consignment</span> },
+                { key: 'on', header: 'On', render: (r) => r.unitStayId ? <UnitNo no={units.find((u: any) => u.unitStayId === r.unitStayId)?.cargoUnit?.unitNo ?? String(r.unitStayId)} /> : <span className="small muted">Whole consignment</span> },
                 { key: 'd', header: 'Date', render: (r) => <span className="small">{fmtD(r.refDate)}</span> },
                 { key: 'v', header: 'Valid to', render: (r) => <span className="small">{fmtD(r.validTo)}</span> },
                 { key: 'a', header: 'Amount', num: true, render: (r) => <Money amount={r.amount} currency={r.amountCurrency} /> },
@@ -206,23 +255,55 @@ export function ConsignmentDetail() {
 }
 
 function EditConsignment({ open, onClose, c }: { open: boolean; onClose: () => void; c: S<'Consignment'> }) {
+  const qc = useQueryClient();
   const toast = useToast();
+  const [consigneePartyId, setConsigneePartyId] = useState(String(c.consigneePartyId ?? ''));
+  const [agentPartyId, setAgentPartyId] = useState(String(c.agentPartyId ?? ''));
+  const [billToPartyId, setBillToPartyId] = useState(String(c.billToPartyId ?? ''));
+  const [regime, setRegime] = useState(c.cargoRegimeCode || 'IMPORT_HOME');
+  const [destCountry, setDestCountry] = useState(c.destinationCountry ?? 'Tanzania');
+  const [cargoDesc, setCargoDesc] = useState(c.cargoDescription ?? '');
+  const [saving, setSaving] = useState(false);
+
   const opts = (role: string) => [['', '—'] as [string, string], ...parties.filter((p) => p.roles.includes(role as never)).map((p) => [String(p.partyId), p.partyName] as [string, string])];
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/consignments/${c.consignmentId}`, {
+        consigneePartyId: consigneePartyId ? Number(consigneePartyId) : undefined,
+        agentPartyId: agentPartyId ? Number(agentPartyId) : undefined,
+        billToPartyId: billToPartyId ? Number(billToPartyId) : undefined,
+        cargoRegimeCode: regime,
+        destinationCountry: destCountry,
+        cargoDescription: cargoDesc,
+      });
+      qc.invalidateQueries({ queryKey: ['consignment', c.consignmentId] });
+      qc.invalidateQueries({ queryKey: ['consignments'] });
+      toast('Consignment saved');
+      onClose();
+    } catch (err: any) {
+      toast(err?.message || 'Failed to update consignment');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Drawer open={open} onClose={onClose} title={`Edit ${c.refNo}`}
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" perm="consignment.edit" onClick={() => { onClose(); toast('Consignment saved'); }}>Save consignment</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button><Button variant="primary" perm="consignment.edit" disabled={saving} onClick={handleSave}>{saving ? 'Saving...' : 'Save consignment'}</Button></>}>
       <div className="stack-lg">
         <Banner>Changing the bill-to moves charges not yet invoiced to the new party. Invoiced charges stay where they are.</Banner>
         <div className="form-grid">
-          <Field label="Consignee"><Select defaultValue={String(c.consigneePartyId ?? '')} options={opts('CONSIGNEE')} /></Field>
-          <Field label="Clearing agent"><Select defaultValue={String(c.agentPartyId ?? '')} options={opts('CLEARING_AGENT')} /></Field>
-          <Field label="Bill to" required><Select defaultValue={String(c.billToPartyId ?? '')} options={opts('CUSTOMER')} /></Field>
-          <Field label="Regime"><Select defaultValue={c.cargoRegimeCode} options={[['IMPORT_HOME', 'Import (home use)'], ['TRANSIT', 'Transit'], ['EXPORT', 'Export'], ['EMPTY', 'Empty']]} /></Field>
-          <Field label="Destination country"><Input defaultValue={c.destinationCountry ?? 'TZ'} /></Field>
+          <Field label="Consignee"><Select value={consigneePartyId} onChange={(e) => setConsigneePartyId(e.target.value)} options={opts('CONSIGNEE')} /></Field>
+          <Field label="Clearing agent"><Select value={agentPartyId} onChange={(e) => setAgentPartyId(e.target.value)} options={opts('CLEARING_AGENT')} /></Field>
+          <Field label="Bill to" required><Select value={billToPartyId} onChange={(e) => setBillToPartyId(e.target.value)} options={opts('CUSTOMER')} /></Field>
+          <Field label="Regime"><Select value={regime} onChange={(e) => setRegime(e.target.value)} options={[['IMPORT_HOME', 'Import (home use)'], ['TRANSIT', 'Transit'], ['EXPORT', 'Export'], ['EMPTY', 'Empty']]} /></Field>
+          <Field label="Destination country"><Input value={destCountry} onChange={(e) => setDestCountry(e.target.value)} /></Field>
           <Field label="Declared packages"><Input inputMode="numeric" defaultValue={c.declaredPackages ?? ''} /></Field>
           <Field label="Valid to" hint="Delivery order expiry, if any"><Input type="date" defaultValue={c.validTo ?? ''} /></Field>
         </div>
-        <Field label="Cargo description"><Textarea defaultValue={c.cargoDescription ?? ''} /></Field>
+        <Field label="Cargo description"><Textarea value={cargoDesc} onChange={(e) => setCargoDesc(e.target.value)} /></Field>
         <Field label="Remarks"><Textarea defaultValue={c.remarks ?? ''} placeholder="Visible to everyone handling this consignment" /></Field>
       </div>
     </Drawer>

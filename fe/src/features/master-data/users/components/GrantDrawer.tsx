@@ -3,7 +3,7 @@ import { Banner, Field, Input, Panel, Select } from '@/ds/components';
 import { ROLES, type Role } from '@/app/roles';
 import { SITES } from '@/app/session';
 import { INACTIVE_ROLES, type User } from '@/mock/admin';
-import { EditDrawer, GrantChip } from '../../shared/AdminKit';
+import { EditDrawer, GrantChip, useDynamicSites } from '../../shared/AdminKit';
 
 type RG = NonNullable<User['roleGrants']>[number];
 
@@ -16,6 +16,7 @@ interface GrantDrawerProps {
 }
 
 export function GrantDrawer({ open, onClose, user, onGrant, roles = ROLES }: GrantDrawerProps) {
+  const { options: siteOptions } = useDynamicSites();
   const held = (user.roleGrants ?? []).map((g) => g.roleCode);
   const availableRoles = roles.filter((x) => !x.external);
   const [role, setRole] = useState(
@@ -64,7 +65,7 @@ export function GrantDrawer({ open, onClose, user, onGrant, roles = ROLES }: Gra
             onChange={(e) => setSite(e.target.value)}
             options={[
               ['ALL', 'All sites'],
-              ...SITES.map((s) => [String(s.siteId), `${s.siteCode} · ${s.siteName}`] as [string, string]),
+              ...(siteOptions.length > 0 ? siteOptions : SITES.map((s) => [String(s.siteId), `${s.siteCode} · ${s.siteName}`] as [string, string])),
             ]}
           />
         </Field>

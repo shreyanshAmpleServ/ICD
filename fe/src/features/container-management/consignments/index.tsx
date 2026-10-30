@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Download, Plus } from 'lucide-react';
 import {
-  Button, Chips, CommonTable, DateCell, Page, PageHeader, PartyCell, Pill,
-  ReferenceCell, Select, StatusCell
+  Button, Chips, CommonTable, DateCell, Drawer, Field, Input, Page, PageHeader, PartyCell, Pill,
+  ReferenceCell, Select, StatusCell, Textarea, useToast,
 } from '@/ds/components';
-import { useQ, delay } from '@/api/query';
-import { allStays, consignments, partyName, vesselCalls } from '@/mock/core';
+import { useQ } from '@/api/query';
+import { api } from '@/api/client';
+import { allStays, consignments, parties, partyName, vesselCalls } from '@/mock/core';
 import { Progress } from '@/features/container-management/shared';
 
 export { consignmentsApi } from './api';
@@ -19,29 +21,43 @@ const REF: Record<string, string> = { BL: 'BL', BOOKING: 'Booking', EMPTY_RELEAS
 const REGIME: Record<string, string> = { IMPORT_HOME: 'Import (home use)', TRANSIT: 'Transit', EXPORT: 'Export', EMPTY: 'Empty' };
 export const regimeName = (r?: string | null) => (r ? REGIME[r] ?? r.toLowerCase().replace(/_/g, ' ') : '—');
 export const refTypeName = (r?: string | null) => (r ? REF[r] ?? r : '—');
-export const vcName = (id?: number | null) => { const v = vesselCalls.find((x) => x.vesselCallId === id); return v ? `${v.vesselName} ${v.voyageNo}` : null; };
+export const vcName = (id?: number | null, vcList: any[] = vesselCalls) => { const v = vcList.find((x) => x.vesselCallId === id); return v ? `${v.vesselName} ${v.voyageNo}` : null; };
 
 export function Consignments() {
   const nav = useNavigate();
+  const qc = useQueryClient();
+  const toast = useToast();
   const [q, setQ] = useState('');
   const [kind, setKind] = useState('ALL');
   const [quick, setQuick] = useState<Quick>('open');
-  const { data = [] } = useQ(['consignments'], () => delay(consignments));
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const { data: dbConsignments = [] } = useQ(['consignments'], () =>
+    api.get<{ items: any[] }>('/consignments').then((r) => r.items).catch(() => consignments)
+  );
+  const { data: dbVesselCalls = [] } = useQ(['vessel-calls'], () =>
+    api.get<{ items: any[] }>('/vessel-calls').then((r) => r.items).catch(() => vesselCalls)
+  );
+
+  const data = dbConsignments.length > 0 ? dbConsignments : consignments;
+  const calls = dbVesselCalls.length > 0 ? dbVesselCalls : vesselCalls;
+
   const held = useMemo(() => new Set(allStays.filter((s) => (s.activeHoldCount ?? 0) > 0).map((s) => s.consignmentId)), []);
 
   const counts = {
-    open: data.filter((c) => c.status === 'OPEN').length,
-    waiting: data.filter((c) => (c.unitsReceived ?? 0) < (c.unitsExpected ?? 0)).length,
-    held: data.filter((c) => held.has(c.consignmentId)).length,
-    transit: data.filter((c) => c.cargoRegimeCode === 'TRANSIT').length,
+    open: data.filter((c: any) => c.status === 'OPEN').length,
+    waiting: data.filter((c: any) => (c.unitsReceived ?? 0) < (c.unitsExpected ?? 0)).length,
+    held: data.filter((c: any) => held.has(c.consignmentId) || c.hasActiveHolds).length,
+    transit: data.filter((c: any) => c.cargoRegimeCode === 'TRANSIT').length,
   };
-  const rows = data.filter((c) => {
+  const rows = data.filter((c: any) => {
     const n = q.trim().toUpperCase();
-    if (n && !c.refNo.includes(n) && !partyName(c.consigneePartyId ?? c.shipperPartyId ?? c.billToPartyId).toUpperCase().includes(n) && !partyName(c.agentPartyId).toUpperCase().includes(n) && !(c.cargoDescription ?? '').toUpperCase().includes(n)) return false;
+    const cName = c.consigneeName || partyName(c.consigneePartyId ?? c.shipperPartyId ?? c.billToPartyId);
+    if (n && !c.refNo?.toUpperCase().includes(n) && !cName.toUpperCase().includes(n) && !partyName(c.agentPartyId).toUpperCase().includes(n) && !(c.cargoDescription ?? '').toUpperCase().includes(n)) return false;
     if (kind !== 'ALL' && c.refType !== kind) return false;
     if (quick === 'open') return c.status === 'OPEN';
     if (quick === 'waiting') return (c.unitsReceived ?? 0) < (c.unitsExpected ?? 0);
-    if (quick === 'held') return held.has(c.consignmentId);
+    if (quick === 'held') return held.has(c.consignmentId) || c.hasActiveHolds;
     if (quick === 'transit') return c.cargoRegimeCode === 'TRANSIT';
     return true;
   });
@@ -55,14 +71,14 @@ export function Consignments() {
         actions={
           <>
             <Button icon={<Download />} perm="reports.operational">Export</Button>
-            <Button variant="primary" icon={<Plus />} perm="consignment.edit">New consignment</Button>
+            <Button variant="primary" icon={<Plus />} perm="consignment.edit" onClick={() => setCreateOpen(true)}>New consignment</Button>
           </>
         }
       />
       <CommonTable
         rows={rows}
-        rowKey={(c) => c.consignmentId!}
-        onRow={(c) => nav(`/consignments/${c.consignmentId}`)}
+        rowKey={(c: any) => c.consignmentId!}
+        onRow={(c: any) => nav(`/consignments/${c.consignmentId}`)}
         searchValue={q}
         onSearchChange={setQ}
         searchPlaceholder="BL, booking, consignee or agent"
@@ -94,7 +110,7 @@ export function Consignments() {
           {
             key: 'ref',
             header: 'Reference',
-            render: (c) => (
+            render: (c: any) => (
               <ReferenceCell
                 refNo={c.refNo}
                 sub={`${refTypeName(c.refType)} · ${regimeName(c.cargoRegimeCode)}${c.destinationCountry ? ` → ${c.destinationCountry}` : ''}`}
@@ -104,9 +120,9 @@ export function Consignments() {
           {
             key: 'party',
             header: 'Consignee / shipper',
-            render: (c) => (
+            render: (c: any) => (
               <PartyCell
-                name={partyName(c.consigneePartyId ?? c.shipperPartyId ?? c.billToPartyId)}
+                name={c.consigneeName || partyName(c.consigneePartyId ?? c.shipperPartyId ?? c.billToPartyId)}
                 sub={c.cargoDescription}
               />
             )
@@ -114,14 +130,14 @@ export function Consignments() {
           {
             key: 'agent',
             header: 'Agent',
-            render: (c) => <PartyCell name={c.agentPartyId ? partyName(c.agentPartyId) : '—'} />
+            render: (c: any) => <PartyCell name={c.agentPartyId ? partyName(c.agentPartyId) : '—'} />
           },
           {
             key: 'vc',
             header: 'Vessel call',
-            render: (c) => (
+            render: (c: any) => (
               <div className="stack" style={{ gap: 2 }}>
-                <span className="small">{vcName(c.vesselCallId) ?? '—'}</span>
+                <span className="small">{c.vesselName ? `${c.vesselName} ${c.voyageNo || ''}` : vcName(c.vesselCallId, calls) ?? '—'}</span>
                 <div className="xs faint">{partyName(c.shippingLinePartyId)}</div>
               </div>
             )
@@ -129,13 +145,13 @@ export function Consignments() {
           {
             key: 'units',
             header: 'Units in / expected',
-            render: (c) => (
+            render: (c: any) => (
               <div style={{ minWidth: 120 }}>
                 <div className="small row">
-                  <strong>{c.unitsReceived}</strong>
-                  <span className="faint">/ {c.unitsExpected}</span>
+                  <strong>{c.unitsReceived ?? 0}</strong>
+                  <span className="faint">/ {c.unitsExpected ?? 1}</span>
                   <span className="spacer" />
-                  <span className="xs muted">{c.unitsDelivered} out</span>
+                  <span className="xs muted">{c.unitsDelivered ?? 0} out</span>
                 </div>
                 <Progress pct={c.unitsExpected ? ((c.unitsReceived ?? 0) / c.unitsExpected) * 100 : 0} label="Units received" />
               </div>
@@ -144,21 +160,159 @@ export function Consignments() {
           {
             key: 'held',
             header: '',
-            render: (c) => (held.has(c.consignmentId) ? <Pill tone="hold">Held units</Pill> : null)
+            render: (c: any) => (held.has(c.consignmentId) || c.hasActiveHolds ? <Pill tone="hold">Held units</Pill> : null)
           },
           {
             key: 'status',
             header: 'Status',
-            render: (c) => <StatusCell value={c.status} />
+            render: (c: any) => <StatusCell value={c.status} />
           },
           {
             key: 'valid',
             header: 'Valid to',
-            render: (c) => <DateCell value={c.validTo} />
+            render: (c: any) => <DateCell value={c.validTo} />
           },
         ]}
       />
+
+      {createOpen && (
+        <CreateConsignmentDrawer
+          open={createOpen}
+          calls={calls}
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => {
+            qc.invalidateQueries({ queryKey: ['consignments'] });
+            toast('Consignment created successfully');
+            setCreateOpen(false);
+          }}
+        />
+      )}
     </Page>
+  );
+}
+
+function CreateConsignmentDrawer({
+  open,
+  calls,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  calls: any[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [refNo, setRefNo] = useState('');
+  const [refType, setRefType] = useState('BL');
+  const [vesselCallId, setVesselCallId] = useState(String(calls[0]?.vesselCallId || '1'));
+  const [consigneePartyId, setConsigneePartyId] = useState('1');
+  const [cargoRegimeCode, setCargoRegimeCode] = useState('IMPORT_HOME');
+  const [destinationCountry, setDestinationCountry] = useState('Tanzania');
+  const [cargoDescription, setCargoDescription] = useState('');
+  const [unitsExpected, setUnitsExpected] = useState('1');
+  const [submitting, setSubmitting] = useState(false);
+
+  const consignees = useMemo(() => parties.filter((p) => p.roles.includes('CONSIGNEE' as never)), []);
+
+  const handleSubmit = async () => {
+    if (!refNo.trim()) return;
+    setSubmitting(true);
+    try {
+      await api.post('/consignments', {
+        refNo: refNo.trim().toUpperCase(),
+        refType,
+        vesselCallId: Number(vesselCallId),
+        consigneePartyId: Number(consigneePartyId),
+        billToPartyId: Number(consigneePartyId),
+        cargoRegimeCode,
+        destinationCountry,
+        cargoDescription: cargoDescription.trim() || 'General Merchandise',
+        unitsExpected: Math.max(1, parseInt(unitsExpected, 10) || 1),
+      });
+      onCreated();
+    } catch (err: any) {
+      console.error('Failed to create consignment:', err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="New Consignment"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={submitting || !refNo.trim()}>
+            {submitting ? 'Creating...' : 'Create consignment'}
+          </Button>
+        </>
+      }
+    >
+      <div className="stack-lg">
+        <div className="form-grid">
+          <Field label="Reference No (BL / Booking)" required>
+            <Input
+              value={refNo}
+              onChange={(e) => setRefNo(e.target.value.toUpperCase())}
+              placeholder="e.g. MSKU987654321"
+            />
+          </Field>
+          <Field label="Reference type">
+            <Select
+              value={refType}
+              onChange={(e) => setRefType(e.target.value)}
+              options={[['BL', 'Bill of lading (BL)'], ['BOOKING', 'Booking'], ['EMPTY_RELEASE', 'Empty release']]}
+            />
+          </Field>
+          <Field label="Vessel call" required>
+            <Select
+              value={vesselCallId}
+              onChange={(e) => setVesselCallId(e.target.value)}
+              options={calls.map((c) => [String(c.vesselCallId), `${c.vesselName} ${c.voyageNo} · ${(c.status || '').toLowerCase()}`])}
+            />
+          </Field>
+          <Field label="Consignee" required>
+            <Select
+              value={consigneePartyId}
+              onChange={(e) => setConsigneePartyId(e.target.value)}
+              options={consignees.map((p) => [String(p.partyId), p.partyName])}
+            />
+          </Field>
+          <Field label="Cargo regime">
+            <Select
+              value={cargoRegimeCode}
+              onChange={(e) => setCargoRegimeCode(e.target.value)}
+              options={[['IMPORT_HOME', 'Import (home use)'], ['TRANSIT', 'Transit'], ['EXPORT', 'Export'], ['EMPTY', 'Empty']]}
+            />
+          </Field>
+          <Field label="Destination country">
+            <Input
+              value={destinationCountry}
+              onChange={(e) => setDestinationCountry(e.target.value)}
+              placeholder="e.g. Tanzania"
+            />
+          </Field>
+          <Field label="Units expected">
+            <Input
+              type="number"
+              min={1}
+              value={unitsExpected}
+              onChange={(e) => setUnitsExpected(e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="Cargo description">
+          <Textarea
+            value={cargoDescription}
+            onChange={(e) => setCargoDescription(e.target.value)}
+            placeholder="e.g. 500 Bags of Raw Cashew Nuts"
+          />
+        </Field>
+      </div>
+    </Drawer>
   );
 }
 

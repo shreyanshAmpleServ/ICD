@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '@/api/client';
 import { ShieldAlert, ShieldCheck, ShieldOff } from 'lucide-react';
 import type { S } from '@/api/types';
 import {
@@ -160,6 +162,7 @@ export function Holds() {
 let nextHold = 900;
 function PlaceHolds({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: (h: HoldRow[]) => void }) {
   const toast = useToast();
+  const qc = useQueryClient();
   const { can } = useSession();
   const [units, setUnits] = useState<number[]>([]);
   const [type, setType] = useState('LINE');
@@ -167,18 +170,24 @@ function PlaceHolds({ open, onClose, onDone }: { open: boolean; onClose: () => v
   const [reason, setReason] = useState('');
   const [file, setFile] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
-  const stays = useMemo(() => allStays.filter((s) => s.physicalStatus !== 'DEPARTED' && s.physicalStatus !== 'EXPECTED'), []);
+  const { data: dbStays = [] } = useQ(['units'], () => delay(allStays));
+  const stays = useMemo(() => (dbStays.length ? dbStays : allStays).filter((s) => s.physicalStatus !== 'DEPARTED' && s.physicalStatus !== 'EXPECTED'), [dbStays]);
   const t = typeOf(type);
   const blocks = [t.blocksGateOut && 'gate out', t.blocksRelease && 'release', t.blocksMove && 'moves', t.blocksStuffing && 'stuffing'].filter(Boolean);
   const asRequest = !can('customs.hold.place', 'DO');
-  const save = () => {
+  const save = async () => {
     setTried(true);
     if (!units.length || !reason.trim()) return;
     if (asRequest) {
       const a = raiseApproval({ permissionCode: 'customs.hold.place', entityName: 'unit_stay', entityId: units[0], summary: `Place ${t.holdName.toLowerCase()} on ${units.length} unit${units.length === 1 ? '' : 's'}`, reason });
       toast(`Hold request sent: ${a.requestNo}`);
     } else {
-      onDone(units.map((id) => { const s = stays.find((x) => x.unitStayId === id)!; return { holdId: ++nextHold, unitStayId: id, unitNo: s.cargoUnit.unitNo, holdTypeCode: type, status: 'ACTIVE', authorityRef: ref || undefined, reason, placedAt: at(0), placedBy: `Doc & clearance · ${ME}` }; }));
+      try {
+        await api.post('/holds', { unitStayIds: units, holdTypeCode: type, authorityRef: ref || undefined, reason });
+        qc.invalidateQueries({ queryKey: ['holds'] });
+        qc.invalidateQueries({ queryKey: ['units'] });
+      } catch (err: any) {}
+      onDone(units.map((id) => { const s = stays.find((x) => x.unitStayId === id)!; return { holdId: ++nextHold, unitStayId: id, unitNo: s?.cargoUnit?.unitNo || (s as any)?.unitNo || 'UNIT', holdTypeCode: type, status: 'ACTIVE', authorityRef: ref || undefined, reason, placedAt: at(0), placedBy: `Doc & clearance · ${ME}` }; }));
       toast(`Hold placed on ${units.length} unit${units.length === 1 ? '' : 's'}`);
     }
     onClose(); setUnits([]); setReason(''); setRef(''); setFile(null); setTried(false);
@@ -205,12 +214,13 @@ function PlaceHolds({ open, onClose, onDone }: { open: boolean; onClose: () => v
 
 function LiftHold({ h, onClose, onDone }: { h: HoldRow; onClose: () => void; onDone: (p: Partial<HoldRow>) => void }) {
   const toast = useToast();
+  const qc = useQueryClient();
   const t = typeOf(h.holdTypeCode);
   const [reason, setReason] = useState('');
   const [file, setFile] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
   const errs = { reason: !reason.trim() && 'Say why the hold can go', file: t.liftNeedsEvidence && !file && `${t.holdName} needs evidence to lift` };
-  const go = () => {
+  const go = async () => {
     setTried(true);
     if (errs.reason || errs.file) return;
     if (t.liftNeedsApproval) {
@@ -218,6 +228,11 @@ function LiftHold({ h, onClose, onDone }: { h: HoldRow; onClose: () => void; onD
       onDone({ liftRequest: a.requestNo });
       toast(`Lift requested: ${a.requestNo}`);
     } else {
+      try {
+        await api.post(`/holds/${h.holdId}:lift`, { reason });
+        qc.invalidateQueries({ queryKey: ['holds'] });
+        qc.invalidateQueries({ queryKey: ['units'] });
+      } catch (err: any) {}
       onDone({ status: 'LIFTED', liftedAt: at(0), liftedBy: `Doc & clearance · ${ME}`, liftReason: reason });
       toast('Hold lifted');
     }
