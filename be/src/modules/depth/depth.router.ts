@@ -3,102 +3,14 @@ import { cargoService } from "../cargo/cargo.service";
 import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
 import {
-  appointments,
-  slotRules,
-  contractors,
-  jobs,
-  lotBalances,
-  reefers,
-  repairCodes,
-  estimates,
-} from "../../data/ops";
-import {
   occupancyForecast,
   dwellPredictions,
   suggestionLog,
-  serviceRequests,
 } from "../../data/insight";
 import { dgLines, segregationWarnings, IMO_CLASSES } from "../../data/cargo";
-import { integrations, integrationMessages, models } from "../../data/admin";
-import { getPrisma, isDbLive } from "../../db/prisma";
+import { integrationMessages, models } from "../../data/admin";
 
 const router = Router();
-
-// In-memory portal invitations
-let portalInvitations = [
-  {
-    invitationId: 1,
-    email: "agent@bollore.tz",
-    partyName: "Bollore Transport",
-    role: "CLEARING_AGENT",
-    status: "ACCEPTED",
-    sentAt: "2026-10-01T10:00:00Z",
-    logInst: 1,
-  },
-  {
-    invitationId: 2,
-    email: "ops@cma-cgm.tz",
-    partyName: "CMA CGM Tanzania",
-    role: "SHIPPING_LINE",
-    status: "PENDING",
-    sentAt: "2026-10-05T14:30:00Z",
-    logInst: 1,
-  },
-];
-
-// In-memory device reads
-let deviceReads = [
-  {
-    deviceReadId: 1,
-    integrationKind: "ANPR",
-    payload: { plateNo: "T 124 DFH", confidence: 0.98 },
-    status: "MATCHED",
-    capturedAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    deviceReadId: 2,
-    integrationKind: "CONTAINER_OCR",
-    payload: { unitNo: "MSKU 882014 9", confidence: 0.94 },
-    status: "MATCHED",
-    capturedAt: new Date(Date.now() - 3500000).toISOString(),
-  },
-];
-
-// In-memory reefer readings
-const reeferReadingsStore: Record<string, any[]> = {
-  "1": [
-    {
-      readingId: 1,
-      setTempC: -18.0,
-      supplyTempC: -17.8,
-      returnTempC: -17.2,
-      powerKw: 4.8,
-      recordedAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-  ],
-};
-
-// In-memory appointment rules
-let appointmentSlotRules = [
-  {
-    appointmentSlotRuleId: 1,
-    flow: "IMPORT_PICKUP",
-    startHour: 6,
-    endHour: 18,
-    maxSlotsPerHour: 20,
-    isActive: true,
-    logInst: 1,
-  },
-  {
-    appointmentSlotRuleId: 2,
-    flow: "EXPORT_DROP",
-    startHour: 6,
-    endHour: 20,
-    maxSlotsPerHour: 15,
-    isActive: true,
-    logInst: 1,
-  },
-];
 
 // In-memory dg segregation matrix
 let segregationMatrix = {
@@ -202,7 +114,7 @@ router.get(
       if (prisma) {
         try {
           const dbAppts = await prisma.appointments.findMany({
-            include: { appointments_visit_types: true, appointments_parties: true },
+            include: { visit_types: true, parties: true },
             orderBy: { appointment_id: "desc" },
           });
           if (dbAppts && dbAppts.length > 0) {
@@ -220,7 +132,7 @@ router.get(
                 hour: slotStartDate.getHours(),
                 slotStart: slotStartDate.toISOString(),
                 slotEnd: slotEndDate.toISOString(),
-                visitTypeCode: (a as any).appointments_visit_types?.visit_code || "IMPORT_PICKUP",
+                visitTypeCode: a.visit_types?.visit_code || "IMPORT_PICKUP",
                 plateNo: a.truck_plate || "T 118 DPE",
                 partyId: a.transporter_party_id || 1,
                 driverName: "Juma Ramadhani",
@@ -409,27 +321,27 @@ router.get(
               lines:
                 (j.handling_job_lines || []).length > 0
                   ? (j.handling_job_lines || []).map((l) => ({
-                      lineNo: l.line_no,
-                      packageKind: l.uom || "CARTONS",
-                      pieces: l.package_count || 450,
-                      goodsDesc: l.cargo_description || "Industrial equipment",
+                    lineNo: l.line_no,
+                    packageKind: l.uom || "CARTONS",
+                    pieces: l.package_count || 450,
+                    goodsDesc: l.cargo_description || "Industrial equipment",
+                    cargoWeightKg: 12400,
+                    shortQty: 0,
+                    excessQty: 0,
+                    damagedQty: 0,
+                  }))
+                  : [
+                    {
+                      lineNo: 1,
+                      packageKind: "CARTONS",
+                      pieces: 450,
+                      goodsDesc: "Industrial pump components",
                       cargoWeightKg: 12400,
                       shortQty: 0,
                       excessQty: 0,
                       damagedQty: 0,
-                    }))
-                  : [
-                      {
-                        lineNo: 1,
-                        packageKind: "CARTONS",
-                        pieces: 450,
-                        goodsDesc: "Industrial pump components",
-                        cargoWeightKg: 12400,
-                        shortQty: 0,
-                        excessQty: 0,
-                        damagedQty: 0,
-                      },
-                    ],
+                    },
+                  ],
             }));
             const dbIds = new Set(mapped.map((m) => m.handlingJobId));
             items = [
@@ -911,333 +823,7 @@ router.put(
   },
 );
 
-// ------------------------------------------------------------------ 6. M&R Maintenance & Repair (Site-scoped)
-router.get(
-  "/repair-codes",
-  requireSite(false),
-  requirePermission("repair.estimate"),
-  (req, res) => {
-    res.json({
-      items: repairCodes,
-      total: repairCodes.length,
-      nextCursor: null,
-    });
-  },
-);
-
-router.post(
-  "/repair-codes",
-  requireSite(false),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const newRc = {
-      repairCodeId: repairCodes.length + 1,
-      code: req.body.code || `RC_${repairCodes.length + 1}`,
-      name: req.body.name || "Patch Panel",
-      component: req.body.component || "PANEL",
-      standardHours: req.body.standardHours || 2.0,
-      ...req.body,
-    };
-    repairCodes.push(newRc as any);
-    res.status(201).json(newRc);
-  },
-);
-
-router.get(
-  "/repair-codes/:repairCodeId",
-  requireSite(false),
-  requirePermission("repair.estimate"),
-  (req, res) => {
-    const rc = (repairCodes as any[]).find(
-      (x) =>
-        String(x.repairCodeId) === req.params.repairCodeId ||
-        x.code === req.params.repairCodeId,
-    );
-    if (!rc) return res.status(404).json({ error: "Repair code not found" });
-    res.json(rc);
-  },
-);
-
-router.patch(
-  "/repair-codes/:repairCodeId",
-  requireSite(false),
-  requirePermission("admin.config.manage", "DO"),
-  (req, res) => {
-    const rc = (repairCodes as any[]).find(
-      (x) =>
-        String(x.repairCodeId) === req.params.repairCodeId ||
-        x.code === req.params.repairCodeId,
-    );
-    if (!rc) return res.status(404).json({ error: "Repair code not found" });
-    Object.assign(rc, req.body);
-    res.json(rc);
-  },
-);
-
-router.get(
-  ["/repair-estimates", "/repairs"],
-  requireSite(false),
-  requirePermission("repair.estimate"),
-  async (req, res) => {
-    let items: any[] = estimates;
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbEst = await prisma.repair_estimates.findMany({
-            orderBy: { estimate_id: "desc" },
-          });
-          if (dbEst && dbEst.length > 0) {
-            const mapped = dbEst.map((e) => ({
-              repairEstimateId: e.estimate_id,
-              estimateNo: `EST-26-0${e.estimate_id}`,
-              createdAt:
-                e.created_at?.toISOString() || new Date().toISOString(),
-              unitStayId: e.unit_stay_id,
-              unitNo: "TCLU 551902 4",
-              unitType: "20GP",
-              location: "A-01-02-1",
-              lineCode: "MSK",
-              partyName: "Maersk Line Tanzania",
-              totalLabour: 140,
-              totalMaterial: 140,
-              totalAmount: Number(e.total_amount ?? 280),
-              status: (e.status as any) || "APPROVED",
-              approverRef: "APP-2026-9912",
-              lines: [
-                {
-                  lineNo: 1,
-                  component: "PANEL",
-                  damageCode: "SCRATCH",
-                  repairCode: "RP-01",
-                  description: "Straighten and paint side panel",
-                  hours: Number(e.total_hours ?? 3.5),
-                  labourCost: 140,
-                  materialCost: 140,
-                  lineStatus: "APPROVED",
-                },
-              ],
-            }));
-            const dbIds = new Set(mapped.map((m) => m.repairEstimateId));
-            items = [
-              ...mapped,
-              ...estimates.filter(
-                (es) => !dbIds.has((es as any).repairEstimateId),
-              ),
-            ];
-          }
-        } catch (err) {
-          console.warn(
-            "[DepthRouter] DB query error on repair-estimates:",
-            err,
-          );
-        }
-      }
-    }
-    res.json({ items, total: items.length, nextCursor: null });
-  },
-);
-
-router.post(
-  "/repair-estimates",
-  requireSite(false),
-  requirePermission("repair.estimate", "DO"),
-  (req, res) => {
-    const newEst = {
-      repairEstimateId: estimates.length + 1,
-      estimateNo: `EST-26-0${estimates.length + 101}`,
-      unitStayId: req.body.unitStayId || 5001,
-      unitNo: req.body.unitNo || "MSKU 882014 9",
-      partyName: req.body.partyName || "Maersk Line",
-      totalLaborUsd: req.body.totalLaborUsd || 120.0,
-      totalMaterialUsd: req.body.totalMaterialUsd || 85.0,
-      totalAmountUsd:
-        (req.body.totalLaborUsd || 120.0) + (req.body.totalMaterialUsd || 85.0),
-      status: "DRAFT",
-      createdAt: new Date().toISOString(),
-      ...req.body,
-    };
-    estimates.push(newEst as any);
-    res.status(201).json(newEst);
-  },
-);
-
-router.get(
-  ["/repair-estimates/:repairEstimateId", "/repairs/:repairEstimateId"],
-  requireSite(false),
-  requirePermission("repair.estimate"),
-  (req, res) => {
-    const est = (estimates as any[]).find(
-      (e) =>
-        String(e.repairEstimateId) === req.params.repairEstimateId ||
-        e.estimateNo === req.params.repairEstimateId,
-    );
-    if (!est)
-      return res.status(404).json({ error: "Repair estimate not found" });
-    res.json(est);
-  },
-);
-
-router.patch(
-  "/repair-estimates/:repairEstimateId",
-  requireSite(false),
-  requirePermission("repair.estimate", "DO"),
-  (req, res) => {
-    const est = (estimates as any[]).find(
-      (e) => String(e.repairEstimateId) === req.params.repairEstimateId,
-    );
-    if (!est)
-      return res.status(404).json({ error: "Repair estimate not found" });
-    Object.assign(est, req.body);
-    res.json(est);
-  },
-);
-
-router.post(
-  "/repair-estimates/:repairEstimateId([0-9a-zA-Z_.-]+):send",
-  requireSite(false),
-  requirePermission("repair.estimate", "DO"),
-  (req, res) => {
-    const est = (estimates as any[]).find(
-      (e) => String(e.repairEstimateId) === req.params.repairEstimateId,
-    );
-    if (est) est.status = "SENT";
-    res.json({ success: true, estimate: est });
-  },
-);
-
-router.post(
-  "/repair-estimates/:repairEstimateId([0-9a-zA-Z_.-]+):decision",
-  requireSite(false),
-  requirePermission("repair.estimate", "DO"),
-  (req, res) => {
-    const est = (estimates as any[]).find(
-      (e) => String(e.repairEstimateId) === req.params.repairEstimateId,
-    );
-    if (est) {
-      est.status = req.body.decision === "APPROVE" ? "APPROVED" : "REJECTED";
-      est.decisionNotes = req.body.notes;
-    }
-    res.json({ success: true, estimate: est });
-  },
-);
-
-router.post(
-  "/repair-estimates/:repairEstimateId([0-9a-zA-Z_.-]+):complete",
-  requireSite(false),
-  requirePermission("repair.estimate", "DO"),
-  (req, res) => {
-    const est = (estimates as any[]).find(
-      (e) => String(e.repairEstimateId) === req.params.repairEstimateId,
-    );
-    if (est) est.status = "COMPLETED";
-    res.json({ success: true, estimate: est });
-  },
-);
-
-// ------------------------------------------------------------------ 7. Devices & OCR/ANPR (Site-scoped)
-router.get(
-  "/device-integrations",
-  requireSite(false),
-  requirePermission("device.configure"),
-  (req, res) => {
-    res.json({
-      items: integrations,
-      total: integrations.length,
-      nextCursor: null,
-    });
-  },
-);
-
-router.post(
-  "/device-integrations",
-  requireSite(false),
-  requirePermission("device.configure", "DO"),
-  (req, res) => {
-    const newInt = {
-      deviceIntegrationId: integrations.length + 1,
-      integrationKind: req.body.integrationKind || "ANPR",
-      lane: req.body.lane || "Main Gate In 1",
-      vendor: req.body.vendor || "Hikvision",
-      model: req.body.model || "iDS-TCM403",
-      laneMode: req.body.laneMode || "ASSISTED",
-      isActive: true,
-      health: "OK",
-      ...req.body,
-    };
-    integrations.push(newInt as any);
-    res.status(201).json(newInt);
-  },
-);
-
-router.get(
-  "/device-integrations/:deviceIntegrationId",
-  requireSite(false),
-  requirePermission("device.configure"),
-  (req, res) => {
-    const item = integrations.find(
-      (i) => String(i.deviceIntegrationId) === req.params.deviceIntegrationId,
-    );
-    if (!item)
-      return res.status(404).json({ error: "Device integration not found" });
-    res.json(item);
-  },
-);
-
-router.patch(
-  "/device-integrations/:deviceIntegrationId",
-  requireSite(false),
-  requirePermission("device.configure", "DO"),
-  (req, res) => {
-    const item = integrations.find(
-      (i) => String(i.deviceIntegrationId) === req.params.deviceIntegrationId,
-    );
-    if (!item)
-      return res.status(404).json({ error: "Device integration not found" });
-    Object.assign(item, req.body);
-    res.json(item);
-  },
-);
-
-router.post("/device-reads:ingest", requireSite(false), (req, res) => {
-  const read = {
-    deviceReadId: deviceReads.length + 1,
-    integrationKind: req.body.integrationKind || "ANPR",
-    payload: req.body.payload || req.body,
-    status: "INGESTED",
-    capturedAt: new Date().toISOString(),
-  };
-  deviceReads.push(read);
-  res.status(201).json(read);
-});
-
-router.get(
-  "/device-reads",
-  requireSite(false),
-  requirePermission("device.configure"),
-  (req, res) => {
-    res.json({
-      items: deviceReads,
-      total: deviceReads.length,
-      nextCursor: null,
-    });
-  },
-);
-
-router.post(
-  "/device-reads/:deviceReadId([0-9a-zA-Z_.-]+):match",
-  requireSite(false),
-  requirePermission("gate.visit.checkin", "DO"),
-  (req, res) => {
-    const read = deviceReads.find(
-      (d) => String(d.deviceReadId) === req.params.deviceReadId,
-    );
-    if (read) read.status = "MATCHED";
-    res.json({ success: true, deviceRead: read });
-  },
-);
-
-// ------------------------------------------------------------------ 8. EDI & Integration (Site-scoped)
+// ------------------------------------------------------------------ 2. EDI & Integration (Site-scoped)
 router.get(
   "/integration-messages",
   requireSite(false),
@@ -1291,7 +877,7 @@ router.post("/edi/inbound/:partnerCode", requireSite(false), (req, res) => {
   });
 });
 
-// ------------------------------------------------------------------ 9. Intelligence & Forecasting (Site-scoped)
+// ------------------------------------------------------------------ 3. Intelligence & Forecasting (Site-scoped)
 router.get(
   "/models",
   requireSite(false),

@@ -7,1021 +7,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model accounting_period {
-  accounting_period_id Int       @id(map: "PK_accounting_period") @default(autoincrement())
-  company_id           Int
-  period_key           String    @db.Char(7)
-  period_start         DateTime  @db.Date
-  period_end           DateTime  @db.Date
-  status               String    @default("OPEN", map: "DF_accounting_period_status") @db.VarChar(8)
-  closed_at            DateTime?
-  closed_by_sub        String?   @db.VarChar(64)
-  reopened_count       Int       @default(0, map: "DF_accounting_period_reopen") @db.TinyInt
-  createdate           DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_accounting_period_createdate")
-  updatedate           DateTime?
-  createdby            String    @db.NVarChar(64)
-  updatedby            String?   @db.NVarChar(64)
-  log_inst             Int       @default(1, map: "DF_accounting_period_log_inst")
-  m_company            m_company @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_accounting_period_company")
-  invoice              invoice[]
-  payment              payment[]
-
-  @@unique([company_id, period_key], map: "UQ_accounting_period")
+model appointments {
+  appointment_id           Int         @id(map: "PK__appointm__A50828FC54F8AB6F") @default(autoincrement())
+  site_id                  Int
+  visit_type_id            Int
+  transporter_party_id     Int
+  appointment_no           String      @unique(map: "UQ__appointm__A5090472411673D3") @db.NVarChar(50)
+  truck_plate              String      @db.NVarChar(30)
+  slot_start               DateTime
+  slot_end                 DateTime
+  status                   String?     @default("BOOKED", map: "DF__appointme__statu__511AFFBC") @db.NVarChar(30)
+  created_at               DateTime?   @default(dbgenerated("sysutcdatetime()"), map: "DF__appointme__creat__520F23F5")
+  appointments_parties     parties     @relation(fields: [transporter_party_id], references: [party_id], onUpdate: NoAction, map: "FK_appointments_transporters")
+  appointments_sites       sites       @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_appointments_sites")
+  appointments_visit_types visit_types @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_appointments_visit_types")
 }
 
-model aiva_conversation {
-  aiva_conversation_id String         @id(map: "PK_aiva_conversation") @default(dbgenerated("newsequentialid()"), map: "DF_aiva_conv_id") @db.UniqueIdentifier
-  user_id              Int
-  site_id              Int?
-  surface              String         @default("ICD_PANEL", map: "DF_aiva_conv_surface") @db.VarChar(10)
-  context_entity       String?        @db.VarChar(40)
-  context_id           BigInt?
-  started_at           DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_aiva_conv_started")
-  last_message_at      DateTime?
-  m_site               m_site?        @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_aiva_conv_site")
-  app_user             app_user       @relation(fields: [user_id], references: [user_id], onUpdate: NoAction, map: "FK_aiva_conv_user")
-  aiva_message         aiva_message[]
-
-  @@index([user_id, started_at], map: "IX_aiva_conv_user")
-}
-
-model aiva_draft_action {
-  aiva_draft_action_id BigInt            @id(map: "PK_aiva_draft_action") @default(autoincrement())
-  aiva_message_id      BigInt
-  action_kind          String            @db.VarChar(30)
-  target_entity        String?           @db.VarChar(40)
-  target_ids_json      String?           @db.NVarChar(Max)
-  payload_json         String            @db.NVarChar(Max)
-  status               String            @default("DRAFT", map: "DF_ada_status") @db.VarChar(10)
-  submitted_by_sub     String?           @db.VarChar(64)
-  submitted_at         DateTime?
-  approval_request_id  BigInt?
-  result_entity        String?           @db.VarChar(40)
-  result_id            BigInt?
-  createdate           DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_ada_created")
-  updatedate           DateTime?
-  approval_request     approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ada_approval")
-  aiva_message         aiva_message      @relation(fields: [aiva_message_id], references: [aiva_message_id], onUpdate: NoAction, map: "FK_ada_message")
-}
-
-model aiva_message {
-  aiva_message_id      BigInt              @id(map: "PK_aiva_message") @default(autoincrement())
-  aiva_conversation_id String              @db.UniqueIdentifier
-  role                 String              @db.VarChar(10)
-  content              String              @db.NVarChar(Max)
-  model                String?             @db.VarChar(60)
-  input_tokens         Int?
-  output_tokens        Int?
-  latency_ms           Int?
-  feedback             Int?                @db.SmallInt
-  feedback_note        String?             @db.NVarChar(400)
-  createdate           DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_aiva_message_created")
-  aiva_draft_action    aiva_draft_action[]
-  aiva_conversation    aiva_conversation   @relation(fields: [aiva_conversation_id], references: [aiva_conversation_id], onUpdate: NoAction, map: "FK_aiva_message_conv")
-  aiva_tool_call       aiva_tool_call[]
-
-  @@index([aiva_conversation_id, createdate], map: "IX_aiva_message_conv")
-}
-
-model aiva_tool_call {
-  aiva_tool_call_id BigInt       @id(map: "PK_aiva_tool_call") @default(autoincrement())
-  aiva_message_id   BigInt
-  tool_name         String       @db.VarChar(60)
-  arguments_json    String?      @db.NVarChar(Max)
-  result_summary    String?      @db.NVarChar(500)
-  was_denied        Boolean      @default(false, map: "DF_aiva_tool_denied")
-  duration_ms       Int?
-  createdate        DateTime     @default(dbgenerated("sysutcdatetime()"), map: "DF_aiva_tool_created")
-  aiva_message      aiva_message @relation(fields: [aiva_message_id], references: [aiva_message_id], onUpdate: NoAction, map: "FK_aiva_tool_message")
-
-  @@index([aiva_message_id], map: "IX_aiva_tool_message")
-  @@index([tool_name, createdate], map: "IX_aiva_tool_name")
-}
-
-model api_idempotency {
-  idempotency_key String   @id(map: "PK_api_idempotency") @db.UniqueIdentifier
-  user_sub        String   @db.VarChar(64)
-  device_id       Int?
-  endpoint        String   @db.VarChar(120)
-  request_sha256  String   @db.Char(64)
-  response_status Int?     @db.SmallInt
-  response_json   String?  @db.NVarChar(Max)
-  created_at      DateTime @default(dbgenerated("sysutcdatetime()"), map: "DF_api_idempotency_created")
-  expires_at      DateTime
-
-  @@index([expires_at], map: "IX_api_idempotency_expires")
-}
-
-model app_user {
-  user_id                                                        Int                   @id(map: "PK_app_user") @default(autoincrement())
-  user_sub                                                       String                @unique(map: "UQ_app_user_sub") @db.VarChar(64)
-  user_name                                                      String                @db.NVarChar(120)
-  email                                                          String?               @db.VarChar(200)
-  phone                                                          String?               @db.VarChar(30)
-  party_id                                                       Int?
-  preferred_language                                             String                @default("en", map: "DF_app_user_lang") @db.Char(2)
-  is_ng_user                                                     Boolean               @default(true, map: "DF_app_user_is_ng")
-  mfa_required                                                   Boolean               @default(false, map: "DF_app_user_mfa")
-  last_login_at                                                  DateTime?
-  is_active                                                      Boolean               @default(true, map: "DF_app_user_is_active")
-  createdate                                                     DateTime              @default(dbgenerated("sysutcdatetime()"), map: "DF_app_user_createdate")
-  updatedate                                                     DateTime?
-  createdby                                                      String                @db.NVarChar(64)
-  updatedby                                                      String?               @db.NVarChar(64)
-  log_inst                                                       Int                   @default(1, map: "DF_app_user_log_inst")
-  aiva_conversation                                              aiva_conversation[]
-  m_party                                                        m_party?              @relation(fields: [party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_app_user_party")
-  approval_delegation_approval_delegation_from_user_idToapp_user approval_delegation[] @relation("approval_delegation_from_user_idToapp_user")
-  approval_delegation_approval_delegation_to_user_idToapp_user   approval_delegation[] @relation("approval_delegation_to_user_idToapp_user")
-  notification                                                   notification[]
-  portal_invitation                                              portal_invitation[]
-  saved_report                                                   saved_report[]
-  user_site_role                                                 user_site_role[]
-}
-
-model appointment {
-  appointment_id       BigInt         @id(map: "PK_appointment") @default(autoincrement())
-  site_id              Int
-  appointment_no       String         @db.VarChar(30)
-  visit_type_id        Int
-  slot_start           DateTime
-  slot_end             DateTime
-  transporter_party_id Int
-  truck_id             Int?
-  driver_id            Int?
-  release_order_id     BigInt?
-  consignment_id       BigInt?
-  status               String         @default("BOOKED", map: "DF_appointment_status") @db.VarChar(10)
-  truck_visit_id       BigInt?
-  booked_via           String         @default("PORTAL", map: "DF_appointment_via") @db.VarChar(8)
-  cancel_reason        String?        @db.NVarChar(200)
-  createdate           DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_appointment_createdate")
-  updatedate           DateTime?
-  createdby            String         @db.NVarChar(64)
-  updatedby            String?        @db.NVarChar(64)
-  log_inst             Int            @default(1, map: "DF_appointment_log_inst")
-  consignment          consignment?   @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_appointment_consignment")
-  m_driver             m_driver?      @relation(fields: [driver_id], references: [driver_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_appointment_driver")
-  release_order        release_order? @relation(fields: [release_order_id], references: [release_order_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_appointment_release")
-  m_site               m_site         @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_appointment_site")
-  m_party              m_party        @relation(fields: [transporter_party_id], references: [party_id], onUpdate: NoAction, map: "FK_appointment_transporter")
-  m_truck              m_truck?       @relation(fields: [truck_id], references: [truck_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_appointment_truck")
-  truck_visit          truck_visit?   @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_appointment_visit")
-  m_visit_type         m_visit_type   @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_appointment_visit_type")
-
-  @@unique([site_id, appointment_no], map: "UQ_appointment_no")
-}
-
-model approval_delegation {
-  approval_delegation_id                              Int           @id(map: "PK_approval_delegation") @default(autoincrement())
-  from_user_id                                        Int
-  to_user_id                                          Int
-  permission_code                                     String?       @db.VarChar(80)
-  site_id                                             Int?
-  valid_from                                          DateTime
-  valid_to                                            DateTime
-  reason                                              String        @db.NVarChar(200)
-  revoked_at                                          DateTime?
-  createdate                                          DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_approval_delegation_createdate")
-  updatedate                                          DateTime?
-  createdby                                           String        @db.NVarChar(64)
-  updatedby                                           String?       @db.NVarChar(64)
-  log_inst                                            Int           @default(1, map: "DF_approval_delegation_log_inst")
-  app_user_approval_delegation_from_user_idToapp_user app_user      @relation("approval_delegation_from_user_idToapp_user", fields: [from_user_id], references: [user_id], onUpdate: NoAction, map: "FK_ad_from")
-  m_permission                                        m_permission? @relation(fields: [permission_code], references: [permission_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_ad_perm")
-  m_site                                              m_site?       @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ad_site")
-  app_user_approval_delegation_to_user_idToapp_user   app_user      @relation("approval_delegation_to_user_idToapp_user", fields: [to_user_id], references: [user_id], onUpdate: NoAction, map: "FK_ad_to")
-
-  @@index([to_user_id, valid_from, valid_to], map: "IX_ad_to_user")
-}
-
-model approval_request {
-  approval_request_id     BigInt                    @id(map: "PK_approval_request") @default(autoincrement())
-  site_id                 Int?
-  request_no              String                    @unique(map: "UQ_approval_request_no") @db.VarChar(30)
-  permission_code         String                    @db.VarChar(80)
-  entity_name             String                    @db.VarChar(40)
-  entity_id               BigInt
-  summary                 String                    @db.NVarChar(300)
-  reason                  String                    @db.NVarChar(800)
-  amount                  Decimal?                  @db.Decimal(19, 4)
-  amount_currency         String?                   @db.Char(3)
-  payload_json            String?                   @db.NVarChar(Max)
-  levels_required         Int                       @default(1, map: "DF_approval_request_levels") @db.TinyInt
-  current_level           Int                       @default(1, map: "DF_approval_request_level") @db.TinyInt
-  status                  String                    @default("PENDING", map: "DF_approval_request_status") @db.VarChar(10)
-  requested_by_sub        String                    @db.VarChar(64)
-  requested_at            DateTime                  @default(dbgenerated("sysutcdatetime()"), map: "DF_approval_request_at")
-  expires_at              DateTime?
-  decided_at              DateTime?
-  applied_at              DateTime?
-  createdate              DateTime                  @default(dbgenerated("sysutcdatetime()"), map: "DF_approval_request_createdate")
-  updatedate              DateTime?
-  createdby               String                    @db.NVarChar(64)
-  updatedby               String?                   @db.NVarChar(64)
-  log_inst                Int                       @default(1, map: "DF_approval_request_log_inst")
-  aiva_draft_action       aiva_draft_action[]
-  m_currency              m_currency?               @relation(fields: [amount_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_approval_request_currency")
-  m_permission            m_permission              @relation(fields: [permission_code], references: [permission_code], onUpdate: NoAction, map: "FK_approval_request_perm")
-  m_site                  m_site?                   @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_approval_request_site")
-  approval_step           approval_step[]
-  cashier_shift           cashier_shift[]
-  charge                  charge[]
-  disbursement            disbursement[]
-  exception_case          exception_case[]
-  hold                    hold[]
-  invoice                 invoice[]
-  refund                  refund[]
-  release_check           release_check[]
-  release_order           release_order[]
-  release_validity_change release_validity_change[]
-  tariff                  tariff[]
-  visit_checkpoint_event  visit_checkpoint_event[]
-  weighing                weighing[]
-
-  @@index([entity_name, entity_id], map: "IX_approval_request_entity")
-}
-
-model approval_step {
-  approval_step_id    BigInt           @id(map: "PK_approval_step") @default(autoincrement())
-  approval_request_id BigInt
-  level_no            Int              @db.TinyInt
-  decision            String           @db.VarChar(8)
-  decided_by_sub      String           @db.VarChar(64)
-  requested_by_sub    String           @db.VarChar(64)
-  on_behalf_of_sub    String?          @db.VarChar(64)
-  decision_note       String?          @db.NVarChar(500)
-  decided_at          DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_approval_step_at")
-  createdate          DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_approval_step_created")
-  createdby           String           @db.NVarChar(64)
-  approval_request    approval_request @relation(fields: [approval_request_id], references: [approval_request_id], onUpdate: NoAction, map: "FK_approval_step_request")
-
-  @@unique([approval_request_id, level_no], map: "UQ_approval_step_level")
-  @@unique([approval_request_id, decided_by_sub], map: "UQ_approval_step_person")
-}
-
-model audit_log {
-  audit_log_id        BigInt   @id(map: "PK_audit_log") @default(autoincrement())
-  occurred_at         DateTime @default(dbgenerated("sysutcdatetime()"), map: "DF_audit_log_occurred")
-  user_sub            String   @db.VarChar(64)
-  user_name           String?  @db.NVarChar(120)
-  device_id           Int?
-  ip_address          String?  @db.VarChar(45)
-  site_id             Int?
-  entity_name         String   @db.VarChar(60)
-  entity_id           String   @db.VarChar(64)
-  action              String   @db.VarChar(20)
-  reason              String?  @db.NVarChar(500)
-  changes_json        String?  @db.NVarChar(Max)
-  correlation_id      String?  @db.UniqueIdentifier
-  approval_request_id BigInt?
-  source              String   @default("UI", map: "DF_audit_log_source") @db.VarChar(10)
-
-  @@index([entity_name, entity_id, occurred_at], map: "IX_audit_log_entity")
-  @@index([occurred_at], map: "IX_audit_log_time")
-  @@index([user_sub, occurred_at], map: "IX_audit_log_user")
-}
-
-model billable_event {
-  billable_event_id BigInt        @id(map: "PK_billable_event") @default(autoincrement())
-  site_id           Int
-  charge_code_id    Int
-  dedupe_key        String        @unique(map: "UQ_billable_event_dedupe") @db.VarChar(100)
-  unit_stay_id      BigInt?
-  truck_visit_id    BigInt?
-  consignment_id    BigInt?
-  bill_to_party_id  Int?
-  source_entity     String        @db.VarChar(40)
-  source_id         BigInt?
-  service_date      DateTime      @db.Date
-  occurred_at       DateTime
-  quantity          Decimal       @default(1, map: "DF_billable_event_qty") @db.Decimal(12, 3)
-  uom               String        @default("UNIT", map: "DF_billable_event_uom") @db.VarChar(10)
-  day_no            Int?
-  status            String        @default("UNRATED", map: "DF_billable_event_status") @db.VarChar(10)
-  rated_at          DateTime?
-  createdate        DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_billable_event_createdate")
-  updatedate        DateTime?
-  createdby         String        @db.NVarChar(64)
-  updatedby         String?       @db.NVarChar(64)
-  log_inst          Int           @default(1, map: "DF_billable_event_log_inst")
-  m_party           m_party?      @relation(fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_bill_to")
-  m_charge_code     m_charge_code @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_be_charge")
-  consignment       consignment?  @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_consignment")
-  m_site            m_site        @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_be_site")
-  unit_stay         unit_stay?    @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_stay")
-  truck_visit       truck_visit?  @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_visit")
-  charge            charge[]
-}
-
-model cargo_unit {
-  cargo_unit_id    BigInt           @id(map: "PK_cargo_unit") @default(autoincrement())
-  unit_category    String           @db.VarChar(10)
-  unit_no          String           @db.VarChar(40)
-  unit_type_id     Int
-  owner_party_id   Int?
-  identity_rule_id Int?
-  engine_no        String?          @db.VarChar(30)
-  make             String?          @db.NVarChar(40)
-  model            String?          @db.NVarChar(60)
-  model_year       Int?             @db.SmallInt
-  colour           String?          @db.NVarChar(30)
-  tare_kg          Int?
-  max_gross_kg     Int?
-  createdate       DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_cargo_unit_createdate")
-  updatedate       DateTime?
-  createdby        String           @db.NVarChar(64)
-  updatedby        String?          @db.NVarChar(64)
-  log_inst         Int              @default(1, map: "DF_cargo_unit_log_inst")
-  m_party          m_party?         @relation(fields: [owner_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cargo_unit_owner")
-  m_identity_rule  m_identity_rule? @relation(fields: [identity_rule_id], references: [identity_rule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cargo_unit_rule")
-  m_unit_type      m_unit_type      @relation(fields: [unit_type_id], references: [unit_type_id], onUpdate: NoAction, map: "FK_cargo_unit_type")
-  unit_stay        unit_stay[]
-
-  @@unique([unit_category, unit_no], map: "UQ_cargo_unit")
-  @@index([unit_no], map: "IX_cargo_unit_no")
-}
-
-model cashier_shift {
-  cashier_shift_id    BigInt            @id(map: "PK_cashier_shift") @default(autoincrement())
-  site_id             Int
-  cashier_sub         String            @db.VarChar(64)
-  currency            String            @db.Char(3)
-  opened_at           DateTime
-  closed_at           DateTime?
-  opening_float       Decimal           @default(0, map: "DF_cashier_shift_float") @db.Decimal(19, 4)
-  expected_cash       Decimal?          @db.Decimal(19, 4)
-  counted_cash        Decimal?          @db.Decimal(19, 4)
-  difference          Decimal?          @db.Decimal(20, 4)
-  status              String            @default("OPEN", map: "DF_cashier_shift_status") @db.VarChar(10)
-  approval_request_id BigInt?
-  createdate          DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_cashier_shift_createdate")
-  updatedate          DateTime?
-  createdby           String            @db.NVarChar(64)
-  updatedby           String?           @db.NVarChar(64)
-  log_inst            Int               @default(1, map: "DF_cashier_shift_log_inst")
-  approval_request    approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cs_approval")
-  m_currency          m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_cs_currency")
-  m_site              m_site            @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_cs_site")
-  payment             payment[]
-}
-
-model charge {
-  charge_id             BigInt            @id(map: "PK_charge") @default(autoincrement())
-  billable_event_id     BigInt
-  bill_to_party_id      Int
-  tariff_id             Int?
-  tariff_rule_id        Int?
-  tariff_slab_id        Int?
-  currency              String            @db.Char(3)
-  quantity              Decimal           @db.Decimal(12, 3)
-  unit_rate             Decimal           @db.Decimal(19, 6)
-  amount                Decimal           @db.Decimal(19, 4)
-  tax_code_id           Int?
-  tax_rate_pct          Decimal           @default(0, map: "DF_charge_tax_rate") @db.Decimal(6, 3)
-  tax_amount            Decimal           @default(0, map: "DF_charge_tax_amount") @db.Decimal(19, 4)
-  charge_kind           String            @default("NORMAL", map: "DF_charge_kind") @db.VarChar(10)
-  reverses_charge_id    BigInt?
-  approval_request_id   BigInt?
-  status                String            @default("OPEN", map: "DF_charge_status") @db.VarChar(12)
-  rating_correlation_id String?           @db.UniqueIdentifier
-  rated_at              DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_charge_rated")
-  createdate            DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_charge_createdate")
-  updatedate            DateTime?
-  createdby             String            @db.NVarChar(64)
-  updatedby             String?           @db.NVarChar(64)
-  log_inst              Int               @default(1, map: "DF_charge_log_inst")
-  approval_request      approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_approval")
-  m_party               m_party           @relation(fields: [bill_to_party_id], references: [party_id], onUpdate: NoAction, map: "FK_charge_bill_to")
-  m_currency            m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_charge_currency")
-  billable_event        billable_event    @relation(fields: [billable_event_id], references: [billable_event_id], onUpdate: NoAction, map: "FK_charge_event")
-  charge                charge?           @relation("chargeTocharge", fields: [reverses_charge_id], references: [charge_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_reverses")
-  other_charge          charge[]          @relation("chargeTocharge")
-  tariff_rule           tariff_rule?      @relation(fields: [tariff_rule_id], references: [tariff_rule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_rule")
-  tariff_slab           tariff_slab?      @relation(fields: [tariff_slab_id], references: [tariff_slab_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_slab")
-  tariff                tariff?           @relation(fields: [tariff_id], references: [tariff_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_tariff")
-  m_tax_code            m_tax_code?       @relation(fields: [tax_code_id], references: [tax_code_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_tax")
-  invoice_line          invoice_line[]
-
-  @@index([billable_event_id], map: "IX_charge_event")
-}
-
-model consignment {
-  consignment_id                                      BigInt             @id(map: "PK_consignment") @default(autoincrement())
+model approval_requests {
+  approval_request_id                                 Int       @id(map: "PK__approval__AB34D1C8C921A4AF") @default(autoincrement())
   site_id                                             Int
-  ref_type                                            String             @db.VarChar(15)
-  ref_no                                              String             @db.VarChar(40)
-  cargo_regime_id                                     Int
-  vessel_call_id                                      Int?
-  shipping_line_party_id                              Int?
-  consignee_party_id                                  Int?
-  shipper_party_id                                    Int?
-  agent_party_id                                      Int?
-  bill_to_party_id                                    Int?
-  commodity_id                                        Int?
-  cargo_description                                   String?            @db.NVarChar(400)
-  origin_port_id                                      Int?
-  destination_port_id                                 Int?
-  destination_country                                 String?            @db.Char(2)
-  declared_packages                                   Int?
-  declared_weight_kg                                  Decimal?           @db.Decimal(12, 1)
-  units_expected                                      Int                @default(0, map: "DF_consignment_exp")
-  units_received                                      Int                @default(0, map: "DF_consignment_rec")
-  units_delivered                                     Int                @default(0, map: "DF_consignment_del")
-  valid_from                                          DateTime?          @db.Date
-  valid_to                                            DateTime?          @db.Date
-  status                                              String             @default("OPEN", map: "DF_consignment_status") @db.VarChar(10)
-  remarks                                             String?            @db.NVarChar(400)
-  createdate                                          DateTime           @default(dbgenerated("sysutcdatetime()"), map: "DF_consignment_createdate")
-  updatedate                                          DateTime?
-  createdby                                           String             @db.NVarChar(64)
-  updatedby                                           String?            @db.NVarChar(64)
-  log_inst                                            Int                @default(1, map: "DF_consignment_log_inst")
-  appointment                                         appointment[]
-  billable_event                                      billable_event[]
-  m_party_consignment_agent_party_idTom_party         m_party?           @relation("consignment_agent_party_idTom_party", fields: [agent_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_agent")
-  m_party_consignment_bill_to_party_idTom_party       m_party?           @relation("consignment_bill_to_party_idTom_party", fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_bill_to")
-  m_commodity                                         m_commodity?       @relation(fields: [commodity_id], references: [commodity_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_commodity")
-  m_party_consignment_consignee_party_idTom_party     m_party?           @relation("consignment_consignee_party_idTom_party", fields: [consignee_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_consignee")
-  m_country                                           m_country?         @relation(fields: [destination_country], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_dest_country")
-  m_port_consignment_destination_port_idTom_port      m_port?            @relation("consignment_destination_port_idTom_port", fields: [destination_port_id], references: [port_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_destination")
-  m_party_consignment_shipping_line_party_idTom_party m_party?           @relation("consignment_shipping_line_party_idTom_party", fields: [shipping_line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_line")
-  m_port_consignment_origin_port_idTom_port           m_port?            @relation("consignment_origin_port_idTom_port", fields: [origin_port_id], references: [port_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_origin")
-  m_cargo_regime                                      m_cargo_regime     @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onUpdate: NoAction, map: "FK_consignment_regime")
-  m_party_consignment_shipper_party_idTom_party       m_party?           @relation("consignment_shipper_party_idTom_party", fields: [shipper_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_shipper")
-  m_site                                              m_site             @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_consignment_site")
-  vessel_call                                         vessel_call?       @relation(fields: [vessel_call_id], references: [vessel_call_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_vessel_call")
-  consignment_line                                    consignment_line[]
-  customs_ref                                         customs_ref[]
-  disbursement                                        disbursement[]
-  handling_job                                        handling_job[]
-  invoice                                             invoice[]
-  release_order                                       release_order[]
-  service_request                                     service_request[]
-  unit_stay                                           unit_stay[]
-
-  @@unique([site_id, ref_type, ref_no], map: "UQ_consignment_ref")
-  @@index([ref_no], map: "IX_consignment_ref_no")
-}
-
-model consignment_line {
-  consignment_line_id BigInt              @id(map: "PK_consignment_line") @default(autoincrement())
-  consignment_id      BigInt
-  line_no             Int                 @db.SmallInt
-  unit_type_id        Int?
-  unit_grade          String?             @db.Char(1)
-  qty_expected        Decimal             @db.Decimal(12, 3)
-  qty_received        Decimal             @default(0, map: "DF_consignment_line_rec") @db.Decimal(12, 3)
-  qty_delivered       Decimal             @default(0, map: "DF_consignment_line_del") @db.Decimal(12, 3)
-  uom                 String              @default("UNIT", map: "DF_consignment_line_uom") @db.VarChar(10)
-  weight_kg           Decimal?            @db.Decimal(12, 1)
-  description         String?             @db.NVarChar(200)
-  createdate          DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_consignment_line_createdate")
-  updatedate          DateTime?
-  createdby           String              @db.NVarChar(64)
-  updatedby           String?             @db.NVarChar(64)
-  log_inst            Int                 @default(1, map: "DF_consignment_line_log_inst")
-  consignment         consignment         @relation(fields: [consignment_id], references: [consignment_id], onUpdate: NoAction, map: "FK_consignment_line_consignment")
-  m_unit_type         m_unit_type?        @relation(fields: [unit_type_id], references: [unit_type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_line_unit_type")
-  handling_job_line   handling_job_line[]
-
-  @@unique([consignment_id, line_no], map: "UQ_consignment_line")
-}
-
-model customs_ref {
-  customs_ref_id       BigInt             @id(map: "PK_customs_ref") @default(autoincrement())
-  customs_ref_type_id  Int
-  unit_stay_id         BigInt?
-  consignment_id       BigInt?
-  ref_no               String             @db.VarChar(40)
-  ref_date             DateTime?          @db.Date
-  status               String             @default("ACTIVE", map: "DF_customs_ref_status") @db.VarChar(10)
-  valid_to             DateTime?          @db.Date
-  amount               Decimal?           @db.Decimal(19, 4)
-  amount_currency      String?            @db.Char(3)
-  evidence_document_id BigInt?
-  source               String             @default("MANUAL", map: "DF_customs_ref_source") @db.VarChar(10)
-  remarks              String?            @db.NVarChar(400)
-  createdate           DateTime           @default(dbgenerated("sysutcdatetime()"), map: "DF_customs_ref_createdate")
-  updatedate           DateTime?
-  createdby            String             @db.NVarChar(64)
-  updatedby            String?            @db.NVarChar(64)
-  log_inst             Int                @default(1, map: "DF_customs_ref_log_inst")
-  consignment          consignment?       @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_customs_ref_consignment")
-  m_currency           m_currency?        @relation(fields: [amount_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_customs_ref_currency")
-  document             document?          @relation(fields: [evidence_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_customs_ref_doc")
-  unit_stay            unit_stay?         @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_customs_ref_stay")
-  m_customs_ref_type   m_customs_ref_type @relation(fields: [customs_ref_type_id], references: [customs_ref_type_id], onUpdate: NoAction, map: "FK_customs_ref_type")
-
-  @@index([ref_no], map: "IX_customs_ref_no")
-}
-
-model device_read {
-  device_read_id        BigInt               @id(map: "PK_device_read") @default(autoincrement())
-  device_integration_id Int
-  read_kind             String               @db.VarChar(12)
-  read_value            String               @db.VarChar(60)
-  confidence            Decimal?             @db.Decimal(5, 2)
-  image_storage_key     String?              @db.VarChar(400)
-  read_at               DateTime
-  matched_visit_id      BigInt?
-  match_status          String               @default("PENDING", map: "DF_device_read_match") @db.VarChar(10)
-  createdate            DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_device_read_created")
-  m_device_integration  m_device_integration @relation(fields: [device_integration_id], references: [device_integration_id], onUpdate: NoAction, map: "FK_dr_integration")
-  truck_visit           truck_visit?         @relation(fields: [matched_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_dr_visit")
-
-  @@index([device_integration_id, read_at], map: "IX_dr_integration_time")
-}
-
-model disbursement {
-  disbursement_id                                BigInt            @id(map: "PK_disbursement") @default(autoincrement())
-  site_id                                        Int
-  consignment_id                                 BigInt
-  unit_stay_id                                   BigInt?
-  bill_to_party_id                               Int
-  payee_party_id                                 Int?
-  charge_code_id                                 Int
-  description                                    String            @db.NVarChar(300)
-  currency                                       String            @db.Char(3)
-  amount_paid                                    Decimal           @db.Decimal(19, 4)
-  paid_at                                        DateTime          @db.Date
-  payee_receipt_no                               String?           @db.VarChar(40)
-  receipt_document_id                            BigInt?
-  rebill_mode                                    String            @default("AT_COST", map: "DF_disb_mode") @db.VarChar(14)
-  handling_fee                                   Decimal           @default(0, map: "DF_disb_fee") @db.Decimal(19, 4)
-  status                                         String            @default("RECORDED", map: "DF_disb_status") @db.VarChar(12)
-  write_off_approval_request_id                  BigInt?
-  createdate                                     DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_disbursement_createdate")
-  updatedate                                     DateTime?
-  createdby                                      String            @db.NVarChar(64)
-  updatedby                                      String?           @db.NVarChar(64)
-  log_inst                                       Int               @default(1, map: "DF_disbursement_log_inst")
-  m_party_disbursement_bill_to_party_idTom_party m_party           @relation("disbursement_bill_to_party_idTom_party", fields: [bill_to_party_id], references: [party_id], onUpdate: NoAction, map: "FK_disb_bill_to")
-  m_charge_code                                  m_charge_code     @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_disb_charge")
-  consignment                                    consignment       @relation(fields: [consignment_id], references: [consignment_id], onUpdate: NoAction, map: "FK_disb_consignment")
-  m_currency                                     m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_disb_currency")
-  document                                       document?         @relation(fields: [receipt_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_doc")
-  m_party_disbursement_payee_party_idTom_party   m_party?          @relation("disbursement_payee_party_idTom_party", fields: [payee_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_payee")
-  m_site                                         m_site            @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_disb_site")
-  unit_stay                                      unit_stay?        @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_stay")
-  approval_request                               approval_request? @relation(fields: [write_off_approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_writeoff")
-  invoice_line                                   invoice_line[]
-
-  @@index([consignment_id], map: "IX_disb_consignment")
-}
-
-model document {
-  document_id                                     BigInt                @id(map: "PK_document") @default(autoincrement())
-  document_type_id                                Int
-  site_id                                         Int?
-  entity_name                                     String                @db.VarChar(40)
-  entity_id                                       BigInt
-  file_name                                       String                @db.NVarChar(260)
-  content_type                                    String                @db.VarChar(100)
-  size_bytes                                      BigInt
-  storage_key                                     String                @db.VarChar(400)
-  sha256                                          String                @db.Char(64)
-  version_no                                      Int                   @default(1, map: "DF_document_version")
-  supersedes_document_id                          BigInt?
-  status                                          String                @default("ACTIVE", map: "DF_document_status") @db.VarChar(20)
-  scan_status                                     String                @default("PENDING", map: "DF_document_scan") @db.VarChar(10)
-  captured_at                                     DateTime?
-  captured_device_id                              Int?
-  expiry_date                                     DateTime?             @db.Date
-  approved_by                                     String?               @db.NVarChar(64)
-  approved_at                                     DateTime?
-  deleted_reason                                  String?               @db.NVarChar(200)
-  createdate                                      DateTime              @default(dbgenerated("sysutcdatetime()"), map: "DF_document_createdate")
-  updatedate                                      DateTime?
-  createdby                                       String                @db.NVarChar(64)
-  updatedby                                       String?               @db.NVarChar(64)
-  log_inst                                        Int                   @default(1, map: "DF_document_log_inst")
-  customs_ref                                     customs_ref[]
-  disbursement                                    disbursement[]
-  m_device                                        m_device?             @relation(fields: [captured_device_id], references: [device_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_document_device")
-  m_site                                          m_site?               @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_document_site")
-  document                                        document?             @relation("documentTodocument", fields: [supersedes_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_document_supersedes")
-  other_document                                  document[]            @relation("documentTodocument")
-  m_document_type                                 m_document_type       @relation(fields: [document_type_id], references: [document_type_id], onUpdate: NoAction, map: "FK_document_type")
-  hold_hold_lift_evidence_document_idTodocument   hold[]                @relation("hold_lift_evidence_document_idTodocument")
-  hold_hold_placed_evidence_document_idTodocument hold[]                @relation("hold_placed_evidence_document_idTodocument")
-  integration_message                             integration_message[]
-  manifest                                        manifest[]
-  payment                                         payment[]
-  report_run                                      report_run[]
-  visit_unit_txn                                  visit_unit_txn[]
-
-  @@index([entity_name, entity_id], map: "IX_document_entity")
-}
-
-model dwell_prediction {
-  dwell_prediction_id BigInt           @id(map: "PK_dwell_prediction") @default(autoincrement())
-  unit_stay_id        BigInt
-  ml_model_version_id Int
-  predicted_exit_date DateTime         @db.Date
-  p50_days            Decimal          @db.Decimal(6, 2)
-  p90_days            Decimal?         @db.Decimal(6, 2)
-  features_json       String?          @db.NVarChar(Max)
-  predicted_at        DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_dwell_pred_at")
-  ml_model_version    ml_model_version @relation(fields: [ml_model_version_id], references: [ml_model_version_id], onUpdate: NoAction, map: "FK_dp_model")
-  unit_stay           unit_stay        @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_dp_stay")
-
-  @@index([unit_stay_id, predicted_at], map: "IX_dp_stay")
-}
-
-model exam {
-  exam_id          BigInt           @id(map: "PK_exam") @default(autoincrement())
-  unit_stay_id     BigInt
-  exam_type        String           @db.VarChar(10)
-  notice_ref       String?          @db.VarChar(40)
-  authority        String           @default("CUSTOMS", map: "DF_exam_authority") @db.VarChar(12)
-  status           String           @default("REQUESTED", map: "DF_exam_status") @db.VarChar(12)
-  scheduled_at     DateTime?
-  exam_location_id Int?
-  move_order_id    BigInt?
-  started_at       DateTime?
-  completed_at     DateTime?
-  result           String?          @db.VarChar(12)
-  officers_present String?          @db.NVarChar(300)
-  seal_removed     String?          @db.VarChar(30)
-  seal_applied     String?          @db.VarChar(30)
-  remarks          String?          @db.NVarChar(800)
-  createdate       DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_exam_createdate")
-  updatedate       DateTime?
-  createdby        String           @db.NVarChar(64)
-  updatedby        String?          @db.NVarChar(64)
-  log_inst         Int              @default(1, map: "DF_exam_log_inst")
-  m_yard_location  m_yard_location? @relation(fields: [exam_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_exam_location")
-  move_order       move_order?      @relation(fields: [move_order_id], references: [move_order_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_exam_move_order")
-  unit_stay        unit_stay        @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_exam_stay")
-
-  @@index([unit_stay_id], map: "IX_exam_stay")
-}
-
-model exception_case {
-  exception_case_id                           BigInt              @id(map: "PK_exception_case") @default(autoincrement())
-  site_id                                     Int
-  case_no                                     String              @db.VarChar(30)
-  exception_type_id                           Int
-  severity                                    String              @db.VarChar(8)
-  status                                      String              @default("OPEN", map: "DF_exception_case_status") @db.VarChar(12)
-  title                                       String              @db.NVarChar(200)
-  description                                 String?
-  entity_name                                 String              @db.VarChar(40)
-  entity_id                                   BigInt
-  unit_stay_id                                BigInt?
-  truck_visit_id                              BigInt?
-  raised_by                                   String              @db.VarChar(64)
-  raised_at                                   DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_exception_case_raised")
-  assigned_role_id                            Int?
-  assigned_to_sub                             String?             @db.VarChar(64)
-  due_at                                      DateTime
-  escalation_level                            Int                 @default(0, map: "DF_exception_case_esc") @db.TinyInt
-  escalated_at                                DateTime?
-  hold_id                                     BigInt?
-  approval_request_id                         BigInt?
-  resolution_code                             String?             @db.VarChar(20)
-  resolution_note                             String?
-  resolved_at                                 DateTime?
-  resolved_by_sub                             String?             @db.VarChar(64)
-  closed_at                                   DateTime?
-  closed_by_sub                               String?             @db.VarChar(64)
-  reopened_count                              Int                 @default(0, map: "DF_exception_case_reopen") @db.TinyInt
-  createdate                                  DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_exception_case_createdate")
-  updatedate                                  DateTime?
-  createdby                                   String              @db.NVarChar(64)
-  updatedby                                   String?             @db.NVarChar(64)
-  log_inst                                    Int                 @default(1, map: "DF_exception_case_log_inst")
-  approval_request                            approval_request?   @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_approval")
-  hold_exception_case_hold_idTohold           hold?               @relation("exception_case_hold_idTohold", fields: [hold_id], references: [hold_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_hold")
-  m_resolution_code                           m_resolution_code?  @relation(fields: [resolution_code], references: [resolution_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_resolution")
-  m_role                                      m_role?             @relation(fields: [assigned_role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_role")
-  m_site                                      m_site              @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_ec_site")
-  unit_stay                                   unit_stay?          @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_stay")
-  m_exception_type                            m_exception_type    @relation(fields: [exception_type_id], references: [exception_type_id], onUpdate: NoAction, map: "FK_ec_type")
-  truck_visit                                 truck_visit?        @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_visit")
-  exception_comment                           exception_comment[]
-  hold_hold_exception_case_idToexception_case hold[]              @relation("hold_exception_case_idToexception_case")
-
-  @@unique([site_id, case_no], map: "UQ_exception_case_no")
-  @@index([entity_name, entity_id], map: "IX_ec_entity")
-}
-
-model exception_comment {
-  exception_comment_id BigInt         @id(map: "PK_exception_comment") @default(autoincrement())
-  exception_case_id    BigInt
-  comment_kind         String         @default("COMMENT", map: "DF_exception_comment_kind") @db.VarChar(10)
-  comment_text         String         @db.NVarChar(2000)
-  createdate           DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_exception_comment_created")
-  createdby            String         @db.NVarChar(64)
-  exception_case       exception_case @relation(fields: [exception_case_id], references: [exception_case_id], onUpdate: NoAction, map: "FK_exception_comment_case")
-
-  @@index([exception_case_id, createdate], map: "IX_exception_comment_case")
-}
-
-model fiscal_receipt {
-  fiscal_receipt_id BigInt    @id(map: "PK_fiscal_receipt") @default(autoincrement())
-  invoice_id        BigInt    @unique(map: "UQ_fiscal_receipt_invoice")
-  provider          String    @db.VarChar(30)
-  status            String    @default("PENDING", map: "DF_fiscal_receipt_status") @db.VarChar(8)
-  receipt_no        String?   @db.VarChar(40)
-  verification_code String?   @db.VarChar(80)
-  verification_url  String?   @db.VarChar(300)
-  issued_at         DateTime?
-  attempts          Int       @default(0, map: "DF_fiscal_receipt_attempts") @db.SmallInt
-  next_attempt_at   DateTime?
-  last_error        String?
-  request_json      String?   @db.NVarChar(Max)
-  response_json     String?   @db.NVarChar(Max)
-  createdate        DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_fiscal_receipt_createdate")
-  updatedate        DateTime?
-  createdby         String    @db.NVarChar(64)
-  updatedby         String?   @db.NVarChar(64)
-  log_inst          Int       @default(1, map: "DF_fiscal_receipt_log_inst")
-  invoice           invoice   @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_fiscal_receipt_invoice")
-}
-
-model gl_posting {
-  gl_posting_id   BigInt        @id(map: "PK_gl_posting") @default(autoincrement())
-  company_id      Int
-  source_entity   String        @db.VarChar(14)
-  source_id       BigInt
-  destination     String        @db.VarChar(12)
-  posting_date    DateTime      @db.Date
-  status          String        @default("PENDING", map: "DF_gl_posting_status") @db.VarChar(8)
-  journal_json    String        @db.NVarChar(Max)
-  external_ref    String?       @db.VarChar(60)
-  outbox_event_id BigInt?
-  attempts        Int           @default(0, map: "DF_gl_posting_attempts") @db.SmallInt
-  last_error      String?
-  posted_at       DateTime?
-  createdate      DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_gl_posting_createdate")
-  updatedate      DateTime?
-  createdby       String        @db.NVarChar(64)
-  updatedby       String?       @db.NVarChar(64)
-  log_inst        Int           @default(1, map: "DF_gl_posting_log_inst")
-  m_company       m_company     @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_gl_posting_company")
-  outbox_event    outbox_event? @relation(fields: [outbox_event_id], references: [outbox_event_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_gl_posting_outbox")
-
-  @@unique([source_entity, source_id, destination], map: "UQ_gl_posting")
-}
-
-model handling_job {
-  handling_job_id      BigInt              @id(map: "PK_handling_job") @default(autoincrement())
-  site_id              Int
-  job_no               String              @db.VarChar(30)
-  job_kind             String              @db.VarChar(10)
-  container_stay_id    BigInt
-  consignment_id       BigInt?
-  work_location_id     Int?
-  status               String              @default("PLANNED", map: "DF_handling_job_status") @db.VarChar(12)
-  planned_at           DateTime?
-  started_at           DateTime?
-  completed_at         DateTime?
-  supervisor_sub       String?             @db.VarChar(64)
-  labour_contractor_id Int?
-  labour_count         Int?                @db.SmallInt
-  equipment_id         Int?
-  seal_removed         String?             @db.VarChar(30)
-  seal_applied         String?             @db.VarChar(30)
-  customs_officer_name String?             @db.NVarChar(120)
-  remarks              String?             @db.NVarChar(800)
-  approved_by_sub      String?             @db.VarChar(64)
-  approved_at          DateTime?
-  createdate           DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_handling_job_createdate")
-  updatedate           DateTime?
-  createdby            String              @db.NVarChar(64)
-  updatedby            String?             @db.NVarChar(64)
-  log_inst             Int                 @default(1, map: "DF_handling_job_log_inst")
-  consignment          consignment?        @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_consignment")
-  unit_stay            unit_stay           @relation(fields: [container_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_hj_container")
-  m_equipment          m_equipment?        @relation(fields: [equipment_id], references: [equipment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_equipment")
-  labour_contractor    labour_contractor?  @relation(fields: [labour_contractor_id], references: [labour_contractor_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_labour")
-  m_yard_location      m_yard_location?    @relation(fields: [work_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_location")
-  m_site               m_site              @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_hj_site")
-  handling_job_line    handling_job_line[]
-
-  @@unique([site_id, job_no], map: "UQ_handling_job_no")
-  @@index([container_stay_id], map: "IX_hj_container")
-}
-
-model handling_job_line {
-  handling_job_line_id BigInt            @id(map: "PK_handling_job_line") @default(autoincrement())
-  handling_job_id      BigInt
-  line_no              Int               @db.SmallInt
-  lot_stay_id          BigInt?
-  consignment_line_id  BigInt?
-  marks_numbers        String?           @db.NVarChar(200)
-  description          String?           @db.NVarChar(300)
-  packages_declared    Int?
-  packages_counted     Int
-  package_type         String?           @db.VarChar(10)
-  weight_kg            Decimal?          @db.Decimal(12, 1)
-  volume_cbm           Decimal?          @db.Decimal(10, 3)
-  short_qty            Int               @default(0, map: "DF_hjl_short")
-  excess_qty           Int               @default(0, map: "DF_hjl_excess")
-  damaged_qty          Int               @default(0, map: "DF_hjl_damaged")
-  damage_note          String?           @db.NVarChar(300)
-  createdate           DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_handling_job_line_createdate")
-  updatedate           DateTime?
-  createdby            String            @db.NVarChar(64)
-  updatedby            String?           @db.NVarChar(64)
-  log_inst             Int               @default(1, map: "DF_handling_job_line_log_inst")
-  consignment_line     consignment_line? @relation(fields: [consignment_line_id], references: [consignment_line_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hjl_cline")
-  handling_job         handling_job      @relation(fields: [handling_job_id], references: [handling_job_id], onUpdate: NoAction, map: "FK_hjl_job")
-  unit_stay            unit_stay?        @relation(fields: [lot_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hjl_lot")
-
-  @@unique([handling_job_id, line_no], map: "UQ_handling_job_line")
-}
-
-model hold {
-  hold_id                                               BigInt            @id(map: "PK_hold") @default(autoincrement())
-  unit_stay_id                                          BigInt
-  hold_type_id                                          Int
-  status                                                String            @default("ACTIVE", map: "DF_hold_status") @db.VarChar(8)
-  authority_ref                                         String?           @db.VarChar(60)
-  reason                                                String            @db.NVarChar(500)
-  placed_at                                             DateTime
-  placed_by_sub                                         String            @db.VarChar(64)
-  placed_evidence_document_id                           BigInt?
-  exception_case_id                                     BigInt?
-  lift_approval_request_id                              BigInt?
-  lifted_at                                             DateTime?
-  lifted_by_sub                                         String?           @db.VarChar(64)
-  lift_reason                                           String?           @db.NVarChar(500)
-  lift_evidence_document_id                             BigInt?
-  createdate                                            DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_hold_createdate")
-  updatedate                                            DateTime?
-  createdby                                             String            @db.NVarChar(64)
-  updatedby                                             String?           @db.NVarChar(64)
-  log_inst                                              Int               @default(1, map: "DF_hold_log_inst")
-  exception_case_exception_case_hold_idTohold           exception_case[]  @relation("exception_case_hold_idTohold")
-  exception_case_hold_exception_case_idToexception_case exception_case?   @relation("hold_exception_case_idToexception_case", fields: [exception_case_id], references: [exception_case_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hold_exception_case")
-  approval_request                                      approval_request? @relation(fields: [lift_approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hold_lift_approval")
-  document_hold_lift_evidence_document_idTodocument     document?         @relation("hold_lift_evidence_document_idTodocument", fields: [lift_evidence_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hold_lift_doc")
-  document_hold_placed_evidence_document_idTodocument   document?         @relation("hold_placed_evidence_document_idTodocument", fields: [placed_evidence_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hold_placed_doc")
-  unit_stay                                             unit_stay         @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_hold_stay")
-  m_hold_type                                           m_hold_type       @relation(fields: [hold_type_id], references: [hold_type_id], onUpdate: NoAction, map: "FK_hold_type")
-}
-
-model inspection {
-  inspection_id          BigInt                @id(map: "PK_inspection") @default(autoincrement())
-  unit_stay_id           BigInt
-  inspection_template_id Int
-  inspection_kind        String                @db.VarChar(12)
-  truck_visit_id         BigInt?
-  status                 String                @default("IN_PROGRESS", map: "DF_inspection_status") @db.VarChar(12)
-  overall_condition      String?               @db.VarChar(12)
-  odometer_km            Int?
-  fuel_level             String?               @db.VarChar(4)
-  battery_ok             Boolean?
-  personal_effects       String?               @db.NVarChar(400)
-  remarks                String?               @db.NVarChar(800)
-  started_at             DateTime
-  completed_at           DateTime?
-  inspector_sub          String                @db.VarChar(64)
-  approved_by            String?               @db.NVarChar(64)
-  approved_at            DateTime?
-  device_id              Int?
-  client_txn_id          String?               @db.UniqueIdentifier
-  createdate             DateTime              @default(dbgenerated("sysutcdatetime()"), map: "DF_inspection_createdate")
-  updatedate             DateTime?
-  createdby              String                @db.NVarChar(64)
-  updatedby              String?               @db.NVarChar(64)
-  log_inst               Int                   @default(1, map: "DF_inspection_log_inst")
-  m_device               m_device?             @relation(fields: [device_id], references: [device_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_inspection_device")
-  unit_stay              unit_stay             @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_inspection_stay")
-  m_inspection_template  m_inspection_template @relation(fields: [inspection_template_id], references: [inspection_template_id], onUpdate: NoAction, map: "FK_inspection_template")
-  truck_visit            truck_visit?          @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_inspection_visit")
-  inspection_finding     inspection_finding[]
-  inspection_result      inspection_result[]
-  repair_estimate        repair_estimate[]
-
-  @@index([unit_stay_id, started_at], map: "IX_inspection_stay")
-}
-
-model inspection_finding {
-  inspection_finding_id BigInt                 @id(map: "PK_inspection_finding") @default(autoincrement())
-  inspection_id         BigInt
-  area                  String                 @db.VarChar(15)
-  damage_code_id        Int
-  severity              String                 @db.VarChar(10)
-  location_detail       String?                @db.NVarChar(100)
-  size_cm               String?                @db.VarChar(20)
-  description           String?                @db.NVarChar(400)
-  needs_repair          Boolean                @default(false, map: "DF_if_repair")
-  is_preexisting        Boolean                @default(false, map: "DF_if_preexist")
-  createdate            DateTime               @default(dbgenerated("sysutcdatetime()"), map: "DF_inspection_finding_createdate")
-  updatedate            DateTime?
-  createdby             String                 @db.NVarChar(64)
-  updatedby             String?                @db.NVarChar(64)
-  log_inst              Int                    @default(1, map: "DF_inspection_finding_log_inst")
-  m_damage_code         m_damage_code          @relation(fields: [damage_code_id], references: [damage_code_id], onUpdate: NoAction, map: "FK_if_damage")
-  inspection            inspection             @relation(fields: [inspection_id], references: [inspection_id], onUpdate: NoAction, map: "FK_if_inspection")
-  repair_estimate_line  repair_estimate_line[]
-
-  @@index([inspection_id], map: "IX_inspection_finding_insp")
-}
-
-model inspection_result {
-  inspection_id      BigInt
-  inspection_item_id Int
-  result_value       String?           @db.NVarChar(100)
-  is_ok              Boolean?
-  createdate         DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_inspection_result_createdate")
-  updatedate         DateTime?
-  createdby          String            @db.NVarChar(64)
-  updatedby          String?           @db.NVarChar(64)
-  log_inst           Int               @default(1, map: "DF_inspection_result_log_inst")
-  inspection         inspection        @relation(fields: [inspection_id], references: [inspection_id], onUpdate: NoAction, map: "FK_inspection_result_insp")
-  m_inspection_item  m_inspection_item @relation(fields: [inspection_item_id], references: [inspection_item_id], onUpdate: NoAction, map: "FK_inspection_result_item")
-
-  @@id([inspection_id, inspection_item_id], map: "PK_inspection_result")
-}
-
-model integration_message {
-  integration_message_id BigInt    @id(map: "PK_integration_message") @default(autoincrement())
-  partner_system         String    @db.VarChar(14)
-  partner_party_id       Int?
-  direction              String    @db.VarChar(3)
-  message_type           String    @db.VarChar(20)
-  format                 String    @db.VarChar(10)
-  correlation_ref        String?   @db.VarChar(80)
-  related_entity         String?   @db.VarChar(40)
-  related_id             BigInt?
-  status                 String    @default("PENDING", map: "DF_integration_message_status") @db.VarChar(10)
-  payload                String?   @db.NVarChar(Max)
-  document_id            BigInt?
-  attempts               Int       @default(0, map: "DF_integration_message_attempts") @db.SmallInt
-  next_attempt_at        DateTime?
-  last_error             String?
-  processed_at           DateTime?
-  createdate             DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_integration_message_created")
-  updatedate             DateTime?
-  document               document? @relation(fields: [document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_im_document")
-  m_party                m_party?  @relation(fields: [partner_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_im_party")
-
-  @@index([related_entity, related_id], map: "IX_im_related")
-}
-
-model invoice {
-  invoice_id                                         BigInt                    @id(map: "PK_invoice") @default(autoincrement())
-  company_id                                         Int
-  site_id                                            Int
-  doc_kind                                           String                    @db.VarChar(12)
-  invoice_no                                         String?                   @db.VarChar(30)
-  status                                             String                    @default("DRAFT", map: "DF_invoice_status") @db.VarChar(10)
-  bill_to_party_id                                   Int
-  consignment_id                                     BigInt?
-  release_order_id                                   BigInt?
-  currency                                           String                    @db.Char(3)
-  base_currency                                      String                    @db.Char(3)
-  exchange_rate                                      Decimal                   @default(1, map: "DF_invoice_fx") @db.Decimal(19, 8)
-  exchange_rate_date                                 DateTime?                 @db.Date
-  invoice_date                                       DateTime                  @db.Date
-  due_date                                           DateTime?                 @db.Date
-  service_to_date                                    DateTime?                 @db.Date
-  subtotal                                           Decimal                   @default(0, map: "DF_invoice_subtotal") @db.Decimal(19, 4)
-  tax_total                                          Decimal                   @default(0, map: "DF_invoice_tax") @db.Decimal(19, 4)
-  total                                              Decimal                   @default(0, map: "DF_invoice_total") @db.Decimal(19, 4)
-  total_base                                         Decimal                   @default(0, map: "DF_invoice_total_base") @db.Decimal(19, 4)
-  tax_total_base                                     Decimal                   @default(0, map: "DF_invoice_tax_base") @db.Decimal(19, 4)
-  amount_paid                                        Decimal                   @default(0, map: "DF_invoice_paid") @db.Decimal(19, 4)
-  amount_credited                                    Decimal                   @default(0, map: "DF_invoice_credited") @db.Decimal(19, 4)
-  balance                                            Decimal?                  @db.Decimal(21, 4)
-  proforma_invoice_id                                BigInt?
-  original_invoice_id                                BigInt?
-  approval_request_id                                BigInt?
-  reason                                             String?                   @db.NVarChar(400)
-  accounting_period_id                               Int?
-  issued_at                                          DateTime?
-  posted_at                                          DateTime?
-  cancelled_at                                       DateTime?
-  cancel_reason                                      String?                   @db.NVarChar(300)
-  createdate                                         DateTime                  @default(dbgenerated("sysutcdatetime()"), map: "DF_invoice_createdate")
-  updatedate                                         DateTime?
-  createdby                                          String                    @db.NVarChar(64)
-  updatedby                                          String?                   @db.NVarChar(64)
-  log_inst                                           Int                       @default(1, map: "DF_invoice_log_inst")
-  fiscal_receipt                                     fiscal_receipt?
-  approval_request                                   approval_request?         @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_approval")
-  m_currency_invoice_base_currencyTom_currency       m_currency                @relation("invoice_base_currencyTom_currency", fields: [base_currency], references: [currency_code], onUpdate: NoAction, map: "FK_invoice_base_currency")
-  m_company                                          m_company                 @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_invoice_company")
-  consignment                                        consignment?              @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_consignment")
-  m_currency_invoice_currencyTom_currency            m_currency                @relation("invoice_currencyTom_currency", fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_invoice_currency")
-  invoice_invoice_original_invoice_idToinvoice       invoice?                  @relation("invoice_original_invoice_idToinvoice", fields: [original_invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_original")
-  other_invoice_invoice_original_invoice_idToinvoice invoice[]                 @relation("invoice_original_invoice_idToinvoice")
-  m_party                                            m_party                   @relation(fields: [bill_to_party_id], references: [party_id], onUpdate: NoAction, map: "FK_invoice_party")
-  accounting_period                                  accounting_period?        @relation(fields: [accounting_period_id], references: [accounting_period_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_period")
-  invoice_invoice_proforma_invoice_idToinvoice       invoice?                  @relation("invoice_proforma_invoice_idToinvoice", fields: [proforma_invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_proforma")
-  other_invoice_invoice_proforma_invoice_idToinvoice invoice[]                 @relation("invoice_proforma_invoice_idToinvoice")
-  release_order                                      release_order?            @relation(fields: [release_order_id], references: [release_order_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_release")
-  m_site                                             m_site                    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_invoice_site")
-  invoice_line                                       invoice_line[]
-  payment_allocation                                 payment_allocation[]
-  release_validity_change                            release_validity_change[]
-
-  @@index([company_id, invoice_date], map: "IX_invoice_date")
+  requested_by_user_id                                Int
+  decided_by_user_id                                  Int?
+  request_no                                          String    @unique(map: "UQ__approval__18D3F2FD472531DD") @db.NVarChar(50)
+  permission_code                                     String    @db.NVarChar(100)
+  entity_name                                         String    @db.NVarChar(50)
+  entity_id                                           Int
+  requested_amount                                    Decimal?  @db.Decimal(18, 2)
+  currency                                            String?   @default("USD", map: "DF__approval___curre__5AD97420") @db.NVarChar(5)
+  status                                              String?   @default("PENDING", map: "DF__approval___statu__5BCD9859") @db.NVarChar(30)
+  requested_at                                        DateTime? @default(dbgenerated("sysutcdatetime()"), map: "DF__approval___reque__5CC1BC92")
+  decided_at                                          DateTime?
+  decision_notes                                      String?   @db.NVarChar(500)
+  users_approval_requests_decided_by_user_idTousers   users?    @relation("approval_requests_decided_by_user_idTousers", fields: [decided_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_approval_requests_decided_by")
+  users_approval_requests_requested_by_user_idTousers users     @relation("approval_requests_requested_by_user_idTousers", fields: [requested_by_user_id], references: [user_id], onUpdate: NoAction, map: "FK_approval_requests_requested_by")
+  sites                                               sites     @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_approval_requests_sites")
 }
 
 model invoice_line {
@@ -1306,20 +325,13 @@ model m_checkpoint {
   @@unique([site_id, checkpoint_code], map: "UQ_m_checkpoint_code")
 }
 
-model m_commodity {
-  commodity_id   Int           @id(map: "PK_m_commodity") @default(autoincrement())
-  commodity_code String        @unique(map: "UQ_m_commodity_code") @db.VarChar(20)
-  commodity_name String        @db.NVarChar(120)
-  hs_code        String?       @db.VarChar(12)
-  is_hazardous   Boolean       @default(false, map: "DF_m_commodity_haz")
-  is_active      Boolean       @default(true, map: "DF_m_commodity_is_active")
-  createdate     DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_m_commodity_createdate")
-  updatedate     DateTime?
-  createdby      String        @db.NVarChar(64)
-  updatedby      String?       @db.NVarChar(64)
-  log_inst       Int           @default(1, map: "DF_m_commodity_log_inst")
-  consignment    consignment[]
-  unit_stay      unit_stay[]
+model commodities {
+  commodity_id   Int      @id(map: "PK__commodit__4BD0F147F581FAFA") @default(autoincrement())
+  commodity_code String   @unique(map: "UQ__commodit__6C0BFFF3EDDB915A") @db.NVarChar(30)
+  commodity_name String   @db.NVarChar(100)
+  hs_code        String?  @db.NVarChar(30)
+  is_hazardous   Boolean? @default(false, map: "DF__commoditi__is_ha__48EFCE0F")
+  is_active      Boolean? @default(true, map: "DF__commoditi__is_ac__49E3F248")
 }
 
 model m_company {
@@ -1360,145 +372,32 @@ model m_company {
   tariff            tariff[]
 }
 
-model m_country {
-  country_code   String           @id(map: "PK_m_country") @db.Char(2)
-  country_name   String           @db.NVarChar(100)
-  is_active      Boolean          @default(true, map: "DF_m_country_is_active")
-  createdate     DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_m_country_createdate")
-  updatedate     DateTime?
-  createdby      String           @db.NVarChar(64)
-  updatedby      String?          @db.NVarChar(64)
-  log_inst       Int              @default(1, map: "DF_m_country_log_inst")
-  consignment    consignment[]
-  m_calendar     m_calendar[]
-  m_company      m_company[]
-  m_country_pack m_country_pack[]
-  m_driver       m_driver[]
-  m_party        m_party[]
-  m_port         m_port[]
-  m_site         m_site[]
-  m_tax_code     m_tax_code[]
-  m_truck        m_truck[]
-  m_vessel       m_vessel[]
-  unit_stay      unit_stay[]
-}
-
-model m_country_pack {
-  country_pack_id    Int                  @id(map: "PK_m_country_pack") @default(autoincrement())
-  pack_code          String               @unique(map: "UQ_m_country_pack_code") @db.VarChar(20)
-  pack_name          String               @db.NVarChar(100)
-  country_code       String               @db.Char(2)
-  pack_version       String               @db.VarChar(20)
-  is_active          Boolean              @default(true, map: "DF_m_country_pack_is_active")
-  createdate         DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_m_country_pack_createdate")
-  updatedate         DateTime?
-  createdby          String               @db.NVarChar(64)
-  updatedby          String?              @db.NVarChar(64)
-  log_inst           Int                  @default(1, map: "DF_m_country_pack_log_inst")
-  m_cargo_regime     m_cargo_regime[]
-  m_company          m_company[]
-  m_country          m_country            @relation(fields: [country_code], references: [country_code], onUpdate: NoAction, map: "FK_m_country_pack_country")
-  m_customs_ref_type m_customs_ref_type[]
-  m_hold_type        m_hold_type[]
-}
-
-model m_currency {
-  currency_code                                             String              @id(map: "PK_m_currency") @db.Char(3)
-  currency_name                                             String              @db.NVarChar(60)
-  minor_units                                               Int                 @default(2, map: "DF_m_currency_minor_units") @db.TinyInt
-  is_active                                                 Boolean             @default(true, map: "DF_m_currency_is_active")
-  createdate                                                DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_m_currency_createdate")
-  updatedate                                                DateTime?
-  createdby                                                 String              @db.NVarChar(64)
-  updatedby                                                 String?             @db.NVarChar(64)
-  log_inst                                                  Int                 @default(1, map: "DF_m_currency_log_inst")
-  approval_request                                          approval_request[]
-  cashier_shift                                             cashier_shift[]
-  charge                                                    charge[]
-  customs_ref                                               customs_ref[]
-  disbursement                                              disbursement[]
-  invoice_invoice_base_currencyTom_currency                 invoice[]           @relation("invoice_base_currencyTom_currency")
-  invoice_invoice_currencyTom_currency                      invoice[]           @relation("invoice_currencyTom_currency")
-  labour_contractor                                         labour_contractor[]
-  m_approval_policy                                         m_approval_policy[]
-  m_company                                                 m_company[]
-  m_exchange_rate_m_exchange_rate_from_currencyTom_currency m_exchange_rate[]   @relation("m_exchange_rate_from_currencyTom_currency")
-  m_exchange_rate_m_exchange_rate_to_currencyTom_currency   m_exchange_rate[]   @relation("m_exchange_rate_to_currencyTom_currency")
-  m_party_m_party_credit_currencyTom_currency               m_party[]           @relation("m_party_credit_currencyTom_currency")
-  m_party_m_party_default_currencyTom_currency              m_party[]           @relation("m_party_default_currencyTom_currency")
-  m_payment_channel                                         m_payment_channel[]
-  m_role_permission                                         m_role_permission[]
-  payment                                                   payment[]
-  refund                                                    refund[]
-  repair_estimate                                           repair_estimate[]
-  tariff                                                    tariff[]
-}
-
-model m_customs_ref_type {
-  customs_ref_type_id  Int                    @id(map: "PK_m_customs_ref_type") @default(autoincrement())
-  country_pack_id      Int
-  ref_type_code        String                 @db.VarChar(20)
-  ref_type_name        String                 @db.NVarChar(100)
-  number_pattern       String?                @db.NVarChar(200)
-  has_validity         Boolean                @default(false, map: "DF_m_crt_validity")
-  has_amount           Boolean                @default(false, map: "DF_m_crt_amount")
-  evidence_doc_type_id Int?
-  sets_customs_status  String?                @db.VarChar(12)
-  is_active            Boolean                @default(true, map: "DF_m_crt_active")
-  createdate           DateTime               @default(dbgenerated("sysutcdatetime()"), map: "DF_m_customs_ref_type_createdate")
-  updatedate           DateTime?
-  createdby            String                 @db.NVarChar(64)
-  updatedby            String?                @db.NVarChar(64)
-  log_inst             Int                    @default(1, map: "DF_m_customs_ref_type_log_inst")
-  customs_ref          customs_ref[]
-  m_document_type      m_document_type?       @relation(fields: [evidence_doc_type_id], references: [document_type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_crt_doc")
-  m_country_pack       m_country_pack         @relation(fields: [country_pack_id], references: [country_pack_id], onUpdate: NoAction, map: "FK_m_crt_pack")
-  m_regime_customs_ref m_regime_customs_ref[]
-
-  @@unique([country_pack_id, ref_type_code], map: "UQ_m_customs_ref_type")
-}
-
-model m_damage_code {
-  damage_code_id     Int                  @id(map: "PK_m_damage_code") @default(autoincrement())
-  damage_code        String               @unique(map: "UQ_m_damage_code") @db.VarChar(10)
-  damage_name        String               @db.NVarChar(60)
-  applies_to         String               @default("ANY", map: "DF_m_damage_applies") @db.VarChar(10)
-  createdate         DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_m_damage_code_createdate")
-  updatedate         DateTime?
-  createdby          String               @db.NVarChar(64)
-  updatedby          String?              @db.NVarChar(64)
-  log_inst           Int                  @default(1, map: "DF_m_damage_code_log_inst")
-  inspection_finding inspection_finding[]
-}
-
-model m_device {
-  device_id              Int                      @id(map: "PK_m_device") @default(autoincrement())
-  site_id                Int
-  device_code            String                   @unique(map: "UQ_m_device_code") @db.VarChar(30)
-  device_name            String                   @db.NVarChar(80)
-  device_kind            String                   @db.VarChar(10)
-  public_key             String?                  @db.VarChar(Max)
-  registered_at          DateTime                 @default(dbgenerated("sysutcdatetime()"), map: "DF_m_device_registered")
-  registered_by          String                   @db.NVarChar(64)
-  revoked_at             DateTime?
-  revoked_by             String?                  @db.NVarChar(64)
-  revoked_reason         String?                  @db.NVarChar(200)
-  last_seen_at           DateTime?
-  createdate             DateTime                 @default(dbgenerated("sysutcdatetime()"), map: "DF_m_device_createdate")
-  updatedate             DateTime?
-  createdby              String                   @db.NVarChar(64)
-  updatedby              String?                  @db.NVarChar(64)
-  log_inst               Int                      @default(1, map: "DF_m_device_log_inst")
-  document               document[]
-  inspection             inspection[]
-  key_movement           key_movement[]
-  m_site                 m_site                   @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_m_device_site")
-  m_device_integration   m_device_integration[]
-  print_log              print_log[]
-  unit_status_history    unit_status_history[]
-  visit_checkpoint_event visit_checkpoint_event[]
-  weighing               weighing[]
-  yard_move              yard_move[]
+model consignments {
+  consignment_id                                       Int                 @id(map: "PK__consignm__3114B3D0D420D30A") @default(autoincrement())
+  site_id                                              Int
+  cargo_regime_id                                      Int
+  vessel_call_id                                       Int?
+  shipping_line_party_id                               Int?
+  consignee_party_id                                   Int?
+  bill_to_party_id                                     Int?
+  agent_party_id                                       Int?
+  ref_type                                             String?             @default("BL", map: "DF__consignme__ref_t__60C757A0") @db.NVarChar(30)
+  ref_no                                               String              @unique(map: "UQ__consignm__BDA580DBD41F6E40") @db.NVarChar(50)
+  status                                               String?             @default("OPEN", map: "DF__consignme__statu__61BB7BD9") @db.NVarChar(30)
+  created_at                                           DateTime?           @default(dbgenerated("sysutcdatetime()"), map: "DF__consignme__creat__62AFA012")
+  billable_charges                                     billable_charges[]
+  consignment_lines                                    consignment_lines[]
+  parties_consignments_agent_party_idToparties         parties?            @relation("consignments_agent_party_idToparties", fields: [agent_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_agent")
+  parties_consignments_bill_to_party_idToparties       parties?            @relation("consignments_bill_to_party_idToparties", fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_bill_to")
+  cargo_regimes                                        cargo_regimes       @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onUpdate: NoAction, map: "FK_consignments_cargo_regimes")
+  parties_consignments_consignee_party_idToparties     parties?            @relation("consignments_consignee_party_idToparties", fields: [consignee_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_consignee")
+  parties_consignments_shipping_line_party_idToparties parties?            @relation("consignments_shipping_line_party_idToparties", fields: [shipping_line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_shipping_line")
+  sites                                                sites               @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_consignments_sites")
+  vessel_calls                                         vessel_calls?       @relation(fields: [vessel_call_id], references: [vessel_call_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignments_vessel_calls")
+  customs_refs                                         customs_refs[]
+  invoices                                             invoices[]
+  release_orders                                       release_orders[]
+  unit_stays                                           unit_stays[]
 }
 
 model m_device_integration {
@@ -1884,68 +783,44 @@ model m_number_sequence {
   m_site             m_site?   @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_number_sequence_site")
 }
 
-model m_party {
-  party_id                                                   Int                   @id(map: "PK_m_party") @default(autoincrement())
-  party_code                                                 String                @unique(map: "UQ_m_party_code") @db.VarChar(30)
-  party_name                                                 String                @db.NVarChar(200)
-  short_name                                                 String?               @db.NVarChar(60)
-  tax_id                                                     String?               @db.VarChar(30)
-  vat_no                                                     String?               @db.VarChar(30)
-  country_code                                               String?               @db.Char(2)
-  address_line1                                              String?               @db.NVarChar(200)
-  city                                                       String?               @db.NVarChar(100)
-  phone                                                      String?               @db.VarChar(30)
-  email                                                      String?               @db.VarChar(200)
-  default_currency                                           String?               @db.Char(3)
-  credit_status                                              String                @default("CASH", map: "DF_m_party_credit_status") @db.VarChar(10)
-  credit_limit                                               Decimal?              @db.Decimal(19, 4)
-  credit_currency                                            String?               @db.Char(3)
-  disbursement_service                                       Boolean               @default(false, map: "DF_m_party_disb")
-  source                                                     String                @default("NG", map: "DF_m_party_source") @db.VarChar(10)
-  sync_status                                                String                @default("SYNCED", map: "DF_m_party_sync_status") @db.VarChar(12)
-  ng_ref_id                                                  String?               @db.VarChar(64)
-  ng_updatedate                                              DateTime?
-  is_active                                                  Boolean               @default(true, map: "DF_m_party_is_active")
-  createdate                                                 DateTime              @default(dbgenerated("sysutcdatetime()"), map: "DF_m_party_createdate")
-  updatedate                                                 DateTime?
-  createdby                                                  String                @db.NVarChar(64)
-  updatedby                                                  String?               @db.NVarChar(64)
-  log_inst                                                   Int                   @default(1, map: "DF_m_party_log_inst")
-  app_user                                                   app_user[]
-  appointment                                                appointment[]
-  billable_event                                             billable_event[]
-  cargo_unit                                                 cargo_unit[]
-  charge                                                     charge[]
-  consignment_consignment_agent_party_idTom_party            consignment[]         @relation("consignment_agent_party_idTom_party")
-  consignment_consignment_bill_to_party_idTom_party          consignment[]         @relation("consignment_bill_to_party_idTom_party")
-  consignment_consignment_consignee_party_idTom_party        consignment[]         @relation("consignment_consignee_party_idTom_party")
-  consignment_consignment_shipping_line_party_idTom_party    consignment[]         @relation("consignment_shipping_line_party_idTom_party")
-  consignment_consignment_shipper_party_idTom_party          consignment[]         @relation("consignment_shipper_party_idTom_party")
-  disbursement_disbursement_bill_to_party_idTom_party        disbursement[]        @relation("disbursement_bill_to_party_idTom_party")
-  disbursement_disbursement_payee_party_idTom_party          disbursement[]        @relation("disbursement_payee_party_idTom_party")
-  integration_message                                        integration_message[]
-  invoice                                                    invoice[]
-  labour_contractor                                          labour_contractor[]
-  m_driver                                                   m_driver[]
-  m_country                                                  m_country?            @relation(fields: [country_code], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_party_country")
-  m_currency_m_party_credit_currencyTom_currency             m_currency?           @relation("m_party_credit_currencyTom_currency", fields: [credit_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_party_credit_currency")
-  m_currency_m_party_default_currencyTom_currency            m_currency?           @relation("m_party_default_currencyTom_currency", fields: [default_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_party_currency")
-  m_party_contact                                            m_party_contact[]
-  m_party_role                                               m_party_role[]
-  m_truck                                                    m_truck[]
-  m_vessel                                                   m_vessel[]
-  payment                                                    payment[]
-  portal_invitation                                          portal_invitation[]
-  release_order_release_order_requested_by_party_idTom_party release_order[]       @relation("release_order_requested_by_party_idTom_party")
-  release_order_release_order_transporter_party_idTom_party  release_order[]       @relation("release_order_transporter_party_idTom_party")
-  repair_estimate                                            repair_estimate[]
-  service_request                                            service_request[]
-  tariff                                                     tariff[]
-  truck_visit                                                truck_visit[]
-  unit_stay                                                  unit_stay[]
-  vessel_call                                                vessel_call[]
-
-  @@index([party_name], map: "IX_m_party_name")
+model parties {
+  party_id                                                  Int                  @id(map: "PK__parties__8A2AF38EF45FA744") @default(autoincrement())
+  party_code                                                String               @unique(map: "UQ__parties__E4449B5EBF32AECC") @db.NVarChar(50)
+  party_name                                                String               @db.NVarChar(150)
+  short_name                                                String?              @db.NVarChar(50)
+  tax_id                                                    String?              @db.NVarChar(50)
+  vat_no                                                    String?              @db.NVarChar(50)
+  country_code                                              String?              @default("TZ", map: "DF__parties__country__1C1D2798") @db.NVarChar(5)
+  city                                                      String?              @default("Dar es Salaam", map: "DF__parties__city__1D114BD1") @db.NVarChar(50)
+  phone                                                     String?              @db.NVarChar(30)
+  email                                                     String?              @db.NVarChar(100)
+  credit_status                                             String?              @default("CASH", map: "DF__parties__credit___1E05700A") @db.NVarChar(20)
+  credit_limit                                              Decimal?             @default(0.00, map: "DF__parties__credit___1EF99443") @db.Decimal(18, 2)
+  is_provisional                                            Boolean?             @default(false, map: "DF__parties__is_prov__1FEDB87C")
+  is_active                                                 Boolean?             @default(true, map: "DF__parties__is_acti__20E1DCB5")
+  created_at                                                DateTime?            @default(dbgenerated("sysutcdatetime()"), map: "DF__parties__created__21D600EE")
+  appointments                                              appointments[]
+  billable_charges                                          billable_charges[]
+  cargo_units                                               cargo_units[]
+  consignments_consignments_agent_party_idToparties         consignments[]       @relation("consignments_agent_party_idToparties")
+  consignments_consignments_bill_to_party_idToparties       consignments[]       @relation("consignments_bill_to_party_idToparties")
+  consignments_consignments_consignee_party_idToparties     consignments[]       @relation("consignments_consignee_party_idToparties")
+  consignments_consignments_shipping_line_party_idToparties consignments[]       @relation("consignments_shipping_line_party_idToparties")
+  disbursements                                             disbursements[]
+  drivers                                                   drivers[]
+  invoices                                                  invoices[]
+  manifests                                                 manifests[]
+  party_contacts                                            party_contacts[]
+  payments                                                  payments[]
+  portal_invitations                                        portal_invitations[]
+  release_orders                                            release_orders[]
+  repair_estimates                                          repair_estimates[]
+  service_requests                                          service_requests[]
+  truck_visits                                              truck_visits[]
+  trucks                                                    trucks[]
+  users                                                     users[]
+  vessel_calls                                              vessel_calls[]
+  vessels                                                   vessels[]
 }
 
 model m_party_contact {
@@ -2454,56 +1329,24 @@ model m_yard_level {
   @@unique([site_id, level_no], map: "UQ_m_yard_level")
 }
 
-model m_yard_location {
-  yard_location_id                                        Int                   @id(map: "PK_m_yard_location") @default(autoincrement())
-  site_id                                                 Int
-  parent_id                                               Int?
-  level_no                                                Int                   @db.TinyInt
-  location_code                                           String                @db.VarChar(20)
-  full_code                                               String                @db.VarChar(80)
-  location_kind                                           String                @db.VarChar(20)
-  is_slot                                                 Boolean               @default(false, map: "DF_m_yard_location_is_slot")
-  allows_20                                               Boolean               @default(true, map: "DF_m_yard_location_a20")
-  allows_40                                               Boolean               @default(true, map: "DF_m_yard_location_a40")
-  allows_45                                               Boolean               @default(false, map: "DF_m_yard_location_a45")
-  max_tier                                                Int?                  @db.TinyInt
-  max_weight_kg                                           Int?
-  bay_size                                                String?               @db.VarChar(10)
-  reefer_plug_no                                          String?               @db.VarChar(20)
-  map_x                                                   Decimal?              @db.Decimal(9, 2)
-  map_y                                                   Decimal?              @db.Decimal(9, 2)
-  map_w                                                   Decimal?              @db.Decimal(9, 2)
-  map_h                                                   Decimal?              @db.Decimal(9, 2)
-  map_rotation                                            Int?                  @db.SmallInt
-  sort_order                                              Int                   @default(0, map: "DF_m_yard_location_sort")
-  is_blocked                                              Boolean               @default(false, map: "DF_m_yard_location_blocked")
-  blocked_reason                                          String?               @db.NVarChar(200)
-  is_active                                               Boolean               @default(true, map: "DF_m_yard_location_is_active")
-  createdate                                              DateTime              @default(dbgenerated("sysutcdatetime()"), map: "DF_m_yard_location_createdate")
-  updatedate                                              DateTime?
-  createdby                                               String                @db.NVarChar(64)
-  updatedby                                               String?               @db.NVarChar(64)
-  log_inst                                                Int                   @default(1, map: "DF_m_yard_location_log_inst")
-  exam                                                    exam[]
-  handling_job                                            handling_job[]
-  key_custody                                             key_custody[]
-  key_movement                                            key_movement[]
-  m_yard_location                                         m_yard_location?      @relation("m_yard_locationTom_yard_location", fields: [parent_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_yard_location_parent")
-  other_m_yard_location                                   m_yard_location[]     @relation("m_yard_locationTom_yard_location")
-  m_site                                                  m_site                @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_m_yard_location_site")
-  m_yard_location_tag                                     m_yard_location_tag[]
-  move_order_move_order_from_location_idTom_yard_location move_order[]          @relation("move_order_from_location_idTom_yard_location")
-  move_order_move_order_to_location_idTom_yard_location   move_order[]          @relation("move_order_to_location_idTom_yard_location")
-  occupancy_forecast                                      occupancy_forecast[]
-  reefer_session                                          reefer_session[]
-  unit_stay                                               unit_stay[]
-  yard_move_yard_move_from_location_idTom_yard_location   yard_move[]           @relation("yard_move_from_location_idTom_yard_location")
-  yard_move_yard_move_to_location_idTom_yard_location     yard_move[]           @relation("yard_move_to_location_idTom_yard_location")
-  yard_occupancy                                          yard_occupancy[]
-  yard_suggestion_log                                     yard_suggestion_log[]
-
-  @@unique([site_id, full_code], map: "UQ_m_yard_location_code")
-  @@index([parent_id], map: "IX_m_yard_location_parent")
+model yard_locations {
+  yard_location_id                                       Int              @id(map: "PK__yard_loc__9582717161ACF40C") @default(autoincrement())
+  site_id                                                Int
+  yard_block_id                                          Int
+  parent_id                                              Int?
+  location_code                                          String           @db.NVarChar(30)
+  full_code                                              String           @unique(map: "UQ__yard_loc__224F1E74A83B390B") @db.NVarChar(50)
+  kind                                                   String?          @default("SLOT", map: "DF__yard_locat__kind__7B7B4DDC") @db.NVarChar(30)
+  is_slot                                                Boolean?         @default(true, map: "DF__yard_loca__is_sl__7C6F7215")
+  is_blocked                                             Boolean?         @default(false, map: "DF__yard_loca__is_bl__7D63964E")
+  occupied_unit_id                                       Int?
+  unit_stays                                             unit_stays[]
+  yard_blocks                                            yard_blocks      @relation(fields: [yard_block_id], references: [yard_block_id], onUpdate: NoAction, map: "FK_yard_locations_yard_blocks")
+  yard_locations                                         yard_locations?  @relation("yard_locationsToyard_locations", fields: [parent_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_yard_locations_parent")
+  other_yard_locations                                   yard_locations[] @relation("yard_locationsToyard_locations")
+  sites                                                  sites            @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_yard_locations_sites")
+  yard_moves_yard_moves_from_location_idToyard_locations yard_moves[]     @relation("yard_moves_from_location_idToyard_locations")
+  yard_moves_yard_moves_to_location_idToyard_locations   yard_moves[]     @relation("yard_moves_to_location_idToyard_locations")
 }
 
 model m_yard_location_tag {
@@ -2785,24 +1628,18 @@ model payment_allocation {
   @@index([payment_id], map: "IX_pa_payment")
 }
 
-model portal_invitation {
-  portal_invitation_id BigInt    @id(map: "PK_portal_invitation") @default(autoincrement())
-  party_id             Int
-  email                String    @db.VarChar(200)
-  role_id              Int
-  token_sha256         String    @unique(map: "UQ_portal_invitation_token") @db.Char(64)
-  expires_at           DateTime
-  accepted_at          DateTime?
-  accepted_user_id     Int?
-  revoked_at           DateTime?
-  createdate           DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_portal_invitation_createdate")
-  updatedate           DateTime?
-  createdby            String    @db.NVarChar(64)
-  updatedby            String?   @db.NVarChar(64)
-  log_inst             Int       @default(1, map: "DF_portal_invitation_log_inst")
-  m_party              m_party   @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_pi_party")
-  m_role               m_role    @relation(fields: [role_id], references: [role_id], onUpdate: NoAction, map: "FK_pi_role")
-  app_user             app_user? @relation(fields: [accepted_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_pi_user")
+model delegations {
+  delegation_id                         Int      @id(map: "PK__delegati__2FB12689F954E669") @default(autoincrement())
+  site_id                               Int
+  from_user_id                          Int
+  to_user_id                            Int
+  starts_at                             DateTime
+  ends_at                               DateTime
+  reason                                String?  @db.NVarChar(256)
+  is_active                             Boolean? @default(true, map: "DF__delegatio__is_ac__320C68B7")
+  users_delegations_from_user_idTousers users    @relation("delegations_from_user_idTousers", fields: [from_user_id], references: [user_id], onUpdate: NoAction, map: "FK_delegations_from_user")
+  sites                                 sites    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_delegations_sites")
+  users_delegations_to_user_idTousers   users    @relation("delegations_to_user_idTousers", fields: [to_user_id], references: [user_id], onUpdate: NoAction, map: "FK_delegations_to_user")
 }
 
 model print_log {
@@ -3105,54 +1942,28 @@ model schema_migration {
   checksum_sha256 String?  @db.Char(64)
 }
 
-model service_request {
-  service_request_id BigInt       @id(map: "PK_service_request") @default(autoincrement())
-  site_id            Int
-  request_no         String       @db.VarChar(30)
-  request_kind       String       @db.VarChar(20)
-  party_id           Int
-  consignment_id     BigInt?
-  unit_stay_id       BigInt?
-  subject            String       @db.NVarChar(200)
-  details            String?      @db.NVarChar(2000)
-  payload_json       String?      @db.NVarChar(Max)
-  status             String       @default("SUBMITTED", map: "DF_service_request_status") @db.VarChar(12)
-  assigned_to_sub    String?      @db.VarChar(64)
-  result_entity      String?      @db.VarChar(40)
-  result_id          BigInt?
-  responded_at       DateTime?
-  closed_at          DateTime?
-  createdate         DateTime     @default(dbgenerated("sysutcdatetime()"), map: "DF_service_request_createdate")
-  updatedate         DateTime?
-  createdby          String       @db.NVarChar(64)
-  updatedby          String?      @db.NVarChar(64)
-  log_inst           Int          @default(1, map: "DF_service_request_log_inst")
-  consignment        consignment? @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_sr_consignment")
-  m_party            m_party      @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_sr_party")
-  m_site             m_site       @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_sr_site")
-  unit_stay          unit_stay?   @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_sr_stay")
-
-  @@unique([site_id, request_no], map: "UQ_service_request_no")
-  @@index([party_id, createdate], map: "IX_sr_party")
+model manifest_lines {
+  manifest_line_id Int       @id(map: "PK__manifest__C22BCE7FD67DB74D") @default(autoincrement())
+  manifest_id      Int
+  line_no          Int
+  unit_no          String    @db.NVarChar(32)
+  bl_no            String?   @db.NVarChar(64)
+  consignee_raw    String?   @db.NVarChar(128)
+  full_empty       String?   @default("F", map: "DF__manifest___full___5C02A283") @db.NVarChar(8)
+  seal_no          String?   @db.NVarChar(64)
+  gross_weight_kg  Decimal?  @db.Decimal(12, 2)
+  match_status     String?   @default("NEW", map: "DF__manifest___match__5CF6C6BC") @db.NVarChar(32)
+  manifests        manifests @relation(fields: [manifest_id], references: [manifest_id], onUpdate: NoAction, map: "FK_manifest_lines_manifests")
 }
 
-model sync_state {
-  sync_state_id   Int       @id(map: "PK_sync_state") @default(autoincrement())
-  source_system   String    @default("NG", map: "DF_sync_state_source") @db.VarChar(20)
-  entity_name     String    @db.VarChar(40)
-  last_updatedate DateTime?
-  last_ref_id     String?   @db.VarChar(64)
-  last_run_at     DateTime?
-  last_status     String?   @db.VarChar(10)
-  last_error      String?
-  rows_last_run   Int?
-  createdate      DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_sync_state_createdate")
-  updatedate      DateTime?
-  createdby       String    @db.NVarChar(64)
-  updatedby       String?   @db.NVarChar(64)
-  log_inst        Int       @default(1, map: "DF_sync_state_log_inst")
-
-  @@unique([source_system, entity_name], map: "UQ_sync_state")
+model notification_rules {
+  rule_id        Int      @id(map: "PK__notifica__E92A92961DA98189") @default(autoincrement())
+  site_id        Int
+  event_type     String   @db.NVarChar(64)
+  channel        String?  @default("EMAIL", map: "DF__notificat__chann__40E497F3") @db.NVarChar(16)
+  recipient_role String   @db.NVarChar(64)
+  is_active      Boolean? @default(true, map: "DF__notificat__is_ac__41D8BC2C")
+  sites          sites    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_notification_rules_sites")
 }
 
 model tariff {
@@ -3385,83 +2196,25 @@ model unit_status_history {
   @@index([unit_stay_id, occurred_at], map: "IX_ush_stay")
 }
 
-model unit_stay {
-  unit_stay_id                                            BigInt                @id(map: "PK_unit_stay") @default(autoincrement())
-  cargo_unit_id                                           BigInt
-  site_id                                                 Int
-  consignment_id                                          BigInt?
-  cargo_regime_id                                         Int
-  flow                                                    String                @db.VarChar(15)
-  full_empty                                              String                @db.Char(1)
-  physical_status                                         String                @default("EXPECTED", map: "DF_unit_stay_phys") @db.VarChar(12)
-  customs_status                                          String                @default("NOT_LODGED", map: "DF_unit_stay_customs") @db.VarChar(12)
-  billing_status                                          String                @default("ACCRUING", map: "DF_unit_stay_billing") @db.VarChar(10)
-  release_status                                          String                @default("NONE", map: "DF_unit_stay_release") @db.VarChar(10)
-  active_hold_count                                       Int                   @default(0, map: "DF_unit_stay_holds") @db.SmallInt
-  current_location_id                                     Int?
-  line_party_id                                           Int?
-  commodity_id                                            Int?
-  cargo_description                                       String?               @db.NVarChar(400)
-  unit_grade                                              String?               @db.Char(1)
-  condition_status                                        String                @default("UNKNOWN", map: "DF_unit_stay_cond") @db.VarChar(10)
-  seal_no                                                 String?               @db.VarChar(30)
-  gross_weight_kg                                         Decimal?              @db.Decimal(10, 1)
-  vgm_kg                                                  Decimal?              @db.Decimal(10, 1)
-  imo_class                                               String?               @db.VarChar(5)
-  un_no                                                   String?               @db.Char(4)
-  reefer_set_temp_c                                       Decimal?              @db.Decimal(4, 1)
-  discharge_at                                            DateTime?
-  gated_in_at                                             DateTime?
-  departed_at                                             DateTime?
-  storage_start_at                                        DateTime?
-  expected_exit_date                                      DateTime?             @db.Date
-  destination_country                                     String?               @db.Char(2)
-  manifest_line_id                                        BigInt?
-  remarks                                                 String?               @db.NVarChar(400)
-  createdate                                              DateTime              @default(dbgenerated("sysutcdatetime()"), map: "DF_unit_stay_createdate")
-  updatedate                                              DateTime?
-  createdby                                               String                @db.NVarChar(64)
-  updatedby                                               String?               @db.NVarChar(64)
-  log_inst                                                Int                   @default(1, map: "DF_unit_stay_log_inst")
-  billable_event                                          billable_event[]
-  customs_ref                                             customs_ref[]
-  disbursement                                            disbursement[]
-  dwell_prediction                                        dwell_prediction[]
-  exam                                                    exam[]
-  exception_case                                          exception_case[]
-  handling_job                                            handling_job[]
-  handling_job_line                                       handling_job_line[]
-  hold                                                    hold[]
-  inspection                                              inspection[]
-  invoice_line                                            invoice_line[]
-  key_custody                                             key_custody?
-  lot_balance                                             lot_balance?
-  lot_delivery                                            lot_delivery[]
-  manifest_line_manifest_line_unit_stay_idTounit_stay     manifest_line[]       @relation("manifest_line_unit_stay_idTounit_stay")
-  move_order                                              move_order[]
-  reefer_session                                          reefer_session[]
-  release_check                                           release_check[]
-  release_order_unit                                      release_order_unit[]
-  repair_estimate                                         repair_estimate[]
-  service_request                                         service_request[]
-  unit_dg_line                                            unit_dg_line[]
-  unit_status_history                                     unit_status_history[]
-  m_commodity                                             m_commodity?          @relation(fields: [commodity_id], references: [commodity_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_commodity")
-  consignment                                             consignment?          @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_consignment")
-  m_country                                               m_country?            @relation(fields: [destination_country], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_dest_country")
-  m_party                                                 m_party?              @relation(fields: [line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_line")
-  m_yard_location                                         m_yard_location?      @relation(fields: [current_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_location")
-  manifest_line_unit_stay_manifest_line_idTomanifest_line manifest_line?        @relation("unit_stay_manifest_line_idTomanifest_line", fields: [manifest_line_id], references: [manifest_line_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_manifest_line")
-  m_cargo_regime                                          m_cargo_regime        @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onUpdate: NoAction, map: "FK_unit_stay_regime")
-  m_site                                                  m_site                @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_unit_stay_site")
-  cargo_unit                                              cargo_unit            @relation(fields: [cargo_unit_id], references: [cargo_unit_id], onUpdate: NoAction, map: "FK_unit_stay_unit")
-  visit_unit_txn                                          visit_unit_txn[]
-  weighing                                                weighing[]
-  yard_move                                               yard_move[]
-  yard_occupancy                                          yard_occupancy[]
-  yard_suggestion_log                                     yard_suggestion_log[]
+model repair_codes {
+  repair_code_id Int      @id(map: "PK__repair_c__48EB905D8F9E0F97") @default(autoincrement())
+  component_code String   @db.NVarChar(32)
+  repair_code    String   @unique(map: "UQ__repair_c__C4B1CC009653ED20") @db.NVarChar(32)
+  description    String   @db.NVarChar(256)
+  default_hours  Decimal? @default(1.0, map: "DF__repair_co__defau__74643BF9") @db.Decimal(5, 2)
+  is_active      Boolean? @default(true, map: "DF__repair_co__is_ac__75586032")
+}
 
-  @@index([site_id, physical_status], map: "IX_unit_stay_site_status")
+model repair_estimates {
+  estimate_id  Int        @id(map: "PK__repair_e__679797FF11D8ACEF") @default(autoincrement())
+  unit_stay_id Int
+  party_id     Int
+  total_hours  Decimal?   @default(0.0, map: "DF__repair_es__total__7834CCDD") @db.Decimal(6, 2)
+  total_amount Decimal?   @default(0.0, map: "DF__repair_es__total__7928F116") @db.Decimal(18, 2)
+  status       String?    @default("DRAFT", map: "DF__repair_es__statu__7A1D154F") @db.NVarChar(32)
+  created_at   DateTime?  @default(dbgenerated("sysutcdatetime()"), map: "DF__repair_es__creat__7B113988")
+  parties      parties    @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_repair_estimates_parties")
+  unit_stays   unit_stays @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_repair_estimates_unit_stays")
 }
 
 model user_site_role {

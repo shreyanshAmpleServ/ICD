@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   CalendarPlus, Download, FileText, HelpCircle, MessageSquarePlus, Search, Truck, Wallet,
 } from 'lucide-react';
@@ -6,12 +6,12 @@ import {
   Banner, Button, Chips, DL, DataTable, Empty, Kpi, Money, Page, PageHeader, Panel, Pill,
   SearchInput, Select, StatusPill, Tabs, UnitNo, fmtD, fmtDT, fmtT, useToast,
 } from '@/ds/components';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { useSession } from '@/app/session';
 import { consignment, parties, party as partyOf, type Stay } from '@/mock/core';
 import { VISIT_TYPES } from '@/mock/gate';
 import {
-  PORTAL_PARTY, SR_KINDS, appointments as seedAppts, invoicesOf, plainStatus, portalDocs, portalUnits, serviceRequests,
+  PORTAL_PARTY, SR_KINDS, appointments as seedAppts, plainStatus,
   type Appt, type Inv, type Plain, type SR, type Why,
 } from '@/mock/insight';
 import '@/features/reports/insight.css';
@@ -21,6 +21,7 @@ import { UnitDrawer } from './components/UnitDrawer';
 import { PayDrawer } from './components/PayDrawer';
 import { BookDrawer } from './components/BookDrawer';
 import { RequestDrawer } from './components/RequestDrawer';
+import { portalApi } from './api';
 
 export { portalApi } from './api';
 
@@ -44,18 +45,45 @@ export function PortalView() {
   const [req, setReq] = useState<{ open: boolean; kind?: ReqKind; unit?: Stay; invoice?: Inv }>({ open: false });
   const [paid, setPaid] = useState<Record<number, 'PENDING'>>({});
   const [appts, setAppts] = useState<Appt[]>(seedAppts);
-  const [myReqs, setMyReqs] = useState<SR[]>(serviceRequests.filter((s) => s.partyId === PORTAL_PARTY));
+  const [myReqs, setMyReqs] = useState<SR[]>([]);
 
-  const { data: units = [] } = useQ(['portal-units', partyId], () =>
-    delay(portalUnits(partyId).filter((s) => s.physicalStatus !== 'DEPARTED'))
+  const { data: units = [] } = useQ<Stay[]>(['portal-units', partyId], () =>
+    portalApi.getPortalUnits(partyId)
   );
-  const { data: invs = [] } = useQ(['portal-invoices', partyId], () => delay(invoicesOf(partyId)));
+  const { data: invs = [], refetch: refetchInvs } = useQ<Inv[]>(['portal-invoices', partyId], () =>
+    portalApi.getPortalInvoices(partyId)
+  );
+  const { data: docs = [] } = useQ<any[]>(['portal-documents', partyId], () =>
+    portalApi.getPortalDocuments(partyId)
+  );
+  const { data: serverAppts = seedAppts, refetch: refetchAppts } = useQ<Appt[]>(['portal-appointments', partyId], () =>
+    portalApi.getPortalAppointments(partyId)
+  );
+  const { data: serverReqs = [], refetch: refetchReqs } = useQ<SR[]>(['portal-requests', partyId], () =>
+    portalApi.getPortalRequests(partyId)
+  );
+  const { data: summary, refetch: refetchSummary } = useQ<any>(['portal-summary', partyId], () =>
+    portalApi.getPortalSummary(partyId)
+  );
+
+  useEffect(() => {
+    if (serverAppts && serverAppts.length > 0) {
+      setAppts(serverAppts);
+    }
+  }, [serverAppts]);
+
+  useEffect(() => {
+    if (serverReqs && serverReqs.length > 0) {
+      setMyReqs(serverReqs);
+    }
+  }, [serverReqs]);
+
   const plain = useMemo(() => new Map(units.map((s) => [s.unitStayId!, plainStatus(s)])), [units]);
   const count = (k: Plain['key']) => units.filter((s) => plain.get(s.unitStayId!)?.key === k).length;
   const due = invs
     .filter((i) => Number(i.balance) > 0 && !paid[i.invoiceId!])
     .reduce((a, i) => a + Number(i.balance), 0);
-  const reqs = partyId === PORTAL_PARTY ? myReqs : serviceRequests.filter((s) => s.partyId === partyId);
+  const reqs = myReqs;
 
   const rows = units.filter((s) => {
     if (
@@ -133,16 +161,24 @@ export function PortalView() {
         <div className="kpi-strip">
           <Kpi
             label="Ready to collect"
-            value={count('ready')}
-            delta={count('ready') ? 'Book a truck to collect' : 'Nothing ready yet'}
+            value={summary?.readyToCollect ?? count('ready')}
+            delta={(summary?.readyToCollect ?? count('ready')) ? 'Book a truck to collect' : 'Nothing ready yet'}
           />
-          <Kpi label="Waiting for customs" value={count('customs')} delta="We update as customs records" />
-          <Kpi label="On hold" value={count('hold')} delta={count('hold') ? 'See why for each' : 'None'} />
+          <Kpi
+            label="Waiting for customs"
+            value={summary?.waitingForCustoms ?? count('customs')}
+            delta="We update as customs records"
+          />
+          <Kpi
+            label="On hold"
+            value={summary?.onHold ?? count('hold')}
+            delta={(summary?.onHold ?? count('hold')) ? 'See why for each' : 'None'}
+          />
           <Kpi
             label="Charges due"
-            value={Math.round(due).toLocaleString('en-US')}
+            value={Math.round(summary?.chargesDue ?? due).toLocaleString('en-US')}
             unit="USD"
-            delta={`${invs.filter((i) => Number(i.balance) > 0 && !paid[i.invoiceId!]).length} invoices open`}
+            delta={`${summary?.openInvoicesCount ?? invs.filter((i) => Number(i.balance) > 0 && !paid[i.invoiceId!]).length} invoices open`}
           />
         </div>
 
@@ -158,7 +194,7 @@ export function PortalView() {
               label: 'My requests',
               count: reqs.filter((r) => !['CLOSED', 'REJECTED', 'APPROVED'].includes(r.status!)).length,
             },
-            { id: 'documents', label: 'Documents', count: portalDocs.length },
+            { id: 'documents', label: 'Documents', count: docs.length },
           ]}
         />
 
@@ -592,8 +628,9 @@ export function PortalView() {
             sub="Copies of what we issued to you. Originals stay valid; these are for your records."
           >
             <DataTable
-              rows={portalDocs}
+              rows={docs}
               rowKey={(d) => d.documentId!}
+              empty={<Empty title="No documents yet">Documents will appear here when issued.</Empty>}
               cols={[
                 {
                   key: 't',
@@ -646,9 +683,20 @@ export function PortalView() {
       <PayDrawer
         inv={pay}
         onClose={() => setPay(null)}
-        onPaid={(i) => {
+        onPaid={async (i) => {
           setPaid((p) => ({ ...p, [i.invoiceId!]: 'PENDING' }));
           setPay(null);
+          try {
+            await portalApi.payInvoice(i.invoiceId!, {
+              amount: Number(i.balance),
+              paymentMethod: 'MPESA',
+              transactionRef: `PAY-${Date.now()}`,
+            });
+            refetchInvs();
+            refetchSummary();
+          } catch (err) {
+            console.warn('[Portal] Payment sync error:', err);
+          }
         }}
       />
       <BookDrawer
@@ -656,10 +704,24 @@ export function PortalView() {
         unit={book.unit}
         units={units.filter((s) => plain.get(s.unitStayId!)?.key === 'ready')}
         onClose={() => setBook({ open: false })}
-        onBooked={(a) => {
+        onBooked={async (a) => {
           setAppts((x) => [a, ...x]);
           setBook({ open: false });
           setTab('trucks');
+          try {
+            await portalApi.bookAppointment({
+              slotStart: a.slotStart,
+              slotEnd: a.slotEnd,
+              plate: a.plate,
+              driver: a.driver,
+              partyId,
+              visitTypeCode: a.visitTypeCode,
+              unitStayId: a.unitNos?.[0] ? units.find((u) => u.cargoUnit.unitNo === a.unitNos?.[0])?.unitStayId : undefined,
+            });
+            refetchAppts();
+          } catch (err) {
+            console.warn('[Portal] Book appointment sync error:', err);
+          }
         }}
       />
       <RequestDrawer
@@ -669,10 +731,23 @@ export function PortalView() {
         units={units}
         partyId={partyId}
         onClose={() => setReq({ open: false })}
-        onSent={(r) => {
+        onSent={async (r) => {
           setMyReqs((x) => [r, ...x]);
           setReq({ open: false });
           setTab('requests');
+          try {
+            await portalApi.submitRequest({
+              requestKind: r.requestKind,
+              partyId,
+              subject: r.subject,
+              details: r.details,
+              unitStayId: r.unitStayId,
+              payload: r.payload,
+            });
+            refetchReqs();
+          } catch (err) {
+            console.warn('[Portal] Submit request sync error:', err);
+          }
         }}
       />
     </Page>
