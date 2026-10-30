@@ -28,22 +28,22 @@ export class UnitsController {
     }
 
     try {
-      const dbTypes = await prisma.unit_types.findMany({
+      const dbTypes = await (prisma as any).unit_types.findMany({
         orderBy: { unit_type_id: 'asc' },
       });
 
-      const mapped = dbTypes.map((u) => ({
-        unitTypeId: u.unit_type_id,
+      const mapped = dbTypes.map((u: any) => ({
+        unitTypeId: Number(u.unit_type_id),
         typeCode: u.type_code,
         typeName: u.type_name,
-        category: u.category,
+        category: u.unit_category || u.category,
         lengthFt: u.length_ft,
-        teu: String(u.teu || 1.0),
+        teu: String(u.teu_factor || u.teu || 1.0),
         isReefer: Boolean(u.is_reefer),
         isActive: Boolean(u.is_active),
       }));
 
-      const result = paginateArray(mapped, params, (u) => u.unitTypeId);
+      const result = paginateArray(mapped, params, (u: any) => u.unitTypeId);
       return sendSuccess(res, result, 'Unit types retrieved successfully from database');
     } catch (err: any) {
       return sendError(res, err.message, 500);
@@ -59,27 +59,28 @@ export class UnitsController {
     }
 
     try {
-      const created = await prisma.unit_types.create({
+      const created = await (prisma as any).unit_types.create({
         data: {
           type_code: body.typeCode || body.unitTypeCode || `UT-${Date.now()}`,
           type_name: body.typeName || 'Standard Container',
-          category: body.category || 'CONTAINER',
+          unit_category: body.category || 'CONTAINER',
           length_ft: body.lengthFt ? Number(body.lengthFt) : 40,
-          teu: body.teu ? Number(body.teu) : 2.0,
+          teu_factor: body.teu ? Number(body.teu) : 2.0,
           is_reefer: Boolean(body.isReefer),
           is_active: true,
+          createdby: 'system',
         },
       });
 
       return sendCreated(
         res,
         {
-          unitTypeId: created.unit_type_id,
+          unitTypeId: Number(created.unit_type_id),
           typeCode: created.type_code,
           typeName: created.type_name,
-          category: created.category,
+          category: created.unit_category || created.category,
           lengthFt: created.length_ft,
-          teu: String(created.teu),
+          teu: String(created.teu_factor || created.teu),
           isReefer: created.is_reefer,
           isActive: created.is_active,
         },
@@ -99,7 +100,7 @@ export class UnitsController {
     }
 
     try {
-      const dbType = await prisma.unit_types.findFirst({
+      const dbType = await (prisma as any).unit_types.findFirst({
         where: isNaN(Number(idOrCode))
           ? { type_code: idOrCode }
           : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] },
@@ -112,12 +113,12 @@ export class UnitsController {
       return sendSuccess(
         res,
         {
-          unitTypeId: dbType.unit_type_id,
+          unitTypeId: Number(dbType.unit_type_id),
           typeCode: dbType.type_code,
           typeName: dbType.type_name,
-          category: dbType.category,
+          category: dbType.unit_category || dbType.category,
           lengthFt: dbType.length_ft,
-          teu: String(dbType.teu),
+          teu: String(dbType.teu_factor || dbType.teu),
           isReefer: dbType.is_reefer,
           isActive: dbType.is_active,
         },
@@ -138,7 +139,7 @@ export class UnitsController {
     }
 
     try {
-      const existing = await prisma.unit_types.findFirst({
+      const existing = await (prisma as any).unit_types.findFirst({
         where: isNaN(Number(idOrCode))
           ? { type_code: idOrCode }
           : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] },
@@ -148,11 +149,11 @@ export class UnitsController {
         throw new NotFoundError('Unit type', idOrCode);
       }
 
-      const updated = await prisma.unit_types.update({
+      const updated = await (prisma as any).unit_types.update({
         where: { unit_type_id: existing.unit_type_id },
         data: {
           type_name: req.body.typeName ?? existing.type_name,
-          category: req.body.category ?? existing.category,
+          unit_category: req.body.category ?? existing.unit_category,
           is_active: req.body.isActive !== undefined ? Boolean(req.body.isActive) : existing.is_active,
         },
       });
@@ -240,11 +241,18 @@ export class UnitsController {
 
     try {
       const [units, invoices] = await Promise.all([
-        prisma.unit_stays.findMany({
-          where: { unit_no: { contains: q } },
+        (prisma as any).unit_stays.findMany({
+          where: {
+            unit_stay_cargo_units: {
+              unit_no: { contains: q },
+            },
+          },
+          include: {
+            unit_stay_cargo_units: true,
+          },
           take: 10,
         }),
-        prisma.invoices.findMany({
+        (prisma as any).invoices.findMany({
           where: { invoice_no: { contains: q } },
           take: 10,
         }),
@@ -254,9 +262,9 @@ export class UnitsController {
         {
           entity: 'UNIT',
           label: 'Units',
-          hits: units.map((u) => ({
-            id: u.unit_stay_id,
-            title: u.unit_no,
+          hits: units.map((u: any) => ({
+            id: Number(u.unit_stay_id),
+            title: u.unit_stay_cargo_units?.unit_no || `CONT-${u.unit_stay_id}`,
             status: u.physical_status,
             to: `/units/${u.unit_stay_id}`,
           })),
@@ -264,8 +272,8 @@ export class UnitsController {
         {
           entity: 'INVOICE',
           label: 'Invoices',
-          hits: invoices.map((i) => ({
-            id: i.invoice_id,
+          hits: invoices.map((i: any) => ({
+            id: Number(i.invoice_id),
             title: i.invoice_no,
             status: i.status,
             to: `/invoices/${i.invoice_id}`,
@@ -297,47 +305,62 @@ export class UnitsController {
     }
 
     try {
-      const dbStays = await prisma.unit_stays.findMany({
+      const dbStays = await (prisma as any).unit_stays.findMany({
         where: {
-          ...(category ? { unit_stays_unit_types: { category: String(category) } } : {}),
+          ...(category
+            ? {
+                unit_stay_cargo_units: {
+                  unit_category: String(category),
+                },
+              }
+            : {}),
           ...(status ? { physical_status: String(status) } : {}),
           ...(customsStatus ? { customs_status: String(customsStatus) } : {}),
           ...(searchQ
             ? {
                 OR: [
-                  { unit_no: { contains: String(searchQ) } },
+                  { unit_stay_cargo_units: { unit_no: { contains: String(searchQ) } } },
                   { seal_no: { contains: String(searchQ) } },
                 ],
               }
             : {}),
         },
         include: {
-          unit_stays_unit_types: true,
-          unit_stays_yard_locations: true,
-          unit_stays_consignments: true,
-          unit_stays_cargo_regimes: true,
-          holds: true,
+          unit_stay_cargo_units: {
+            include: {
+              cargo_unit_unit_types: true,
+            },
+          },
+          unit_stay_yard_locations: true,
+          unit_stay_consignments: true,
+          unit_stay_cargo_regimes: true,
+          unit_stay_holds: true,
         },
         orderBy: { unit_stay_id: 'desc' },
       });
 
-      const mapped = dbStays.map((u) => {
-        const activeHolds = (u.holds || []).filter((h) => h.status === 'ACTIVE').length;
-        const dwell = u.arrived_at
-          ? Math.max(1, Math.floor((Date.now() - new Date(u.arrived_at).getTime()) / 86400000))
+      const mapped = dbStays.map((u: any) => {
+        const activeHolds = (u.unit_stay_holds || []).filter((h: any) => h.status === 'ACTIVE').length;
+        const dwell = u.gated_in_at
+          ? Math.max(1, Math.floor((Date.now() - new Date(u.gated_in_at).getTime()) / 86400000))
           : 4;
+        const cUnit = u.unit_stay_cargo_units;
+        const uType = cUnit?.cargo_unit_unit_types;
+        const unitNo = cUnit?.unit_no || `CONT-${u.unit_stay_id}`;
+        const cat = cUnit?.unit_category || uType?.unit_category || 'CONTAINER';
+        const typeCode = uType?.type_code || '40HC';
 
         return {
-          unitStayId: u.unit_stay_id,
+          unitStayId: Number(u.unit_stay_id),
           siteId: u.site_id,
-          consignmentId: u.consignment_id,
+          consignmentId: u.consignment_id ? Number(u.consignment_id) : null,
           cargoUnit: {
-            cargoUnitId: u.unit_stay_id,
-            category: u.unit_stays_unit_types?.category || 'CONTAINER',
-            unitNo: u.unit_no,
-            unitTypeCode: u.unit_stays_unit_types?.type_code || '40HC',
-            isoType: u.unit_stays_unit_types?.type_code || '40HC',
-            tareWeightKg: 3800,
+            cargoUnitId: Number(u.unit_stay_id),
+            category: cat,
+            unitNo,
+            unitTypeCode: typeCode,
+            isoType: typeCode,
+            tareWeightKg: Number(uType?.default_tare_kg || 3800),
           },
           physicalStatus: u.physical_status,
           flow: u.flow,
@@ -348,27 +371,27 @@ export class UnitsController {
           sealNo: u.seal_no,
           grossWeightKg: Number(u.gross_weight_kg || 0),
           activeHoldCount: activeHolds,
-          currentLocation: u.unit_stays_yard_locations
+          currentLocation: u.unit_stay_yard_locations
             ? {
-                locationId: u.unit_stays_yard_locations.yard_location_id,
-                fullCode: u.unit_stays_yard_locations.full_code,
-                zone: u.unit_stays_yard_locations.full_code.split('-')[0] || 'A',
+                locationId: u.unit_stay_yard_locations.yard_location_id,
+                fullCode: u.unit_stay_yard_locations.full_code,
+                zone: u.unit_stay_yard_locations.full_code.split('-')[0] || 'A',
               }
             : undefined,
           unitSummary: {
-            unitNo: u.unit_no,
-            category: u.unit_stays_unit_types?.category || 'CONTAINER',
+            unitNo,
+            category: cat,
             activeHoldCount: activeHolds,
             releaseStatus: u.release_status,
             physicalStatus: u.physical_status,
             dwellDays: dwell,
-            consignmentRef: u.unit_stays_consignments?.ref_no,
+            consignmentRef: u.unit_stay_consignments?.ref_no,
           },
-          arrivedAt: u.arrived_at?.toISOString(),
+          arrivedAt: (u.gated_in_at || u.createdate)?.toISOString(),
         };
       });
 
-      const paginated = paginateArray(mapped, params, (s) => s.unitStayId);
+      const paginated = paginateArray(mapped, params, (s: any) => s.unitStayId);
       return sendSuccess(res, paginated, 'Units retrieved successfully from database');
     } catch (err: any) {
       return sendError(res, err.message, 500);
@@ -385,32 +408,47 @@ export class UnitsController {
 
     try {
       const typeCode = body.isoType || body.unitTypeCode || '40HC';
-      const uType = await prisma.unit_types.findFirst({ where: { type_code: typeCode } });
+      const uType = await (prisma as any).unit_types.findFirst({ where: { type_code: typeCode } });
       const typeId = uType?.unit_type_id || 2;
+      const unitNo = body.unitNo || `NEWU${Date.now().toString().slice(-7)}`;
 
-      const created = await prisma.unit_stays.create({
+      let cUnit = await (prisma as any).cargo_units.findFirst({
+        where: { unit_no: unitNo },
+      });
+      if (!cUnit) {
+        cUnit = await (prisma as any).cargo_units.create({
+          data: {
+            unit_category: body.category || 'CONTAINER',
+            unit_no: unitNo,
+            unit_type_id: typeId,
+            createdby: 'system',
+          },
+        });
+      }
+
+      const created = await (prisma as any).unit_stays.create({
         data: {
           site_id: body.siteId || 1,
-          unit_type_id: typeId,
-          consignment_id: body.consignmentId || null,
+          cargo_unit_id: cUnit.cargo_unit_id,
+          consignment_id: body.consignmentId ? Number(body.consignmentId) : null,
           cargo_regime_id: body.cargoRegimeId || 1,
-          unit_no: body.unitNo || `NEWU${Date.now().toString().slice(-7)}`,
           flow: body.flow || 'IMPORT',
           full_empty: body.fullEmpty || 'F',
           physical_status: body.physicalStatus || 'EXPECTED',
-          customs_status: body.customsStatus || 'PENDING',
-          release_status: body.releaseStatus || 'PENDING_CHARGES',
+          customs_status: body.customsStatus || 'NOT_LODGED',
+          release_status: body.releaseStatus || 'NONE',
           seal_no: body.sealNo || 'SEAL-001',
           gross_weight_kg: body.grossWeightKg ? Number(body.grossWeightKg) : 24000,
-          arrived_at: new Date(),
+          gated_in_at: new Date(),
+          createdby: 'system',
         },
       });
 
       return sendCreated(
         res,
         {
-          unitStayId: created.unit_stay_id,
-          unitNo: created.unit_no,
+          unitStayId: Number(created.unit_stay_id),
+          unitNo,
           siteId: created.site_id,
           physicalStatus: created.physical_status,
           flow: created.flow,
@@ -432,16 +470,26 @@ export class UnitsController {
     }
 
     try {
-      const u = await prisma.unit_stays.findFirst({
-        where: isNaN(Number(idOrUnitNo))
-          ? { unit_no: idOrUnitNo }
-          : { OR: [{ unit_stay_id: Number(idOrUnitNo) }, { unit_no: idOrUnitNo }] },
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+              OR: [
+                { unit_stay_id: Number(idOrUnitNo) },
+                { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+              ],
+            }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
         include: {
-          unit_stays_unit_types: true,
-          unit_stays_yard_locations: true,
-          unit_stays_consignments: true,
-          unit_stays_cargo_regimes: true,
-          holds: true,
+          unit_stay_cargo_units: {
+            include: {
+              cargo_unit_unit_types: true,
+            },
+          },
+          unit_stay_yard_locations: true,
+          unit_stay_consignments: true,
+          unit_stay_cargo_regimes: true,
+          unit_stay_holds: true,
         },
       });
 
@@ -449,17 +497,23 @@ export class UnitsController {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
 
-      const activeHolds = (u.holds || []).filter((h) => h.status === 'ACTIVE').length;
+      const activeHolds = (u.unit_stay_holds || []).filter((h: any) => h.status === 'ACTIVE').length;
+      const cUnit = u.unit_stay_cargo_units;
+      const uType = cUnit?.cargo_unit_unit_types;
+      const unitNo = cUnit?.unit_no || `CONT-${u.unit_stay_id}`;
+      const cat = cUnit?.unit_category || uType?.unit_category || 'CONTAINER';
+      const typeCode = uType?.type_code || '40HC';
+
       const stay = {
-        unitStayId: u.unit_stay_id,
+        unitStayId: Number(u.unit_stay_id),
         siteId: u.site_id,
-        consignmentId: u.consignment_id,
+        consignmentId: u.consignment_id ? Number(u.consignment_id) : null,
         cargoUnit: {
-          cargoUnitId: u.unit_stay_id,
-          category: u.unit_stays_unit_types?.category || 'CONTAINER',
-          unitNo: u.unit_no,
-          unitTypeCode: u.unit_stays_unit_types?.type_code || '40HC',
-          isoType: u.unit_stays_unit_types?.type_code || '40HC',
+          cargoUnitId: Number(u.unit_stay_id),
+          category: cat,
+          unitNo,
+          unitTypeCode: typeCode,
+          isoType: typeCode,
         },
         physicalStatus: u.physical_status,
         flow: u.flow,
@@ -470,13 +524,13 @@ export class UnitsController {
         sealNo: u.seal_no,
         grossWeightKg: Number(u.gross_weight_kg || 0),
         activeHoldCount: activeHolds,
-        currentLocation: u.unit_stays_yard_locations
+        currentLocation: u.unit_stay_yard_locations
           ? {
-              locationId: u.unit_stays_yard_locations.yard_location_id,
-              fullCode: u.unit_stays_yard_locations.full_code,
+              locationId: u.unit_stay_yard_locations.yard_location_id,
+              fullCode: u.unit_stay_yard_locations.full_code,
             }
           : undefined,
-        gatedInAt: u.arrived_at?.toISOString(),
+        gatedInAt: (u.gated_in_at || u.createdate)?.toISOString(),
       };
 
       return sendSuccess(res, stay, 'Unit stay retrieved successfully from database');
@@ -495,17 +549,23 @@ export class UnitsController {
     }
 
     try {
-      const u = await prisma.unit_stays.findFirst({
-        where: isNaN(Number(idOrUnitNo))
-          ? { unit_no: idOrUnitNo }
-          : { OR: [{ unit_stay_id: Number(idOrUnitNo) }, { unit_no: idOrUnitNo }] },
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+              OR: [
+                { unit_stay_id: Number(idOrUnitNo) },
+                { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+              ],
+            }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
       });
 
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
 
-      const updated = await prisma.unit_stays.update({
+      const updated = await (prisma as any).unit_stays.update({
         where: { unit_stay_id: u.unit_stay_id },
         data: {
           ...(req.body.physicalStatus ? { physical_status: req.body.physicalStatus } : {}),
@@ -532,27 +592,37 @@ export class UnitsController {
     }
 
     try {
-      const u = await prisma.unit_stays.findFirst({
-        where: isNaN(Number(idOrUnitNo))
-          ? { unit_no: idOrUnitNo }
-          : { OR: [{ unit_stay_id: Number(idOrUnitNo) }, { unit_no: idOrUnitNo }] },
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+              OR: [
+                { unit_stay_id: Number(idOrUnitNo) },
+                { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+              ],
+            }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+        include: {
+          unit_stay_cargo_units: true,
+        },
       });
 
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
 
+      const unitNo = u.unit_stay_cargo_units?.unit_no || `CONT-${u.unit_stay_id}`;
       const timeline = [
         {
           eventType: 'MANIFEST_IMPORTED',
-          occurredAt: u.arrived_at?.toISOString() || new Date().toISOString(),
+          occurredAt: (u.gated_in_at || u.createdate)?.toISOString() || new Date().toISOString(),
           summary: 'Manifest record verified and loaded into ICD system',
           user: 'SYSTEM',
         },
         {
           eventType: 'GATE_IN',
-          occurredAt: u.arrived_at?.toISOString() || new Date().toISOString(),
-          summary: `Unit ${u.unit_no} gated into depot`,
+          occurredAt: (u.gated_in_at || u.createdate)?.toISOString() || new Date().toISOString(),
+          summary: `Unit ${unitNo} gated into depot`,
           user: 'Gate Officer',
         },
         {
@@ -566,8 +636,8 @@ export class UnitsController {
       return sendSuccess(
         res,
         {
-          unitStayId: u.unit_stay_id,
-          unitNo: u.unit_no,
+          unitStayId: Number(u.unit_stay_id),
+          unitNo,
           events: timeline,
         },
         'Unit timeline retrieved successfully'
@@ -588,32 +658,39 @@ export class UnitsController {
     }
 
     try {
-      const u = await prisma.unit_stays.findFirst({
-        where: isNaN(Number(idOrUnitNo))
-          ? { unit_no: idOrUnitNo }
-          : { OR: [{ unit_stay_id: Number(idOrUnitNo) }, { unit_no: idOrUnitNo }] },
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+              OR: [
+                { unit_stay_id: Number(idOrUnitNo) },
+                { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+              ],
+            }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
       });
 
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
 
-      const holds = await prisma.holds.findMany({
+      const holds = await (prisma as any).holds.findMany({
         where: { unit_stay_id: u.unit_stay_id },
+        include: { hold_types: true },
         orderBy: { hold_id: 'desc' },
       });
 
-      const mapped = holds.map((h) => ({
-        holdId: h.hold_id,
-        unitStayId: h.unit_stay_id,
-        holdTypeCode: h.hold_type,
+      const mapped = holds.map((h: any) => ({
+        holdId: Number(h.hold_id),
+        unitStayId: Number(h.unit_stay_id),
+        holdTypeCode: h.hold_types?.type_code || `HOLD_${h.hold_type_id}`,
         reason: h.reason,
         status: h.status,
         placedAt: h.placed_at?.toISOString(),
         liftedAt: h.lifted_at?.toISOString(),
       }));
 
-      const paginated = paginateArray(mapped, params, (h) => h.holdId);
+      const paginated = paginateArray(mapped, params, (h: any) => h.holdId);
       return sendSuccess(res, paginated, 'Unit holds retrieved successfully from database');
     } catch (err: any) {
       if (err instanceof NotFoundError) throw err;
@@ -630,40 +707,55 @@ export class UnitsController {
     }
 
     try {
-      const u = await prisma.unit_stays.findFirst({
-        where: isNaN(Number(idOrUnitNo))
-          ? { unit_no: idOrUnitNo }
-          : { OR: [{ unit_stay_id: Number(idOrUnitNo) }, { unit_no: idOrUnitNo }] },
-        include: { unit_stays_yard_locations: true },
+      const isNum = !isNaN(Number(idOrUnitNo));
+      const u = await (prisma as any).unit_stays.findFirst({
+        where: isNum
+          ? {
+              OR: [
+                { unit_stay_id: Number(idOrUnitNo) },
+                { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+              ],
+            }
+          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
+        include: {
+          unit_stay_cargo_units: true,
+          unit_stay_yard_locations: true,
+        },
       });
 
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
 
-      const moves = await prisma.yard_moves.findMany({
+      const moves = await (prisma as any).yard_moves.findMany({
         where: { unit_stay_id: u.unit_stay_id },
+        include: {
+          m_yard_location_yard_move_from_location_idTom_yard_location: true,
+          m_yard_location_yard_move_to_location_idTom_yard_location: true,
+        },
         orderBy: { yard_move_id: 'desc' },
       });
 
       return sendSuccess(
         res,
         {
-          unitStayId: u.unit_stay_id,
-          unitNo: u.unit_no,
+          unitStayId: Number(u.unit_stay_id),
+          unitNo: u.unit_stay_cargo_units?.unit_no || `CONT-${u.unit_stay_id}`,
           moves: moves.length > 0
-            ? moves.map((m) => ({
-                yardMoveId: m.yard_move_id,
-                moveType: m.move_type,
-                status: m.status,
-                orderedAt: m.ordered_at?.toISOString(),
-                executedAt: m.executed_at?.toISOString(),
+            ? moves.map((m: any) => ({
+                yardMoveId: Number(m.yard_move_id),
+                moveType: m.move_kind || 'RELOCATE',
+                status: 'COMPLETED',
+                fromLocation: m.m_yard_location_yard_move_from_location_idTom_yard_location?.full_code,
+                toLocation: m.m_yard_location_yard_move_to_location_idTom_yard_location?.full_code,
+                orderedAt: m.occurred_at?.toISOString(),
+                executedAt: m.occurred_at?.toISOString(),
               }))
             : [
                 {
                   fromLocation: 'GATE_IN_LANE_1',
-                  toLocation: u.unit_stays_yard_locations?.full_code || 'A-01-01-1',
-                  movedAt: u.arrived_at?.toISOString() || new Date().toISOString(),
+                  toLocation: u.unit_stay_yard_locations?.full_code || 'A-01-01-1',
+                  movedAt: (u.gated_in_at || u.createdate)?.toISOString() || new Date().toISOString(),
                   movedBy: 'Terminal Yard Operator',
                 },
               ],

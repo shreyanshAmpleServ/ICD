@@ -333,10 +333,10 @@ model cargo_unit {
   createdby        String           @db.NVarChar(64)
   updatedby        String?          @db.NVarChar(64)
   log_inst         Int              @default(1, map: "DF_cargo_unit_log_inst")
-  m_party          m_party?         @relation(fields: [owner_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cargo_unit_owner")
-  m_identity_rule  m_identity_rule? @relation(fields: [identity_rule_id], references: [identity_rule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cargo_unit_rule")
-  unit_types       m_unit_type      @relation(fields: [unit_type_id], references: [unit_type_id], onUpdate: NoAction, map: "FK_cargo_unit_type")
-  unit_stay        unit_stay[]
+  cargo_unit_parties        m_party?         @relation(fields: [owner_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cargo_unit_owner")
+  cargo_unit_identity_rules m_identity_rule? @relation(fields: [identity_rule_id], references: [identity_rule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cargo_unit_rule")
+  cargo_unit_unit_types     m_unit_type      @relation(fields: [unit_type_id], references: [unit_type_id], onUpdate: NoAction, map: "FK_cargo_unit_type")
+  cargo_unit_unit_stays     unit_stay[]
 
   @@unique([unit_category, unit_no], map: "UQ_cargo_unit")
   @@index([unit_no], map: "IX_cargo_unit_no")
@@ -527,8 +527,8 @@ model device_read {
   matched_visit_id      BigInt?
   match_status          String               @default("PENDING", map: "DF_device_read_match") @db.VarChar(10)
   createdate            DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_device_read_created")
-  m_device_integration  m_device_integration @relation(fields: [device_integration_id], references: [device_integration_id], onUpdate: NoAction, map: "FK_dr_integration")
-  truck_visit           truck_visit?         @relation(fields: [matched_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_dr_visit")
+  device_read_integrations  m_device_integration @relation(fields: [device_integration_id], references: [device_integration_id], onUpdate: NoAction, map: "FK_dr_integration")
+  device_read_truck_visits  truck_visit?         @relation(fields: [matched_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_dr_visit")
 
   @@index([device_integration_id, read_at], map: "IX_dr_integration_time")
 }
@@ -793,13 +793,13 @@ model handling_job {
   createdby            String              @db.NVarChar(64)
   updatedby            String?             @db.NVarChar(64)
   log_inst             Int                 @default(1, map: "DF_handling_job_log_inst")
-  consignment          consignment?        @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_consignment")
-  unit_stay            unit_stay           @relation(fields: [container_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_hj_container")
-  m_equipment          m_equipment?        @relation(fields: [equipment_id], references: [equipment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_equipment")
-  labour_contractor    labour_contractor?  @relation(fields: [labour_contractor_id], references: [labour_contractor_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_labour")
-  m_yard_location      m_yard_location?    @relation(fields: [work_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_location")
-  m_site               m_site              @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_hj_site")
-  handling_job_line    handling_job_line[]
+  handling_job_consignments           consignment?        @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_consignment")
+  handling_job_unit_stays             unit_stay           @relation(fields: [container_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_hj_container")
+  handling_job_equipment              m_equipment?        @relation(fields: [equipment_id], references: [equipment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_equipment")
+  handling_job_labour_contractors     labour_contractor?  @relation(fields: [labour_contractor_id], references: [labour_contractor_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_labour")
+  handling_job_yard_locations         m_yard_location?    @relation(fields: [work_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_location")
+  handling_job_sites                  m_site              @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_hj_site")
+  handling_job_lines                  handling_job_line[]
 
   @@unique([site_id, job_no], map: "UQ_handling_job_no")
   @@index([container_stay_id], map: "IX_hj_container")
@@ -827,9 +827,9 @@ model handling_job_line {
   createdby            String            @db.NVarChar(64)
   updatedby            String?           @db.NVarChar(64)
   log_inst             Int               @default(1, map: "DF_handling_job_line_log_inst")
-  consignment_line     consignment_line? @relation(fields: [consignment_line_id], references: [consignment_line_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hjl_cline")
-  handling_job         handling_job      @relation(fields: [handling_job_id], references: [handling_job_id], onUpdate: NoAction, map: "FK_hjl_job")
-  unit_stay            unit_stay?        @relation(fields: [lot_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hjl_lot")
+  handling_job_line_consignment_lines consignment_line? @relation(fields: [consignment_line_id], references: [consignment_line_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hjl_cline")
+  handling_job_line_jobs              handling_job      @relation(fields: [handling_job_id], references: [handling_job_id], onUpdate: NoAction, map: "FK_hjl_job")
+  handling_job_line_unit_stays        unit_stay?        @relation(fields: [lot_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hjl_lot")
 
   @@unique([handling_job_id, line_no], map: "UQ_handling_job_line")
 }
@@ -860,8 +860,8 @@ model hold {
   approval_request                                      approval_request? @relation(fields: [lift_approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hold_lift_approval")
   document_hold_lift_evidence_document_idTodocument     document?         @relation("hold_lift_evidence_document_idTodocument", fields: [lift_evidence_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hold_lift_doc")
   document_hold_placed_evidence_document_idTodocument   document?         @relation("hold_placed_evidence_document_idTodocument", fields: [placed_evidence_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hold_placed_doc")
-  unit_stay                                             unit_stay         @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_hold_stay")
-  m_hold_type                                           m_hold_type       @relation(fields: [hold_type_id], references: [hold_type_id], onUpdate: NoAction, map: "FK_hold_type")
+  hold_unit_stays                                       unit_stay         @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_hold_stay")
+  hold_types                                            m_hold_type       @relation(fields: [hold_type_id], references: [hold_type_id], onUpdate: NoAction, map: "FK_hold_type")
 }
 
 model inspection {
@@ -1130,10 +1130,10 @@ model labour_contractor {
   createdby            String         @db.NVarChar(64)
   updatedby            String?        @db.NVarChar(64)
   log_inst             Int            @default(1, map: "DF_labour_contractor_log_inst")
-  handling_job         handling_job[]
-  m_currency           m_currency?    @relation(fields: [currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_lc_currency")
-  m_party              m_party?       @relation(fields: [party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_lc_party")
-  m_site               m_site         @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_lc_site")
+  labour_contractor_handling_jobs handling_job[]
+  labour_contractor_currencies    m_currency?    @relation(fields: [currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_lc_currency")
+  labour_contractor_parties       m_party?       @relation(fields: [party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_lc_party")
+  labour_contractor_sites         m_site         @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_lc_site")
 }
 
 model lot_balance {
@@ -1519,11 +1519,11 @@ model m_device_integration {
   createdby             String        @db.NVarChar(64)
   updatedby             String?       @db.NVarChar(64)
   log_inst              Int           @default(1, map: "DF_m_device_integration_log_inst")
-  device_read           device_read[]
-  m_device              m_device?     @relation(fields: [gate_agent_device_id], references: [device_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_di_agent")
-  m_checkpoint          m_checkpoint? @relation(fields: [checkpoint_id], references: [checkpoint_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_di_checkpoint")
-  m_gate_lane           m_gate_lane?  @relation(fields: [gate_lane_id], references: [gate_lane_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_di_lane")
-  m_site                m_site        @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_m_di_site")
+  m_device_integration_device_reads device_read[]
+  m_device_integration_devices      m_device?     @relation(fields: [gate_agent_device_id], references: [device_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_di_agent")
+  m_device_integration_checkpoints  m_checkpoint? @relation(fields: [checkpoint_id], references: [checkpoint_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_di_checkpoint")
+  m_device_integration_gate_lanes   m_gate_lane?  @relation(fields: [gate_lane_id], references: [gate_lane_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_di_lane")
+  m_device_integration_sites        m_site        @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_m_di_site")
 }
 
 model m_document_type {
@@ -2125,7 +2125,7 @@ model m_repair_code {
   createdby            String                 @db.NVarChar(64)
   updatedby            String?                @db.NVarChar(64)
   log_inst             Int                    @default(1, map: "DF_m_repair_code_log_inst")
-  repair_estimate_line repair_estimate_line[]
+  m_repair_code_lines repair_estimate_line[]
 }
 
 model m_resolution_code {
@@ -2359,7 +2359,7 @@ model m_unit_type {
   createdby                 String                      @db.NVarChar(64)
   updatedby                 String?                     @db.NVarChar(64)
   log_inst                  Int                         @default(1, map: "DF_m_unit_type_log_inst")
-  cargo_unit                cargo_unit[]
+  m_unit_type_cargo_units   cargo_unit[]
   consignment_line          consignment_line[]
   m_unit_type_identity_rule m_unit_type_identity_rule[]
   tariff_rule               tariff_rule[]
@@ -2836,7 +2836,7 @@ model reefer_reading {
   is_out_of_range   Boolean        @default(false, map: "DF_reefer_reading_oor")
   createdate        DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_reefer_reading_created")
   createdby         String         @db.NVarChar(64)
-  reefer_session    reefer_session @relation(fields: [reefer_session_id], references: [reefer_session_id], onUpdate: NoAction, map: "FK_rr_session")
+  reefer_reading_sessions reefer_session @relation(fields: [reefer_session_id], references: [reefer_session_id], onUpdate: NoAction, map: "FK_rr_session")
 
   @@index([reefer_session_id, read_at], map: "IX_rr_session")
 }
@@ -2858,9 +2858,9 @@ model reefer_session {
   createdby         String           @db.NVarChar(64)
   updatedby         String?          @db.NVarChar(64)
   log_inst          Int              @default(1, map: "DF_reefer_session_log_inst")
-  reefer_reading    reefer_reading[]
-  m_yard_location   m_yard_location  @relation(fields: [plug_location_id], references: [yard_location_id], onUpdate: NoAction, map: "FK_rs_plug")
-  unit_stay         unit_stay        @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_rs_stay")
+  reefer_session_readings       reefer_reading[]
+  reefer_session_yard_locations m_yard_location  @relation(fields: [plug_location_id], references: [yard_location_id], onUpdate: NoAction, map: "FK_rs_plug")
+  reefer_session_unit_stays     unit_stay        @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_rs_stay")
 }
 
 model refund {
@@ -3017,12 +3017,12 @@ model repair_estimate {
   createdby            String                 @db.NVarChar(64)
   updatedby            String?                @db.NVarChar(64)
   log_inst             Int                    @default(1, map: "DF_repair_estimate_log_inst")
-  m_party              m_party                @relation(fields: [approver_party_id], references: [party_id], onUpdate: NoAction, map: "FK_re_approver")
-  m_currency           m_currency             @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_re_currency")
-  inspection           inspection?            @relation(fields: [inspection_id], references: [inspection_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_re_inspection")
-  m_site               m_site                 @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_re_site")
-  unit_stay            unit_stay              @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_re_stay")
-  repair_estimate_line repair_estimate_line[]
+  repair_estimate_parties    m_party                @relation(fields: [approver_party_id], references: [party_id], onUpdate: NoAction, map: "FK_re_approver")
+  repair_estimate_currencies m_currency             @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_re_currency")
+  repair_estimate_inspection inspection?            @relation(fields: [inspection_id], references: [inspection_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_re_inspection")
+  repair_estimate_sites      m_site                 @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_re_site")
+  repair_estimate_unit_stays unit_stay              @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_re_stay")
+  repair_estimate_lines      repair_estimate_line[]
 
   @@unique([site_id, estimate_no], map: "UQ_repair_estimate_no")
   @@index([unit_stay_id], map: "IX_re_stay")
@@ -3046,9 +3046,9 @@ model repair_estimate_line {
   createdby               String              @db.NVarChar(64)
   updatedby               String?             @db.NVarChar(64)
   log_inst                Int                 @default(1, map: "DF_repair_estimate_line_log_inst")
-  m_repair_code           m_repair_code       @relation(fields: [repair_code], references: [repair_code], onUpdate: NoAction, map: "FK_rel_code")
-  repair_estimate         repair_estimate     @relation(fields: [repair_estimate_id], references: [repair_estimate_id], onUpdate: NoAction, map: "FK_rel_estimate")
-  inspection_finding      inspection_finding? @relation(fields: [inspection_finding_id], references: [inspection_finding_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_rel_finding")
+  repair_estimate_line_codes     m_repair_code       @relation(fields: [repair_code], references: [repair_code], onUpdate: NoAction, map: "FK_rel_code")
+  repair_estimate_line_estimates repair_estimate     @relation(fields: [repair_estimate_id], references: [repair_estimate_id], onUpdate: NoAction, map: "FK_rel_estimate")
+  repair_estimate_line_findings  inspection_finding? @relation(fields: [inspection_finding_id], references: [inspection_finding_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_rel_finding")
 
   @@unique([repair_estimate_id, line_no], map: "UQ_repair_estimate_line")
 }
@@ -3632,7 +3632,7 @@ model yard_move {
   m_yard_location_yard_move_from_location_idTom_yard_location m_yard_location? @relation("yard_move_from_location_idTom_yard_location", fields: [from_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_yard_move_from")
   move_order                                                  move_order?      @relation(fields: [move_order_id], references: [move_order_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_yard_move_order")
   m_site                                                      m_site           @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_yard_move_site")
-  unit_stay                                                   unit_stay        @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_yard_move_stay")
+  yard_move_unit_stays                                        unit_stay        @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_yard_move_stay")
   m_yard_location_yard_move_to_location_idTom_yard_location   m_yard_location? @relation("yard_move_to_location_idTom_yard_location", fields: [to_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_yard_move_to")
 
   @@index([site_id, occurred_at], map: "IX_yard_move_site_time")

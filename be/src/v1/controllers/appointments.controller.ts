@@ -14,7 +14,7 @@ export class AppointmentsController {
         orderBy: { rule_id: "asc" },
       });
 
-      const items = (dbRules || []).map((r) => ({
+      const items = (dbRules || []).map((r: any) => ({
         appointmentSlotRuleId: r.rule_id,
         ruleId: r.rule_id,
         flow: r.visit_types?.visit_code || "IMPORT_PICKUP",
@@ -156,7 +156,7 @@ export class AppointmentsController {
       const slots = hours.map((h) => {
         const slotHourStr = h < 10 ? `0${h}` : `${h}`;
         const slotStart = `${date}T${slotHourStr}:00:00Z`;
-        const countInSlot = bookedAppts.filter((a) => {
+        const countInSlot = bookedAppts.filter((a: any) => {
           const apptHour = new Date(a.slot_start).getUTCHours();
           return apptHour >= h && apptHour < h + 2;
         }).length;
@@ -188,7 +188,7 @@ export class AppointmentsController {
         orderBy: { appointment_id: "desc" },
       });
 
-      const items = (dbAppts || []).map((a) => {
+      const items = (dbAppts || []).map((a: any) => {
         const slotStartDate = a.slot_start ? new Date(a.slot_start) : new Date();
         const slotEndDate = a.slot_end
           ? new Date(a.slot_end)

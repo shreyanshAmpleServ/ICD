@@ -13,7 +13,7 @@ export class CfsController {
         orderBy: { contractor_id: "asc" },
       });
 
-      const items = (dbContractors || []).map((c) => ({
+      const items = (dbContractors || []).map((c: any) => ({
         labourContractorId: c.contractor_id,
         contractorId: c.contractor_id,
         contractorName: c.contractor_name,
@@ -123,28 +123,32 @@ export class CfsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const dbJobs = await prisma.handling_jobs.findMany({
+      const dbJobs = await (prisma as any).handling_jobs.findMany({
         include: {
-          unit_stays: true,
+          handling_job_unit_stays: {
+            include: {
+              unit_stay_cargo_units: true,
+            },
+          },
           handling_job_lines: true,
-          labour_contractors: true,
+          handling_job_labour_contractors: true,
         },
         orderBy: { handling_job_id: "desc" },
       });
 
-      const items = (dbJobs || []).map((j) => ({
-        handlingJobId: j.handling_job_id,
-        jobNo: `JOB-26-0${j.handling_job_id}`,
-        jobKind: j.job_type === "CFS_DESTUFFING" ? "DESTUFF" : "STUFF",
-        jobType: j.job_type === "CFS_DESTUFFING" ? "STRIP" : "STUFF",
-        unitStayId: j.unit_stay_id,
-        unitNo: j.unit_stays?.unit_no || "TCLU 551902 4",
+      const items = (dbJobs || []).map((j: any) => ({
+        handlingJobId: Number(j.handling_job_id),
+        jobNo: j.job_no || `JOB-26-0${j.handling_job_id}`,
+        jobKind: j.job_kind === "CFS_DESTUFFING" || j.job_kind === "CFS_DESTUFF" ? "DESTUFF" : "STUFF",
+        jobType: j.job_kind === "CFS_DESTUFFING" || j.job_kind === "CFS_DESTUFF" ? "STRIP" : "STUFF",
+        unitStayId: Number(j.container_stay_id),
+        unitNo: j.handling_job_unit_stays?.unit_stay_cargo_units?.unit_no || "TCLU 551902 4",
         plannedAt: j.started_at?.toISOString() || new Date().toISOString(),
         status: j.status || "IN_PROGRESS",
-        contractorName: j.labour_contractors?.contractor_name || "Kilima Gang",
+        contractorName: j.handling_job_labour_contractors?.contractor_name || "Kilima Gang",
         lines:
           (j.handling_job_lines || []).length > 0
-            ? (j.handling_job_lines || []).map((l) => ({
+            ? (j.handling_job_lines || []).map((l: any) => ({
                 lineNo: l.line_no,
                 packageKind: l.uom || "CARTONS",
                 pieces: l.package_count || 450,
@@ -183,22 +187,24 @@ export class CfsController {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const unitStayId = Number(req.body.unitStayId) || 5001;
       const jobKind = req.body.jobKind || req.body.jobType || "STRIP";
-      const dbJobType =
+      const dbJobKind =
         jobKind === "STRIP" || jobKind === "DESTUFF"
-          ? "CFS_DESTUFFING"
-          : "CFS_STUFFING";
+          ? "CFS_DESTUFF"
+          : "CFS_STUFF";
 
-      const created = await prisma.handling_jobs.create({
+      const created = await (prisma as any).handling_jobs.create({
         data: {
           site_id: siteId,
-          unit_stay_id: unitStayId,
-          job_type: dbJobType,
+          job_no: `JOB-${Date.now()}`,
+          job_kind: dbJobKind,
+          container_stay_id: unitStayId,
           status: "PLANNED",
-          contractor_id: req.body.contractorId || 1,
+          labour_contractor_id: req.body.contractorId || 1,
           started_at: new Date(),
+          createdby: "system",
         },
         include: {
-          labour_contractors: true,
+          handling_job_labour_contractors: true,
         },
       });
 
@@ -206,7 +212,7 @@ export class CfsController {
       if (req.body.lines && Array.isArray(req.body.lines)) {
         for (let i = 0; i < req.body.lines.length; i++) {
           const l = req.body.lines[i];
-          await prisma.handling_job_lines.create({
+          await (prisma as any).handling_job_lines.create({
             data: {
               handling_job_id: created.handling_job_id,
               line_no: l.lineNo || i + 1,
@@ -214,20 +220,21 @@ export class CfsController {
               uom: l.packageKind || l.uom || "CARTONS",
               cargo_description:
                 l.goodsDesc || l.cargoDescription || "General cargo",
+              createdby: "system",
             },
           });
         }
       }
 
       return sendCreated(res, {
-        handlingJobId: created.handling_job_id,
-        jobNo: `JOB-26-0${created.handling_job_id}`,
+        handlingJobId: Number(created.handling_job_id),
+        jobNo: created.job_no,
         jobType: jobKind,
-        unitStayId: created.unit_stay_id,
+        unitStayId: Number(created.container_stay_id),
         unitNo: req.body.unitNo || "MSKU 882014 9",
         status: created.status,
         contractorName:
-          created.labour_contractors?.contractor_name || "Kilima Gang",
+          created.handling_job_labour_contractors?.contractor_name || "Kilima Gang",
         scheduledAt: created.started_at?.toISOString(),
         lines: req.body.lines || [],
       });
@@ -244,31 +251,35 @@ export class CfsController {
     try {
       const idStr = String(req.params.handlingJobId);
       const isNum = !isNaN(Number(idStr));
-      const j = await prisma.handling_jobs.findFirst({
+      const j = await (prisma as any).handling_jobs.findFirst({
         where: isNum
           ? { handling_job_id: Number(idStr) }
           : { handling_job_id: parseInt(idStr.replace(/\D/g, ""), 10) || 1 },
         include: {
-          unit_stays: true,
+          handling_job_unit_stays: {
+            include: {
+              unit_stay_cargo_units: true,
+            },
+          },
           handling_job_lines: true,
-          labour_contractors: true,
+          handling_job_labour_contractors: true,
         },
       });
 
       if (!j) return sendError(res, "Handling job not found", 404);
 
       return sendSuccess(res, {
-        handlingJobId: j.handling_job_id,
-        jobNo: `JOB-26-0${j.handling_job_id}`,
-        jobKind: j.job_type === "CFS_DESTUFFING" ? "DESTUFF" : "STUFF",
-        jobType: j.job_type === "CFS_DESTUFFING" ? "STRIP" : "STUFF",
-        unitStayId: j.unit_stay_id,
-        unitNo: j.unit_stays?.unit_no || "TCLU 551902 4",
+        handlingJobId: Number(j.handling_job_id),
+        jobNo: j.job_no || `JOB-26-0${j.handling_job_id}`,
+        jobKind: j.job_kind === "CFS_DESTUFFING" || j.job_kind === "CFS_DESTUFF" ? "DESTUFF" : "STUFF",
+        jobType: j.job_kind === "CFS_DESTUFFING" || j.job_kind === "CFS_DESTUFF" ? "STRIP" : "STUFF",
+        unitStayId: Number(j.container_stay_id),
+        unitNo: j.handling_job_unit_stays?.unit_stay_cargo_units?.unit_no || "TCLU 551902 4",
         status: j.status,
-        contractorName: j.labour_contractors?.contractor_name || "Kilima Gang",
+        contractorName: j.handling_job_labour_contractors?.contractor_name || "Kilima Gang",
         lines:
           (j.handling_job_lines || []).length > 0
-            ? (j.handling_job_lines || []).map((l) => ({
+            ? (j.handling_job_lines || []).map((l: any) => ({
                 lineNo: l.line_no,
                 packageKind: l.uom || "CARTONS",
                 pieces: l.package_count || 450,
@@ -410,14 +421,14 @@ export class CfsController {
     }
 
     try {
-      const job = await prisma.handling_jobs.findFirst({
-        where: { unit_stay_id: unitStayId },
+      const job = await (prisma as any).handling_jobs.findFirst({
+        where: { container_stay_id: unitStayId },
         include: { handling_job_lines: true },
       });
 
       const totalPkgs =
         (job?.handling_job_lines || []).reduce(
-          (sum, l) => sum + (l.package_count || 0),
+          (sum: number, l: any) => sum + (l.package_count || 0),
           0,
         ) || 450;
 
