@@ -6,6 +6,8 @@ import {
   StatusPill, Tabs, Tag, Timeline, UnitNo, fmtD, useToast,
 } from '@/ds/components';
 import { allStays, consignments, parties, party as partyOf } from '@/mock/core';
+import { useQ } from '@/api/query';
+import { partiesApi } from '../api';
 import { balanceOf, contactsOf, invoicesOf, partySync } from '@/mock/insight';
 import { MatchDrawer } from './MatchDrawer';
 import { ContactDrawer } from './ContactDrawer';
@@ -25,7 +27,8 @@ export function PartyDetailView() {
   const id = Number(partyId);
   const nav = useNavigate();
   const toast = useToast();
-  const base = partyOf(id);
+  const { data: dbParty } = useQ(['party', id], () => partiesApi.getPartyDetail(id));
+  const base = dbParty || partyOf(id);
   const [matched, setMatched] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('overview');
   const [matchOpen, setMatchOpen] = useState(false);

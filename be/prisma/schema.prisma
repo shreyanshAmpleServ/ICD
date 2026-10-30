@@ -130,7 +130,7 @@ model app_user {
   updatedby                                                      String?               @db.NVarChar(64)
   log_inst                                                       Int                   @default(1, map: "DF_app_user_log_inst")
   aiva_conversation                                              aiva_conversation[]
-  m_party                                                        m_party?              @relation(fields: [party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_app_user_party")
+  m_party_app_user                                               m_party?              @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_app_user_party")
   approval_delegation_approval_delegation_from_user_idToapp_user approval_delegation[] @relation("approval_delegation_from_user_idToapp_user")
   approval_delegation_approval_delegation_to_user_idToapp_user   approval_delegation[] @relation("approval_delegation_to_user_idToapp_user")
   notification                                                   notification[]
@@ -164,7 +164,7 @@ model appointment {
   m_driver                 m_driver?      @relation(fields: [driver_id], references: [driver_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_appointment_driver")
   release_order            release_order? @relation(fields: [release_order_id], references: [release_order_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_appointment_release")
   appointments_sites       m_site         @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_appointment_site")
-  appointments_parties     m_party        @relation(fields: [transporter_party_id], references: [party_id], onUpdate: NoAction, map: "FK_appointment_transporter")
+  m_party_appointment      m_party        @relation(fields: [transporter_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_appointment_transporter")
   m_truck                  m_truck?       @relation(fields: [truck_id], references: [truck_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_appointment_truck")
   truck_visit              truck_visit?   @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_appointment_visit")
   appointments_visit_types m_visit_type   @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_appointment_visit_type")
@@ -305,7 +305,7 @@ model billable_event {
   createdby         String        @db.NVarChar(64)
   updatedby         String?       @db.NVarChar(64)
   log_inst          Int           @default(1, map: "DF_billable_event_log_inst")
-  m_party           m_party?      @relation(fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_bill_to")
+  m_party_billable_event m_party? @relation(fields: [bill_to_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_be_bill_to")
   m_charge_code     m_charge_code @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_be_charge")
   consignment       consignment?  @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_consignment")
   m_site            m_site        @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_be_site")
@@ -315,25 +315,25 @@ model billable_event {
 }
 
 model cargo_unit {
-  cargo_unit_id    BigInt           @id(map: "PK_cargo_unit") @default(autoincrement())
-  unit_category    String           @db.VarChar(10)
-  unit_no          String           @db.VarChar(40)
-  unit_type_id     Int
-  owner_party_id   Int?
-  identity_rule_id Int?
-  engine_no        String?          @db.VarChar(30)
-  make             String?          @db.NVarChar(40)
-  model            String?          @db.NVarChar(60)
-  model_year       Int?             @db.SmallInt
-  colour           String?          @db.NVarChar(30)
-  tare_kg          Int?
-  max_gross_kg     Int?
-  createdate       DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_cargo_unit_createdate")
-  updatedate       DateTime?
-  createdby        String           @db.NVarChar(64)
-  updatedby        String?          @db.NVarChar(64)
-  log_inst         Int              @default(1, map: "DF_cargo_unit_log_inst")
-  cargo_unit_parties        m_party?         @relation(fields: [owner_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cargo_unit_owner")
+  cargo_unit_id             BigInt           @id(map: "PK_cargo_unit") @default(autoincrement())
+  unit_category             String           @db.VarChar(10)
+  unit_no                   String           @db.VarChar(40)
+  unit_type_id              Int
+  owner_party_id            Int?
+  identity_rule_id          Int?
+  engine_no                 String?          @db.VarChar(30)
+  make                      String?          @db.NVarChar(40)
+  model                     String?          @db.NVarChar(60)
+  model_year                Int?             @db.SmallInt
+  colour                    String?          @db.NVarChar(30)
+  tare_kg                   Int?
+  max_gross_kg              Int?
+  createdate                DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_cargo_unit_createdate")
+  updatedate                DateTime?
+  createdby                 String           @db.NVarChar(64)
+  updatedby                 String?          @db.NVarChar(64)
+  log_inst                  Int              @default(1, map: "DF_cargo_unit_log_inst")
+  m_party_cargo_unit        m_party?         @relation(fields: [owner_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_cargo_unit_owner")
   cargo_unit_identity_rules m_identity_rule? @relation(fields: [identity_rule_id], references: [identity_rule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cargo_unit_rule")
   cargo_unit_unit_types     m_unit_type      @relation(fields: [unit_type_id], references: [unit_type_id], onUpdate: NoAction, map: "FK_cargo_unit_type")
   cargo_unit_unit_stays     unit_stay[]
@@ -392,7 +392,7 @@ model charge {
   updatedby             String?           @db.NVarChar(64)
   log_inst              Int               @default(1, map: "DF_charge_log_inst")
   approval_request      approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_approval")
-  m_party               m_party           @relation(fields: [bill_to_party_id], references: [party_id], onUpdate: NoAction, map: "FK_charge_bill_to")
+  m_party_charge        m_party           @relation(fields: [bill_to_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_charge_bill_to")
   m_currency            m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_charge_currency")
   billable_event        billable_event    @relation(fields: [billable_event_id], references: [billable_event_id], onUpdate: NoAction, map: "FK_charge_event")
   charge                charge?           @relation("chargeTocharge", fields: [reverses_charge_id], references: [charge_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_reverses")
@@ -439,16 +439,16 @@ model consignment {
   log_inst                                            Int                @default(1, map: "DF_consignment_log_inst")
   appointment                                         appointment[]
   billable_event                                      billable_event[]
-  m_party_consignment_agent_party_idTom_party         m_party?           @relation("consignment_agent_party_idTom_party", fields: [agent_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_agent")
-  m_party_consignment_bill_to_party_idTom_party       m_party?           @relation("consignment_bill_to_party_idTom_party", fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_bill_to")
+  m_party_consignment_agent                           m_party?           @relation("consignment_agent_party_idTom_party", fields: [agent_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_agent")
+  m_party_consignment_bill_to                         m_party?           @relation("consignment_bill_to_party_idTom_party", fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_bill_to")
   m_commodity                                         m_commodity?       @relation(fields: [commodity_id], references: [commodity_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_commodity")
-  m_party_consignment_consignee_party_idTom_party     m_party?           @relation("consignment_consignee_party_idTom_party", fields: [consignee_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_consignee")
+  m_party_consignment_consignee                       m_party?           @relation("consignment_consignee_party_idTom_party", fields: [consignee_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_consignee")
   m_country                                           m_country?         @relation(fields: [destination_country], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_dest_country")
   m_port_consignment_destination_port_idTom_port      m_port?            @relation("consignment_destination_port_idTom_port", fields: [destination_port_id], references: [port_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_destination")
-  m_party_consignment_shipping_line_party_idTom_party m_party?           @relation("consignment_shipping_line_party_idTom_party", fields: [shipping_line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_line")
+  m_party_consignment_shipping_line                   m_party?           @relation("consignment_shipping_line_party_idTom_party", fields: [shipping_line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_line")
   m_port_consignment_origin_port_idTom_port           m_port?            @relation("consignment_origin_port_idTom_port", fields: [origin_port_id], references: [port_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_origin")
   m_cargo_regime                                      m_cargo_regime     @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onUpdate: NoAction, map: "FK_consignment_regime")
-  m_party_consignment_shipper_party_idTom_party       m_party?           @relation("consignment_shipper_party_idTom_party", fields: [shipper_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_shipper")
+  m_party_consignment_shipper                         m_party?           @relation("consignment_shipper_party_idTom_party", fields: [shipper_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_shipper")
   m_site                                              m_site             @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_consignment_site")
   vessel_call                                         vessel_call?       @relation(fields: [vessel_call_id], references: [vessel_call_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_vessel_call")
   consignment_line                                    consignment_line[]
@@ -517,18 +517,18 @@ model customs_ref {
 }
 
 model device_read {
-  device_read_id        BigInt               @id(map: "PK_device_read") @default(autoincrement())
-  device_integration_id Int
-  read_kind             String               @db.VarChar(12)
-  read_value            String               @db.VarChar(60)
-  confidence            Decimal?             @db.Decimal(5, 2)
-  image_storage_key     String?              @db.VarChar(400)
-  read_at               DateTime
-  matched_visit_id      BigInt?
-  match_status          String               @default("PENDING", map: "DF_device_read_match") @db.VarChar(10)
-  createdate            DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_device_read_created")
-  device_read_integrations  m_device_integration @relation(fields: [device_integration_id], references: [device_integration_id], onUpdate: NoAction, map: "FK_dr_integration")
-  device_read_truck_visits  truck_visit?         @relation(fields: [matched_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_dr_visit")
+  device_read_id           BigInt               @id(map: "PK_device_read") @default(autoincrement())
+  device_integration_id    Int
+  read_kind                String               @db.VarChar(12)
+  read_value               String               @db.VarChar(60)
+  confidence               Decimal?             @db.Decimal(5, 2)
+  image_storage_key        String?              @db.VarChar(400)
+  read_at                  DateTime
+  matched_visit_id         BigInt?
+  match_status             String               @default("PENDING", map: "DF_device_read_match") @db.VarChar(10)
+  createdate               DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_device_read_created")
+  device_read_integrations m_device_integration @relation(fields: [device_integration_id], references: [device_integration_id], onUpdate: NoAction, map: "FK_dr_integration")
+  device_read_truck_visits truck_visit?         @relation(fields: [matched_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_dr_visit")
 
   @@index([device_integration_id, read_at], map: "IX_dr_integration_time")
 }
@@ -556,12 +556,12 @@ model disbursement {
   createdby                                      String            @db.NVarChar(64)
   updatedby                                      String?           @db.NVarChar(64)
   log_inst                                       Int               @default(1, map: "DF_disbursement_log_inst")
-  m_party_disbursement_bill_to_party_idTom_party m_party           @relation("disbursement_bill_to_party_idTom_party", fields: [bill_to_party_id], references: [party_id], onUpdate: NoAction, map: "FK_disb_bill_to")
+  m_party_disbursement_bill_to           m_party           @relation("disbursement_bill_to_party_idTom_party", fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_bill_to")
   m_charge_code                                  m_charge_code     @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_disb_charge")
   consignment                                    consignment       @relation(fields: [consignment_id], references: [consignment_id], onUpdate: NoAction, map: "FK_disb_consignment")
   m_currency                                     m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_disb_currency")
   document                                       document?         @relation(fields: [receipt_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_doc")
-  m_party_disbursement_payee_party_idTom_party   m_party?          @relation("disbursement_payee_party_idTom_party", fields: [payee_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_payee")
+  m_party_disbursement_payee             m_party?          @relation("disbursement_payee_party_idTom_party", fields: [payee_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_payee")
   m_site                                         m_site            @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_disb_site")
   unit_stay                                      unit_stay?        @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_stay")
   approval_request                               approval_request? @relation(fields: [write_off_approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_writeoff")
@@ -767,66 +767,66 @@ model gl_posting {
 }
 
 model handling_job {
-  handling_job_id      BigInt              @id(map: "PK_handling_job") @default(autoincrement())
-  site_id              Int
-  job_no               String              @db.VarChar(30)
-  job_kind             String              @db.VarChar(10)
-  container_stay_id    BigInt
-  consignment_id       BigInt?
-  work_location_id     Int?
-  status               String              @default("PLANNED", map: "DF_handling_job_status") @db.VarChar(12)
-  planned_at           DateTime?
-  started_at           DateTime?
-  completed_at         DateTime?
-  supervisor_sub       String?             @db.VarChar(64)
-  labour_contractor_id Int?
-  labour_count         Int?                @db.SmallInt
-  equipment_id         Int?
-  seal_removed         String?             @db.VarChar(30)
-  seal_applied         String?             @db.VarChar(30)
-  customs_officer_name String?             @db.NVarChar(120)
-  remarks              String?             @db.NVarChar(800)
-  approved_by_sub      String?             @db.VarChar(64)
-  approved_at          DateTime?
-  createdate           DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_handling_job_createdate")
-  updatedate           DateTime?
-  createdby            String              @db.NVarChar(64)
-  updatedby            String?             @db.NVarChar(64)
-  log_inst             Int                 @default(1, map: "DF_handling_job_log_inst")
-  handling_job_consignments           consignment?        @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_consignment")
-  handling_job_unit_stays             unit_stay           @relation(fields: [container_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_hj_container")
-  handling_job_equipment              m_equipment?        @relation(fields: [equipment_id], references: [equipment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_equipment")
-  handling_job_labour_contractors     labour_contractor?  @relation(fields: [labour_contractor_id], references: [labour_contractor_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_labour")
-  handling_job_yard_locations         m_yard_location?    @relation(fields: [work_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_location")
-  handling_job_sites                  m_site              @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_hj_site")
-  handling_job_lines                  handling_job_line[]
+  handling_job_id                 BigInt              @id(map: "PK_handling_job") @default(autoincrement())
+  site_id                         Int
+  job_no                          String              @db.VarChar(30)
+  job_kind                        String              @db.VarChar(10)
+  container_stay_id               BigInt
+  consignment_id                  BigInt?
+  work_location_id                Int?
+  status                          String              @default("PLANNED", map: "DF_handling_job_status") @db.VarChar(12)
+  planned_at                      DateTime?
+  started_at                      DateTime?
+  completed_at                    DateTime?
+  supervisor_sub                  String?             @db.VarChar(64)
+  labour_contractor_id            Int?
+  labour_count                    Int?                @db.SmallInt
+  equipment_id                    Int?
+  seal_removed                    String?             @db.VarChar(30)
+  seal_applied                    String?             @db.VarChar(30)
+  customs_officer_name            String?             @db.NVarChar(120)
+  remarks                         String?             @db.NVarChar(800)
+  approved_by_sub                 String?             @db.VarChar(64)
+  approved_at                     DateTime?
+  createdate                      DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_handling_job_createdate")
+  updatedate                      DateTime?
+  createdby                       String              @db.NVarChar(64)
+  updatedby                       String?             @db.NVarChar(64)
+  log_inst                        Int                 @default(1, map: "DF_handling_job_log_inst")
+  handling_job_consignments       consignment?        @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_consignment")
+  handling_job_unit_stays         unit_stay           @relation(fields: [container_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_hj_container")
+  handling_job_equipment          m_equipment?        @relation(fields: [equipment_id], references: [equipment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_equipment")
+  handling_job_labour_contractors labour_contractor?  @relation(fields: [labour_contractor_id], references: [labour_contractor_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_labour")
+  handling_job_yard_locations     m_yard_location?    @relation(fields: [work_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hj_location")
+  handling_job_sites              m_site              @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_hj_site")
+  handling_job_lines              handling_job_line[]
 
   @@unique([site_id, job_no], map: "UQ_handling_job_no")
   @@index([container_stay_id], map: "IX_hj_container")
 }
 
 model handling_job_line {
-  handling_job_line_id BigInt            @id(map: "PK_handling_job_line") @default(autoincrement())
-  handling_job_id      BigInt
-  line_no              Int               @db.SmallInt
-  lot_stay_id          BigInt?
-  consignment_line_id  BigInt?
-  marks_numbers        String?           @db.NVarChar(200)
-  description          String?           @db.NVarChar(300)
-  packages_declared    Int?
-  packages_counted     Int
-  package_type         String?           @db.VarChar(10)
-  weight_kg            Decimal?          @db.Decimal(12, 1)
-  volume_cbm           Decimal?          @db.Decimal(10, 3)
-  short_qty            Int               @default(0, map: "DF_hjl_short")
-  excess_qty           Int               @default(0, map: "DF_hjl_excess")
-  damaged_qty          Int               @default(0, map: "DF_hjl_damaged")
-  damage_note          String?           @db.NVarChar(300)
-  createdate           DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_handling_job_line_createdate")
-  updatedate           DateTime?
-  createdby            String            @db.NVarChar(64)
-  updatedby            String?           @db.NVarChar(64)
-  log_inst             Int               @default(1, map: "DF_handling_job_line_log_inst")
+  handling_job_line_id                BigInt            @id(map: "PK_handling_job_line") @default(autoincrement())
+  handling_job_id                     BigInt
+  line_no                             Int               @db.SmallInt
+  lot_stay_id                         BigInt?
+  consignment_line_id                 BigInt?
+  marks_numbers                       String?           @db.NVarChar(200)
+  description                         String?           @db.NVarChar(300)
+  packages_declared                   Int?
+  packages_counted                    Int
+  package_type                        String?           @db.VarChar(10)
+  weight_kg                           Decimal?          @db.Decimal(12, 1)
+  volume_cbm                          Decimal?          @db.Decimal(10, 3)
+  short_qty                           Int               @default(0, map: "DF_hjl_short")
+  excess_qty                          Int               @default(0, map: "DF_hjl_excess")
+  damaged_qty                         Int               @default(0, map: "DF_hjl_damaged")
+  damage_note                         String?           @db.NVarChar(300)
+  createdate                          DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_handling_job_line_createdate")
+  updatedate                          DateTime?
+  createdby                           String            @db.NVarChar(64)
+  updatedby                           String?           @db.NVarChar(64)
+  log_inst                            Int               @default(1, map: "DF_handling_job_line_log_inst")
   handling_job_line_consignment_lines consignment_line? @relation(fields: [consignment_line_id], references: [consignment_line_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hjl_cline")
   handling_job_line_jobs              handling_job      @relation(fields: [handling_job_id], references: [handling_job_id], onUpdate: NoAction, map: "FK_hjl_job")
   handling_job_line_unit_stays        unit_stay?        @relation(fields: [lot_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_hjl_lot")
@@ -959,7 +959,7 @@ model integration_message {
   createdate             DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_integration_message_created")
   updatedate             DateTime?
   document               document? @relation(fields: [document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_im_document")
-  m_party                m_party?  @relation(fields: [partner_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_im_party")
+  m_party_integration_message m_party?  @relation(fields: [partner_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_im_party")
 
   @@index([related_entity, related_id], map: "IX_im_related")
 }
@@ -1011,7 +1011,7 @@ model invoice {
   m_currency_invoice_currencyTom_currency            m_currency                @relation("invoice_currencyTom_currency", fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_invoice_currency")
   invoice_invoice_original_invoice_idToinvoice       invoice?                  @relation("invoice_original_invoice_idToinvoice", fields: [original_invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_original")
   other_invoice_invoice_original_invoice_idToinvoice invoice[]                 @relation("invoice_original_invoice_idToinvoice")
-  invoices_parties                                   m_party                   @relation(fields: [bill_to_party_id], references: [party_id], onUpdate: NoAction, map: "FK_invoice_party")
+  m_party_invoice                                    m_party                   @relation(fields: [bill_to_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_invoice_party")
   accounting_period                                  accounting_period?        @relation(fields: [accounting_period_id], references: [accounting_period_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_period")
   invoice_invoice_proforma_invoice_idToinvoice       invoice?                  @relation("invoice_proforma_invoice_idToinvoice", fields: [proforma_invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_proforma")
   other_invoice_invoice_proforma_invoice_idToinvoice invoice[]                 @relation("invoice_proforma_invoice_idToinvoice")
@@ -1117,22 +1117,22 @@ model kpi_daily {
 }
 
 model labour_contractor {
-  labour_contractor_id Int            @id(map: "PK_labour_contractor") @default(autoincrement())
-  site_id              Int
-  party_id             Int?
-  contractor_name      String         @db.NVarChar(120)
-  rate_basis           String?        @db.VarChar(12)
-  rate                 Decimal?       @db.Decimal(19, 6)
-  currency             String?        @db.Char(3)
-  is_active            Boolean        @default(true, map: "DF_labour_contractor_active")
-  createdate           DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_labour_contractor_createdate")
-  updatedate           DateTime?
-  createdby            String         @db.NVarChar(64)
-  updatedby            String?        @db.NVarChar(64)
-  log_inst             Int            @default(1, map: "DF_labour_contractor_log_inst")
+  labour_contractor_id            Int            @id(map: "PK_labour_contractor") @default(autoincrement())
+  site_id                         Int
+  party_id                        Int?
+  contractor_name                 String         @db.NVarChar(120)
+  rate_basis                      String?        @db.VarChar(12)
+  rate                            Decimal?       @db.Decimal(19, 6)
+  currency                        String?        @db.Char(3)
+  is_active                       Boolean        @default(true, map: "DF_labour_contractor_active")
+  createdate                      DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_labour_contractor_createdate")
+  updatedate                      DateTime?
+  createdby                       String         @db.NVarChar(64)
+  updatedby                       String?        @db.NVarChar(64)
+  log_inst                        Int            @default(1, map: "DF_labour_contractor_log_inst")
   labour_contractor_handling_jobs handling_job[]
   labour_contractor_currencies    m_currency?    @relation(fields: [currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_lc_currency")
-  labour_contractor_parties       m_party?       @relation(fields: [party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_lc_party")
+  m_party_labour_contractor       m_party?       @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_lc_party")
   labour_contractor_sites         m_site         @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_lc_site")
 }
 
@@ -1374,7 +1374,7 @@ model m_country {
   m_company         m_company[]
   m_country_pack    m_country_pack[]
   m_driver          m_driver[]
-  m_party           m_party[]
+  m_party_m_country m_party[]
   m_port            m_port[]
   m_site            m_site[]
   m_tax_code        m_tax_code[]
@@ -1424,8 +1424,8 @@ model m_currency {
   m_company                                                 m_company[]
   m_exchange_rate_m_exchange_rate_from_currencyTom_currency m_exchange_rate[]   @relation("m_exchange_rate_from_currencyTom_currency")
   m_exchange_rate_m_exchange_rate_to_currencyTom_currency   m_exchange_rate[]   @relation("m_exchange_rate_to_currencyTom_currency")
-  m_party_m_party_credit_currencyTom_currency               m_party[]           @relation("m_party_credit_currencyTom_currency")
-  m_party_m_party_default_currencyTom_currency              m_party[]           @relation("m_party_default_currencyTom_currency")
+  m_party_m_currency_credit                                 m_party[]           @relation("m_party_credit_currencyTom_currency")
+  m_party_m_currency_default                                m_party[]           @relation("m_party_default_currencyTom_currency")
   m_payment_channel                                         m_payment_channel[]
   m_role_permission                                         m_role_permission[]
   payment                                                   payment[]
@@ -1502,23 +1502,23 @@ model m_device {
 }
 
 model m_device_integration {
-  device_integration_id Int           @id(map: "PK_m_device_integration") @default(autoincrement())
-  site_id               Int
-  integration_kind      String        @db.VarChar(12)
-  gate_lane_id          Int?
-  checkpoint_id         Int?
-  vendor                String?       @db.NVarChar(60)
-  model                 String?       @db.NVarChar(60)
-  config_json           String?       @db.NVarChar(Max)
-  secret_ref            String?       @db.VarChar(200)
-  gate_agent_device_id  Int?
-  lane_mode             String        @default("ASSISTED", map: "DF_m_di_mode") @db.VarChar(10)
-  is_active             Boolean       @default(true, map: "DF_m_di_active")
-  createdate            DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_m_device_integration_createdate")
-  updatedate            DateTime?
-  createdby             String        @db.NVarChar(64)
-  updatedby             String?       @db.NVarChar(64)
-  log_inst              Int           @default(1, map: "DF_m_device_integration_log_inst")
+  device_integration_id             Int           @id(map: "PK_m_device_integration") @default(autoincrement())
+  site_id                           Int
+  integration_kind                  String        @db.VarChar(12)
+  gate_lane_id                      Int?
+  checkpoint_id                     Int?
+  vendor                            String?       @db.NVarChar(60)
+  model                             String?       @db.NVarChar(60)
+  config_json                       String?       @db.NVarChar(Max)
+  secret_ref                        String?       @db.VarChar(200)
+  gate_agent_device_id              Int?
+  lane_mode                         String        @default("ASSISTED", map: "DF_m_di_mode") @db.VarChar(10)
+  is_active                         Boolean       @default(true, map: "DF_m_di_active")
+  createdate                        DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_m_device_integration_createdate")
+  updatedate                        DateTime?
+  createdby                         String        @db.NVarChar(64)
+  updatedby                         String?       @db.NVarChar(64)
+  log_inst                          Int           @default(1, map: "DF_m_device_integration_log_inst")
   m_device_integration_device_reads device_read[]
   m_device_integration_devices      m_device?     @relation(fields: [gate_agent_device_id], references: [device_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_di_agent")
   m_device_integration_checkpoints  m_checkpoint? @relation(fields: [checkpoint_id], references: [checkpoint_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_di_checkpoint")
@@ -1567,7 +1567,7 @@ model m_driver {
   log_inst             Int             @default(1, map: "DF_m_driver_log_inst")
   appointment          appointment[]
   m_country            m_country?      @relation(fields: [licence_country], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_driver_country")
-  m_party              m_party?        @relation(fields: [transporter_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_driver_transporter")
+  m_party_m_driver     m_party?        @relation(fields: [transporter_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_m_driver_transporter")
   release_order        release_order[]
   truck_visit          truck_visit[]
 
@@ -1885,65 +1885,65 @@ model m_number_sequence {
 }
 
 model m_party {
-  party_id                                                   Int                   @id(map: "PK_m_party") @default(autoincrement())
-  party_code                                                 String                @unique(map: "UQ_m_party_code") @db.VarChar(30)
-  party_name                                                 String                @db.NVarChar(200)
-  short_name                                                 String?               @db.NVarChar(60)
-  tax_id                                                     String?               @db.VarChar(30)
-  vat_no                                                     String?               @db.VarChar(30)
-  country_code                                               String?               @db.Char(2)
-  address_line1                                              String?               @db.NVarChar(200)
-  city                                                       String?               @db.NVarChar(100)
-  phone                                                      String?               @db.VarChar(30)
-  email                                                      String?               @db.VarChar(200)
-  default_currency                                           String?               @db.Char(3)
-  credit_status                                              String                @default("CASH", map: "DF_m_party_credit_status") @db.VarChar(10)
-  credit_limit                                               Decimal?              @db.Decimal(19, 4)
-  credit_currency                                            String?               @db.Char(3)
-  disbursement_service                                       Boolean               @default(false, map: "DF_m_party_disb")
-  source                                                     String                @default("NG", map: "DF_m_party_source") @db.VarChar(10)
-  sync_status                                                String                @default("SYNCED", map: "DF_m_party_sync_status") @db.VarChar(12)
-  ng_ref_id                                                  String?               @db.VarChar(64)
-  ng_updatedate                                              DateTime?
-  is_active                                                  Boolean               @default(true, map: "DF_m_party_is_active")
-  createdate                                                 DateTime              @default(dbgenerated("sysutcdatetime()"), map: "DF_m_party_createdate")
-  updatedate                                                 DateTime?
-  createdby                                                  String                @db.NVarChar(64)
-  updatedby                                                  String?               @db.NVarChar(64)
-  log_inst                                                   Int                   @default(1, map: "DF_m_party_log_inst")
-  app_user                                                   app_user[]
-  appointment                                                appointment[]
-  billable_event                                             billable_event[]
-  cargo_unit                                                 cargo_unit[]
-  charge                                                     charge[]
-  consignment_consignment_agent_party_idTom_party            consignment[]         @relation("consignment_agent_party_idTom_party")
-  consignment_consignment_bill_to_party_idTom_party          consignment[]         @relation("consignment_bill_to_party_idTom_party")
-  consignment_consignment_consignee_party_idTom_party        consignment[]         @relation("consignment_consignee_party_idTom_party")
-  consignment_consignment_shipping_line_party_idTom_party    consignment[]         @relation("consignment_shipping_line_party_idTom_party")
-  consignment_consignment_shipper_party_idTom_party          consignment[]         @relation("consignment_shipper_party_idTom_party")
-  disbursement_disbursement_bill_to_party_idTom_party        disbursement[]        @relation("disbursement_bill_to_party_idTom_party")
-  disbursement_disbursement_payee_party_idTom_party          disbursement[]        @relation("disbursement_payee_party_idTom_party")
-  integration_message                                        integration_message[]
-  invoice                                                    invoice[]
-  labour_contractor                                          labour_contractor[]
-  m_driver                                                   m_driver[]
-  m_country                                                  m_country?            @relation(fields: [country_code], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_party_country")
-  m_currency_m_party_credit_currencyTom_currency             m_currency?           @relation("m_party_credit_currencyTom_currency", fields: [credit_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_party_credit_currency")
-  m_currency_m_party_default_currencyTom_currency            m_currency?           @relation("m_party_default_currencyTom_currency", fields: [default_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_party_currency")
-  m_party_contact                                            m_party_contact[]
-  m_party_role                                               m_party_role[]
-  m_truck                                                    m_truck[]
-  m_vessel                                                   m_vessel[]
-  payment                                                    payment[]
-  portal_invitation                                          portal_invitation[]
-  release_order_release_order_requested_by_party_idTom_party release_order[]       @relation("release_order_requested_by_party_idTom_party")
-  release_order_release_order_transporter_party_idTom_party  release_order[]       @relation("release_order_transporter_party_idTom_party")
-  repair_estimate                                            repair_estimate[]
-  service_request                                            service_request[]
-  tariff                                                     tariff[]
-  truck_visit                                                truck_visit[]
-  unit_stay_party                                            unit_stay[]
-  vessel_call                                                vessel_call[]
+  party_id                           Int                   @id(map: "PK_m_party") @default(autoincrement())
+  party_code                         String                @unique(map: "UQ_m_party_code") @db.VarChar(30)
+  party_name                         String                @db.NVarChar(200)
+  short_name                         String?               @db.NVarChar(60)
+  tax_id                             String?               @db.VarChar(30)
+  vat_no                             String?               @db.VarChar(30)
+  country_code                       String?               @db.Char(2)
+  address_line1                      String?               @db.NVarChar(200)
+  city                               String?               @db.NVarChar(100)
+  phone                              String?               @db.VarChar(30)
+  email                              String?               @db.VarChar(200)
+  default_currency                   String?               @db.Char(3)
+  credit_status                      String                @default("CASH", map: "DF_m_party_credit_status") @db.VarChar(10)
+  credit_limit                       Decimal?              @db.Decimal(19, 4)
+  credit_currency                    String?               @db.Char(3)
+  disbursement_service               Boolean               @default(false, map: "DF_m_party_disb")
+  source                             String                @default("NG", map: "DF_m_party_source") @db.VarChar(10)
+  sync_status                        String                @default("SYNCED", map: "DF_m_party_sync_status") @db.VarChar(12)
+  ng_ref_id                          String?               @db.VarChar(64)
+  ng_updatedate                      DateTime?
+  is_active                          Boolean               @default(true, map: "DF_m_party_is_active")
+  createdate                         DateTime              @default(dbgenerated("sysutcdatetime()"), map: "DF_m_party_createdate")
+  updatedate                         DateTime?
+  createdby                          String                @db.NVarChar(64)
+  updatedby                          String?               @db.NVarChar(64)
+  log_inst                           Int                   @default(1, map: "DF_m_party_log_inst")
+  m_party_app_user                   app_user[]
+  m_party_appointment                appointment[]
+  m_party_billable_event             billable_event[]
+  m_party_cargo_unit                 cargo_unit[]
+  m_party_charge                     charge[]
+  m_party_consignment_agent          consignment[]         @relation("consignment_agent_party_idTom_party")
+  m_party_consignment_bill_to        consignment[]         @relation("consignment_bill_to_party_idTom_party")
+  m_party_consignment_consignee      consignment[]         @relation("consignment_consignee_party_idTom_party")
+  m_party_consignment_shipping_line  consignment[]         @relation("consignment_shipping_line_party_idTom_party")
+  m_party_consignment_shipper        consignment[]         @relation("consignment_shipper_party_idTom_party")
+  m_party_disbursement_bill_to       disbursement[]        @relation("disbursement_bill_to_party_idTom_party")
+  m_party_disbursement_payee         disbursement[]        @relation("disbursement_payee_party_idTom_party")
+  m_party_integration_message        integration_message[]
+  m_party_invoice                    invoice[]
+  m_party_labour_contractor          labour_contractor[]
+  m_party_m_driver                   m_driver[]
+  m_party_m_country                  m_country?            @relation(fields: [country_code], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_party_country")
+  m_party_m_currency_credit          m_currency?           @relation("m_party_credit_currencyTom_currency", fields: [credit_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_party_credit_currency")
+  m_party_m_currency_default         m_currency?           @relation("m_party_default_currencyTom_currency", fields: [default_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_party_currency")
+  m_party_m_party_contact            m_party_contact[]
+  m_party_m_party_role               m_party_role[]
+  m_party_m_truck                    m_truck[]
+  m_party_m_vessel                   m_vessel[]
+  m_party_payment                    payment[]
+  m_party_portal_invitation          portal_invitation[]
+  m_party_release_order_requested_by release_order[]       @relation("release_order_requested_by_party_idTom_party")
+  m_party_release_order_transporter  release_order[]       @relation("release_order_transporter_party_idTom_party")
+  m_party_repair_estimate            repair_estimate[]
+  m_party_service_request            service_request[]
+  m_party_tariff                     tariff[]
+  m_party_truck_visit                truck_visit[]
+  m_party_unit_stay                  unit_stay[]
+  m_party_vessel_call                vessel_call[]
 
   @@index([party_name], map: "IX_m_party_name")
 }
@@ -1966,7 +1966,7 @@ model m_party_contact {
   createdby          String         @db.NVarChar(64)
   updatedby          String?        @db.NVarChar(64)
   log_inst           Int            @default(1, map: "DF_m_party_contact_log_inst")
-  m_party            m_party        @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_m_party_contact_party")
+  m_party_m_party_contact m_party  @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_m_party_contact_party")
   notification       notification[]
 
   @@index([party_id], map: "IX_m_party_contact_party")
@@ -1980,7 +1980,7 @@ model m_party_role {
   createdby  String    @db.NVarChar(64)
   updatedby  String?   @db.NVarChar(64)
   log_inst   Int       @default(1, map: "DF_m_party_role_log_inst")
-  m_party    m_party   @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_m_party_role_party")
+  m_party_m_party_role m_party @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_m_party_role_party")
 
   @@id([party_id, role_code], map: "PK_m_party_role")
   @@index([role_code, party_id], map: "IX_m_party_role_code")
@@ -2125,7 +2125,7 @@ model m_repair_code {
   createdby            String                 @db.NVarChar(64)
   updatedby            String?                @db.NVarChar(64)
   log_inst             Int                    @default(1, map: "DF_m_repair_code_log_inst")
-  m_repair_code_lines repair_estimate_line[]
+  m_repair_code_lines  repair_estimate_line[]
 }
 
 model m_resolution_code {
@@ -2330,7 +2330,7 @@ model m_truck {
   log_inst                                    Int             @default(1, map: "DF_m_truck_log_inst")
   appointment                                 appointment[]
   m_country                                   m_country?      @relation(fields: [country_code], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_truck_country")
-  m_party                                     m_party?        @relation(fields: [transporter_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_truck_transporter")
+  m_party_m_truck                             m_party?        @relation(fields: [transporter_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_m_truck_transporter")
   release_order                               release_order[]
   truck_visit_truck_visit_trailer_idTom_truck truck_visit[]   @relation("truck_visit_trailer_idTom_truck")
   truck_visit_truck_visit_truck_idTom_truck   truck_visit[]   @relation("truck_visit_truck_idTom_truck")
@@ -2396,7 +2396,7 @@ model m_vessel {
   updatedby         String?       @db.NVarChar(64)
   log_inst          Int           @default(1, map: "DF_m_vessel_log_inst")
   m_country         m_country?    @relation(fields: [flag_country], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_vessel_flag")
-  m_party           m_party?      @relation(fields: [operator_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_vessel_operator")
+  m_party_m_vessel    m_party?      @relation(fields: [operator_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_m_vessel_operator")
   vessel_call       vessel_call[]
 }
 
@@ -2750,7 +2750,7 @@ model payment {
   m_payment_channel      m_payment_channel    @relation(fields: [payment_channel_id], references: [payment_channel_id], onUpdate: NoAction, map: "FK_payment_channel")
   m_company              m_company            @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_payment_company")
   m_currency             m_currency           @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_payment_currency")
-  m_party                m_party              @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_payment_party")
+  m_party_payment        m_party              @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_payment_party")
   accounting_period      accounting_period?   @relation(fields: [accounting_period_id], references: [accounting_period_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_period")
   document               document?            @relation(fields: [proof_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_proof")
   payment                payment?             @relation("paymentTopayment", fields: [reversal_of_payment_id], references: [payment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_reversal")
@@ -2800,7 +2800,7 @@ model portal_invitation {
   createdby            String    @db.NVarChar(64)
   updatedby            String?   @db.NVarChar(64)
   log_inst             Int       @default(1, map: "DF_portal_invitation_log_inst")
-  parties              m_party   @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_pi_party")
+  m_party_portal_invitation m_party @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_pi_party")
   m_role               m_role    @relation(fields: [role_id], references: [role_id], onUpdate: NoAction, map: "FK_pi_role")
   app_user             app_user? @relation(fields: [accepted_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_pi_user")
 }
@@ -2824,40 +2824,40 @@ model print_log {
 }
 
 model reefer_reading {
-  reefer_reading_id BigInt         @id(map: "PK_reefer_reading") @default(autoincrement())
-  reefer_session_id BigInt
-  read_at           DateTime
-  supply_temp_c     Decimal?       @db.Decimal(4, 1)
-  return_temp_c     Decimal?       @db.Decimal(4, 1)
-  set_temp_c        Decimal?       @db.Decimal(4, 1)
-  power_on          Boolean?
-  alarm_code        String?        @db.VarChar(20)
-  source            String         @default("MANUAL", map: "DF_reefer_reading_source") @db.VarChar(6)
-  is_out_of_range   Boolean        @default(false, map: "DF_reefer_reading_oor")
-  createdate        DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_reefer_reading_created")
-  createdby         String         @db.NVarChar(64)
+  reefer_reading_id       BigInt         @id(map: "PK_reefer_reading") @default(autoincrement())
+  reefer_session_id       BigInt
+  read_at                 DateTime
+  supply_temp_c           Decimal?       @db.Decimal(4, 1)
+  return_temp_c           Decimal?       @db.Decimal(4, 1)
+  set_temp_c              Decimal?       @db.Decimal(4, 1)
+  power_on                Boolean?
+  alarm_code              String?        @db.VarChar(20)
+  source                  String         @default("MANUAL", map: "DF_reefer_reading_source") @db.VarChar(6)
+  is_out_of_range         Boolean        @default(false, map: "DF_reefer_reading_oor")
+  createdate              DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_reefer_reading_created")
+  createdby               String         @db.NVarChar(64)
   reefer_reading_sessions reefer_session @relation(fields: [reefer_session_id], references: [reefer_session_id], onUpdate: NoAction, map: "FK_rr_session")
 
   @@index([reefer_session_id, read_at], map: "IX_rr_session")
 }
 
 model reefer_session {
-  reefer_session_id BigInt           @id(map: "PK_reefer_session") @default(autoincrement())
-  unit_stay_id      BigInt
-  plug_location_id  Int
-  set_temp_c        Decimal          @db.Decimal(4, 1)
-  plugged_at        DateTime
-  unplugged_at      DateTime?
-  meter_start_kwh   Decimal?         @db.Decimal(12, 2)
-  meter_end_kwh     Decimal?         @db.Decimal(12, 2)
-  kwh_used          Decimal?         @db.Decimal(13, 2)
-  plugged_by_sub    String           @db.VarChar(64)
-  unplugged_by_sub  String?          @db.VarChar(64)
-  createdate        DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_reefer_session_createdate")
-  updatedate        DateTime?
-  createdby         String           @db.NVarChar(64)
-  updatedby         String?          @db.NVarChar(64)
-  log_inst          Int              @default(1, map: "DF_reefer_session_log_inst")
+  reefer_session_id             BigInt           @id(map: "PK_reefer_session") @default(autoincrement())
+  unit_stay_id                  BigInt
+  plug_location_id              Int
+  set_temp_c                    Decimal          @db.Decimal(4, 1)
+  plugged_at                    DateTime
+  unplugged_at                  DateTime?
+  meter_start_kwh               Decimal?         @db.Decimal(12, 2)
+  meter_end_kwh                 Decimal?         @db.Decimal(12, 2)
+  kwh_used                      Decimal?         @db.Decimal(13, 2)
+  plugged_by_sub                String           @db.VarChar(64)
+  unplugged_by_sub              String?          @db.VarChar(64)
+  createdate                    DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_reefer_session_createdate")
+  updatedate                    DateTime?
+  createdby                     String           @db.NVarChar(64)
+  updatedby                     String?          @db.NVarChar(64)
+  log_inst                      Int              @default(1, map: "DF_reefer_session_log_inst")
   reefer_session_readings       reefer_reading[]
   reefer_session_yard_locations m_yard_location  @relation(fields: [plug_location_id], references: [yard_location_id], onUpdate: NoAction, map: "FK_rs_plug")
   reefer_session_unit_stays     unit_stay        @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_rs_stay")
@@ -2946,9 +2946,9 @@ model release_order {
   consignment                                          consignment?              @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_consignment")
   m_driver                                             m_driver?                 @relation(fields: [driver_id], references: [driver_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_driver")
   approval_request                                     approval_request?         @relation(fields: [override_approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_override")
-  m_party_release_order_requested_by_party_idTom_party m_party?                  @relation("release_order_requested_by_party_idTom_party", fields: [requested_by_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_requester")
+  m_party_release_order_requested_by              m_party?                  @relation("release_order_requested_by_party_idTom_party", fields: [requested_by_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_requester")
   m_site                                               m_site                    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_release_order_site")
-  m_party_release_order_transporter_party_idTom_party  m_party?                  @relation("release_order_transporter_party_idTom_party", fields: [transporter_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_transporter")
+  m_party_release_order_transporter               m_party?                  @relation("release_order_transporter_party_idTom_party", fields: [transporter_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_transporter")
   m_truck                                              m_truck?                  @relation(fields: [truck_id], references: [truck_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_truck")
   release_order_unit                                   release_order_unit[]
   release_validity_change                              release_validity_change[]
@@ -2996,28 +2996,28 @@ model release_validity_change {
 }
 
 model repair_estimate {
-  repair_estimate_id   BigInt                 @id(map: "PK_repair_estimate") @default(autoincrement())
-  site_id              Int
-  estimate_no          String                 @db.VarChar(30)
-  unit_stay_id         BigInt
-  inspection_id        BigInt?
-  approver_party_id    Int
-  currency             String                 @db.Char(3)
-  labour_rate          Decimal?               @db.Decimal(19, 6)
-  total_labour         Decimal                @default(0, map: "DF_re_labour") @db.Decimal(19, 4)
-  total_material       Decimal                @default(0, map: "DF_re_material") @db.Decimal(19, 4)
-  total_amount         Decimal?               @db.Decimal(20, 4)
-  status               String                 @default("DRAFT", map: "DF_re_status") @db.VarChar(10)
-  sent_at              DateTime?
-  approver_ref         String?                @db.VarChar(60)
-  decided_at           DateTime?
-  completed_at         DateTime?
-  createdate           DateTime               @default(dbgenerated("sysutcdatetime()"), map: "DF_repair_estimate_createdate")
-  updatedate           DateTime?
-  createdby            String                 @db.NVarChar(64)
-  updatedby            String?                @db.NVarChar(64)
-  log_inst             Int                    @default(1, map: "DF_repair_estimate_log_inst")
-  repair_estimate_parties    m_party                @relation(fields: [approver_party_id], references: [party_id], onUpdate: NoAction, map: "FK_re_approver")
+  repair_estimate_id         BigInt                 @id(map: "PK_repair_estimate") @default(autoincrement())
+  site_id                    Int
+  estimate_no                String                 @db.VarChar(30)
+  unit_stay_id               BigInt
+  inspection_id              BigInt?
+  approver_party_id          Int
+  currency                   String                 @db.Char(3)
+  labour_rate                Decimal?               @db.Decimal(19, 6)
+  total_labour               Decimal                @default(0, map: "DF_re_labour") @db.Decimal(19, 4)
+  total_material             Decimal                @default(0, map: "DF_re_material") @db.Decimal(19, 4)
+  total_amount               Decimal?               @db.Decimal(20, 4)
+  status                     String                 @default("DRAFT", map: "DF_re_status") @db.VarChar(10)
+  sent_at                    DateTime?
+  approver_ref               String?                @db.VarChar(60)
+  decided_at                 DateTime?
+  completed_at               DateTime?
+  createdate                 DateTime               @default(dbgenerated("sysutcdatetime()"), map: "DF_repair_estimate_createdate")
+  updatedate                 DateTime?
+  createdby                  String                 @db.NVarChar(64)
+  updatedby                  String?                @db.NVarChar(64)
+  log_inst                   Int                    @default(1, map: "DF_repair_estimate_log_inst")
+  m_party_repair_estimate   m_party                @relation(fields: [approver_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_re_approver")
   repair_estimate_currencies m_currency             @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_re_currency")
   repair_estimate_inspection inspection?            @relation(fields: [inspection_id], references: [inspection_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_re_inspection")
   repair_estimate_sites      m_site                 @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_re_site")
@@ -3029,23 +3029,23 @@ model repair_estimate {
 }
 
 model repair_estimate_line {
-  repair_estimate_line_id BigInt              @id(map: "PK_repair_estimate_line") @default(autoincrement())
-  repair_estimate_id      BigInt
-  line_no                 Int                 @db.SmallInt
-  inspection_finding_id   BigInt?
-  repair_code             String              @db.VarChar(10)
-  location_detail         String?             @db.NVarChar(100)
-  quantity                Decimal             @default(1, map: "DF_rel_qty") @db.Decimal(8, 2)
-  labour_hours            Decimal             @default(0, map: "DF_rel_hours") @db.Decimal(6, 2)
-  labour_cost             Decimal             @default(0, map: "DF_rel_labour") @db.Decimal(19, 4)
-  material_cost           Decimal             @default(0, map: "DF_rel_material") @db.Decimal(19, 4)
-  responsibility          String              @default("OWNER", map: "DF_rel_resp") @db.VarChar(6)
-  line_status             String              @default("PROPOSED", map: "DF_rel_status") @db.VarChar(10)
-  createdate              DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_repair_estimate_line_createdate")
-  updatedate              DateTime?
-  createdby               String              @db.NVarChar(64)
-  updatedby               String?             @db.NVarChar(64)
-  log_inst                Int                 @default(1, map: "DF_repair_estimate_line_log_inst")
+  repair_estimate_line_id        BigInt              @id(map: "PK_repair_estimate_line") @default(autoincrement())
+  repair_estimate_id             BigInt
+  line_no                        Int                 @db.SmallInt
+  inspection_finding_id          BigInt?
+  repair_code                    String              @db.VarChar(10)
+  location_detail                String?             @db.NVarChar(100)
+  quantity                       Decimal             @default(1, map: "DF_rel_qty") @db.Decimal(8, 2)
+  labour_hours                   Decimal             @default(0, map: "DF_rel_hours") @db.Decimal(6, 2)
+  labour_cost                    Decimal             @default(0, map: "DF_rel_labour") @db.Decimal(19, 4)
+  material_cost                  Decimal             @default(0, map: "DF_rel_material") @db.Decimal(19, 4)
+  responsibility                 String              @default("OWNER", map: "DF_rel_resp") @db.VarChar(6)
+  line_status                    String              @default("PROPOSED", map: "DF_rel_status") @db.VarChar(10)
+  createdate                     DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_repair_estimate_line_createdate")
+  updatedate                     DateTime?
+  createdby                      String              @db.NVarChar(64)
+  updatedby                      String?             @db.NVarChar(64)
+  log_inst                       Int                 @default(1, map: "DF_repair_estimate_line_log_inst")
   repair_estimate_line_codes     m_repair_code       @relation(fields: [repair_code], references: [repair_code], onUpdate: NoAction, map: "FK_rel_code")
   repair_estimate_line_estimates repair_estimate     @relation(fields: [repair_estimate_id], references: [repair_estimate_id], onUpdate: NoAction, map: "FK_rel_estimate")
   repair_estimate_line_findings  inspection_finding? @relation(fields: [inspection_finding_id], references: [inspection_finding_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_rel_finding")
@@ -3128,7 +3128,7 @@ model service_request {
   updatedby          String?      @db.NVarChar(64)
   log_inst           Int          @default(1, map: "DF_service_request_log_inst")
   consignment        consignment? @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_sr_consignment")
-  parties            m_party      @relation(fields: [party_id], references: [party_id], onUpdate: NoAction, map: "FK_sr_party")
+  m_party_service_request m_party @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_sr_party")
   m_site             m_site       @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_sr_site")
   unit_stay          unit_stay?   @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_sr_stay")
 
@@ -3181,7 +3181,7 @@ model tariff {
   approval_request    approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_approval")
   m_company           m_company         @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_tariff_company")
   m_currency          m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_tariff_currency")
-  m_party             m_party?          @relation(fields: [party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_party")
+  m_party_tariff        m_party?          @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_tariff_party")
   m_cargo_regime      m_cargo_regime?   @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_regime")
   m_site              m_site?           @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_site")
   tariff_rule         tariff_rule[]
@@ -3331,7 +3331,7 @@ model truck_visit {
   m_driver                                m_driver?                @relation(fields: [driver_id], references: [driver_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visit_driver")
   m_site                                  m_site                   @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_truck_visit_site")
   m_truck_truck_visit_trailer_idTom_truck m_truck?                 @relation("truck_visit_trailer_idTom_truck", fields: [trailer_id], references: [truck_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visit_trailer")
-  m_party                                 m_party?                 @relation(fields: [transporter_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visit_transporter")
+  m_party_truck_visit                     m_party?                 @relation(fields: [transporter_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_truck_visit_transporter")
   m_truck_truck_visit_truck_idTom_truck   m_truck?                 @relation("truck_visit_truck_idTom_truck", fields: [truck_id], references: [truck_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visit_truck")
   m_visit_type                            m_visit_type             @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_truck_visit_type")
   visit_checkpoint_event                  visit_checkpoint_event[]
@@ -3449,7 +3449,7 @@ model unit_stay {
   unit_stay_commodity             m_commodity?          @relation(fields: [commodity_id], references: [commodity_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_commodity")
   unit_stay_consignments          consignment?          @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_consignment")
   unit_stay_country               m_country?            @relation(fields: [destination_country], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_dest_country")
-  unit_stay_party                 m_party?              @relation(fields: [line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_line")
+  m_party_unit_stay               m_party?              @relation(fields: [line_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_unit_stay_line")
   unit_stay_yard_locations        m_yard_location?      @relation(fields: [current_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_location")
   unit_stay_manifest_line         manifest_line?        @relation("unit_stay_manifest_line_idTomanifest_line", fields: [manifest_line_id], references: [manifest_line_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_unit_stay_manifest_line")
   unit_stay_cargo_regimes         m_cargo_regime        @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onUpdate: NoAction, map: "FK_unit_stay_regime")
@@ -3506,7 +3506,7 @@ model vessel_call {
   log_inst               Int           @default(1, map: "DF_vessel_call_log_inst")
   consignment            consignment[]
   manifest               manifest[]
-  m_party                m_party?      @relation(fields: [shipping_line_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_vessel_call_line")
+  m_party_vessel_call    m_party?      @relation(fields: [shipping_line_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_vessel_call_line")
   m_port                 m_port        @relation(fields: [port_id], references: [port_id], onUpdate: NoAction, map: "FK_vessel_call_port")
   m_vessel               m_vessel      @relation(fields: [vessel_id], references: [vessel_id], onUpdate: NoAction, map: "FK_vessel_call_vessel")
 

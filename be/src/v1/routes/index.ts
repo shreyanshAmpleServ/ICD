@@ -6,6 +6,7 @@ import { cfsRouter } from './cfs.routes';
 import { reefersRouter } from './reefers.routes';
 import { repairsRouter } from './repairs.routes';
 import { devicesRouter } from './devices.routes';
+import { partiesRouter } from './parties.routes';
 
 // Legacy module routers
 import { sessionRouter } from '../../modules/session/session.router';
@@ -31,6 +32,7 @@ v1Router.use(cfsRouter);
 v1Router.use(reefersRouter);
 v1Router.use(repairsRouter);
 v1Router.use(devicesRouter);
+v1Router.use(partiesRouter);
 
 // Mount legacy routers
 v1Router.use(sessionRouter);
