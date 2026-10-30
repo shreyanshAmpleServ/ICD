@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 
 import { seedPortalData } from '../scripts/seed-portal';
+import { seedAllServiceRequests } from '../scripts/seed-service-requests';
+import { seedOpsData } from '../scripts/seed-ops-data';
 
 dotenv.config();
 
@@ -759,6 +761,12 @@ export async function seedDatabase() {
 
   // 16. Customer Portal Data Seed
   await seedPortalData();
+
+  // 17. Service Requests Seed
+  await seedAllServiceRequests();
+
+  // 18. Operational Master Data Seed (Slot Rules, Contractors, Repair Codes, Devices)
+  await seedOpsData();
 
   console.log('🎉 Full database seeding finished successfully! All tables seeded in MSSQL ICD_New.');
 }

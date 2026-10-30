@@ -108,5 +108,33 @@ router.post(
   asyncHandler(portalController.payInvoice),
 );
 
+// Portal Invitations
+router.get(
+  "/portal/invitations",
+  requireSite(false),
+  requirePermission("portal.invite"),
+  asyncHandler(portalController.getInvitations),
+);
+
+router.post(
+  "/portal/invitations",
+  requireSite(false),
+  requirePermission("portal.invite", "DO"),
+  asyncHandler(portalController.createInvitation),
+);
+
+router.post(
+  "/portal/invitations/:invitationId([0-9a-zA-Z_.-]+):revoke",
+  requireSite(false),
+  requirePermission("portal.invite", "DO"),
+  asyncHandler(portalController.revokeInvitation),
+);
+
+router.post(
+  "/portal/invitations:accept",
+  requireSite(false),
+  asyncHandler(portalController.acceptInvitation),
+);
+
 export const portalRouter = router;
 export default router;
