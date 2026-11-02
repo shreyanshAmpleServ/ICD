@@ -1,4 +1,13 @@
 import { Router } from 'express';
+import { gateRoutes } from './gate';
+import { yardRoutes } from './yard';
+import { cargoRoutes } from './cargo';
+import { setupRoutes } from './setup';
+import { billingRoutes } from './billing';
+import { controlRoutes } from './control';
+import { customersRoutes } from './customers';
+import { authRoutes } from './auth';
+
 import { unitsRouter } from './units.routes';
 import { portalRouter } from './portal.routes';
 import { appointmentsRouter } from './appointments.routes';
@@ -7,6 +16,8 @@ import { reefersRouter } from './reefers.routes';
 import { repairsRouter } from './repairs.routes';
 import { devicesRouter } from './devices.routes';
 import { partiesRouter } from './parties.routes';
+import { searchRouter } from './search.routes';
+import { notificationsRouter } from './notifications.routes';
 
 // Legacy module routers
 import { sessionRouter } from '../../modules/session/session.router';
@@ -24,7 +35,21 @@ import { depthRouter } from '../../modules/depth/depth.router';
 
 export const v1Router = Router();
 
-// Mount all v1 modular domain routes
+// Global Search & Notifications
+v1Router.use(searchRouter);
+v1Router.use(notificationsRouter);
+
+// Mount structured category routes matching frontend views
+v1Router.use(authRoutes);
+v1Router.use(gateRoutes);
+v1Router.use(yardRoutes);
+v1Router.use(cargoRoutes);
+v1Router.use(setupRoutes);
+v1Router.use(billingRoutes);
+v1Router.use(controlRoutes);
+v1Router.use(customersRoutes);
+
+// Mount domain routes
 v1Router.use(portalRouter);
 v1Router.use(unitsRouter);
 v1Router.use(appointmentsRouter);

@@ -10,24 +10,23 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const dbCodes = await prisma.repair_codes.findMany({
-        orderBy: { repair_code_id: "asc" },
-      });
+        const dbCodes = await prisma.m_repair_code.findMany({
+          where: { is_active: true },
+          orderBy: { repair_code: "asc" },
+        });
 
-      const items = (dbCodes || []).map((rc: any) => ({
-        repairCodeId: rc.repair_code_id,
-        code: rc.repair_code,
-        name: rc.description,
-        component: rc.component_code,
-        standardHours: Number(rc.default_hours ?? 2.0),
-        isActive: rc.is_active ?? true,
-      }));
+        const items = (dbCodes || []).map((rc: any) => ({
+          repairCode: rc.repair_code,
+          repairName: rc.repair_name,
+          defaultLabourHours: String(rc.default_labour_hours ?? 1.5),
+          isActive: rc.is_active ?? true,
+        }));
 
-      return sendSuccess(res, { items, total: items.length, nextCursor: null });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+        return res.json(items);
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
 
   public createCode = async (req: Request, res: Response) => {
     const prisma = getPrisma();
@@ -35,29 +34,27 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const code = req.body.code || `RC_${Date.now()}`;
-      const created = await prisma.repair_codes.create({
-        data: {
-          repair_code: code,
-          component_code: req.body.component || "PANEL",
-          description: req.body.name || req.body.description || "Repair operation",
-          default_hours: req.body.standardHours ? Number(req.body.standardHours) : 2.0,
-          is_active: true,
-        },
-      });
+        const code = req.body.repairCode || req.body.code || `RC_${Date.now()}`;
+        const created = await prisma.m_repair_code.create({
+          data: {
+            repair_code: code,
+            repair_name: req.body.repairName || req.body.name || "Repair operation",
+            default_labour_hours: req.body.defaultLabourHours ? parseFloat(req.body.defaultLabourHours) : 1.5,
+            is_active: true,
+            createdby: "system",
+          },
+        });
 
-      return sendCreated(res, {
-        repairCodeId: created.repair_code_id,
-        code: created.repair_code,
-        name: created.description,
-        component: created.component_code,
-        standardHours: Number(created.default_hours),
-        isActive: created.is_active,
-      });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+        return sendCreated(res, {
+          repairCode: created.repair_code,
+          repairName: created.repair_name,
+          defaultLabourHours: String(created.default_labour_hours),
+          isActive: created.is_active,
+        });
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
 
   public getCodeById = async (req: Request, res: Response) => {
     const prisma = getPrisma();
@@ -65,28 +62,23 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const idStr = String(req.params.repairCodeId);
-      const isNum = !isNaN(Number(idStr));
-      const rc = await prisma.repair_codes.findFirst({
-        where: isNum
-          ? { OR: [{ repair_code_id: Number(idStr) }, { repair_code: idStr }] }
-          : { repair_code: idStr },
-      });
+        const code = String(req.params.repairCodeId || req.params.id);
+        const rc = await prisma.m_repair_code.findUnique({
+          where: { repair_code: code },
+        });
 
-      if (!rc) return sendError(res, "Repair code not found", 404);
+        if(!rc) return sendError(res, "Repair code not found", 404);
 
-      return sendSuccess(res, {
-        repairCodeId: rc.repair_code_id,
-        code: rc.repair_code,
-        name: rc.description,
-        component: rc.component_code,
-        standardHours: Number(rc.default_hours),
-        isActive: rc.is_active,
-      });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+          return res.json({
+            repairCode: rc.repair_code,
+            repairName: rc.repair_name,
+            defaultLabourHours: String(rc.default_labour_hours),
+            isActive: rc.is_active,
+          });
+        } catch(err: any) {
+          return sendError(res, err.message, 500);
+        }
+      };
 
   public updateCode = async (req: Request, res: Response) => {
     const prisma = getPrisma();
@@ -94,38 +86,26 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const idStr = String(req.params.repairCodeId);
-      const isNum = !isNaN(Number(idStr));
-      const existing = await prisma.repair_codes.findFirst({
-        where: isNum
-          ? { OR: [{ repair_code_id: Number(idStr) }, { repair_code: idStr }] }
-          : { repair_code: idStr },
-      });
+        const code = String(req.params.repairCodeId || req.params.id);
+        const updated = await prisma.m_repair_code.update({
+          where: { repair_code: code },
+          data: {
+            repair_name: req.body.repairName || req.body.name,
+            default_labour_hours: req.body.defaultLabourHours ? parseFloat(req.body.defaultLabourHours) : undefined,
+            is_active: req.body.isActive,
+          },
+        });
 
-      if (!existing) return sendError(res, "Repair code not found", 404);
-
-      const updated = await prisma.repair_codes.update({
-        where: { repair_code_id: existing.repair_code_id },
-        data: {
-          description: req.body.name || req.body.description,
-          component_code: req.body.component,
-          default_hours: req.body.standardHours ? Number(req.body.standardHours) : undefined,
-          is_active: req.body.isActive,
-        },
-      });
-
-      return sendSuccess(res, {
-        repairCodeId: updated.repair_code_id,
-        code: updated.repair_code,
-        name: updated.description,
-        component: updated.component_code,
-        standardHours: Number(updated.default_hours),
-        isActive: updated.is_active,
-      });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+        return sendSuccess(res, {
+          repairCode: updated.repair_code,
+          repairName: updated.repair_name,
+          defaultLabourHours: String(updated.default_labour_hours),
+          isActive: updated.is_active,
+        });
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
 
   // Repair Estimates
   public getEstimates = async (req: Request, res: Response) => {
@@ -134,53 +114,72 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const dbEst = await (prisma as any).repair_estimates.findMany({
-        include: {
-          repair_estimate_unit_stays: {
-            include: {
-              unit_stay_cargo_units: true,
+        const dbEst = await prisma.repair_estimate.findMany({
+          include: {
+            repair_estimate_unit_stays: {
+              include: {
+                unit_stay_cargo_units: {
+                  include: { cargo_unit_unit_types: true },
+                },
+                unit_stay_yard_locations: true,
+              },
+            },
+            m_party_repair_estimate: true,
+            repair_estimate_lines: {
+              orderBy: { line_no: "asc" },
             },
           },
-          repair_estimate_parties: true,
-        },
-        orderBy: { repair_estimate_id: "desc" },
-      });
+          orderBy: { repair_estimate_id: "desc" },
+        });
 
-      const items = (dbEst || []).map((e: any) => ({
-        repairEstimateId: Number(e.repair_estimate_id),
-        estimateNo: e.estimate_no || `EST-26-0${e.repair_estimate_id}`,
-        createdAt: e.createdate?.toISOString() || new Date().toISOString(),
-        unitStayId: Number(e.unit_stay_id),
-        unitNo: e.repair_estimate_unit_stays?.unit_stay_cargo_units?.unit_no || "TCLU 551902 4",
-        unitType: "20GP",
-        location: "A-01-02-1",
-        lineCode: e.repair_estimate_parties?.party_code || "MSK",
-        partyName: e.repair_estimate_parties?.party_name || "Maersk Line Tanzania",
-        totalLabour: Number(e.total_labour ?? 140),
-        totalMaterial: Number(e.total_material ?? 140),
-        totalAmount: Number(e.total_amount ?? 280),
-        status: e.status || "APPROVED",
-        approverRef: e.approver_ref || "APP-2026-9912",
-        lines: [
-          {
-            lineNo: 1,
-            component: "PANEL",
-            damageCode: "SCRATCH",
-            repairCode: "RP-01",
-            description: "Straighten and paint side panel",
-            hours: 3.5,
-            labourCost: Number(e.total_labour ?? 140),
-            materialCost: Number(e.total_material ?? 140),
-            lineStatus: "APPROVED",
-          },
-        ],
-      }));
+        const items = (dbEst || []).map((e: any) => {
+          const u = e.repair_estimate_unit_stays?.unit_stay_cargo_units;
+          const lines = (e.repair_estimate_lines || []).map((l: any) => ({
+            repairEstimateLineId: Number(l.repair_estimate_line_id),
+            lineNo: l.line_no,
+            repairCode: l.repair_code,
+            locationDetail: l.location_detail || "",
+            quantity: String(l.quantity),
+            labourHours: String(l.labour_hours),
+            labourCost: String(l.labour_cost),
+            materialCost: String(l.material_cost),
+            responsibility: l.responsibility,
+            lineStatus: l.line_status,
+          }));
 
-      return sendSuccess(res, { items, total: items.length, nextCursor: null });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+          const tl = Number(e.total_labour ?? 0);
+          const tm = Number(e.total_material ?? 0);
+
+          return {
+            repairEstimateId: Number(e.repair_estimate_id),
+            estimateNo: e.estimate_no,
+            createdAt: e.createdate.toISOString(),
+            unitStayId: Number(e.unit_stay_id),
+            unitNo: u?.unit_no || "MSKU 402117 8",
+            unitType: u?.cargo_unit_unit_types?.type_code || "40HC",
+            location: e.repair_estimate_unit_stays?.unit_stay_yard_locations?.full_code || "C-02-04",
+            lineCode: e.m_party_repair_estimate?.party_code || "MSK",
+            approverPartyId: e.approver_party_id,
+            currency: e.currency,
+            labourRate: String(e.labour_rate ?? 18),
+            totalLabour: String(tl),
+            totalMaterial: String(tm),
+            totalAmount: String(tl + tm),
+            status: e.status,
+            sentAt: e.sent_at?.toISOString() || undefined,
+            approverRef: e.approver_ref || undefined,
+            decidedAt: e.decided_at?.toISOString() || undefined,
+            completedAt: e.completed_at?.toISOString() || undefined,
+            inspectionId: e.inspection_id ? Number(e.inspection_id) : undefined,
+            lines,
+          };
+        });
+
+        return res.json(items);
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
 
   public createEstimate = async (req: Request, res: Response) => {
     const prisma = getPrisma();
@@ -189,39 +188,84 @@ export class RepairsController {
     }
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
-      const unitStayId = Number(req.body.unitStayId) || 5001;
-      const partyId = Number(req.body.partyId) || 1;
-      const totalAmount = req.body.totalAmount ? Number(req.body.totalAmount) : 280;
+      const unitStayId = Number(req.body.unitStayId) || 1;
+      const partyId = Number(req.body.approverPartyId || req.body.partyId) || 1;
+      const labourRate = req.body.labourRate ? parseFloat(req.body.labourRate) : 18.0;
 
-      const created = await (prisma as any).repair_estimates.create({
-        data: {
-          site_id: siteId,
-          estimate_no: `EST-${Date.now()}`,
-          unit_stay_id: unitStayId,
-          approver_party_id: partyId,
-          currency: "USD",
-          total_labour: 140,
-          total_material: 140,
-          total_amount: totalAmount,
-          status: "DRAFT",
-          createdby: "system",
-        },
-      });
+        const lines = req.body.lines || [
+          {
+            line_no: 1,
+            repair_code: "STR-DT",
+            location_detail: "Front end",
+            quantity: 1,
+            labour_hours: 1.5,
+            labour_cost: 27.0,
+            material_cost: 0.0,
+            responsibility: "OWNER",
+            line_status: "PROPOSED",
+          },
+        ];
 
-      return sendCreated(res, {
-        repairEstimateId: Number(created.repair_estimate_id),
-        estimateNo: created.estimate_no,
-        unitStayId: Number(created.unit_stay_id),
-        unitNo: req.body.unitNo || "MSKU 882014 9",
-        partyName: req.body.partyName || "Maersk Line",
-        totalAmountUsd: Number(created.total_amount),
-        status: created.status,
-        createdAt: created.createdate?.toISOString(),
-      });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+        const totLab = lines.reduce((a: number, l: any) => a + Number(l.labourCost || l.labour_cost || 0), 0);
+        const totMat = lines.reduce((a: number, l: any) => a + Number(l.materialCost || l.material_cost || 0), 0);
+
+        const created = await prisma.repair_estimate.create({
+          data: {
+            site_id: siteId,
+            estimate_no: `EST-26-0${Date.now().toString().slice(-4)}`,
+            unit_stay_id: unitStayId,
+            approver_party_id: partyId,
+            currency: "USD",
+            labour_rate: labourRate,
+            total_labour: totLab,
+            total_material: totMat,
+            status: "DRAFT",
+            inspection_id: req.body.inspectionId ? Number(req.body.inspectionId) : null,
+            createdby: "system",
+            repair_estimate_lines: {
+              create: lines.map((l: any, i: number) => ({
+                line_no: l.lineNo || l.line_no || i + 1,
+                repair_code: l.repairCode || l.repair_code || "STR-DT",
+                location_detail: l.locationDetail || l.location_detail || "",
+                quantity: l.quantity ? parseFloat(l.quantity) : 1,
+                labour_hours: l.labourHours ? parseFloat(l.labourHours) : 1.5,
+                labour_cost: l.labourCost ? parseFloat(l.labourCost) : 27.0,
+                material_cost: l.materialCost ? parseFloat(l.materialCost) : 0.0,
+                responsibility: l.responsibility || "OWNER",
+                line_status: l.lineStatus || l.line_status || "PROPOSED",
+                createdby: "system",
+              })),
+            },
+          },
+          include: {
+            repair_estimate_lines: true,
+            repair_estimate_unit_stays: {
+              include: {
+                unit_stay_cargo_units: {
+                  include: { cargo_unit_unit_types: true },
+                },
+              },
+            },
+            m_party_repair_estimate: true,
+          },
+        });
+
+        const u = created.repair_estimate_unit_stays?.unit_stay_cargo_units;
+        return sendCreated(res, {
+          repairEstimateId: Number(created.repair_estimate_id),
+          estimateNo: created.estimate_no,
+          createdAt: created.createdate.toISOString(),
+          unitStayId: Number(created.unit_stay_id),
+          unitNo: u?.unit_no || "MSKU 402117 8",
+          unitType: u?.cargo_unit_unit_types?.type_code || "40HC",
+          lineCode: created.m_party_repair_estimate?.party_code || "MSK",
+          totalAmount: String(totLab + totMat),
+          status: created.status,
+        });
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
 
   public getEstimateById = async (req: Request, res: Response) => {
     const prisma = getPrisma();
@@ -229,37 +273,73 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const idStr = String(req.params.repairEstimateId);
-      const isNum = !isNaN(Number(idStr));
-      const est = await (prisma as any).repair_estimates.findFirst({
-        where: isNum
-          ? { repair_estimate_id: Number(idStr) }
-          : { repair_estimate_id: parseInt(idStr.replace(/\D/g, ""), 10) || 1 },
-        include: {
-          repair_estimate_unit_stays: {
-            include: {
-              unit_stay_cargo_units: true,
+        const id = parseInt(req.params.repairEstimateId || req.params.id, 10);
+        const e = await prisma.repair_estimate.findUnique({
+          where: { repair_estimate_id: id },
+          include: {
+            repair_estimate_unit_stays: {
+              include: {
+                unit_stay_cargo_units: {
+                  include: { cargo_unit_unit_types: true },
+                },
+                unit_stay_yard_locations: true,
+              },
+            },
+            m_party_repair_estimate: true,
+            repair_estimate_lines: {
+              orderBy: { line_no: "asc" },
             },
           },
-          repair_estimate_parties: true,
-        },
-      });
+        });
 
-      if (!est) return sendError(res, "Repair estimate not found", 404);
+        if(!e) return sendError(res, "Repair estimate not found", 404);
 
-      return sendSuccess(res, {
-        repairEstimateId: Number(est.repair_estimate_id),
-        estimateNo: est.estimate_no || `EST-26-0${est.repair_estimate_id}`,
-        unitStayId: Number(est.unit_stay_id),
-        unitNo: est.repair_estimate_unit_stays?.unit_stay_cargo_units?.unit_no,
-        partyName: est.repair_estimate_parties?.party_name,
-        totalAmount: Number(est.total_amount),
-        status: est.status,
-      });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+        const u = e.repair_estimate_unit_stays?.unit_stay_cargo_units;
+        const lines = (e.repair_estimate_lines || []).map((l: any) => ({
+          repairEstimateLineId: Number(l.repair_estimate_line_id),
+          lineNo: l.line_no,
+          repairCode: l.repair_code,
+          locationDetail: l.location_detail || "",
+          quantity: String(l.quantity),
+          labourHours: String(l.labour_hours),
+          labourCost: String(l.labour_cost),
+          materialCost: String(l.material_cost),
+          responsibility: l.responsibility,
+          lineStatus: l.line_status,
+        }));
+
+        const tl = Number(e.total_labour ?? 0);
+        const tm = Number(e.total_material ?? 0);
+
+        const result = {
+          repairEstimateId: Number(e.repair_estimate_id),
+          estimateNo: e.estimate_no,
+          createdAt: e.createdate.toISOString(),
+          unitStayId: Number(e.unit_stay_id),
+          unitNo: u?.unit_no || "MSKU 402117 8",
+          unitType: u?.cargo_unit_unit_types?.type_code || "40HC",
+          location: e.repair_estimate_unit_stays?.unit_stay_yard_locations?.full_code || "C-02-04",
+          lineCode: e.m_party_repair_estimate?.party_code || "MSK",
+          approverPartyId: e.approver_party_id,
+          currency: e.currency,
+          labourRate: String(e.labour_rate ?? 18),
+          totalLabour: String(tl),
+          totalMaterial: String(tm),
+          totalAmount: String(tl + tm),
+          status: e.status,
+          sentAt: e.sent_at?.toISOString() || undefined,
+          approverRef: e.approver_ref || undefined,
+          decidedAt: e.decided_at?.toISOString() || undefined,
+          completedAt: e.completed_at?.toISOString() || undefined,
+          inspectionId: e.inspection_id ? Number(e.inspection_id) : undefined,
+          lines,
+        };
+
+        return res.json(result);
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
 
   public updateEstimate = async (req: Request, res: Response) => {
     const prisma = getPrisma();
@@ -267,19 +347,21 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const id = parseInt(req.params.repairEstimateId, 10);
-      const updated = await (prisma as any).repair_estimates.update({
-        where: { repair_estimate_id: id },
-        data: {
-          status: req.body.status,
-          total_amount: req.body.totalAmount ? Number(req.body.totalAmount) : undefined,
-        },
-      });
-      return sendSuccess(res, updated);
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+        const id = parseInt(req.params.repairEstimateId || req.params.id, 10);
+        const updated = await prisma.repair_estimate.update({
+          where: { repair_estimate_id: id },
+          data: {
+            status: req.body.status,
+            approver_ref: req.body.approverRef,
+            total_labour: req.body.totalLabour ? parseFloat(req.body.totalLabour) : undefined,
+            total_material: req.body.totalMaterial ? parseFloat(req.body.totalMaterial) : undefined,
+          },
+        });
+        return sendSuccess(res, updated);
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
 
   public sendEstimate = async (req: Request, res: Response) => {
     const prisma = getPrisma();
@@ -287,16 +369,19 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const id = parseInt(req.params.repairEstimateId, 10);
-      const updated = await (prisma as any).repair_estimates.update({
-        where: { repair_estimate_id: id },
-        data: { status: "SENT" },
-      });
-      return sendSuccess(res, { success: true, estimate: updated });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+        const id = parseInt(req.params.repairEstimateId || req.params.id, 10);
+        const updated = await prisma.repair_estimate.update({
+          where: { repair_estimate_id: id },
+          data: {
+            status: "SENT",
+            sent_at: new Date(),
+          },
+        });
+        return sendSuccess(res, { success: true, estimate: updated });
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
 
   public decideEstimate = async (req: Request, res: Response) => {
     const prisma = getPrisma();
@@ -304,17 +389,48 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const id = parseInt(req.params.repairEstimateId, 10);
-      const nextStatus = req.body.decision === "APPROVE" ? "APPROVED" : "REJECTED";
-      const updated = await (prisma as any).repair_estimates.update({
-        where: { repair_estimate_id: id },
-        data: { status: nextStatus },
-      });
-      return sendSuccess(res, { success: true, estimate: updated });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
+        const id = parseInt(req.params.repairEstimateId || req.params.id, 10);
+        const decisions = req.body.decisions || {};
+        const ref = req.body.ref || "REF-DECISION";
+
+        // Update line items
+        const lineIds = Object.keys(decisions).map(Number);
+        let approvedCount = 0;
+        let totalLines = 0;
+
+        for(const lineId of lineIds) {
+          totalLines++;
+          const dec = decisions[lineId];
+          if (dec === "APPROVED") approvedCount++;
+          await prisma.repair_estimate_line.update({
+            where: { repair_estimate_line_id: lineId },
+            data: { line_status: dec },
+          });
+        }
+
+      const nextStatus =
+          totalLines === 0
+            ? "APPROVED"
+            : approvedCount === totalLines
+              ? "APPROVED"
+              : approvedCount === 0
+                ? "REJECTED"
+                : "PARTIAL";
+
+        const updated = await prisma.repair_estimate.update({
+          where: { repair_estimate_id: id },
+          data: {
+            status: nextStatus,
+            approver_ref: ref,
+            decided_at: new Date(),
+          },
+        });
+
+        return sendSuccess(res, { success: true, status: nextStatus, estimate: updated });
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
 
   public completeEstimate = async (req: Request, res: Response) => {
     const prisma = getPrisma();
@@ -322,16 +438,27 @@ export class RepairsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const id = parseInt(req.params.repairEstimateId, 10);
-      const updated = await (prisma as any).repair_estimates.update({
-        where: { repair_estimate_id: id },
-        data: { status: "COMPLETED" },
-      });
-      return sendSuccess(res, { success: true, estimate: updated });
-    } catch (err: any) {
-      return sendError(res, err.message, 500);
-    }
-  };
-}
+        const id = parseInt(req.params.repairEstimateId || req.params.id, 10);
 
-export const repairsController = new RepairsController();
+        // Mark approved lines as DONE
+        await prisma.repair_estimate_line.updateMany({
+          where: { repair_estimate_id: id, line_status: "APPROVED" },
+          data: { line_status: "DONE" },
+        });
+
+        const updated = await prisma.repair_estimate.update({
+          where: { repair_estimate_id: id },
+          data: {
+            status: "COMPLETED",
+            completed_at: new Date(),
+          },
+        });
+
+        return sendSuccess(res, { success: true, estimate: updated });
+      } catch (err: any) {
+        return sendError(res, err.message, 500);
+      }
+    };
+  }
+
+  export const repairsController = new RepairsController();

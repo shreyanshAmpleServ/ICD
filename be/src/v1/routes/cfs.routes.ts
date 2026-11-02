@@ -6,6 +6,7 @@ import { cfsController } from "../controllers/cfs.controller";
 
 const router = Router();
 
+// Labour Contractors
 router.get(
   "/labour-contractors",
   requireSite(false),
@@ -34,6 +35,29 @@ router.patch(
   asyncHandler(cfsController.updateContractor),
 );
 
+// Lots Balances
+router.get(
+  "/lots/balances",
+  requireSite(false),
+  requirePermission("consignment.view"),
+  asyncHandler(cfsController.getLotBalances),
+);
+
+router.get(
+  "/lots/:unitStayId/balance",
+  requireSite(false),
+  requirePermission("consignment.view"),
+  asyncHandler(cfsController.getLotBalance),
+);
+
+router.post(
+  "/lots/:lotStayId/deliveries",
+  requireSite(false),
+  requirePermission("cfs.job.manage", "DO"),
+  asyncHandler(cfsController.recordLotDelivery),
+);
+
+// Handling Jobs
 router.get(
   ["/handling-jobs", "/cfs/jobs"],
   requireSite(false),
@@ -69,33 +93,26 @@ router.put(
   asyncHandler(cfsController.updateJobLines),
 );
 
+// Action routes supporting both slash and colon syntax
 router.post(
-  "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):start",
+  ["/handling-jobs/:handlingJobId/start", "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):start"],
   requireSite(false),
   requirePermission("cfs.job.manage", "DO"),
   asyncHandler(cfsController.startJob),
 );
 
 router.post(
-  "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):complete",
+  ["/handling-jobs/:handlingJobId/complete", "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):complete"],
   requireSite(false),
   requirePermission("cfs.job.manage", "DO"),
   asyncHandler(cfsController.completeJob),
 );
 
 router.post(
-  "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):approve",
+  ["/handling-jobs/:handlingJobId/approve", "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):approve"],
   requireSite(false),
   requirePermission("cfs.job.approve", "DO"),
   asyncHandler(cfsController.approveJob),
-);
-
-// Lots Balance
-router.get(
-  "/lots/:unitStayId/balance",
-  requireSite(false),
-  requirePermission("consignment.view"),
-  asyncHandler(cfsController.getLotBalance),
 );
 
 export const cfsRouter = router;

@@ -28,7 +28,22 @@ router.get(
 );
 
 router.post(
-  "/reefer-sessions/:reeferSessionId([0-9a-zA-Z_.-]+):unplug",
+  [
+    "/reefer-sessions/:reeferSessionId/plug",
+    "/reefers/:reeferSessionId/plug",
+  ],
+  requireSite(false),
+  requirePermission("reefer.manage", "DO"),
+  asyncHandler(reefersController.plugIn)
+);
+
+router.post(
+  [
+    "/reefer-sessions/:reeferSessionId/unplug",
+    "/reefers/:reeferSessionId/unplug",
+    "/reefer-sessions/:reeferSessionId([0-9a-zA-Z_.-]+):unplug",
+    "/reefers/:reeferSessionId([0-9a-zA-Z_.-]+):unplug",
+  ],
   requireSite(false),
   requirePermission("reefer.manage", "DO"),
   asyncHandler(reefersController.unplugSession)
@@ -56,4 +71,3 @@ router.post(
 
 export const reefersRouter = router;
 export default router;
-

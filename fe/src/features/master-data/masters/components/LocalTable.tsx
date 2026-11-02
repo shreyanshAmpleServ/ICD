@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { Plus } from 'lucide-react';
-import { Button, DataTable, Panel, useToast, type Col } from '@/ds/components';
+import { Button, DataTable, Panel, type Col } from '@/ds/components';
 
 interface LocalTableProps<T> {
   title: string;
@@ -9,28 +9,31 @@ interface LocalTableProps<T> {
   rowKey: (r: T) => number;
   cols: Col<T>[];
   toolbar: ReactNode;
+  onAdd?: () => void;
+  onRow?: (item: T) => void;
 }
 
-export function LocalTable<T>({ title, addLabel, rows, rowKey, cols, toolbar }: LocalTableProps<T>) {
-  const toast = useToast();
+export function LocalTable<T>({ title, addLabel, rows, rowKey, cols, toolbar, onAdd, onRow }: LocalTableProps<T>) {
   return (
     <Panel
       flush
       title={title}
-      sub="Kept in NG ICD; edit freely"
+      sub="Master data from ICD database; add or edit freely"
       actions={
-        <Button
-          size="sm"
-          icon={<Plus />}
-          perm="masters.local.edit"
-          onClick={() => toast(`${addLabel.replace('Add ', '')} added`.replace(/^./, (c) => c.toUpperCase()))}
-        >
-          {addLabel}
-        </Button>
+        onAdd && (
+          <Button
+            size="sm"
+            icon={<Plus />}
+            perm="masters.local.edit"
+            onClick={onAdd}
+          >
+            {addLabel}
+          </Button>
+        )
       }
     >
       {toolbar}
-      <DataTable rows={rows} rowKey={rowKey} cols={cols} />
+      <DataTable rows={rows} rowKey={rowKey} cols={cols} onRow={onRow} />
     </Panel>
   );
 }

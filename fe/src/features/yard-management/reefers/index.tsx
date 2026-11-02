@@ -13,7 +13,7 @@ import { UnplugDrawer } from './components/UnplugDrawer';
 
 export { reefersApi } from './api';
 
-const NOW_ISO = new Date('2026-10-07T10:30:00+03:00').toISOString();
+
 const ALARM: Record<string, string> = {
   HIGH_TEMP: 'High temperature',
   POWER_OFF: 'No power',
@@ -25,7 +25,7 @@ const last = (r: Reefer) => r.readings[r.readings.length - 1];
 export function ReefersView() {
   const { site } = useSession();
   const toast = useToast();
-  const { data = [] } = useQ(['reefer-sessions'], () => reefersApi.getReeferSessions());
+  const { data = [], refetch } = useQ(['reefer-sessions'], () => reefersApi.getReeferSessions());
   const [patch, setPatch] = useState<Record<number, Partial<Reefer>>>({});
   const [selId, setSelId] = useState<number | null>(null);
   const [plugFor, setPlugFor] = useState<Reefer | null>(null);
@@ -66,8 +66,7 @@ export function ReefersView() {
             {alarms
               .map(
                 (r) =>
-                  `${r.unitNo} at ${r.plugNo}: ${ALARM[r.alarm!]}${
-                    r.alarm === 'HIGH_TEMP' ? ` (${last(r).supplyTempC} °C, set ${r.setTempC} °C)` : ''
+                  `${r.unitNo} at ${r.plugNo}: ${ALARM[r.alarm!]}${r.alarm === 'HIGH_TEMP' ? ` (${last(r).supplyTempC} °C, set ${r.setTempC} °C)` : ''
                   }`
               )
               .join(' · ')}
@@ -178,14 +177,22 @@ export function ReefersView() {
           {sel && (
             <ReeferDetailPanel
               r={sel}
-              onReading={(rd) => {
-                set(sel, {
-                  readings: [...sel.readings, rd],
-                  alarm: rd.isOutOfRange ? 'HIGH_TEMP' : rd.powerOn === false ? 'POWER_OFF' : undefined,
-                });
-                toast(`Reading saved for ${sel.unitNo}`);
+                onReading = { async(rd) => {
+                try {
+                  if (sel.reeferSessionId) {
+            await reefersApi.recordReading(sel.reeferSessionId, rd);
+          await refetch();
+                  }
+          toast(`Reading saved for ${sel.unitNo}`);
+                } catch (err: any) {
+            set(sel, {
+              readings: [...sel.readings, rd],
+              alarm: rd.isOutOfRange ? 'HIGH_TEMP' : rd.powerOn === false ? 'POWER_OFF' : undefined,
+            });
+          toast(`Reading recorded locally: ${err.message}`);
+                }
               }}
-              onUnplug={() => setUnplugFor(sel)}
+          onUnplug={() => setUnplugFor(sel)}
             />
           )}
         </div>
@@ -200,18 +207,17 @@ export function ReefersView() {
           <PlugInDrawer
             r={plugFor}
             used={usedPlugs}
-            onDone={(plug, temp) => {
-              set(plugFor, {
-                plugNo: plug,
-                unpluggedAt: undefined,
-                pluggedAt: NOW_ISO,
-                kwhUsed: '0.0',
-                setTempC: temp,
-                readings: [],
-                alarm: undefined,
-              });
-              toast(`${plugFor.unitNo} plugged in at ${plug}`);
-              setPlugFor(null);
+              onDone = { async(plug, temp) => {
+              try {
+                if (plugFor.reeferSessionId) {
+          await reefersApi.plugIn(plugFor.reeferSessionId, { plugNo: plug, setTempC: temp });
+        await refetch();
+                }
+        toast(`${plugFor.unitNo} plugged in at ${plug}`);
+              } catch (err: any) {
+          toast(`Plugged in locally: ${err.message}`);
+              }
+        setPlugFor(null);
             }}
           />
         )}
@@ -224,10 +230,20 @@ export function ReefersView() {
         {unplugFor && (
           <UnplugDrawer
             r={unplugFor}
-            onDone={(kwh) => {
-              set(unplugFor, { unpluggedAt: NOW_ISO, kwhUsed: kwh });
-              toast(`${unplugFor.unitNo} unplugged from ${unplugFor.plugNo}`);
-              setUnplugFor(null);
+              onDone = { async(kwh) => {
+              try {
+                if (unplugFor.reeferSessionId) {
+          await reefersApi.unplug(unplugFor.reeferSessionId, {
+            meterEndKwh: parseFloat(kwh) || 0,
+            reason: 'DISPATCH',
+          });
+        await refetch();
+                }
+        toast(`${unplugFor.unitNo} unplugged from ${unplugFor.plugNo}`);
+              } catch (err: any) {
+          toast(`Unplugged locally: ${err.message}`);
+              }
+        setUnplugFor(null);
             }}
           />
         )}

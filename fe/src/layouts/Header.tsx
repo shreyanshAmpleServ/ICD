@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, LogOut, Menu, Search, ShieldCheck, Sparkles, WifiOff, X } from 'lucide-react';
+import { Bell, LogOut, Menu, Search, ShieldCheck, Sparkles, User, WifiOff, X } from 'lucide-react';
 import { ALL_ROLE, SITES, useSession } from '@/app/session';
 import { ROLES } from '@/app/roles';
 import { useT } from '@/app/i18n';
 import { Button, Segmented, Select, StatusPill } from '@/ds/components';
-import { search, type Group } from '@/mock/search';
+import type { Group } from '@/mock/search';
 import { approvals } from '@/mock/control';
 import { useAuth } from '@/features/auth';
 import { api } from '@/api/client';
 import { useQ } from '@/api/query';
+import { ProfileDrawer } from './components/ProfileDrawer';
 
 export interface HeaderProps {
   onMenu: () => void;
@@ -127,6 +128,7 @@ function OneSearch() {
   const [sel, setSel] = useState(0);
   const [results, setResults] = useState<Group[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
   const nav = useNavigate();
   const t = useT();
@@ -137,6 +139,7 @@ function OneSearch() {
     if (trimmed.length < 2) {
       setResults([]);
       setLoading(false);
+      setSearched(false);
       return;
     }
 
@@ -149,19 +152,20 @@ function OneSearch() {
         if (res && Array.isArray(res.groups)) {
           setResults(res.groups);
         } else {
-          setResults(search(trimmed));
+          setResults([]);
         }
       } catch {
-        setResults(search(trimmed));
+        setResults([]);
       } finally {
         setLoading(false);
+        setSearched(true);
       }
     }, 200);
 
     return () => clearTimeout(timeout);
   }, [q]);
 
-  const groups: Group[] = results.length > 0 ? results : q.trim().length >= 2 && !loading ? search(q.trim()) : [];
+  const groups: Group[] = results;
   const flat = groups.flatMap((g) => g.hits);
 
   useEffect(() => {
@@ -225,10 +229,10 @@ function OneSearch() {
               Searching live system...
             </div>
           )}
-          {!loading && groups.length === 0 && (
-            <div className="small muted" style={{ padding: '8px 16px' }}>
-              No match for “{q}”. Try the last 4 digits of a container or the end of a VIN.
-            </div>
+            {!loading && searched && groups.length === 0 && (
+          <div className="small muted" style={{ padding: '8px 16px' }}>
+            No match for “{q}”. Try the last 4 digits of a container or the end of a VIN.
+          </div>
           )}
           {!loading &&
             groups.map((g) => (
@@ -267,6 +271,7 @@ function OneSearch() {
 function MeMenu() {
   const s = useSession();
   const [open, setOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const currentRoles = s.roles && s.roles.length > 0 ? s.roles : ROLES;
   const role = currentRoles.find((r) => r.code === s.roleCode);
   const initials =
@@ -326,6 +331,18 @@ function MeMenu() {
               </div>
               <Button size="sm" variant="ghost" aria-label="Close" icon={<X />} onClick={() => setOpen(false)} />
             </div>
+
+            <Button
+              variant="secondary"
+              icon={<User size={14} />}
+              style={{ width: '100%', marginBottom: 14, justifyContent: 'flex-start' }}
+              onClick={() => {
+                setOpen(false);
+                setProfileOpen(true);
+              }}
+            >
+              View & edit user profile
+            </Button>
 
             <h3>Active Role</h3>
             <Select
@@ -396,6 +413,7 @@ function MeMenu() {
           </div>
         </>
       )}
+      <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   );
 }

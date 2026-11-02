@@ -1,39 +1,38 @@
 import { api } from '@/api/client';
-import { inspections, type Insp } from '@/mock/ops';
+import { type Insp } from '@/mock/ops';
 
 export const inspectionsApi = {
   getInspections: async (siteId?: number): Promise<Insp[]> => {
     try {
       const res = await api.get<Insp[]>('/inspections');
-      const list = res && res.length > 0 ? res : inspections;
+      const list = Array.isArray(res) ? res : [];
       return siteId ? list.filter((i) => i.siteId === siteId) : list;
     } catch {
-      return siteId ? inspections.filter((i) => i.siteId === siteId) : inspections;
+      return [];
     }
   },
 
   getInspection: async (inspectionId: number): Promise<Insp | undefined> => {
     try {
-      const res = await api.get<Insp>(`/inspections/${inspectionId}`);
-      return res || inspections.find((i) => i.inspectionId === inspectionId);
+      return await api.get<Insp>(`/inspections/${inspectionId}`);
     } catch {
-      return inspections.find((i) => i.inspectionId === inspectionId);
+      return undefined;
     }
   },
 
-  startInspection: async (data: Partial<Insp>) => {
-    return api.post<Insp>('/inspections', data);
-  },
+    startInspection: async (data: Partial<Insp>): Promise<Insp> => {
+      return api.post<Insp>('/inspections', data);
+    },
 
-  saveResults: async (inspectionId: number, data: any) => {
-    return api.put<any>(`/inspections/${inspectionId}/results`, data);
-  },
+      saveResults: async (inspectionId: number, data: any) => {
+        return api.put<any>(`/inspections/${inspectionId}/results`, data);
+      },
 
-  completeInspection: async (inspectionId: number, data: any) => {
-    return api.post<any>(`/inspections/${inspectionId}/complete`, data);
-  },
+        completeInspection: async (inspectionId: number, data: any) => {
+          return api.post<any>(`/inspections/${inspectionId}/complete`, data);
+        },
 
-  approveInspection: async (inspectionId: number) => {
-    return api.post<any>(`/inspections/${inspectionId}/approve`, {});
-  },
+          approveInspection: async (inspectionId: number) => {
+            return api.post<any>(`/inspections/${inspectionId}/approve`, {});
+          },
 };

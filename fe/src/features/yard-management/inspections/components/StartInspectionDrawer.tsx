@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { ClipboardCheck } from 'lucide-react';
-import { Button, Drawer, Field, Input, Select, UnitNo, useToast } from '@/ds/components';
-import { allStays } from '@/mock/core';
-import { inspections, type Insp } from '@/mock/ops';
+import { Button, Drawer, Field, Input, Select, useToast } from '@/ds/components';
+import { inspectionsApi } from '../api';
 
 export interface StartInspectionDrawerProps {
   open: boolean;
@@ -11,91 +10,132 @@ export interface StartInspectionDrawerProps {
   onStart: (id: number) => void;
 }
 
-export function StartInspectionDrawer({ open, onClose, siteId, onStart }: StartInspectionDrawerProps) {
-  const toast = useToast();
-  const [q, setQ] = useState('');
-  const [kind, setKind] = useState('PERIODIC');
-  const n = q.replace(/\s/g, '').toUpperCase();
-  const hit =
-    n.length >= 4
-      ? allStays.find((s) => s.siteId === siteId && s.cargoUnit.category !== 'LOT' && s.cargoUnit.unitNo.includes(n))
-      : undefined;
-  const err =
-    n.length >= 4 && !hit
-      ? 'No container or vehicle with that number at this site'
-      : hit && hit.physicalStatus !== 'IN_YARD' && hit.physicalStatus !== 'AT_ACTIVITY'
-      ? 'This unit is not in the yard'
-      : undefined;
+  const CATEGORIES: [string, string][] = [
+    ['CONTAINER', 'Container (ISO 6346)'],
+    ['VEHICLE', 'Vehicle (Ro-Ro / RORO)'],
+  ];
 
-  return (
-    <Drawer
-      open={open}
-      onClose={onClose}
-      title="Start an inspection"
-      footer={
+  const KINDS: [string, string][] = [
+    ['PERIODIC', 'Periodic (yard check)'],
+    ['EXAM', 'Customs exam'],
+    ['GATE_OUT', 'Gate-out check'],
+    ['GATE_IN', 'Gate-in arrival check'],
+  ];
+
+  export function StartInspectionDrawer({ open, onClose, onStart }: StartInspectionDrawerProps) {
+    const toast = useToast();
+    const [loading, setLoading] = useState(false);
+    const [unitNo, setUnitNo] = useState('MSKU0192834');
+    const [unitStayId, setUnitStayId] = useState('1');
+    const [category, setCategory] = useState('CONTAINER');
+    const [kind, setKind] = useState('PERIODIC');
+    const [inspector, setInspector] = useState('Juma M.');
+    const [remarks, setRemarks] = useState('Scheduled yard condition inspection');
+
+    const handleStart = async () => {
+      if (!unitNo.trim()) {
+        toast('Please enter a container number or VIN');
+        return;
+      }
+      setLoading(true);
+      try {
+        const created = await inspectionsApi.startInspection({
+          unitNo: unitNo.trim().toUpperCase(),
+          unitStayId: Number(unitStayId) || 1,
+          inspectionKind: kind as any,
+          category: category as any,
+          inspector,
+          remarks,
+        });
+
+        toast('Inspection started successfully');
+        onClose();
+        if (created?.inspectionId) {
+          onStart(Number(created.inspectionId));
+        }
+      } catch (err: any) {
+        toast(`Failed to start inspection: ${err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <Drawer
+        open={open}
+        onClose={onClose}
+        title="Start an inspection"
+        footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            icon={<ClipboardCheck />}
-            perm="inspection.perform"
-            disabled={!hit || !!err}
-            onClick={() => {
-              const id = 1300 + inspections.length;
-              const cat = hit!.cargoUnit.category === 'VEHICLE' ? 'VEHICLE' : 'CONTAINER';
-              inspections.push({
-                inspectionId: id,
-                unitStayId: hit!.unitStayId!,
-                unitNo: hit!.cargoUnit.unitNo,
-                siteId,
-                category: cat,
-                unitType: hit!.cargoUnit.unitTypeCode,
-                templateCode: cat === 'VEHICLE' ? 'VEH-STD-v3' : 'CTR-STD-v4',
-                inspectionKind: kind as Insp['inspectionKind'],
-                status: 'IN_PROGRESS',
-                startedAt: new Date('2026-10-07T10:30:00+03:00').toISOString(),
-                inspector: 'You',
-                results: [],
-                findings: [],
-                photoCount: 0,
-              });
-              toast('Inspection started');
-              onClose();
-              onStart(id);
-            }}
-          >
-            Start inspection
-          </Button>
-        </>
+              <Button variant="ghost" onClick={onClose} disabled={loading}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                icon={<ClipboardCheck />}
+                perm="inspection.perform"
+                disabled={loading || !unitNo.trim()}
+                onClick={handleStart}
+              >
+                {loading ? 'Starting...' : 'Start inspection'}
+              </Button>
+            </>
       }
     >
-      <div className="stack">
-        <Field label="Container number or VIN" required error={err} hint="At least 4 characters">
-          <Input xl value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. 402117" autoFocus />
-        </Field>
-        {hit && !err && (
-          <div className="row-wrap">
-            <UnitNo no={hit.cargoUnit.unitNo} category={hit.cargoUnit.category} size="md" />
-            <span className="small muted">
-              {hit.cargoUnit.unitTypeCode} · {hit.currentLocation?.fullCode}
-            </span>
-          </div>
-        )}
-        <Field label="Kind" required>
-          <Select
-            value={kind}
-            onChange={(e) => setKind(e.target.value)}
-            options={[
-              ['PERIODIC', 'Periodic (yard check)'],
-              ['EXAM', 'Customs exam'],
-              ['GATE_OUT', 'Gate-out'],
-            ]}
-          />
-        </Field>
-        <p className="xs faint">Gate-in inspections start from the gate lane when the truck is at the inner gate.</p>
-      </div>
-    </Drawer>
-  );
+                <div className="stack" style={{ gap: 16 }}>
+                  <Field label="Container number or VIN" required hint="e.g. MSKU0192834">
+                    <Input
+                      value={unitNo}
+                      onChange={(e) => setUnitNo(e.target.value.toUpperCase())}
+                      placeholder="e.g. MSKU0192834"
+                      autoFocus
+                    />
+                  </Field>
+
+                    <Field label="Unit Stay ID" hint="Database stay ID reference">
+                      <Input
+                        type="number"
+                        value={unitStayId}
+                        onChange={(e) => setUnitStayId(e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Cargo Unit Category" required>
+                      <Select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        options={CATEGORIES}
+                      />
+                    </Field>
+
+                    <Field label="Inspection Kind" required>
+                      <Select
+                        value={kind}
+                        onChange={(e) => setKind(e.target.value)}
+                        options={KINDS}
+                      />
+                    </Field>
+
+                    <Field label="Inspector Name">
+                      <Input
+                        value={inspector}
+                        onChange={(e) => setInspector(e.target.value)}
+                        placeholder="Juma M."
+                      />
+                    </Field>
+
+                    <Field label="Initial Remarks">
+                      <Input
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        placeholder="Notes or inspection reason"
+                      />
+                    </Field>
+
+                    <p className="xs faint">
+                      The created inspection is saved directly to SQL Server database and linked to the active unit stay.
+                    </p>
+                </div>
+              </Drawer>
+              );
 }

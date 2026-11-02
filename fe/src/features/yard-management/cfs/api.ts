@@ -1,32 +1,40 @@
 import { api } from '@/api/client';
-import { jobs, lotBalances, type Job, type Lot } from '@/mock/ops';
+import { type Job, type Lot } from '@/mock/ops';
+
+export interface LabourContractor {
+  labourContractorId: number;
+  contractorName: string;
+}
 
 export const cfsApi = {
   getHandlingJobs: async (): Promise<Job[]> => {
     try {
       const res = await api.get<Job[]>('/handling-jobs');
-      return res && res.length > 0 ? res : jobs;
+      return Array.isArray(res) ? res : [];
     } catch {
-      return jobs;
+      return [];
     }
   },
 
   getHandlingJob: async (handlingJobId: number): Promise<Job | undefined> => {
     try {
-      const res = await api.get<Job>(`/handling-jobs/${handlingJobId}`);
-      return res || jobs.find((j) => j.handlingJobId === handlingJobId);
+      return await api.get<Job>(`/handling-jobs/${handlingJobId}`);
     } catch {
-      return jobs.find((j) => j.handlingJobId === handlingJobId);
+      return undefined;
     }
   },
 
   getLotBalances: async (): Promise<Lot[]> => {
     try {
       const res = await api.get<Lot[]>('/lots/balances');
-      return res && res.length > 0 ? res : lotBalances;
+      return Array.isArray(res) ? res : [];
     } catch {
-      return lotBalances;
+      return [];
     }
+  },
+
+  createJob: async (data: any): Promise<Job> => {
+    return api.post<Job>('/handling-jobs', data);
   },
 
   recordLotDelivery: async (lotStayId: number, data: { qty: number; releaseOrderNo: string }) => {

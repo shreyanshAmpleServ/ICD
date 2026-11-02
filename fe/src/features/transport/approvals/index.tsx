@@ -3,12 +3,13 @@ import { UserRoundCheck } from 'lucide-react';
 import {
   Banner, Button, DataTable, Empty, Page, PageHeader, Panel, StatusPill, Tabs, ago, fmtDT,
 } from '@/ds/components';
-import { useQ, delay } from '@/api/query';
-import { APPROVAL_LIMITS, allApprovals, delegations as seedDelegations, hoursUntil, sessionApprovals, type Apr, type DelegationRow } from '@/mock/cargo';
+import { useQ } from '@/api/query';
+import { APPROVAL_LIMITS, delegations as seedDelegations, hoursUntil, type Apr, type DelegationRow } from '@/mock/cargo';
 import { Countdown } from '@/features/container-management/shared';
 import { AmountVsLimit } from './components/AmountVsLimit';
 import { ApprovalDetailDrawer } from './components/ApprovalDetailDrawer';
 import { Delegations } from './components/Delegations';
+import { approvalsApi } from './api';
 
 export { approvalsApi } from './api';
 
@@ -16,7 +17,7 @@ type TabId = 'mine' | 'asked' | 'all' | 'delegations';
 const permLabel = (p: string) => APPROVAL_LIMITS[p]?.label ?? p;
 
 export function ApprovalsView() {
-  const { data = [] } = useQ(['approvals'], () => delay([...sessionApprovals, ...allApprovals]));
+  const { data = [] } = useQ<Apr[]>(['approvals'], () => approvalsApi.getApprovals());
   const [local, setLocal] = useState<Apr[] | null>(null);
   const list = local ?? data;
   const [tab, setTab] = useState<TabId>('mine');

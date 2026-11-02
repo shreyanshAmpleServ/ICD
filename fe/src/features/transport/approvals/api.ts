@@ -4,8 +4,9 @@ import { allApprovals } from '@/mock/cargo';
 export const approvalsApi = {
   getApprovals: async () => {
     try {
-      const res = await api.get<any[]>('/approvals');
-      return res && res.length > 0 ? res : allApprovals;
+      const res = await api.get<any>('/approvals');
+      const items = res?.items || (Array.isArray(res) ? res : null);
+      return items && items.length > 0 ? items : allApprovals;
     } catch {
       return allApprovals;
     }

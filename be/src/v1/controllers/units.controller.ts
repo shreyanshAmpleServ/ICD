@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { getPrisma } from '../../configs/prisma';
+import { isDbLive } from '../../db/prisma';
 import { parsePaginationParams, paginateArray, NotFoundError, sendSuccess, sendCreated, sendError } from '../../utils';
 import { containerNumberSchema, vinNumberSchema } from '../validations/common.validation';
 import { cargoService } from '../../modules/cargo/cargo.service';
@@ -29,7 +30,7 @@ export class UnitsController {
     }
 
     try {
-      const dbTypes = await (prisma as any).unit_types.findMany({
+      const dbTypes = await prisma.m_unit_type.findMany({
         orderBy: { unit_type_id: 'asc' },
       });
 
@@ -37,9 +38,9 @@ export class UnitsController {
         unitTypeId: Number(u.unit_type_id),
         typeCode: u.type_code,
         typeName: u.type_name,
-        category: u.unit_category || u.category,
+        category: u.unit_category,
         lengthFt: u.length_ft,
-        teu: String(u.teu_factor || u.teu || 1.0),
+        teu: String(u.teu_factor || 1.0),
         isReefer: Boolean(u.is_reefer),
         isActive: Boolean(u.is_active),
       }));
@@ -60,13 +61,13 @@ export class UnitsController {
     }
 
     try {
-      const created = await (prisma as any).unit_types.create({
+      const created = await prisma.m_unit_type.create({
         data: {
           type_code: body.typeCode || body.unitTypeCode || `UT-${Date.now()}`,
           type_name: body.typeName || 'Standard Container',
           unit_category: body.category || 'CONTAINER',
           length_ft: body.lengthFt ? Number(body.lengthFt) : 40,
-          teu_factor: body.teu ? Number(body.teu) : 2.0,
+          teu: body.teu ? Number(body.teu) : 2.0,
           is_reefer: Boolean(body.isReefer),
           is_active: true,
           createdby: 'system',
@@ -79,9 +80,9 @@ export class UnitsController {
           unitTypeId: Number(created.unit_type_id),
           typeCode: created.type_code,
           typeName: created.type_name,
-          category: created.unit_category || created.category,
+          category: created.unit_category,
           lengthFt: created.length_ft,
-          teu: String(created.teu_factor || created.teu),
+          teu: String((created as any).teu || 2.0),
           isReefer: created.is_reefer,
           isActive: created.is_active,
         },
@@ -101,7 +102,7 @@ export class UnitsController {
     }
 
     try {
-      const dbType = await (prisma as any).unit_types.findFirst({
+      const dbType = await prisma.m_unit_type.findFirst({
         where: isNaN(Number(idOrCode))
           ? { type_code: idOrCode }
           : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] },
@@ -117,9 +118,9 @@ export class UnitsController {
           unitTypeId: Number(dbType.unit_type_id),
           typeCode: dbType.type_code,
           typeName: dbType.type_name,
-          category: dbType.unit_category || dbType.category,
+          category: dbType.unit_category,
           lengthFt: dbType.length_ft,
-          teu: String(dbType.teu_factor || dbType.teu),
+          teu: String((dbType as any).teu || 1.0),
           isReefer: dbType.is_reefer,
           isActive: dbType.is_active,
         },
@@ -140,7 +141,7 @@ export class UnitsController {
     }
 
     try {
-      const existing = await (prisma as any).unit_types.findFirst({
+      const existing = await prisma.m_unit_type.findFirst({
         where: isNaN(Number(idOrCode))
           ? { type_code: idOrCode }
           : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] },
@@ -150,12 +151,14 @@ export class UnitsController {
         throw new NotFoundError('Unit type', idOrCode);
       }
 
-      const updated = await (prisma as any).unit_types.update({
+      const updated = await prisma.m_unit_type.update({
         where: { unit_type_id: existing.unit_type_id },
         data: {
           type_name: req.body.typeName ?? existing.type_name,
           unit_category: req.body.category ?? existing.unit_category,
           is_active: req.body.isActive !== undefined ? Boolean(req.body.isActive) : existing.is_active,
+          updatedate: new Date(),
+          updatedby: 'system',
         },
       });
 
@@ -203,26 +206,24 @@ export class UnitsController {
           rawValue,
           normalizedValue: val,
           isValid: parseResult.success,
-          ruleApplied: 'ISO 3779 VIN',
-          errors: parseResult.success
-            ? []
-            : ['VIN must be exactly 17 alphanumeric characters, excluding I, O, Q'],
+          ruleApplied: 'VIN-17 (ISO 3779)',
+          errors: parseResult.success ? [] : ['VIN must be exactly 17 characters without I, O, or Q'],
         },
-        'Vehicle VIN validated'
+        'Vehicle VIN identity validated'
       );
     }
 
     return sendSuccess(
       res,
       {
-        category: category || 'CUSTOM',
+        category: category || 'GENERAL',
         rawValue,
         normalizedValue: val,
-        isValid: true,
-        ruleApplied: 'NONE',
-        errors: [],
+        isValid: val.length > 0 && val.length <= 40,
+        ruleApplied: 'Length check',
+        errors: val.length === 0 ? ['Reference cannot be empty'] : [],
       },
-      'Custom identity validated'
+      'General identity validated'
     );
   };
 
@@ -234,50 +235,26 @@ export class UnitsController {
 
   public search = async (req: Request, res: Response) => {
     const q = String(req.query.q || '').trim();
-    const prisma = getPrisma();
-
-    if (!prisma || !q) {
+    if (!q) {
       return sendSuccess(res, { query: q, results: [], total: 0 }, 'Search completed');
     }
 
     try {
-      const [units, invoices] = await Promise.all([
-        (prisma as any).unit_stays.findMany({
-          where: {
-            unit_stay_cargo_units: {
-              unit_no: { contains: q },
-            },
-          },
-          include: {
-            unit_stay_cargo_units: true,
-          },
-          take: 10,
-        }),
-        (prisma as any).invoices.findMany({
-          where: { invoice_no: { contains: q } },
-          take: 10,
-        }),
-      ]);
+      const allUnits = await cargoService.getUnits();
+      const hits = allUnits.filter((u: any) => {
+        const uNo = (u.cargoUnit?.unitNo || u.unitNo || '').toUpperCase();
+        return uNo.includes(q.toUpperCase());
+      }).slice(0, 10);
 
       const results = [
         {
           entity: 'UNIT',
           label: 'Units',
-          hits: units.map((u: any) => ({
-            id: Number(u.unit_stay_id),
-            title: u.unit_stay_cargo_units?.unit_no || `CONT-${u.unit_stay_id}`,
-            status: u.physical_status,
-            to: `/units/${u.unit_stay_id}`,
-          })),
-        },
-        {
-          entity: 'INVOICE',
-          label: 'Invoices',
-          hits: invoices.map((i: any) => ({
-            id: Number(i.invoice_id),
-            title: i.invoice_no,
-            status: i.status,
-            to: `/invoices/${i.invoice_id}`,
+          hits: hits.map((u: any) => ({
+            id: Number(u.unitStayId),
+            title: u.cargoUnit?.unitNo || u.unitNo,
+            status: u.physicalStatus,
+            to: `/units/${u.unitStayId}`,
           })),
         },
       ];
@@ -287,9 +264,9 @@ export class UnitsController {
         {
           query: q,
           results,
-          total: units.length + invoices.length,
+          total: hits.length,
         },
-        'Search results retrieved from database'
+        'Search completed successfully'
       );
     } catch (err: any) {
       return sendError(res, err.message, 500);
@@ -297,159 +274,18 @@ export class UnitsController {
   };
 
   public getUnits = async (req: Request, res: Response) => {
-    const params = parsePaginationParams(req.query);
     try {
-      const dbStays = await (prisma as any).unit_stays.findMany({
-        where: {
-          ...(category
-            ? {
-              unit_stay_cargo_units: {
-                unit_category: String(category),
-              },
-            }
-            : {}),
-          ...(status ? { physical_status: String(status) } : {}),
-          ...(customsStatus ? { customs_status: String(customsStatus) } : {}),
-          ...(searchQ
-            ? {
-              OR: [
-                { unit_stay_cargo_units: { unit_no: { contains: String(searchQ) } } },
-                { seal_no: { contains: String(searchQ) } },
-              ],
-            }
-            : {}),
-        },
-        include: {
-          unit_stay_cargo_units: {
-            include: {
-              cargo_unit_unit_types: true,
-            },
-          },
-          unit_stay_yard_locations: true,
-          unit_stay_consignments: true,
-          unit_stay_cargo_regimes: true,
-          unit_stay_holds: true,
-        },
-        orderBy: { unit_stay_id: 'desc' },
-      });
-
-      const mapped = dbStays.map((u: any) => {
-        const activeHolds = (u.unit_stay_holds || []).filter((h: any) => h.status === 'ACTIVE').length;
-        const dwell = u.gated_in_at
-          ? Math.max(1, Math.floor((Date.now() - new Date(u.gated_in_at).getTime()) / 86400000))
-          : 4;
-        const cUnit = u.unit_stay_cargo_units;
-        const uType = cUnit?.cargo_unit_unit_types;
-        const unitNo = cUnit?.unit_no || `CONT-${u.unit_stay_id}`;
-        const cat = cUnit?.unit_category || uType?.unit_category || 'CONTAINER';
-        const typeCode = uType?.type_code || '40HC';
-
-        return {
-          unitStayId: Number(u.unit_stay_id),
-          siteId: u.site_id,
-          consignmentId: u.consignment_id ? Number(u.consignment_id) : null,
-          cargoUnit: {
-            cargoUnitId: Number(u.unit_stay_id),
-            category: cat,
-            unitNo,
-            unitTypeCode: typeCode,
-            isoType: typeCode,
-            tareWeightKg: Number(uType?.default_tare_kg || 3800),
-          },
-          physicalStatus: u.physical_status,
-          flow: u.flow,
-          fullEmpty: u.full_empty,
-          customsStatus: u.customs_status,
-          releaseStatus: u.release_status,
-          billingStatus: u.billing_status,
-          sealNo: u.seal_no,
-          grossWeightKg: Number(u.gross_weight_kg || 0),
-          activeHoldCount: activeHolds,
-          currentLocation: u.unit_stay_yard_locations
-            ? {
-              locationId: u.unit_stay_yard_locations.yard_location_id,
-              fullCode: u.unit_stay_yard_locations.full_code,
-              zone: u.unit_stay_yard_locations.full_code.split('-')[0] || 'A',
-            }
-            : undefined,
-          unitSummary: {
-            unitNo,
-            category: cat,
-            activeHoldCount: activeHolds,
-            releaseStatus: u.release_status,
-            physicalStatus: u.physical_status,
-            dwellDays: dwell,
-            consignmentRef: u.unit_stay_consignments?.ref_no,
-          },
-          arrivedAt: (u.gated_in_at || u.createdate)?.toISOString(),
-        };
-      });
-
-      const paginated = paginateArray(mapped, params, (s: any) => s.unitStayId);
-      return sendSuccess(res, paginated, 'Units retrieved successfully from database');
+      const items = await cargoService.getUnits(req.query);
+      return res.json({ items, total: items.length, nextCursor: null });
     } catch (err: any) {
       return sendError(res, err.message, 500);
     }
   };
 
   public createUnit = async (req: Request, res: Response) => {
-    const body = req.body;
-    const prisma = getPrisma();
-
-    if (!prisma) {
-      return sendError(res, 'Database not connected', 500);
-    }
-
     try {
-      const typeCode = body.isoType || body.unitTypeCode || '40HC';
-      const uType = await (prisma as any).unit_types.findFirst({ where: { type_code: typeCode } });
-      const typeId = uType?.unit_type_id || 2;
-      const unitNo = body.unitNo || `NEWU${Date.now().toString().slice(-7)}`;
-
-      let cUnit = await (prisma as any).cargo_units.findFirst({
-        where: { unit_no: unitNo },
-      });
-      if (!cUnit) {
-        cUnit = await (prisma as any).cargo_units.create({
-          data: {
-            unit_category: body.category || 'CONTAINER',
-            unit_no: unitNo,
-            unit_type_id: typeId,
-            createdby: 'system',
-          },
-        });
-      }
-
-      const created = await (prisma as any).unit_stays.create({
-        data: {
-          site_id: body.siteId || 1,
-          cargo_unit_id: cUnit.cargo_unit_id,
-          consignment_id: body.consignmentId ? Number(body.consignmentId) : null,
-          cargo_regime_id: body.cargoRegimeId || 1,
-          flow: body.flow || 'IMPORT',
-          full_empty: body.fullEmpty || 'F',
-          physical_status: body.physicalStatus || 'EXPECTED',
-          customs_status: body.customsStatus || 'NOT_LODGED',
-          release_status: body.releaseStatus || 'NONE',
-          seal_no: body.sealNo || 'SEAL-001',
-          gross_weight_kg: body.grossWeightKg ? Number(body.grossWeightKg) : 24000,
-          gated_in_at: new Date(),
-          createdby: 'system',
-        },
-      });
-
-      return sendCreated(
-        res,
-        {
-          unitStayId: Number(created.unit_stay_id),
-          unitNo,
-          siteId: created.site_id,
-          physicalStatus: created.physical_status,
-          flow: created.flow,
-          customsStatus: created.customs_status,
-        },
-        'Unit stay created successfully in database'
-      );
+      const created = await cargoService.createUnit(req.body);
+      return sendCreated(res, created, 'Unit stay created successfully');
     } catch (err: any) {
       return sendError(res, err.message, 500);
     }
@@ -458,115 +294,25 @@ export class UnitsController {
   public getUnitById = async (req: Request, res: Response) => {
     const idOrUnitNo = req.params.unitStayId;
     try {
-      const isNum = !isNaN(Number(idOrUnitNo));
-      const u = await (prisma as any).unit_stays.findFirst({
-        where: isNum
-          ? {
-            OR: [
-              { unit_stay_id: Number(idOrUnitNo) },
-              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-            ],
-          }
-          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-        include: {
-          unit_stay_cargo_units: {
-            include: {
-              cargo_unit_unit_types: true,
-            },
-          },
-          unit_stay_yard_locations: true,
-          unit_stay_consignments: true,
-          unit_stay_cargo_regimes: true,
-          unit_stay_holds: true,
-        },
-      });
-
-      if (!u) {
+      const unit = await cargoService.getUnit(idOrUnitNo);
+      if (!unit) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
-
-      const activeHolds = (u.unit_stay_holds || []).filter((h: any) => h.status === 'ACTIVE').length;
-      const cUnit = u.unit_stay_cargo_units;
-      const uType = cUnit?.cargo_unit_unit_types;
-      const unitNo = cUnit?.unit_no || `CONT-${u.unit_stay_id}`;
-      const cat = cUnit?.unit_category || uType?.unit_category || 'CONTAINER';
-      const typeCode = uType?.type_code || '40HC';
-
-      const stay = {
-        unitStayId: Number(u.unit_stay_id),
-        siteId: u.site_id,
-        consignmentId: u.consignment_id ? Number(u.consignment_id) : null,
-        cargoUnit: {
-          cargoUnitId: Number(u.unit_stay_id),
-          category: cat,
-          unitNo,
-          unitTypeCode: typeCode,
-          isoType: typeCode,
-        },
-        physicalStatus: u.physical_status,
-        flow: u.flow,
-        fullEmpty: u.full_empty,
-        customsStatus: u.customs_status,
-        releaseStatus: u.release_status,
-        billingStatus: u.billing_status,
-        sealNo: u.seal_no,
-        grossWeightKg: Number(u.gross_weight_kg || 0),
-        activeHoldCount: activeHolds,
-        currentLocation: u.unit_stay_yard_locations
-          ? {
-            locationId: u.unit_stay_yard_locations.yard_location_id,
-            fullCode: u.unit_stay_yard_locations.full_code,
-          }
-          : undefined,
-        gatedInAt: (u.gated_in_at || u.createdate)?.toISOString(),
-      };
-
-      return sendSuccess(res, stay, 'Unit stay retrieved successfully from database');
+      return sendSuccess(res, unit, 'Unit stay retrieved successfully');
     } catch (err: any) {
-      if (err instanceof NotFoundError) throw err;
+      if (err instanceof NotFoundError) {
+        return sendError(res, err.message, 404);
+      }
       return sendError(res, err.message, 500);
     }
   };
 
   public updateUnit = async (req: Request, res: Response) => {
     const idOrUnitNo = req.params.unitStayId;
-    const prisma = getPrisma();
-
-    if (!prisma) {
-      return sendError(res, 'Database not connected', 500);
-    }
-
     try {
-      const isNum = !isNaN(Number(idOrUnitNo));
-      const u = await (prisma as any).unit_stays.findFirst({
-        where: isNum
-          ? {
-            OR: [
-              { unit_stay_id: Number(idOrUnitNo) },
-              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-            ],
-          }
-          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-      });
-
-      if (!u) {
-        throw new NotFoundError('Unit stay', idOrUnitNo);
-      }
-
-      const updated = await (prisma as any).unit_stays.update({
-        where: { unit_stay_id: u.unit_stay_id },
-        data: {
-          ...(req.body.physicalStatus ? { physical_status: req.body.physicalStatus } : {}),
-          ...(req.body.customsStatus ? { customs_status: req.body.customsStatus } : {}),
-          ...(req.body.releaseStatus ? { release_status: req.body.releaseStatus } : {}),
-          ...(req.body.billingStatus ? { billing_status: req.body.billingStatus } : {}),
-          ...(req.body.sealNo ? { seal_no: req.body.sealNo } : {}),
-        },
-      });
-
-      return sendSuccess(res, updated, 'Unit stay updated successfully in database');
+      const updated = await cargoService.updateUnit(idOrUnitNo, req.body);
+      return sendSuccess(res, updated, 'Unit stay updated successfully');
     } catch (err: any) {
-      if (err instanceof NotFoundError) throw err;
       return sendError(res, err.message, 500);
     }
   };
@@ -574,58 +320,24 @@ export class UnitsController {
   public getUnitTimeline = async (req: Request, res: Response) => {
     const idOrUnitNo = req.params.unitStayId;
     try {
-      const isNum = !isNaN(Number(idOrUnitNo));
-      const u = await (prisma as any).unit_stays.findFirst({
-        where: isNum
-          ? {
-            OR: [
-              { unit_stay_id: Number(idOrUnitNo) },
-              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-            ],
-          }
-          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-        include: {
-          unit_stay_cargo_units: true,
-        },
-      });
-
+      const u = await cargoService.getUnit(idOrUnitNo);
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
-
-      const unitNo = u.unit_stay_cargo_units?.unit_no || `CONT-${u.unit_stay_id}`;
-      const timeline = [
-        {
-          eventType: 'MANIFEST_IMPORTED',
-          occurredAt: (u.gated_in_at || u.createdate)?.toISOString() || new Date().toISOString(),
-          summary: 'Manifest record verified and loaded into ICD system',
-          user: 'SYSTEM',
-        },
-        {
-          eventType: 'GATE_IN',
-          occurredAt: (u.gated_in_at || u.createdate)?.toISOString() || new Date().toISOString(),
-          summary: `Unit ${unitNo} gated into depot`,
-          user: 'Gate Officer',
-        },
-        {
-          eventType: 'CUSTOMS_STATUS',
-          occurredAt: new Date().toISOString(),
-          summary: `Customs clearance status: ${u.customsStatus || 'PENDING'}`,
-          user: 'TRA Customs',
-        },
-      ];
-
+      const events = await cargoService.getUnitTimeline(idOrUnitNo);
       return sendSuccess(
         res,
         {
-          unitStayId: Number(u.unit_stay_id),
-          unitNo,
-          events: timeline,
+          unitStayId: Number(u.unitStayId || idOrUnitNo),
+          unitNo: u.cargoUnit?.unitNo || (u as any).unitNo || `CONT-${idOrUnitNo}`,
+          events,
         },
         'Unit timeline retrieved successfully'
       );
     } catch (err: any) {
-      if (err instanceof NotFoundError) throw err;
+      if (err instanceof NotFoundError) {
+        return sendError(res, err.message, 404);
+      }
       return sendError(res, err.message, 500);
     }
   };
@@ -633,98 +345,38 @@ export class UnitsController {
   public getUnitHolds = async (req: Request, res: Response) => {
     const idOrUnitNo = req.params.unitStayId;
     const params = parsePaginationParams(req.query);
-    const prisma = getPrisma();
-
-    if (!prisma) {
-      return sendSuccess(res, paginateArray([], params), 'Database not connected');
-    }
 
     try {
-      const isNum = !isNaN(Number(idOrUnitNo));
-      const u = await (prisma as any).unit_stays.findFirst({
-        where: isNum
-          ? {
-            OR: [
-              { unit_stay_id: Number(idOrUnitNo) },
-              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-            ],
-          }
-          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-      });
-
-      if (!u) {
-        throw new NotFoundError('Unit stay', idOrUnitNo);
-      }
-
-      const holds = await (prisma as any).holds.findMany({
-        where: { unit_stay_id: u.unit_stay_id },
-        include: { hold_types: true },
-        orderBy: { hold_id: 'desc' },
-      });
-
-      const mapped = holds.map((h: any) => ({
-        holdId: Number(h.hold_id),
-        unitStayId: Number(h.unit_stay_id),
-        holdTypeCode: h.hold_types?.type_code || `HOLD_${h.hold_type_id}`,
-        reason: h.reason,
-        status: h.status,
-        placedAt: h.placed_at?.toISOString(),
-        liftedAt: h.lifted_at?.toISOString(),
-      }));
-
-      const paginated = paginateArray(mapped, params, (h: any) => h.holdId);
-      return sendSuccess(res, paginated, 'Unit holds retrieved successfully from database');
+      const allHolds = await cargoService.getHolds();
+      const filtered = allHolds.filter((h: any) => String(h.unitStayId) === String(idOrUnitNo) || String(h.unitNo) === String(idOrUnitNo));
+      const paginated = paginateArray(filtered, params, (h: any) => h.holdId);
+      return sendSuccess(res, paginated, 'Unit holds retrieved successfully');
     } catch (err: any) {
-      if (err instanceof NotFoundError) throw err;
       return sendError(res, err.message, 500);
     }
   };
 
   public getUnitHistory = async (req: Request, res: Response) => {
     const idOrUnitNo = req.params.unitStayId;
-    const prisma = getPrisma();
-
-    if (!prisma) {
-      return sendError(res, 'Database not connected', 500);
-    }
-
     try {
-      const isNum = !isNaN(Number(idOrUnitNo));
-      const u = await (prisma as any).unit_stays.findFirst({
-        where: isNum
-          ? {
-            OR: [
-              { unit_stay_id: Number(idOrUnitNo) },
-              { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-            ],
-          }
-          : { unit_stay_cargo_units: { unit_no: idOrUnitNo } },
-        include: {
-          unit_stay_cargo_units: true,
-          unit_stay_yard_locations: true,
-        },
-      });
-
+      const u = await cargoService.getUnit(idOrUnitNo);
       if (!u) {
         throw new NotFoundError('Unit stay', idOrUnitNo);
       }
-
-      const moves = await (prisma as any).yard_moves.findMany({
-        where: { unit_stay_id: u.unit_stay_id },
-        include: {
-          m_yard_location_yard_move_from_location_idTom_yard_location: true,
-          m_yard_location_yard_move_to_location_idTom_yard_location: true,
-        },
-        orderBy: { yard_move_id: 'desc' },
-      });
-
-      return sendSuccess(
-        res,
-        {
-          unitStayId: Number(u.unit_stay_id),
-          unitNo: u.unit_stay_cargo_units?.unit_no || `CONT-${u.unit_stay_id}`,
-          moves: moves.length > 0
-            ? moves.map((m: any) => ({
+      const prisma = getPrisma();
+      let moves: any[] = [];
+      if (isDbLive() && prisma) {
+        try {
+          const dbMoves = await prisma.yard_move.findMany({
+            where: { unit_stay_id: Number(u.unitStayId) },
+            include: {
+              m_yard_location_yard_move_from_location_idTom_yard_location: true,
+              m_yard_location_yard_move_to_location_idTom_yard_location: true,
+            },
+            orderBy: { yard_move_id: 'desc' },
+          });
+          if (dbMoves && dbMoves.length > 0) {
+            moves = dbMoves.map((m: any) => ({
               yardMoveId: Number(m.yard_move_id),
               moveType: m.move_kind || 'RELOCATE',
               status: 'COMPLETED',
@@ -732,20 +384,33 @@ export class UnitsController {
               toLocation: m.m_yard_location_yard_move_to_location_idTom_yard_location?.full_code,
               orderedAt: m.occurred_at?.toISOString(),
               executedAt: m.occurred_at?.toISOString(),
-            }))
-            : [
-              {
-                fromLocation: 'GATE_IN_LANE_1',
-                toLocation: u.unit_stay_yard_locations?.full_code || 'A-01-01-1',
-                movedAt: (u.gated_in_at || u.createdate)?.toISOString() || new Date().toISOString(),
-                movedBy: 'Terminal Yard Operator',
-              },
-            ],
+            }));
+          }
+        } catch { }
+      }
+      if (moves.length === 0) {
+        moves = [
+          {
+            fromLocation: 'GATE_IN_LANE_1',
+            toLocation: u.currentLocation?.fullCode || 'A-01-01-1',
+            movedAt: u.dischargeAt || new Date().toISOString(),
+            movedBy: 'Terminal Yard Operator',
+          },
+        ];
+      }
+      return sendSuccess(
+        res,
+        {
+          unitStayId: Number(u.unitStayId || idOrUnitNo),
+          unitNo: u.cargoUnit?.unitNo || (u as any).unitNo || `CONT-${idOrUnitNo}`,
+          moves,
         },
-        'Unit history retrieved successfully from database'
+        'Unit history retrieved successfully'
       );
     } catch (err: any) {
-      if (err instanceof NotFoundError) throw err;
+      if (err instanceof NotFoundError) {
+        return sendError(res, err.message, 404);
+      }
       return sendError(res, err.message, 500);
     }
   };

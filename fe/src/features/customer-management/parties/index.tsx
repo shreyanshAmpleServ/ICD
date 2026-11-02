@@ -146,7 +146,10 @@ export function PartiesView() {
               key: 'u',
               header: 'Open units',
               num: true,
-              render: (p: any) => counts.get(p.partyId!) || <span className="faint">—</span>,
+              render: (p: any) => {
+                const c = counts.get(p.partyId!);
+                return typeof c === 'number' && c > 0 ? <span>{c}</span> : <span className="faint">—</span>;
+              },
             },
             {
               key: 's',

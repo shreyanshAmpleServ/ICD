@@ -1,13 +1,13 @@
 import { api } from '@/api/client';
-import { reefers, type Reefer } from '@/mock/ops';
+import { type Reefer } from '@/mock/ops';
 
 export const reefersApi = {
   getReeferSessions: async (): Promise<Reefer[]> => {
     try {
       const res = await api.get<Reefer[]>('/reefers');
-      return res && res.length > 0 ? res : reefers;
+      return Array.isArray(res) ? res : [];
     } catch {
-      return reefers;
+      return [];
     }
   },
 

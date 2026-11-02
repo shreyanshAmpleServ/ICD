@@ -9,21 +9,21 @@ export class AppointmentsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const dbRules = await prisma.appointment_slot_rules.findMany({
-        include: { visit_types: true },
-        orderBy: { rule_id: "asc" },
+      const dbRules = await prisma.m_appointment_slot_rule.findMany({
+        include: { m_visit_type: true },
+        orderBy: { appointment_slot_rule_id: "asc" },
       });
 
       const items = (dbRules || []).map((r: any) => ({
-        appointmentSlotRuleId: r.rule_id,
-        ruleId: r.rule_id,
-        flow: r.visit_types?.visit_code || "IMPORT_PICKUP",
-        visitTypeCode: r.visit_types?.visit_code,
-        visitTypeName: r.visit_types?.visit_name,
+        appointmentSlotRuleId: r.appointment_slot_rule_id,
+        ruleId: r.appointment_slot_rule_id,
+        flow: r.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
+        visitTypeCode: r.m_visit_type?.visit_type_code,
+        visitTypeName: r.m_visit_type?.visit_type_name,
         startHour: 6,
         endHour: 18,
-        slotDurationMin: r.slot_duration_min || 60,
-        maxSlotsPerHour: r.max_trucks_per_slot || 20,
+        slotDurationMin: 60,
+        maxSlotsPerHour: r.capacity_trucks || 20,
         isActive: r.is_active ?? true,
         logInst: 1,
       }));
@@ -42,28 +42,31 @@ export class AppointmentsController {
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const flow = req.body.flow || req.body.visitTypeCode || "IMPORT_PICKUP";
-      const visitType = await prisma.visit_types.findFirst({
-        where: { visit_code: flow },
+      const visitType = await prisma.m_visit_type.findFirst({
+        where: { visit_type_code: flow },
       });
-      const vtId = visitType?.visit_type_id || 3;
+      const vtId = visitType?.visit_type_id || 1;
 
-      const created = await prisma.appointment_slot_rules.create({
+      const created = await prisma.m_appointment_slot_rule.create({
         data: {
           site_id: siteId,
           visit_type_id: vtId,
-          slot_duration_min: req.body.slotDurationMin || 60,
-          max_trucks_per_slot: req.body.maxSlotsPerHour || 20,
+          weekday: req.body.weekday || 1,
+          slot_start: new Date("1970-01-01T08:00:00Z"),
+          slot_end: new Date("1970-01-01T17:00:00Z"),
+          capacity_trucks: req.body.maxSlotsPerHour || 20,
           is_active: req.body.isActive ?? true,
+          createdby: "admin",
         },
-        include: { visit_types: true },
+        include: { m_visit_type: true },
       });
 
       return sendCreated(res, {
-        appointmentSlotRuleId: created.rule_id,
-        ruleId: created.rule_id,
-        flow: created.visit_types?.visit_code,
-        slotDurationMin: created.slot_duration_min,
-        maxSlotsPerHour: created.max_trucks_per_slot,
+        appointmentSlotRuleId: created.appointment_slot_rule_id,
+        ruleId: created.appointment_slot_rule_id,
+        flow: created.m_visit_type?.visit_type_code,
+        slotDurationMin: 60,
+        maxSlotsPerHour: created.capacity_trucks,
         isActive: created.is_active,
         logInst: 1,
       });
@@ -79,21 +82,21 @@ export class AppointmentsController {
     }
     try {
       const id = parseInt(req.params.appointmentSlotRuleId, 10);
-      const r = await prisma.appointment_slot_rules.findUnique({
-        where: { rule_id: id },
-        include: { visit_types: true },
+      const r = await prisma.m_appointment_slot_rule.findUnique({
+        where: { appointment_slot_rule_id: id },
+        include: { m_visit_type: true },
       });
 
       if (!r) return sendError(res, "Slot rule not found", 404);
 
       return sendSuccess(res, {
-        appointmentSlotRuleId: r.rule_id,
-        ruleId: r.rule_id,
-        flow: r.visit_types?.visit_code || "IMPORT_PICKUP",
+        appointmentSlotRuleId: r.appointment_slot_rule_id,
+        ruleId: r.appointment_slot_rule_id,
+        flow: r.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
         startHour: 6,
         endHour: 18,
-        slotDurationMin: r.slot_duration_min || 60,
-        maxSlotsPerHour: r.max_trucks_per_slot || 20,
+        slotDurationMin: 60,
+        maxSlotsPerHour: r.capacity_trucks || 20,
         isActive: r.is_active ?? true,
         logInst: 1,
       });
@@ -109,22 +112,21 @@ export class AppointmentsController {
     }
     try {
       const id = parseInt(req.params.appointmentSlotRuleId, 10);
-      const updated = await prisma.appointment_slot_rules.update({
-        where: { rule_id: id },
+      const updated = await prisma.m_appointment_slot_rule.update({
+        where: { appointment_slot_rule_id: id },
         data: {
-          max_trucks_per_slot: req.body.maxSlotsPerHour,
-          slot_duration_min: req.body.slotDurationMin,
+          capacity_trucks: req.body.maxSlotsPerHour,
           is_active: req.body.isActive,
         },
-        include: { visit_types: true },
+        include: { m_visit_type: true },
       });
 
       return sendSuccess(res, {
-        appointmentSlotRuleId: updated.rule_id,
-        ruleId: updated.rule_id,
-        flow: updated.visit_types?.visit_code,
-        slotDurationMin: updated.slot_duration_min,
-        maxSlotsPerHour: updated.max_trucks_per_slot,
+        appointmentSlotRuleId: updated.appointment_slot_rule_id,
+        ruleId: updated.appointment_slot_rule_id,
+        flow: updated.m_visit_type?.visit_type_code,
+        slotDurationMin: 60,
+        maxSlotsPerHour: updated.capacity_trucks,
         isActive: updated.is_active,
       });
     } catch (err: any) {
@@ -143,7 +145,7 @@ export class AppointmentsController {
       const endOfDay = new Date(`${date}T23:59:59.999Z`);
 
       // Count booked appointments per slot from database
-      const bookedAppts = await prisma.appointments.findMany({
+      const bookedAppts = await prisma.appointment.findMany({
         where: {
           slot_start: { gte: startOfDay, lte: endOfDay },
           status: { not: "CANCELLED" },
@@ -180,10 +182,12 @@ export class AppointmentsController {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const dbAppts = await prisma.appointments.findMany({
+      const dbAppts = await prisma.appointment.findMany({
         include: {
           appointments_visit_types: true,
-          appointments_parties: true,
+          m_party_appointment: true,
+          m_truck: true,
+          m_driver: true,
         },
         orderBy: { appointment_id: "desc" },
       });
@@ -194,7 +198,7 @@ export class AppointmentsController {
           ? new Date(a.slot_end)
           : new Date(Date.now() + 3600000);
         return {
-          appointmentId: a.appointment_id,
+          appointmentId: Number(a.appointment_id),
           apptNo: a.appointment_no,
           appointmentNo: a.appointment_no,
           date: slotStartDate.toISOString().slice(0, 10),
@@ -202,15 +206,15 @@ export class AppointmentsController {
           slotStart: slotStartDate.toISOString(),
           slotEnd: slotEndDate.toISOString(),
           slotTime: slotStartDate.toISOString(),
-          visitTypeCode: (a as any).appointments_visit_types?.visit_code || "IMPORT_PICKUP",
-          visitTypeName: (a as any).appointments_visit_types?.visit_name || "Import container pickup",
-          plateNo: a.truck_plate || "T 118 DPE",
-          plate: a.truck_plate || "T 118 DPE",
-          truckPlate: a.truck_plate,
+          visitTypeCode: a.appointments_visit_types?.visit_type_code || "IMPORT_PICKUP",
+          visitTypeName: a.appointments_visit_types?.visit_type_name || "Import container pickup",
+          plateNo: a.m_truck?.plate_no || "T 118 DPE",
+          plate: a.m_truck?.plate_no || "T 118 DPE",
+          truckPlate: a.m_truck?.plate_no || "T 118 DPE",
           partyId: a.transporter_party_id || 1,
-          partyName: (a as any).appointments_parties?.party_name || "Transporter",
-          driverName: "Juma Ramadhani",
-          driverPhone: "+255 712 111 222",
+          partyName: a.m_party_appointment?.party_name || "Transporter",
+          driverName: a.m_driver?.driver_name || "Juma Ramadhani",
+          driverPhone: a.m_driver?.phone || "+255 712 111 222",
           status: a.status || "BOOKED",
           logInst: 1,
         };
@@ -230,38 +234,85 @@ export class AppointmentsController {
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const visitTypeCode = req.body.visitTypeCode || "IMPORT_PICKUP";
-      const visitType = await prisma.visit_types.findFirst({
-        where: { visit_code: visitTypeCode },
+      const visitType = await prisma.m_visit_type.findFirst({
+        where: { visit_type_code: visitTypeCode },
       });
-      const vtId = visitType?.visit_type_id || 3;
+      const vtId = visitType?.visit_type_id || 1;
 
-      const transporterPartyId = Number(req.body.partyId || req.body.transporterPartyId) || 7;
-      const apptCount = await prisma.appointments.count();
+      let truckId = req.body.truckId ? Number(req.body.truckId) : undefined;
+      const plateNo = req.body.plateNo || req.body.truckPlate || req.body.plate;
+      if (!truckId && plateNo) {
+        const foundTruck = await prisma.m_truck.findFirst({
+          where: { plate_no: plateNo },
+        });
+        if (foundTruck) {
+          truckId = foundTruck.truck_id;
+        } else {
+          const newTruck = await prisma.m_truck.create({
+            data: {
+              plate_no: plateNo,
+              truck_type: "SEMI_TRAILER",
+              createdby: "portal",
+            },
+          });
+          truckId = newTruck.truck_id;
+        }
+      }
+
+      let driverId = req.body.driverId ? Number(req.body.driverId) : undefined;
+      if (!driverId && req.body.driverName) {
+        const foundDriver = await prisma.m_driver.findFirst({
+          where: { driver_name: req.body.driverName },
+        });
+        if (foundDriver) {
+          driverId = foundDriver.driver_id;
+        } else {
+          const newDriver = await prisma.m_driver.create({
+            data: {
+              driver_name: req.body.driverName,
+              license_no: `LIC-${Date.now().toString().slice(-6)}`,
+              phone: req.body.driverPhone,
+              createdby: "portal",
+            },
+          });
+          driverId = newDriver.driver_id;
+        }
+      }
+
+      const transporterPartyId = Number(req.body.partyId || req.body.transporterPartyId) || 1;
+      const apptCount = await prisma.appointment.count();
       const apptNo = req.body.apptNo || req.body.appointmentNo || `APT-26-0${apptCount + 4130}`;
-      const slotStart = req.body.slotStart || req.body.slotTime || new Date(Date.now() + 3600000);
-      const slotEnd = req.body.slotEnd || new Date(Date.now() + 7200000);
+      const slotStart = new Date(req.body.slotStart || req.body.slotTime || Date.now() + 3600000);
+      const slotEnd = new Date(req.body.slotEnd || slotStart.getTime() + 3600000);
 
-      const created = await prisma.appointments.create({
+      const created = await prisma.appointment.create({
         data: {
           site_id: siteId,
           visit_type_id: vtId,
           transporter_party_id: transporterPartyId,
           appointment_no: apptNo,
-          truck_plate: (req.body.plateNo || req.body.truckPlate || req.body.plate || "T 124 DFH").toUpperCase(),
-          slot_start: new Date(slotStart),
-          slot_end: new Date(slotEnd),
+          truck_id: truckId,
+          driver_id: driverId,
+          slot_start: slotStart,
+          slot_end: slotEnd,
           status: "BOOKED",
+          booked_via: "PORTAL",
+          createdby: "portal",
+        },
+        include: {
+          m_truck: true,
+          m_driver: true,
         },
       });
 
       return sendCreated(res, {
-        appointmentId: created.appointment_id,
+        appointmentId: Number(created.appointment_id),
         apptNo: created.appointment_no,
         appointmentNo: created.appointment_no,
         slotStart: created.slot_start.toISOString(),
         slotEnd: created.slot_end.toISOString(),
-        plateNo: created.truck_plate,
-        driverName: req.body.driverName || "Driver",
+        plateNo: created.m_truck?.plate_no || plateNo,
+        driverName: created.m_driver?.driver_name || req.body.driverName || "Driver",
         status: created.status,
       });
     } catch (err: any) {
@@ -277,13 +328,15 @@ export class AppointmentsController {
     try {
       const idStr = String(req.params.appointmentId);
       const isNum = !isNaN(Number(idStr));
-      const a = await prisma.appointments.findFirst({
+      const a = await prisma.appointment.findFirst({
         where: isNum
-          ? { OR: [{ appointment_id: Number(idStr) }, { appointment_no: idStr }] }
+          ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] }
           : { appointment_no: idStr },
         include: {
           appointments_visit_types: true,
-          appointments_parties: true,
+          m_party_appointment: true,
+          m_truck: true,
+          m_driver: true,
         },
       });
 
@@ -295,7 +348,7 @@ export class AppointmentsController {
         : new Date(Date.now() + 3600000);
 
       return sendSuccess(res, {
-        appointmentId: a.appointment_id,
+        appointmentId: Number(a.appointment_id),
         apptNo: a.appointment_no,
         appointmentNo: a.appointment_no,
         date: slotStartDate.toISOString().slice(0, 10),
@@ -303,11 +356,12 @@ export class AppointmentsController {
         slotStart: slotStartDate.toISOString(),
         slotEnd: slotEndDate.toISOString(),
         slotTime: slotStartDate.toISOString(),
-        visitTypeCode: (a as any).appointments_visit_types?.visit_code || "IMPORT_PICKUP",
-        visitTypeName: (a as any).appointments_visit_types?.visit_name,
-        plateNo: a.truck_plate,
+        visitTypeCode: a.appointments_visit_types?.visit_type_code || "IMPORT_PICKUP",
+        visitTypeName: a.appointments_visit_types?.visit_type_name,
+        plateNo: a.m_truck?.plate_no,
         partyId: a.transporter_party_id,
-        partyName: (a as any).appointments_parties?.party_name,
+        partyName: a.m_party_appointment?.party_name,
+        driverName: a.m_driver?.driver_name,
         status: a.status,
       });
     } catch (err: any) {
@@ -323,19 +377,19 @@ export class AppointmentsController {
     try {
       const idStr = String(req.params.appointmentId);
       const isNum = !isNaN(Number(idStr));
-      const existing = await prisma.appointments.findFirst({
+      const existing = await prisma.appointment.findFirst({
         where: isNum
-          ? { OR: [{ appointment_id: Number(idStr) }, { appointment_no: idStr }] }
+          ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] }
           : { appointment_no: idStr },
       });
       if (!existing) return sendError(res, "Appointment not found", 404);
 
-      const updated = await prisma.appointments.update({
+      const updated = await prisma.appointment.update({
         where: { appointment_id: existing.appointment_id },
         data: { status: "CANCELLED" },
       });
 
-      return sendSuccess(res, { success: true, appointment: updated });
+      return sendSuccess(res, { success: true, appointment: { ...updated, appointment_id: Number(updated.appointment_id) } });
     } catch (err: any) {
       return sendError(res, err.message, 500);
     }
@@ -349,9 +403,9 @@ export class AppointmentsController {
     try {
       const idStr = String(req.params.appointmentId);
       const isNum = !isNaN(Number(idStr));
-      const existing = await prisma.appointments.findFirst({
+      const existing = await prisma.appointment.findFirst({
         where: isNum
-          ? { OR: [{ appointment_id: Number(idStr) }, { appointment_no: idStr }] }
+          ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] }
           : { appointment_no: idStr },
       });
       if (!existing) return sendError(res, "Appointment not found", 404);
@@ -359,16 +413,16 @@ export class AppointmentsController {
       const slotStart = req.body.slotStart ? new Date(req.body.slotStart) : existing.slot_start;
       const slotEnd = req.body.slotEnd ? new Date(req.body.slotEnd) : existing.slot_end;
 
-      const updated = await prisma.appointments.update({
+      const updated = await prisma.appointment.update({
         where: { appointment_id: existing.appointment_id },
         data: {
           slot_start: slotStart,
           slot_end: slotEnd,
-          status: "CONFIRMED",
+          status: "BOOKED",
         },
       });
 
-      return sendSuccess(res, { success: true, appointment: updated });
+      return sendSuccess(res, { success: true, appointment: { ...updated, appointment_id: Number(updated.appointment_id) } });
     } catch (err: any) {
       return sendError(res, err.message, 500);
     }

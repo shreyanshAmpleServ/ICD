@@ -2312,7 +2312,7 @@ model m_truck {
   truck_id                                    Int             @id(map: "PK_m_truck") @default(autoincrement())
   plate_no                                    String          @unique(map: "UQ_m_truck_plate") @db.VarChar(20)
   plate_display                               String          @db.VarChar(20)
-  vehicle_kind                                String          @default("TRUCK", map: "DF_m_truck_kind") @db.VarChar(10)
+  vehicle_kind                                String          @default("TRUCK", map: "DF_m_truck_kind") @db.VarChar(20)
   transporter_party_id                        Int?
   country_code                                String?         @db.Char(2)
   make_model                                  String?         @db.NVarChar(80)

@@ -1,5 +1,5 @@
 import { api } from '@/api/client';
-import { estimates, type Estimate } from '@/mock/ops';
+import { type Estimate } from '@/mock/ops';
 
 export type { Estimate };
 
@@ -7,9 +7,9 @@ export const repairsApi = {
   getRepairEstimates: async (): Promise<Estimate[]> => {
     try {
       const res = await api.get<Estimate[]>('/repairs');
-      return res && res.length > 0 ? res : estimates;
+      return Array.isArray(res) ? res : [];
     } catch {
-      return estimates;
+      return [];
     }
   },
 
@@ -17,7 +17,7 @@ export const repairsApi = {
     try {
       return await api.get<Estimate>(`/repairs/${repairEstimateId}`);
     } catch {
-      return estimates.find((e) => String(e.repairEstimateId) === String(repairEstimateId));
+      return undefined;
     }
   },
 

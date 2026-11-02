@@ -1,0 +1,55 @@
+import { Router } from 'express';
+import { requireSite } from '../../../middlewares/siteScope';
+import { requirePermission } from '../../../middlewares/permission';
+import {
+  billingChargesController,
+  billingInvoicesController,
+  billingCashierController,
+  billingRefundsController,
+  billingDisbursementsController,
+  billingStatementsController,
+  billingTariffsController,
+  billingExchangeRatesController,
+  billingLedgerController,
+} from '../../controllers/billing';
+
+export const billingRoutes = Router();
+
+// Charges
+billingRoutes.get('/charges', requireSite(false), requirePermission('billing.invoice.view'), billingChargesController.getCharges);
+billingRoutes.get('/charges/open', requireSite(false), requirePermission('billing.invoice.view'), billingChargesController.getOpenCharges);
+
+// Invoices
+billingRoutes.get('/invoices', requireSite(false), requirePermission('billing.invoice.view'), billingInvoicesController.getInvoices);
+billingRoutes.post('/invoices', requireSite(false), requirePermission('billing.invoice.view', 'DO'), billingInvoicesController.createInvoice);
+billingRoutes.get('/invoices/:invoiceId', requireSite(false), requirePermission('billing.invoice.view'), billingInvoicesController.getInvoiceById);
+
+// Cashier & Payments
+billingRoutes.get('/payments', requireSite(false), requirePermission('payment.record'), billingCashierController.getPayments);
+billingRoutes.post('/payments', requireSite(false), requirePermission('payment.record', 'DO'), billingCashierController.recordPayment);
+billingRoutes.get('/cashier/shifts', requireSite(false), requirePermission('payment.record'), billingCashierController.getShifts);
+billingRoutes.get('/cashier/channels', requireSite(false), requirePermission('payment.record'), billingCashierController.getChannels);
+
+// Refunds
+billingRoutes.get('/refunds', requireSite(false), requirePermission('payment.refund'), billingRefundsController.getRefunds);
+billingRoutes.post('/refunds', requireSite(false), requirePermission('payment.refund', 'DO'), billingRefundsController.createRefund);
+
+// Disbursements
+billingRoutes.get('/disbursements', requireSite(false), requirePermission('finance.disbursement.record'), billingDisbursementsController.getDisbursements);
+billingRoutes.post('/disbursements', requireSite(false), requirePermission('finance.disbursement.record', 'DO'), billingDisbursementsController.createDisbursement);
+
+// Statements
+billingRoutes.get('/statements', requireSite(false), requirePermission('billing.invoice.view'), billingStatementsController.getStatements);
+
+// Tariffs & Rates
+billingRoutes.get('/tariffs', requireSite(false), requirePermission('billing.rates.view'), billingTariffsController.getTariffs);
+billingRoutes.get('/tariffs/rates', requireSite(false), requirePermission('billing.rates.view'), billingTariffsController.getTariffRates);
+
+// Exchange Rates
+billingRoutes.get('/exchange-rates', requireSite(false), requirePermission('billing.rates.view'), billingExchangeRatesController.getExchangeRates);
+billingRoutes.post('/exchange-rates', requireSite(false), requirePermission('billing.rates.view', 'DO'), billingExchangeRatesController.createExchangeRate);
+
+// Ledger
+billingRoutes.get('/ledger/postings', requireSite(false), requirePermission('finance.period.close'), billingLedgerController.getLedgerPostings);
+billingRoutes.get('/ledger/periods', requireSite(false), requirePermission('finance.period.close'), billingLedgerController.getPeriods);
+

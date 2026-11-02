@@ -34,6 +34,13 @@ interface Session {
   setOffline(o: boolean): void;
   userName: string;
   userEmail?: string;
+  userPhone?: string;
+  userSub?: string;
+  userTitle?: string;
+  userRoleName?: string;
+  userMfa?: boolean;
+  setUserName?: (n: string) => void;
+  setUserPhone?: (p: string) => void;
   /** Effective grant for a permission code, or null. */
   grant(code: string): Grant | null;
   /** True when the user holds at least `level` on the permission. */
@@ -83,6 +90,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [dynamicRoles, setDynamicRoles] = useState<Role[]>(ROLES);
   const [userName, setUserName] = useState<string>(() => authService.getUser()?.username || 'Ashok Kumar');
   const [userEmail, setUserEmail] = useState<string | undefined>(() => authService.getUser()?.email);
+  const [userPhone, setUserPhone] = useState<string>('+255 754 000 001');
+  const [userSub, setUserSub] = useState<string>('ng|8101');
+  const [userTitle, setUserTitle] = useState<string>('Senior Operations Lead');
+  const [userRoleName, setUserRoleName] = useState<string>('Administrator');
+  const [userMfa, setUserMfa] = useState<boolean>(true);
 
   const fetchSessionData = () => {
     // 1. Fetch live sites from backend
@@ -101,7 +113,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           );
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // 2. Fetch live roles from backend
     api
@@ -119,7 +131,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           );
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // 3. Fetch logged in session from /me
     api
@@ -128,8 +140,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (res?.name || res?.user?.userName) {
           const name = res.name || res.user?.userName;
           const email = res.email || res.user?.email;
+          const phone = res.phone || res.user?.phone;
+          const sub = res.userSub || res.user?.userSub;
+          const title = res.user?.title;
+          const roleName = res.user?.roleName || res.assignedRoles?.[0]?.roleName;
+          const mfa = res.mfaRequired ?? res.user?.mfaRequired ?? true;
+
           setUserName(name);
-          setUserEmail(email);
+          if (email) setUserEmail(email);
+          if (phone) setUserPhone(phone);
+          if (sub) setUserSub(sub);
+          if (title) setUserTitle(title);
+          if (roleName) setUserRoleName(roleName);
+          setUserMfa(mfa);
+          if (res.preferredLanguage || res.language) {
+            setLang(res.preferredLanguage || res.language);
+          }
 
           // If role returned and not explicitly customized, sync it
           if (res.user?.roleCode && roleCode === ALL_ROLE) {
@@ -138,7 +164,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   useEffect(() => {
@@ -155,7 +181,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const matched = dynamicSites.find((s) => s.siteId === id) || SITES.find((s) => s.siteId === id);
     if (matched) {
       authService.setActiveSite(matched.siteCode);
-      api.post('/session/switch-site', { siteCode: matched.siteCode }).catch(() => {});
+      api.post('/session/switch-site', { siteCode: matched.siteCode }).catch(() => { });
     }
   };
 
@@ -194,6 +220,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setSiteId,
       userName: userName || (role ? 'Neema Mushi' : 'Ashok Kumar'),
       userEmail,
+      userPhone,
+      userSub,
+      userTitle,
+      userRoleName,
+      userMfa,
+      setUserName,
+      setUserPhone,
       grant,
       can: (code, level = 'VIEW') => {
         if (!code) return true;
@@ -203,9 +236,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isExternal: !!role?.external,
       refetchSession: fetchSessionData,
     };
-  }, [roleCode, siteId, phase, theme, lang, offline, dynamicSites, dynamicRoles, userName, userEmail]);
+}, [roleCode, siteId, phase, theme, lang, offline, dynamicSites, dynamicRoles, userName, userEmail, userPhone, userSub, userTitle, userRoleName, userMfa]);
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useSession() {
