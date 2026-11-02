@@ -2,7 +2,33 @@
 export type Grant = 'DO' | 'REQ' | 'APPR' | 'VIEW';
 export interface DemoRole { code: string; name: string; external?: boolean; grants: Record<string, Grant> }
 export type Role = DemoRole;
+const ALL_ADMIN_GRANTS: Record<string, Grant> = {
+  "admin.site.manage": "DO", "admin.yard.design": "DO", "admin.gate.configure": "DO",
+  "admin.users.manage": "DO", "admin.roles.manage": "DO", "admin.config.manage": "DO",
+  "admin.device.manage": "DO", "admin.audit.view": "VIEW", "masters.view": "VIEW",
+  "masters.local.edit": "DO", "manifest.import": "DO", "consignment.view": "VIEW",
+  "consignment.edit": "DO", "gate.visit.checkin": "DO", "gate.visit.checkout": "DO",
+  "gate.checkout.override": "APPR", "gate.pass.print": "DO", "weighbridge.ticket": "DO",
+  "weighbridge.override": "APPR", "inspection.perform": "DO", "inspection.damage.approve": "APPR",
+  "yard.map.view": "VIEW", "yard.allocate": "DO", "yard.move.execute": "DO",
+  "yard.move.override": "APPR", "yard.key.custody": "DO", "customs.ref.edit": "DO",
+  "customs.hold.place": "DO", "customs.hold.lift": "APPR", "customs.exam.record": "DO",
+  "release.issue": "DO", "release.exception.approve": "APPR", "billing.rates.view": "VIEW",
+  "billing.invoice.view": "VIEW", "billing.invoice.create": "DO", "billing.invoice.post": "DO",
+  "billing.creditnote": "APPR", "billing.waiver": "APPR", "billing.freeday.extend": "APPR",
+  "billing.tariff.change": "APPR", "payment.record": "DO", "payment.cashup.approve": "APPR",
+  "payment.refund": "APPR", "finance.period.close": "DO", "finance.exchange_rate.edit": "DO",
+  "finance.disbursement.record": "DO", "dashboard.control_tower": "VIEW",
+  "dashboard.executive": "VIEW", "reports.operational": "VIEW", "reports.financial": "VIEW",
+  "exception.view": "VIEW", "exception.manage": "DO", "security.incident.manage": "DO",
+  "device.configure": "DO", "integration.monitor": "DO", "portal.request.submit": "DO",
+  "portal.request.handle": "DO", "portal.invite": "DO", "appointment.manage": "DO",
+  "appointment.book": "DO", "cfs.job.manage": "DO", "cfs.job.approve": "APPR",
+  "reefer.manage": "DO", "dg.manage": "DO", "repair.estimate": "DO", "aiva.use": "DO"
+};
+
 export const ROLES: DemoRole[] = [
+  { code: 'ICD_ADMIN', name: "ICD administrator", grants: ALL_ADMIN_GRANTS },
   { code: 'GATE_OFFICER', name: "Gate officer", grants: {"gate.visit.checkin": "DO", "gate.visit.checkout": "DO", "gate.checkout.override": "REQ", "gate.pass.print": "DO", "customs.hold.place": "REQ", "consignment.view": "VIEW", "yard.map.view": "VIEW", "masters.view": "VIEW", "masters.local.edit": "DO", "aiva.use": "DO", "appointment.manage": "VIEW"} },
   { code: 'YARD_OFFICER', name: "Yard officer / planner", grants: {"yard.map.view": "VIEW", "yard.allocate": "DO", "yard.move.execute": "DO", "yard.move.override": "REQ", "yard.key.custody": "DO", "customs.hold.place": "REQ", "consignment.view": "VIEW", "aiva.use": "DO", "reefer.manage": "DO", "dg.manage": "DO"} },
   { code: 'EQUIPMENT_OPERATOR', name: "Equipment operator", grants: {"yard.move.execute": "DO", "yard.map.view": "VIEW"} },
@@ -16,7 +42,6 @@ export const ROLES: DemoRole[] = [
   { code: 'OPS_MANAGER', name: "Operations manager / depot supervisor", grants: {"gate.checkout.override": "APPR", "customs.hold.lift": "APPR", "release.exception.approve": "APPR", "inspection.damage.approve": "APPR", "yard.move.override": "APPR", "weighbridge.override": "APPR", "billing.freeday.extend": "REQ", "billing.waiver": "REQ", "billing.creditnote": "REQ", "exception.manage": "DO", "exception.view": "VIEW", "dashboard.control_tower": "VIEW", "reports.operational": "VIEW", "yard.map.view": "VIEW", "consignment.view": "VIEW", "billing.invoice.view": "VIEW", "admin.audit.view": "VIEW", "admin.yard.design": "VIEW", "aiva.use": "DO", "cfs.job.approve": "APPR", "appointment.manage": "DO", "integration.monitor": "VIEW"} },
   { code: 'CUSTOMER_SERVICE', name: "Customer service", grants: {"consignment.view": "VIEW", "billing.invoice.view": "VIEW", "yard.map.view": "VIEW", "exception.view": "VIEW", "masters.view": "VIEW", "aiva.use": "DO", "portal.request.handle": "DO", "portal.invite": "DO"} },
   { code: 'SECURITY_OFFICER', name: "Security officer", grants: {"security.incident.manage": "DO", "exception.view": "VIEW", "admin.audit.view": "VIEW", "yard.map.view": "VIEW"} },
-  { code: 'ICD_ADMIN', name: "ICD administrator", grants: {"admin.site.manage": "DO", "admin.yard.design": "DO", "admin.gate.configure": "DO", "admin.users.manage": "DO", "admin.roles.manage": "DO", "admin.config.manage": "DO", "admin.device.manage": "DO", "admin.audit.view": "VIEW", "masters.view": "VIEW", "masters.local.edit": "DO", "device.configure": "DO", "integration.monitor": "DO", "portal.invite": "DO"} },
   { code: 'MANAGEMENT', name: "Management (read-only)", grants: {"dashboard.executive": "VIEW", "dashboard.control_tower": "VIEW", "reports.operational": "VIEW", "reports.financial": "VIEW", "aiva.use": "DO"} },
   { code: 'AUDITOR', name: "Auditor (read-only)", grants: {"admin.audit.view": "VIEW", "reports.operational": "VIEW", "reports.financial": "VIEW", "billing.invoice.view": "VIEW", "consignment.view": "VIEW", "billing.rates.view": "VIEW"} },
   { code: 'CUSTOMS_OFFICER', name: "Customs officer (restricted)", grants: {"customs.ref.edit": "DO", "customs.hold.place": "DO", "customs.hold.lift": "DO", "customs.exam.record": "DO", "consignment.view": "VIEW"} },

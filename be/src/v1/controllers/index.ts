@@ -16,3 +16,5 @@ export * from './reefers.controller';
 export * from './repairs.controller';
 export * from './devices.controller';
 export * from './parties.controller';
+export * from './charges.controller';
+export * from './invoices.controller';

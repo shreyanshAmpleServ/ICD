@@ -8,23 +8,23 @@ datasource db {
 }
 
 model accounting_period {
-  accounting_period_id Int       @id(map: "PK_accounting_period") @default(autoincrement())
-  company_id           Int
-  period_key           String    @db.Char(7)
-  period_start         DateTime  @db.Date
-  period_end           DateTime  @db.Date
-  status               String    @default("OPEN", map: "DF_accounting_period_status") @db.VarChar(8)
-  closed_at            DateTime?
-  closed_by_sub        String?   @db.VarChar(64)
-  reopened_count       Int       @default(0, map: "DF_accounting_period_reopen") @db.TinyInt
-  createdate           DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_accounting_period_createdate")
-  updatedate           DateTime?
-  createdby            String    @db.NVarChar(64)
-  updatedby            String?   @db.NVarChar(64)
-  log_inst             Int       @default(1, map: "DF_accounting_period_log_inst")
-  m_company            m_company @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_accounting_period_company")
-  invoice              invoice[]
-  payment              payment[]
+  accounting_period_id      Int       @id(map: "PK_accounting_period") @default(autoincrement())
+  company_id                Int
+  period_key                String    @db.Char(7)
+  period_start              DateTime  @db.Date
+  period_end                DateTime  @db.Date
+  status                    String    @default("OPEN", map: "DF_accounting_period_status") @db.VarChar(8)
+  closed_at                 DateTime?
+  closed_by_sub             String?   @db.VarChar(64)
+  reopened_count            Int       @default(0, map: "DF_accounting_period_reopen") @db.TinyInt
+  createdate                DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_accounting_period_createdate")
+  updatedate                DateTime?
+  createdby                 String    @db.NVarChar(64)
+  updatedby                 String?   @db.NVarChar(64)
+  log_inst                  Int       @default(1, map: "DF_accounting_period_log_inst")
+  m_company                 m_company @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_accounting_period_company")
+  accounting_period_invoice invoice[]
+  accounting_period_payment payment[]
 
   @@unique([company_id, period_key], map: "UQ_accounting_period")
 }
@@ -196,48 +196,48 @@ model approval_delegation {
 }
 
 model approval_request {
-  approval_request_id     BigInt                    @id(map: "PK_approval_request") @default(autoincrement())
-  site_id                 Int?
-  request_no              String                    @unique(map: "UQ_approval_request_no") @db.VarChar(30)
-  permission_code         String                    @db.VarChar(80)
-  entity_name             String                    @db.VarChar(40)
-  entity_id               BigInt
-  summary                 String                    @db.NVarChar(300)
-  reason                  String                    @db.NVarChar(800)
-  amount                  Decimal?                  @db.Decimal(19, 4)
-  amount_currency         String?                   @db.Char(3)
-  payload_json            String?                   @db.NVarChar(Max)
-  levels_required         Int                       @default(1, map: "DF_approval_request_levels") @db.TinyInt
-  current_level           Int                       @default(1, map: "DF_approval_request_level") @db.TinyInt
-  status                  String                    @default("PENDING", map: "DF_approval_request_status") @db.VarChar(10)
-  requested_by_sub        String                    @db.VarChar(64)
-  requested_at            DateTime                  @default(dbgenerated("sysutcdatetime()"), map: "DF_approval_request_at")
-  expires_at              DateTime?
-  decided_at              DateTime?
-  applied_at              DateTime?
-  createdate              DateTime                  @default(dbgenerated("sysutcdatetime()"), map: "DF_approval_request_createdate")
-  updatedate              DateTime?
-  createdby               String                    @db.NVarChar(64)
-  updatedby               String?                   @db.NVarChar(64)
-  log_inst                Int                       @default(1, map: "DF_approval_request_log_inst")
-  aiva_draft_action       aiva_draft_action[]
-  m_currency              m_currency?               @relation(fields: [amount_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_approval_request_currency")
-  m_permission            m_permission              @relation(fields: [permission_code], references: [permission_code], onUpdate: NoAction, map: "FK_approval_request_perm")
-  m_site                  m_site?                   @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_approval_request_site")
-  approval_step           approval_step[]
-  cashier_shift           cashier_shift[]
-  charge                  charge[]
-  disbursement            disbursement[]
-  exception_case          exception_case[]
-  hold                    hold[]
-  invoice                 invoice[]
-  refund                  refund[]
-  release_check           release_check[]
-  release_order           release_order[]
-  release_validity_change release_validity_change[]
-  tariff                  tariff[]
-  visit_checkpoint_event  visit_checkpoint_event[]
-  weighing                weighing[]
+  approval_request_id      BigInt                    @id(map: "PK_approval_request") @default(autoincrement())
+  site_id                  Int?
+  request_no               String                    @unique(map: "UQ_approval_request_no") @db.VarChar(30)
+  permission_code          String                    @db.VarChar(80)
+  entity_name              String                    @db.VarChar(40)
+  entity_id                BigInt
+  summary                  String                    @db.NVarChar(300)
+  reason                   String                    @db.NVarChar(800)
+  amount                   Decimal?                  @db.Decimal(19, 4)
+  amount_currency          String?                   @db.Char(3)
+  payload_json             String?                   @db.NVarChar(Max)
+  levels_required          Int                       @default(1, map: "DF_approval_request_levels") @db.TinyInt
+  current_level            Int                       @default(1, map: "DF_approval_request_level") @db.TinyInt
+  status                   String                    @default("PENDING", map: "DF_approval_request_status") @db.VarChar(10)
+  requested_by_sub         String                    @db.VarChar(64)
+  requested_at             DateTime                  @default(dbgenerated("sysutcdatetime()"), map: "DF_approval_request_at")
+  expires_at               DateTime?
+  decided_at               DateTime?
+  applied_at               DateTime?
+  createdate               DateTime                  @default(dbgenerated("sysutcdatetime()"), map: "DF_approval_request_createdate")
+  updatedate               DateTime?
+  createdby                String                    @db.NVarChar(64)
+  updatedby                String?                   @db.NVarChar(64)
+  log_inst                 Int                       @default(1, map: "DF_approval_request_log_inst")
+  aiva_draft_action        aiva_draft_action[]
+  m_currency               m_currency?               @relation(fields: [amount_currency], references: [currency_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_approval_request_currency")
+  m_permission             m_permission              @relation(fields: [permission_code], references: [permission_code], onUpdate: NoAction, map: "FK_approval_request_perm")
+  m_site                   m_site?                   @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_approval_request_site")
+  approval_step            approval_step[]
+  cashier_shift            cashier_shift[]
+  approval_request_charge  charge[]
+  disbursement             disbursement[]
+  exception_case           exception_case[]
+  hold                     hold[]
+  approval_request_invoice invoice[]
+  refund                   refund[]
+  release_check            release_check[]
+  release_order            release_order[]
+  release_validity_change  release_validity_change[]
+  approval_request_tariff  tariff[]
+  visit_checkpoint_event   visit_checkpoint_event[]
+  weighing                 weighing[]
 
   @@index([entity_name, entity_id], map: "IX_approval_request_entity")
 }
@@ -283,35 +283,35 @@ model audit_log {
 }
 
 model billable_event {
-  billable_event_id      BigInt        @id(map: "PK_billable_event") @default(autoincrement())
-  site_id                Int
-  charge_code_id         Int
-  dedupe_key             String        @unique(map: "UQ_billable_event_dedupe") @db.VarChar(100)
-  unit_stay_id           BigInt?
-  truck_visit_id         BigInt?
-  consignment_id         BigInt?
-  bill_to_party_id       Int?
-  source_entity          String        @db.VarChar(40)
-  source_id              BigInt?
-  service_date           DateTime      @db.Date
-  occurred_at            DateTime
-  quantity               Decimal       @default(1, map: "DF_billable_event_qty") @db.Decimal(12, 3)
-  uom                    String        @default("UNIT", map: "DF_billable_event_uom") @db.VarChar(10)
-  day_no                 Int?
-  status                 String        @default("UNRATED", map: "DF_billable_event_status") @db.VarChar(10)
-  rated_at               DateTime?
-  createdate             DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_billable_event_createdate")
-  updatedate             DateTime?
-  createdby              String        @db.NVarChar(64)
-  updatedby              String?       @db.NVarChar(64)
-  log_inst               Int           @default(1, map: "DF_billable_event_log_inst")
-  m_party_billable_event m_party?      @relation(fields: [bill_to_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_be_bill_to")
-  m_charge_code          m_charge_code @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_be_charge")
-  consignment            consignment?  @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_consignment")
-  m_site                 m_site        @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_be_site")
-  unit_stay              unit_stay?    @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_stay")
-  truck_visit            truck_visit?  @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_visit")
-  charge                 charge[]
+  billable_event_id            BigInt        @id(map: "PK_billable_event") @default(autoincrement())
+  site_id                      Int
+  charge_code_id               Int
+  dedupe_key                   String        @unique(map: "UQ_billable_event_dedupe") @db.VarChar(100)
+  unit_stay_id                 BigInt?
+  truck_visit_id               BigInt?
+  consignment_id               BigInt?
+  bill_to_party_id             Int?
+  source_entity                String        @db.VarChar(40)
+  source_id                    BigInt?
+  service_date                 DateTime      @db.Date
+  occurred_at                  DateTime
+  quantity                     Decimal       @default(1, map: "DF_billable_event_qty") @db.Decimal(12, 3)
+  uom                          String        @default("UNIT", map: "DF_billable_event_uom") @db.VarChar(10)
+  day_no                       Int?
+  status                       String        @default("UNRATED", map: "DF_billable_event_status") @db.VarChar(10)
+  rated_at                     DateTime?
+  createdate                   DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_billable_event_createdate")
+  updatedate                   DateTime?
+  createdby                    String        @db.NVarChar(64)
+  updatedby                    String?       @db.NVarChar(64)
+  log_inst                     Int           @default(1, map: "DF_billable_event_log_inst")
+  m_party_billable_event       m_party?      @relation(fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_bill_to")
+  m_charge_code_billable_event m_charge_code @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_be_charge")
+  consignment_billable_event   consignment?  @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_consignment")
+  m_site_billable_event        m_site        @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_be_site")
+  unit_stay_billable_event     unit_stay?    @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_stay")
+  truck_visit_billable_event   truck_visit?  @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_be_visit")
+  billable_event_charge        charge[]
 }
 
 model cargo_unit {
@@ -367,41 +367,41 @@ model cashier_shift {
 }
 
 model charge {
-  charge_id             BigInt            @id(map: "PK_charge") @default(autoincrement())
-  billable_event_id     BigInt
-  bill_to_party_id      Int
-  tariff_id             Int?
-  tariff_rule_id        Int?
-  tariff_slab_id        Int?
-  currency              String            @db.Char(3)
-  quantity              Decimal           @db.Decimal(12, 3)
-  unit_rate             Decimal           @db.Decimal(19, 6)
-  amount                Decimal           @db.Decimal(19, 4)
-  tax_code_id           Int?
-  tax_rate_pct          Decimal           @default(0, map: "DF_charge_tax_rate") @db.Decimal(6, 3)
-  tax_amount            Decimal           @default(0, map: "DF_charge_tax_amount") @db.Decimal(19, 4)
-  charge_kind           String            @default("NORMAL", map: "DF_charge_kind") @db.VarChar(10)
-  reverses_charge_id    BigInt?
-  approval_request_id   BigInt?
-  status                String            @default("OPEN", map: "DF_charge_status") @db.VarChar(12)
-  rating_correlation_id String?           @db.UniqueIdentifier
-  rated_at              DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_charge_rated")
-  createdate            DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_charge_createdate")
-  updatedate            DateTime?
-  createdby             String            @db.NVarChar(64)
-  updatedby             String?           @db.NVarChar(64)
-  log_inst              Int               @default(1, map: "DF_charge_log_inst")
-  approval_request      approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_approval")
-  m_party_charge        m_party           @relation(fields: [bill_to_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_charge_bill_to")
-  m_currency            m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_charge_currency")
-  billable_event        billable_event    @relation(fields: [billable_event_id], references: [billable_event_id], onUpdate: NoAction, map: "FK_charge_event")
-  charge                charge?           @relation("chargeTocharge", fields: [reverses_charge_id], references: [charge_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_reverses")
-  other_charge          charge[]          @relation("chargeTocharge")
-  tariff_rule           tariff_rule?      @relation(fields: [tariff_rule_id], references: [tariff_rule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_rule")
-  tariff_slab           tariff_slab?      @relation(fields: [tariff_slab_id], references: [tariff_slab_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_slab")
-  tariff                tariff?           @relation(fields: [tariff_id], references: [tariff_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_tariff")
-  m_tax_code            m_tax_code?       @relation(fields: [tax_code_id], references: [tax_code_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_tax")
-  invoice_line          invoice_line[]
+  charge_id               BigInt            @id(map: "PK_charge") @default(autoincrement())
+  billable_event_id       BigInt
+  bill_to_party_id        Int
+  tariff_id               Int?
+  tariff_rule_id          Int?
+  tariff_slab_id          Int?
+  currency                String            @db.Char(3)
+  quantity                Decimal           @db.Decimal(12, 3)
+  unit_rate               Decimal           @db.Decimal(19, 6)
+  amount                  Decimal           @db.Decimal(19, 4)
+  tax_code_id             Int?
+  tax_rate_pct            Decimal           @default(0, map: "DF_charge_tax_rate") @db.Decimal(6, 3)
+  tax_amount              Decimal           @default(0, map: "DF_charge_tax_amount") @db.Decimal(19, 4)
+  charge_kind             String            @default("NORMAL", map: "DF_charge_kind") @db.VarChar(10)
+  reverses_charge_id      BigInt?
+  approval_request_id     BigInt?
+  status                  String            @default("OPEN", map: "DF_charge_status") @db.VarChar(12)
+  rating_correlation_id   String?           @db.UniqueIdentifier
+  rated_at                DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_charge_rated")
+  createdate              DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_charge_createdate")
+  updatedate              DateTime?
+  createdby               String            @db.NVarChar(64)
+  updatedby               String?           @db.NVarChar(64)
+  log_inst                Int               @default(1, map: "DF_charge_log_inst")
+  approval_request_charge approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_approval")
+  m_party_charge          m_party           @relation(fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_bill_to")
+  m_currency_charge       m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_charge_currency")
+  billable_event_charge   billable_event    @relation(fields: [billable_event_id], references: [billable_event_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_charge_event")
+  charge                  charge?           @relation("chargeTocharge", fields: [reverses_charge_id], references: [charge_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_reverses")
+  other_charge            charge[]          @relation("chargeTocharge")
+  tariff_rule_charge      tariff_rule?      @relation(fields: [tariff_rule_id], references: [tariff_rule_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_rule")
+  tariff_slab_charge      tariff_slab?      @relation(fields: [tariff_slab_id], references: [tariff_slab_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_slab")
+  tariff_charge           tariff?           @relation(fields: [tariff_id], references: [tariff_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_tariff")
+  m_tax_code_charge       m_tax_code?       @relation(fields: [tax_code_id], references: [tax_code_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_charge_tax")
+  charge_invoice_line     invoice_line[]
 
   @@index([billable_event_id], map: "IX_charge_event")
 }
@@ -438,7 +438,7 @@ model consignment {
   updatedby                                      String?            @db.NVarChar(64)
   log_inst                                       Int                @default(1, map: "DF_consignment_log_inst")
   appointment                                    appointment[]
-  billable_event                                 billable_event[]
+  consignment_billable_event                     billable_event[]
   m_party_consignment_agent                      m_party?           @relation("consignment_agent_party_idTom_party", fields: [agent_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_agent")
   m_party_consignment_bill_to                    m_party?           @relation("consignment_bill_to_party_idTom_party", fields: [bill_to_party_id], references: [party_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_bill_to")
   m_commodity                                    m_commodity?       @relation(fields: [commodity_id], references: [commodity_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_commodity")
@@ -455,7 +455,7 @@ model consignment {
   customs_ref                                    customs_ref[]
   disbursement                                   disbursement[]
   handling_job                                   handling_job[]
-  invoice                                        invoice[]
+  consignment_invoice                            invoice[]
   release_order                                  release_order[]
   service_request                                service_request[]
   unit_stay_consignments                         unit_stay[]
@@ -565,7 +565,7 @@ model disbursement {
   m_site                        m_site            @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_disb_site")
   unit_stay                     unit_stay?        @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_stay")
   approval_request              approval_request? @relation(fields: [write_off_approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disb_writeoff")
-  invoice_line                  invoice_line[]
+  disbursement_invoice_line     invoice_line[]
 
   @@index([consignment_id], map: "IX_disb_consignment")
 }
@@ -720,48 +720,48 @@ model exception_comment {
 }
 
 model fiscal_receipt {
-  fiscal_receipt_id BigInt    @id(map: "PK_fiscal_receipt") @default(autoincrement())
-  invoice_id        BigInt    @unique(map: "UQ_fiscal_receipt_invoice")
-  provider          String    @db.VarChar(30)
-  status            String    @default("PENDING", map: "DF_fiscal_receipt_status") @db.VarChar(8)
-  receipt_no        String?   @db.VarChar(40)
-  verification_code String?   @db.VarChar(80)
-  verification_url  String?   @db.VarChar(300)
-  issued_at         DateTime?
-  attempts          Int       @default(0, map: "DF_fiscal_receipt_attempts") @db.SmallInt
-  next_attempt_at   DateTime?
-  last_error        String?
-  request_json      String?   @db.NVarChar(Max)
-  response_json     String?   @db.NVarChar(Max)
-  createdate        DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_fiscal_receipt_createdate")
-  updatedate        DateTime?
-  createdby         String    @db.NVarChar(64)
-  updatedby         String?   @db.NVarChar(64)
-  log_inst          Int       @default(1, map: "DF_fiscal_receipt_log_inst")
-  invoice           invoice   @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_fiscal_receipt_invoice")
+  fiscal_receipt_id      BigInt    @id(map: "PK_fiscal_receipt") @default(autoincrement())
+  invoice_id             BigInt    @unique(map: "UQ_fiscal_receipt_invoice")
+  provider               String    @db.VarChar(30)
+  status                 String    @default("PENDING", map: "DF_fiscal_receipt_status") @db.VarChar(8)
+  receipt_no             String?   @db.VarChar(40)
+  verification_code      String?   @db.VarChar(80)
+  verification_url       String?   @db.VarChar(300)
+  issued_at              DateTime?
+  attempts               Int       @default(0, map: "DF_fiscal_receipt_attempts") @db.SmallInt
+  next_attempt_at        DateTime?
+  last_error             String?
+  request_json           String?   @db.NVarChar(Max)
+  response_json          String?   @db.NVarChar(Max)
+  createdate             DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_fiscal_receipt_createdate")
+  updatedate             DateTime?
+  createdby              String    @db.NVarChar(64)
+  updatedby              String?   @db.NVarChar(64)
+  log_inst               Int       @default(1, map: "DF_fiscal_receipt_log_inst")
+  invoice_fiscal_receipt invoice   @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_fiscal_receipt_invoice")
 }
 
 model gl_posting {
-  gl_posting_id   BigInt        @id(map: "PK_gl_posting") @default(autoincrement())
-  company_id      Int
-  source_entity   String        @db.VarChar(14)
-  source_id       BigInt
-  destination     String        @db.VarChar(12)
-  posting_date    DateTime      @db.Date
-  status          String        @default("PENDING", map: "DF_gl_posting_status") @db.VarChar(8)
-  journal_json    String        @db.NVarChar(Max)
-  external_ref    String?       @db.VarChar(60)
-  outbox_event_id BigInt?
-  attempts        Int           @default(0, map: "DF_gl_posting_attempts") @db.SmallInt
-  last_error      String?
-  posted_at       DateTime?
-  createdate      DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_gl_posting_createdate")
-  updatedate      DateTime?
-  createdby       String        @db.NVarChar(64)
-  updatedby       String?       @db.NVarChar(64)
-  log_inst        Int           @default(1, map: "DF_gl_posting_log_inst")
-  m_company       m_company     @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_gl_posting_company")
-  outbox_event    outbox_event? @relation(fields: [outbox_event_id], references: [outbox_event_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_gl_posting_outbox")
+  gl_posting_id        BigInt        @id(map: "PK_gl_posting") @default(autoincrement())
+  company_id           Int
+  source_entity        String        @db.VarChar(14)
+  source_id            BigInt
+  destination          String        @db.VarChar(12)
+  posting_date         DateTime      @db.Date
+  status               String        @default("PENDING", map: "DF_gl_posting_status") @db.VarChar(8)
+  journal_json         String        @db.NVarChar(Max)
+  external_ref         String?       @db.VarChar(60)
+  outbox_event_id      BigInt?
+  attempts             Int           @default(0, map: "DF_gl_posting_attempts") @db.SmallInt
+  last_error           String?
+  posted_at            DateTime?
+  createdate           DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_gl_posting_createdate")
+  updatedate           DateTime?
+  createdby            String        @db.NVarChar(64)
+  updatedby            String?       @db.NVarChar(64)
+  log_inst             Int           @default(1, map: "DF_gl_posting_log_inst")
+  m_company_gl_posting m_company     @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_gl_posting_company")
+  outbox_event         outbox_event? @relation(fields: [outbox_event_id], references: [outbox_event_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_gl_posting_outbox")
 
   @@unique([source_entity, source_id, destination], map: "UQ_gl_posting")
 }
@@ -965,99 +965,99 @@ model integration_message {
 }
 
 model invoice {
-  invoice_id                                         BigInt                    @id(map: "PK_invoice") @default(autoincrement())
-  company_id                                         Int
-  site_id                                            Int
-  doc_kind                                           String                    @db.VarChar(12)
-  invoice_no                                         String?                   @db.VarChar(30)
-  status                                             String                    @default("DRAFT", map: "DF_invoice_status") @db.VarChar(10)
-  bill_to_party_id                                   Int
-  consignment_id                                     BigInt?
-  release_order_id                                   BigInt?
-  currency                                           String                    @db.Char(3)
-  base_currency                                      String                    @db.Char(3)
-  exchange_rate                                      Decimal                   @default(1, map: "DF_invoice_fx") @db.Decimal(19, 8)
-  exchange_rate_date                                 DateTime?                 @db.Date
-  invoice_date                                       DateTime                  @db.Date
-  due_date                                           DateTime?                 @db.Date
-  service_to_date                                    DateTime?                 @db.Date
-  subtotal                                           Decimal                   @default(0, map: "DF_invoice_subtotal") @db.Decimal(19, 4)
-  tax_total                                          Decimal                   @default(0, map: "DF_invoice_tax") @db.Decimal(19, 4)
-  total                                              Decimal                   @default(0, map: "DF_invoice_total") @db.Decimal(19, 4)
-  total_base                                         Decimal                   @default(0, map: "DF_invoice_total_base") @db.Decimal(19, 4)
-  tax_total_base                                     Decimal                   @default(0, map: "DF_invoice_tax_base") @db.Decimal(19, 4)
-  amount_paid                                        Decimal                   @default(0, map: "DF_invoice_paid") @db.Decimal(19, 4)
-  amount_credited                                    Decimal                   @default(0, map: "DF_invoice_credited") @db.Decimal(19, 4)
-  balance                                            Decimal?                  @db.Decimal(21, 4)
-  proforma_invoice_id                                BigInt?
-  original_invoice_id                                BigInt?
-  approval_request_id                                BigInt?
-  reason                                             String?                   @db.NVarChar(400)
-  accounting_period_id                               Int?
-  issued_at                                          DateTime?
-  posted_at                                          DateTime?
-  cancelled_at                                       DateTime?
-  cancel_reason                                      String?                   @db.NVarChar(300)
-  createdate                                         DateTime                  @default(dbgenerated("sysutcdatetime()"), map: "DF_invoice_createdate")
-  updatedate                                         DateTime?
-  createdby                                          String                    @db.NVarChar(64)
-  updatedby                                          String?                   @db.NVarChar(64)
-  log_inst                                           Int                       @default(1, map: "DF_invoice_log_inst")
-  fiscal_receipt                                     fiscal_receipt?
-  approval_request                                   approval_request?         @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_approval")
-  m_currency_invoice_base_currencyTom_currency       m_currency                @relation("invoice_base_currencyTom_currency", fields: [base_currency], references: [currency_code], onUpdate: NoAction, map: "FK_invoice_base_currency")
-  m_company                                          m_company                 @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_invoice_company")
-  consignment                                        consignment?              @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_consignment")
-  m_currency_invoice_currencyTom_currency            m_currency                @relation("invoice_currencyTom_currency", fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_invoice_currency")
-  invoice_invoice_original_invoice_idToinvoice       invoice?                  @relation("invoice_original_invoice_idToinvoice", fields: [original_invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_original")
-  other_invoice_invoice_original_invoice_idToinvoice invoice[]                 @relation("invoice_original_invoice_idToinvoice")
-  m_party_invoice                                    m_party                   @relation(fields: [bill_to_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_invoice_party")
-  accounting_period                                  accounting_period?        @relation(fields: [accounting_period_id], references: [accounting_period_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_period")
-  invoice_invoice_proforma_invoice_idToinvoice       invoice?                  @relation("invoice_proforma_invoice_idToinvoice", fields: [proforma_invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_proforma")
-  other_invoice_invoice_proforma_invoice_idToinvoice invoice[]                 @relation("invoice_proforma_invoice_idToinvoice")
-  release_order                                      release_order?            @relation(fields: [release_order_id], references: [release_order_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_release")
-  m_site                                             m_site                    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_invoice_site")
-  invoice_line                                       invoice_line[]
-  payment_allocation                                 payment_allocation[]
-  release_validity_change                            release_validity_change[]
+  invoice_id                       BigInt                    @id(map: "PK_invoice") @default(autoincrement())
+  company_id                       Int
+  site_id                          Int
+  doc_kind                         String                    @db.VarChar(12)
+  invoice_no                       String?                   @db.VarChar(30)
+  status                           String                    @default("DRAFT", map: "DF_invoice_status") @db.VarChar(10)
+  bill_to_party_id                 Int
+  consignment_id                   BigInt?
+  release_order_id                 BigInt?
+  currency                         String                    @db.Char(3)
+  base_currency                    String                    @db.Char(3)
+  exchange_rate                    Decimal                   @default(1, map: "DF_invoice_fx") @db.Decimal(19, 8)
+  exchange_rate_date               DateTime?                 @db.Date
+  invoice_date                     DateTime                  @db.Date
+  due_date                         DateTime?                 @db.Date
+  service_to_date                  DateTime?                 @db.Date
+  subtotal                         Decimal                   @default(0, map: "DF_invoice_subtotal") @db.Decimal(19, 4)
+  tax_total                        Decimal                   @default(0, map: "DF_invoice_tax") @db.Decimal(19, 4)
+  total                            Decimal                   @default(0, map: "DF_invoice_total") @db.Decimal(19, 4)
+  total_base                       Decimal                   @default(0, map: "DF_invoice_total_base") @db.Decimal(19, 4)
+  tax_total_base                   Decimal                   @default(0, map: "DF_invoice_tax_base") @db.Decimal(19, 4)
+  amount_paid                      Decimal                   @default(0, map: "DF_invoice_paid") @db.Decimal(19, 4)
+  amount_credited                  Decimal                   @default(0, map: "DF_invoice_credited") @db.Decimal(19, 4)
+  balance                          Decimal?                  @db.Decimal(21, 4)
+  proforma_invoice_id              BigInt?
+  original_invoice_id              BigInt?
+  approval_request_id              BigInt?
+  reason                           String?                   @db.NVarChar(400)
+  accounting_period_id             Int?
+  issued_at                        DateTime?
+  posted_at                        DateTime?
+  cancelled_at                     DateTime?
+  cancel_reason                    String?                   @db.NVarChar(300)
+  createdate                       DateTime                  @default(dbgenerated("sysutcdatetime()"), map: "DF_invoice_createdate")
+  updatedate                       DateTime?
+  createdby                        String                    @db.NVarChar(64)
+  updatedby                        String?                   @db.NVarChar(64)
+  log_inst                         Int                       @default(1, map: "DF_invoice_log_inst")
+  invoice_fiscal_receipt           fiscal_receipt?
+  approval_request_invoice         approval_request?         @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_approval")
+  m_currency_invoice_base_currency m_currency                @relation("m_currency_invoice_base_currency", fields: [base_currency], references: [currency_code], onUpdate: NoAction, map: "FK_invoice_base_currency")
+  m_company_invoice                m_company                 @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_invoice_company")
+  consignment_invoice              consignment?              @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_consignment")
+  m_currency_invoice_currency      m_currency                @relation("m_currency_invoice_currency", fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_invoice_currency")
+  invoice_invoice_original         invoice?                  @relation("invoice_original_invoice", fields: [original_invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_original")
+  invoice_invoice_original_child   invoice[]                 @relation("invoice_original_invoice")
+  m_party_invoice                  m_party                   @relation(fields: [bill_to_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_invoice_party")
+  accounting_period_invoice        accounting_period?        @relation(fields: [accounting_period_id], references: [accounting_period_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_period")
+  invoice_invoice_proforma         invoice?                  @relation("invoice_proforma_invoice", fields: [proforma_invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_proforma")
+  invoice_invoice_proforma_child   invoice[]                 @relation("invoice_proforma_invoice")
+  release_order_invoice            release_order?            @relation(fields: [release_order_id], references: [release_order_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_invoice_release")
+  m_site_invoice                   m_site                    @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_invoice_site")
+  invoice_invoice_line             invoice_line[]
+  invoice_payment_allocation       payment_allocation[]
+  invoice_release_validity_change  release_validity_change[]
 
   @@index([company_id, invoice_date], map: "IX_invoice_date")
 }
 
 model invoice_line {
-  invoice_line_id    BigInt         @id(map: "PK_invoice_line") @default(autoincrement())
-  invoice_id         BigInt
-  line_no            Int            @db.SmallInt
-  line_doc_kind      String         @db.VarChar(12)
-  charge_id          BigInt?
-  disbursement_id    BigInt?
-  credited_line_id   BigInt?
-  charge_code_id     Int
-  unit_stay_id       BigInt?
-  description        String         @db.NVarChar(300)
-  service_from       DateTime?      @db.Date
-  service_to         DateTime?      @db.Date
-  quantity           Decimal        @db.Decimal(12, 3)
-  uom                String         @db.VarChar(10)
-  unit_rate          Decimal        @db.Decimal(19, 6)
-  amount             Decimal        @db.Decimal(19, 4)
-  tax_code_id        Int?
-  tax_rate_pct       Decimal        @default(0, map: "DF_invoice_line_tax_rate") @db.Decimal(6, 3)
-  tax_amount         Decimal        @default(0, map: "DF_invoice_line_tax") @db.Decimal(19, 4)
-  line_total         Decimal?       @db.Decimal(20, 4)
-  createdate         DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_invoice_line_createdate")
-  updatedate         DateTime?
-  createdby          String         @db.NVarChar(64)
-  updatedby          String?        @db.NVarChar(64)
-  log_inst           Int            @default(1, map: "DF_invoice_line_log_inst")
-  charge             charge?        @relation(fields: [charge_id], references: [charge_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_charge")
-  m_charge_code      m_charge_code  @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_il_charge_code")
-  invoice_line       invoice_line?  @relation("invoice_lineToinvoice_line", fields: [credited_line_id], references: [invoice_line_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_credited")
-  other_invoice_line invoice_line[] @relation("invoice_lineToinvoice_line")
-  disbursement       disbursement?  @relation(fields: [disbursement_id], references: [disbursement_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_disbursement")
-  invoice            invoice        @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_il_invoice")
-  unit_stay          unit_stay?     @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_stay")
-  m_tax_code         m_tax_code?    @relation(fields: [tax_code_id], references: [tax_code_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_tax")
+  invoice_line_id             BigInt         @id(map: "PK_invoice_line") @default(autoincrement())
+  invoice_id                  BigInt
+  line_no                     Int            @db.SmallInt
+  line_doc_kind               String         @db.VarChar(12)
+  charge_id                   BigInt?
+  disbursement_id             BigInt?
+  credited_line_id            BigInt?
+  charge_code_id              Int
+  unit_stay_id                BigInt?
+  description                 String         @db.NVarChar(300)
+  service_from                DateTime?      @db.Date
+  service_to                  DateTime?      @db.Date
+  quantity                    Decimal        @db.Decimal(12, 3)
+  uom                         String         @db.VarChar(10)
+  unit_rate                   Decimal        @db.Decimal(19, 6)
+  amount                      Decimal        @db.Decimal(19, 4)
+  tax_code_id                 Int?
+  tax_rate_pct                Decimal        @default(0, map: "DF_invoice_line_tax_rate") @db.Decimal(6, 3)
+  tax_amount                  Decimal        @default(0, map: "DF_invoice_line_tax") @db.Decimal(19, 4)
+  line_total                  Decimal?       @db.Decimal(20, 4)
+  createdate                  DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_invoice_line_createdate")
+  updatedate                  DateTime?
+  createdby                   String         @db.NVarChar(64)
+  updatedby                   String?        @db.NVarChar(64)
+  log_inst                    Int            @default(1, map: "DF_invoice_line_log_inst")
+  charge_invoice_line         charge?        @relation(fields: [charge_id], references: [charge_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_charge")
+  m_charge_code_invoice_line  m_charge_code  @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_il_charge_code")
+  invoice_line_credited       invoice_line?  @relation("invoice_line_credited", fields: [credited_line_id], references: [invoice_line_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_credited")
+  invoice_line_credited_child invoice_line[] @relation("invoice_line_credited")
+  disbursement_invoice_line   disbursement?  @relation(fields: [disbursement_id], references: [disbursement_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_disbursement")
+  invoice_invoice_line        invoice        @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_il_invoice")
+  unit_stay_invoice_line      unit_stay?     @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_stay")
+  m_tax_code_invoice_line     m_tax_code?    @relation(fields: [tax_code_id], references: [tax_code_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_il_tax")
 
   @@unique([invoice_id, line_no], map: "UQ_invoice_line")
 }
@@ -1264,24 +1264,24 @@ model m_cargo_regime {
 }
 
 model m_charge_code {
-  charge_code_id     Int              @id(map: "PK_m_charge_code") @default(autoincrement())
-  charge_code        String           @unique(map: "UQ_m_charge_code") @db.VarChar(30)
-  charge_name        String           @db.NVarChar(100)
-  charge_group       String           @db.VarChar(14)
-  default_tax_code   String?          @db.VarChar(20)
-  revenue_gl_account String?          @db.VarChar(30)
-  is_disbursement    Boolean          @default(false, map: "DF_m_charge_code_disb")
-  print_order        Int              @default(100, map: "DF_m_charge_code_order") @db.SmallInt
-  is_active          Boolean          @default(true, map: "DF_m_charge_code_active")
-  createdate         DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_m_charge_code_createdate")
-  updatedate         DateTime?
-  createdby          String           @db.NVarChar(64)
-  updatedby          String?          @db.NVarChar(64)
-  log_inst           Int              @default(1, map: "DF_m_charge_code_log_inst")
-  billable_event     billable_event[]
-  disbursement       disbursement[]
-  invoice_line       invoice_line[]
-  tariff_rule        tariff_rule[]
+  charge_code_id               Int              @id(map: "PK_m_charge_code") @default(autoincrement())
+  charge_code                  String           @unique(map: "UQ_m_charge_code") @db.VarChar(30)
+  charge_name                  String           @db.NVarChar(100)
+  charge_group                 String           @db.VarChar(14)
+  default_tax_code             String?          @db.VarChar(20)
+  revenue_gl_account           String?          @db.VarChar(30)
+  is_disbursement              Boolean          @default(false, map: "DF_m_charge_code_disb")
+  print_order                  Int              @default(100, map: "DF_m_charge_code_order") @db.SmallInt
+  is_active                    Boolean          @default(true, map: "DF_m_charge_code_active")
+  createdate                   DateTime         @default(dbgenerated("sysutcdatetime()"), map: "DF_m_charge_code_createdate")
+  updatedate                   DateTime?
+  createdby                    String           @db.NVarChar(64)
+  updatedby                    String?          @db.NVarChar(64)
+  log_inst                     Int              @default(1, map: "DF_m_charge_code_log_inst")
+  m_charge_code_billable_event billable_event[]
+  disbursement                 disbursement[]
+  m_charge_code_invoice_line   invoice_line[]
+  m_charge_code_tariff_rule    tariff_rule[]
 }
 
 model m_checkpoint {
@@ -1323,41 +1323,41 @@ model m_commodity {
 }
 
 model m_company {
-  company_id        Int                 @id(map: "PK_m_company") @default(autoincrement())
-  company_code      String              @unique(map: "UQ_m_company_code") @db.VarChar(20)
-  legal_name        String              @db.NVarChar(200)
-  trading_name      String?             @db.NVarChar(200)
-  country_code      String              @db.Char(2)
-  country_pack_id   Int
-  base_currency     String              @db.Char(3)
-  tax_id            String?             @db.VarChar(30)
-  vat_no            String?             @db.VarChar(30)
-  address_line1     String?             @db.NVarChar(200)
-  address_line2     String?             @db.NVarChar(200)
-  city              String?             @db.NVarChar(100)
-  phone             String?             @db.VarChar(30)
-  email             String?             @db.VarChar(200)
-  logo_storage_key  String?             @db.VarChar(400)
-  is_active         Boolean             @default(true, map: "DF_m_company_is_active")
-  createdate        DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_m_company_createdate")
-  updatedate        DateTime?
-  createdby         String              @db.NVarChar(64)
-  updatedby         String?             @db.NVarChar(64)
-  log_inst          Int                 @default(1, map: "DF_m_company_log_inst")
-  accounting_period accounting_period[]
-  gl_posting        gl_posting[]
-  invoice           invoice[]
-  m_country         m_country           @relation(fields: [country_code], references: [country_code], onUpdate: NoAction, map: "FK_m_company_country")
-  m_currency        m_currency          @relation(fields: [base_currency], references: [currency_code], onUpdate: NoAction, map: "FK_m_company_currency")
-  m_country_pack    m_country_pack      @relation(fields: [country_pack_id], references: [country_pack_id], onUpdate: NoAction, map: "FK_m_company_pack")
-  m_exchange_rate   m_exchange_rate[]
-  m_gl_setting      m_gl_setting[]
-  m_number_sequence m_number_sequence[]
-  m_payment_channel m_payment_channel[]
-  m_print_template  m_print_template[]
-  m_site            m_site[]
-  payment           payment[]
-  tariff            tariff[]
+  company_id           Int                 @id(map: "PK_m_company") @default(autoincrement())
+  company_code         String              @unique(map: "UQ_m_company_code") @db.VarChar(20)
+  legal_name           String              @db.NVarChar(200)
+  trading_name         String?             @db.NVarChar(200)
+  country_code         String              @db.Char(2)
+  country_pack_id      Int
+  base_currency        String              @db.Char(3)
+  tax_id               String?             @db.VarChar(30)
+  vat_no               String?             @db.VarChar(30)
+  address_line1        String?             @db.NVarChar(200)
+  address_line2        String?             @db.NVarChar(200)
+  city                 String?             @db.NVarChar(100)
+  phone                String?             @db.VarChar(30)
+  email                String?             @db.VarChar(200)
+  logo_storage_key     String?             @db.VarChar(400)
+  is_active            Boolean             @default(true, map: "DF_m_company_is_active")
+  createdate           DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_m_company_createdate")
+  updatedate           DateTime?
+  createdby            String              @db.NVarChar(64)
+  updatedby            String?             @db.NVarChar(64)
+  log_inst             Int                 @default(1, map: "DF_m_company_log_inst")
+  accounting_period    accounting_period[]
+  m_company_gl_posting gl_posting[]
+  m_company_invoice    invoice[]
+  m_country            m_country           @relation(fields: [country_code], references: [country_code], onUpdate: NoAction, map: "FK_m_company_country")
+  m_currency           m_currency          @relation(fields: [base_currency], references: [currency_code], onUpdate: NoAction, map: "FK_m_company_currency")
+  m_country_pack       m_country_pack      @relation(fields: [country_pack_id], references: [country_pack_id], onUpdate: NoAction, map: "FK_m_company_pack")
+  m_exchange_rate      m_exchange_rate[]
+  m_gl_setting         m_gl_setting[]
+  m_number_sequence    m_number_sequence[]
+  m_payment_channel    m_payment_channel[]
+  m_print_template     m_print_template[]
+  m_site               m_site[]
+  m_company_payment    payment[]
+  tariff               tariff[]
 }
 
 model m_country {
@@ -1414,11 +1414,11 @@ model m_currency {
   log_inst                                                  Int                 @default(1, map: "DF_m_currency_log_inst")
   approval_request                                          approval_request[]
   cashier_shift                                             cashier_shift[]
-  charge                                                    charge[]
+  m_currency_charge                                         charge[]
   customs_ref                                               customs_ref[]
   disbursement                                              disbursement[]
-  invoice_invoice_base_currencyTom_currency                 invoice[]           @relation("invoice_base_currencyTom_currency")
-  invoice_invoice_currencyTom_currency                      invoice[]           @relation("invoice_currencyTom_currency")
+  m_currency_invoice_base_currency                          invoice[]           @relation("m_currency_invoice_base_currency")
+  m_currency_invoice_currency                               invoice[]           @relation("m_currency_invoice_currency")
   labour_contractor                                         labour_contractor[]
   m_approval_policy                                         m_approval_policy[]
   m_company                                                 m_company[]
@@ -1428,7 +1428,7 @@ model m_currency {
   m_party_m_currency_default                                m_party[]           @relation("m_party_default_currencyTom_currency")
   m_payment_channel                                         m_payment_channel[]
   m_role_permission                                         m_role_permission[]
-  payment                                                   payment[]
+  m_currency_payment                                        payment[]
   refund                                                    refund[]
   repair_estimate                                           repair_estimate[]
   tariff                                                    tariff[]
@@ -2223,14 +2223,14 @@ model m_site {
   appointment             appointment[]
   approval_delegation     approval_delegation[]
   approval_request        approval_request[]
-  billable_event          billable_event[]
+  m_site_billable_event   billable_event[]
   cashier_shift           cashier_shift[]
   consignment             consignment[]
   disbursement            disbursement[]
   document                document[]
   exception_case          exception_case[]
   handling_job            handling_job[]
-  invoice                 invoice[]
+  m_site_invoice          invoice[]
   kpi_daily               kpi_daily[]
   labour_contractor       labour_contractor[]
   m_appointment_slot_rule m_appointment_slot_rule[]
@@ -2254,7 +2254,7 @@ model m_site {
   move_order              move_order[]
   notification            notification[]
   occupancy_forecast      occupancy_forecast[]
-  payment                 payment[]
+  m_site_payment          payment[]
   release_order           release_order[]
   repair_estimate         repair_estimate[]
   report_run              report_run[]
@@ -2285,25 +2285,25 @@ model m_site_facility {
 }
 
 model m_tax_code {
-  tax_code_id       Int            @id(map: "PK_m_tax_code") @default(autoincrement())
-  tax_code          String         @db.VarChar(20)
-  tax_name          String         @db.NVarChar(80)
-  country_code      String         @db.Char(2)
-  rate_pct          Decimal        @db.Decimal(6, 3)
-  tax_treatment     String         @db.VarChar(12)
-  fiscal_tax_class  String?        @db.VarChar(10)
-  output_gl_account String?        @db.VarChar(30)
-  effective_from    DateTime       @db.Date
-  effective_to      DateTime?      @db.Date
-  is_active         Boolean        @default(true, map: "DF_m_tax_code_active")
-  createdate        DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_m_tax_code_createdate")
-  updatedate        DateTime?
-  createdby         String         @db.NVarChar(64)
-  updatedby         String?        @db.NVarChar(64)
-  log_inst          Int            @default(1, map: "DF_m_tax_code_log_inst")
-  charge            charge[]
-  invoice_line      invoice_line[]
-  m_country         m_country      @relation(fields: [country_code], references: [country_code], onUpdate: NoAction, map: "FK_m_tax_code_country")
+  tax_code_id             Int            @id(map: "PK_m_tax_code") @default(autoincrement())
+  tax_code                String         @db.VarChar(20)
+  tax_name                String         @db.NVarChar(80)
+  country_code            String         @db.Char(2)
+  rate_pct                Decimal        @db.Decimal(6, 3)
+  tax_treatment           String         @db.VarChar(12)
+  fiscal_tax_class        String?        @db.VarChar(10)
+  output_gl_account       String?        @db.VarChar(30)
+  effective_from          DateTime       @db.Date
+  effective_to            DateTime?      @db.Date
+  is_active               Boolean        @default(true, map: "DF_m_tax_code_active")
+  createdate              DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_m_tax_code_createdate")
+  updatedate              DateTime?
+  createdby               String         @db.NVarChar(64)
+  updatedby               String?        @db.NVarChar(64)
+  log_inst                Int            @default(1, map: "DF_m_tax_code_log_inst")
+  m_tax_code_charge       charge[]
+  m_tax_code_invoice_line invoice_line[]
+  m_country               m_country      @relation(fields: [country_code], references: [country_code], onUpdate: NoAction, map: "FK_m_tax_code_country")
 
   @@unique([tax_code, effective_from], map: "UQ_m_tax_code")
 }
@@ -2721,66 +2721,66 @@ model outbox_event {
 }
 
 model payment {
-  payment_id             BigInt               @id(map: "PK_payment") @default(autoincrement())
-  company_id             Int
-  site_id                Int
-  receipt_no             String               @db.VarChar(30)
-  party_id               Int
-  payment_channel_id     Int
-  external_ref           String?              @db.VarChar(60)
-  currency               String               @db.Char(3)
-  amount                 Decimal              @db.Decimal(19, 4)
-  exchange_rate          Decimal              @default(1, map: "DF_payment_fx") @db.Decimal(19, 8)
-  amount_base            Decimal              @db.Decimal(19, 4)
-  amount_allocated       Decimal              @default(0, map: "DF_payment_allocated") @db.Decimal(19, 4)
-  unallocated            Decimal?             @db.Decimal(20, 4)
-  received_at            DateTime
-  value_date             DateTime?            @db.Date
-  status                 String               @default("RECEIVED", map: "DF_payment_status") @db.VarChar(10)
-  cashier_shift_id       BigInt?
-  proof_document_id      BigInt?
-  reversal_of_payment_id BigInt?
-  reason                 String?              @db.NVarChar(300)
-  accounting_period_id   Int?
-  createdate             DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_payment_createdate")
-  updatedate             DateTime?
-  createdby              String               @db.NVarChar(64)
-  updatedby              String?              @db.NVarChar(64)
-  log_inst               Int                  @default(1, map: "DF_payment_log_inst")
-  m_payment_channel      m_payment_channel    @relation(fields: [payment_channel_id], references: [payment_channel_id], onUpdate: NoAction, map: "FK_payment_channel")
-  m_company              m_company            @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_payment_company")
-  m_currency             m_currency           @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_payment_currency")
-  m_party_payment        m_party              @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_payment_party")
-  accounting_period      accounting_period?   @relation(fields: [accounting_period_id], references: [accounting_period_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_period")
-  document               document?            @relation(fields: [proof_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_proof")
-  payment                payment?             @relation("paymentTopayment", fields: [reversal_of_payment_id], references: [payment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_reversal")
-  other_payment          payment[]            @relation("paymentTopayment")
-  cashier_shift          cashier_shift?       @relation(fields: [cashier_shift_id], references: [cashier_shift_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_shift")
-  m_site                 m_site               @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_payment_site")
-  payment_allocation     payment_allocation[]
-  refund                 refund[]
+  payment_id                 BigInt               @id(map: "PK_payment") @default(autoincrement())
+  company_id                 Int
+  site_id                    Int
+  receipt_no                 String               @db.VarChar(30)
+  party_id                   Int
+  payment_channel_id         Int
+  external_ref               String?              @db.VarChar(60)
+  currency                   String               @db.Char(3)
+  amount                     Decimal              @db.Decimal(19, 4)
+  exchange_rate              Decimal              @default(1, map: "DF_payment_fx") @db.Decimal(19, 8)
+  amount_base                Decimal              @db.Decimal(19, 4)
+  amount_allocated           Decimal              @default(0, map: "DF_payment_allocated") @db.Decimal(19, 4)
+  unallocated                Decimal?             @db.Decimal(20, 4)
+  received_at                DateTime
+  value_date                 DateTime?            @db.Date
+  status                     String               @default("RECEIVED", map: "DF_payment_status") @db.VarChar(10)
+  cashier_shift_id           BigInt?
+  proof_document_id          BigInt?
+  reversal_of_payment_id     BigInt?
+  reason                     String?              @db.NVarChar(300)
+  accounting_period_id       Int?
+  createdate                 DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_payment_createdate")
+  updatedate                 DateTime?
+  createdby                  String               @db.NVarChar(64)
+  updatedby                  String?              @db.NVarChar(64)
+  log_inst                   Int                  @default(1, map: "DF_payment_log_inst")
+  m_payment_channel          m_payment_channel    @relation(fields: [payment_channel_id], references: [payment_channel_id], onUpdate: NoAction, map: "FK_payment_channel")
+  m_company_payment          m_company            @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_payment_company")
+  m_currency_payment         m_currency           @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_payment_currency")
+  m_party_payment            m_party              @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_payment_party")
+  accounting_period_payment  accounting_period?   @relation(fields: [accounting_period_id], references: [accounting_period_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_period")
+  document                   document?            @relation(fields: [proof_document_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_proof")
+  payment                    payment?             @relation("paymentTopayment", fields: [reversal_of_payment_id], references: [payment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_reversal")
+  other_payment              payment[]            @relation("paymentTopayment")
+  cashier_shift              cashier_shift?       @relation(fields: [cashier_shift_id], references: [cashier_shift_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_payment_shift")
+  m_site_payment             m_site               @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_payment_site")
+  payment_payment_allocation payment_allocation[]
+  refund                     refund[]
 
   @@unique([company_id, receipt_no], map: "UQ_payment_receipt")
   @@index([party_id, received_at], map: "IX_payment_party")
 }
 
 model payment_allocation {
-  payment_allocation_id BigInt    @id(map: "PK_payment_allocation") @default(autoincrement())
-  payment_id            BigInt
-  invoice_id            BigInt
-  amount                Decimal   @db.Decimal(19, 4)
-  amount_invoice_ccy    Decimal   @db.Decimal(19, 4)
-  fx_difference_base    Decimal   @default(0, map: "DF_pa_fx_diff") @db.Decimal(19, 4)
-  allocated_at          DateTime
-  reversed_at           DateTime?
-  reversed_reason       String?   @db.NVarChar(200)
-  createdate            DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_payment_allocation_createdate")
-  updatedate            DateTime?
-  createdby             String    @db.NVarChar(64)
-  updatedby             String?   @db.NVarChar(64)
-  log_inst              Int       @default(1, map: "DF_payment_allocation_log_inst")
-  invoice               invoice   @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_pa_invoice")
-  payment               payment   @relation(fields: [payment_id], references: [payment_id], onUpdate: NoAction, map: "FK_pa_payment")
+  payment_allocation_id      BigInt    @id(map: "PK_payment_allocation") @default(autoincrement())
+  payment_id                 BigInt
+  invoice_id                 BigInt
+  amount                     Decimal   @db.Decimal(19, 4)
+  amount_invoice_ccy         Decimal   @db.Decimal(19, 4)
+  fx_difference_base         Decimal   @default(0, map: "DF_pa_fx_diff") @db.Decimal(19, 4)
+  allocated_at               DateTime
+  reversed_at                DateTime?
+  reversed_reason            String?   @db.NVarChar(200)
+  createdate                 DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_payment_allocation_createdate")
+  updatedate                 DateTime?
+  createdby                  String    @db.NVarChar(64)
+  updatedby                  String?   @db.NVarChar(64)
+  log_inst                   Int       @default(1, map: "DF_payment_allocation_log_inst")
+  invoice_payment_allocation invoice   @relation(fields: [invoice_id], references: [invoice_id], onUpdate: NoAction, map: "FK_pa_invoice")
+  payment_payment_allocation payment   @relation(fields: [payment_id], references: [payment_id], onUpdate: NoAction, map: "FK_pa_payment")
 
   @@index([payment_id], map: "IX_pa_payment")
 }
@@ -2941,7 +2941,7 @@ model release_order {
   updatedby                          String?                   @db.NVarChar(64)
   log_inst                           Int                       @default(1, map: "DF_release_order_log_inst")
   appointment                        appointment[]
-  invoice                            invoice[]
+  release_order_invoice              invoice[]
   release_check                      release_check[]
   consignment                        consignment?              @relation(fields: [consignment_id], references: [consignment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_consignment")
   m_driver                           m_driver?                 @relation(fields: [driver_id], references: [driver_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_release_order_driver")
@@ -2977,20 +2977,20 @@ model release_order_unit {
 }
 
 model release_validity_change {
-  release_validity_change_id BigInt            @id(map: "PK_release_validity_change") @default(autoincrement())
-  release_order_id           BigInt
-  change_kind                String            @db.VarChar(12)
-  old_valid_to               DateTime?
-  new_valid_to               DateTime
-  invoice_id                 BigInt?
-  approval_request_id        BigInt?
-  reason                     String?           @db.NVarChar(300)
-  changed_at                 DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_rvc_at")
-  createdate                 DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_rvc_created")
-  createdby                  String            @db.NVarChar(64)
-  approval_request           approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_rvc_approval")
-  invoice                    invoice?          @relation(fields: [invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_rvc_invoice")
-  release_order              release_order     @relation(fields: [release_order_id], references: [release_order_id], onUpdate: NoAction, map: "FK_rvc_order")
+  release_validity_change_id      BigInt            @id(map: "PK_release_validity_change") @default(autoincrement())
+  release_order_id                BigInt
+  change_kind                     String            @db.VarChar(12)
+  old_valid_to                    DateTime?
+  new_valid_to                    DateTime
+  invoice_id                      BigInt?
+  approval_request_id             BigInt?
+  reason                          String?           @db.NVarChar(300)
+  changed_at                      DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_rvc_at")
+  createdate                      DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_rvc_created")
+  createdby                       String            @db.NVarChar(64)
+  approval_request                approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_rvc_approval")
+  invoice_release_validity_change invoice?          @relation(fields: [invoice_id], references: [invoice_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_rvc_invoice")
+  release_order                   release_order     @relation(fields: [release_order_id], references: [release_order_id], onUpdate: NoAction, map: "FK_rvc_order")
 
   @@index([release_order_id, changed_at], map: "IX_rvc_order")
 }
@@ -3156,87 +3156,87 @@ model sync_state {
 }
 
 model tariff {
-  tariff_id           Int               @id(map: "PK_tariff") @default(autoincrement())
-  tariff_code         String            @db.VarChar(30)
-  tariff_name         String            @db.NVarChar(120)
-  tariff_level        String            @db.VarChar(8)
-  company_id          Int
-  site_id             Int?
-  party_id            Int?
-  cargo_regime_id     Int?
-  currency            String            @db.Char(3)
-  version_no          Int               @default(1, map: "DF_tariff_version") @db.SmallInt
-  effective_from      DateTime          @db.Date
-  effective_to        DateTime?         @db.Date
-  status              String            @default("DRAFT", map: "DF_tariff_status") @db.VarChar(16)
-  approval_request_id BigInt?
-  regulator_ref       String?           @db.NVarChar(100)
-  remarks             String?           @db.NVarChar(400)
-  createdate          DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_tariff_createdate")
-  updatedate          DateTime?
-  createdby           String            @db.NVarChar(64)
-  updatedby           String?           @db.NVarChar(64)
-  log_inst            Int               @default(1, map: "DF_tariff_log_inst")
-  charge              charge[]
-  approval_request    approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_approval")
-  m_company           m_company         @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_tariff_company")
-  m_currency          m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_tariff_currency")
-  m_party_tariff      m_party?          @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_tariff_party")
-  m_cargo_regime      m_cargo_regime?   @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_regime")
-  m_site              m_site?           @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_site")
-  tariff_rule         tariff_rule[]
+  tariff_id               Int               @id(map: "PK_tariff") @default(autoincrement())
+  tariff_code             String            @db.VarChar(30)
+  tariff_name             String            @db.NVarChar(120)
+  tariff_level            String            @db.VarChar(8)
+  company_id              Int
+  site_id                 Int?
+  party_id                Int?
+  cargo_regime_id         Int?
+  currency                String            @db.Char(3)
+  version_no              Int               @default(1, map: "DF_tariff_version") @db.SmallInt
+  effective_from          DateTime          @db.Date
+  effective_to            DateTime?         @db.Date
+  status                  String            @default("DRAFT", map: "DF_tariff_status") @db.VarChar(16)
+  approval_request_id     BigInt?
+  regulator_ref           String?           @db.NVarChar(100)
+  remarks                 String?           @db.NVarChar(400)
+  createdate              DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_tariff_createdate")
+  updatedate              DateTime?
+  createdby               String            @db.NVarChar(64)
+  updatedby               String?           @db.NVarChar(64)
+  log_inst                Int               @default(1, map: "DF_tariff_log_inst")
+  tariff_charge           charge[]
+  approval_request_tariff approval_request? @relation(fields: [approval_request_id], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_approval")
+  m_company               m_company         @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_tariff_company")
+  m_currency              m_currency        @relation(fields: [currency], references: [currency_code], onUpdate: NoAction, map: "FK_tariff_currency")
+  m_party_tariff          m_party?          @relation(fields: [party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_tariff_party")
+  m_cargo_regime          m_cargo_regime?   @relation(fields: [cargo_regime_id], references: [cargo_regime_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_regime")
+  m_site                  m_site?           @relation(fields: [site_id], references: [site_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_site")
+  tariff_tariff_rule      tariff_rule[]
 
   @@unique([tariff_code, version_no], map: "UQ_tariff_version")
 }
 
 model tariff_rule {
-  tariff_rule_id     Int           @id(map: "PK_tariff_rule") @default(autoincrement())
-  tariff_id          Int
-  charge_code_id     Int
-  basis              String        @db.VarChar(14)
-  unit_category      String?       @db.VarChar(10)
-  unit_type_id       Int?
-  length_ft          Int?          @db.TinyInt
-  vehicle_class      String?       @db.VarChar(12)
-  full_empty         String?       @db.Char(1)
-  is_reefer          Boolean?
-  is_hazardous       Boolean?
-  clock_start        String?       @db.VarChar(10)
-  free_days          Int?          @db.SmallInt
-  free_excl_sundays  Boolean       @default(false, map: "DF_tariff_rule_excl_sun")
-  free_excl_holidays Boolean       @default(false, map: "DF_tariff_rule_excl_hol")
-  flat_rate          Decimal?      @db.Decimal(19, 6)
-  min_charge         Decimal?      @db.Decimal(19, 4)
-  max_charge         Decimal?      @db.Decimal(19, 4)
-  tax_code           String?       @db.VarChar(20)
-  sort_order         Int           @default(0, map: "DF_tariff_rule_sort") @db.SmallInt
-  createdate         DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_tariff_rule_createdate")
-  updatedate         DateTime?
-  createdby          String        @db.NVarChar(64)
-  updatedby          String?       @db.NVarChar(64)
-  log_inst           Int           @default(1, map: "DF_tariff_rule_log_inst")
-  charge             charge[]
-  m_charge_code      m_charge_code @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_tariff_rule_charge")
-  tariff             tariff        @relation(fields: [tariff_id], references: [tariff_id], onUpdate: NoAction, map: "FK_tariff_rule_tariff")
-  m_unit_type        m_unit_type?  @relation(fields: [unit_type_id], references: [unit_type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_rule_unit_type")
-  tariff_slab        tariff_slab[]
+  tariff_rule_id            Int           @id(map: "PK_tariff_rule") @default(autoincrement())
+  tariff_id                 Int
+  charge_code_id            Int
+  basis                     String        @db.VarChar(14)
+  unit_category             String?       @db.VarChar(10)
+  unit_type_id              Int?
+  length_ft                 Int?          @db.TinyInt
+  vehicle_class             String?       @db.VarChar(12)
+  full_empty                String?       @db.Char(1)
+  is_reefer                 Boolean?
+  is_hazardous              Boolean?
+  clock_start               String?       @db.VarChar(10)
+  free_days                 Int?          @db.SmallInt
+  free_excl_sundays         Boolean       @default(false, map: "DF_tariff_rule_excl_sun")
+  free_excl_holidays        Boolean       @default(false, map: "DF_tariff_rule_excl_hol")
+  flat_rate                 Decimal?      @db.Decimal(19, 6)
+  min_charge                Decimal?      @db.Decimal(19, 4)
+  max_charge                Decimal?      @db.Decimal(19, 4)
+  tax_code                  String?       @db.VarChar(20)
+  sort_order                Int           @default(0, map: "DF_tariff_rule_sort") @db.SmallInt
+  createdate                DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_tariff_rule_createdate")
+  updatedate                DateTime?
+  createdby                 String        @db.NVarChar(64)
+  updatedby                 String?       @db.NVarChar(64)
+  log_inst                  Int           @default(1, map: "DF_tariff_rule_log_inst")
+  tariff_rule_charge        charge[]
+  m_charge_code_tariff_rule m_charge_code @relation(fields: [charge_code_id], references: [charge_code_id], onUpdate: NoAction, map: "FK_tariff_rule_charge")
+  tariff_tariff_rule        tariff        @relation(fields: [tariff_id], references: [tariff_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_tariff_rule_tariff")
+  m_unit_type               m_unit_type?  @relation(fields: [unit_type_id], references: [unit_type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tariff_rule_unit_type")
+  tariff_rule_tariff_slab   tariff_slab[]
 
   @@index([tariff_id, charge_code_id], map: "IX_tariff_rule_tariff")
 }
 
 model tariff_slab {
-  tariff_slab_id Int         @id(map: "PK_tariff_slab") @default(autoincrement())
-  tariff_rule_id Int
-  from_qty       Decimal     @db.Decimal(12, 3)
-  to_qty         Decimal?    @db.Decimal(12, 3)
-  rate           Decimal     @db.Decimal(19, 6)
-  createdate     DateTime    @default(dbgenerated("sysutcdatetime()"), map: "DF_tariff_slab_createdate")
-  updatedate     DateTime?
-  createdby      String      @db.NVarChar(64)
-  updatedby      String?     @db.NVarChar(64)
-  log_inst       Int         @default(1, map: "DF_tariff_slab_log_inst")
-  charge         charge[]
-  tariff_rule    tariff_rule @relation(fields: [tariff_rule_id], references: [tariff_rule_id], onUpdate: NoAction, map: "FK_tariff_slab_rule")
+  tariff_slab_id          Int         @id(map: "PK_tariff_slab") @default(autoincrement())
+  tariff_rule_id          Int
+  from_qty                Decimal     @db.Decimal(12, 3)
+  to_qty                  Decimal?    @db.Decimal(12, 3)
+  rate                    Decimal     @db.Decimal(19, 6)
+  createdate              DateTime    @default(dbgenerated("sysutcdatetime()"), map: "DF_tariff_slab_createdate")
+  updatedate              DateTime?
+  createdby               String      @db.NVarChar(64)
+  updatedby               String?     @db.NVarChar(64)
+  log_inst                Int         @default(1, map: "DF_tariff_slab_log_inst")
+  tariff_slab_charge      charge[]
+  tariff_rule_tariff_slab tariff_rule @relation(fields: [tariff_rule_id], references: [tariff_rule_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_tariff_slab_rule")
 
   @@unique([tariff_rule_id, from_qty], map: "UQ_tariff_slab")
 }
@@ -3322,7 +3322,7 @@ model truck_visit {
   updatedby                               String?                  @db.NVarChar(64)
   log_inst                                Int                      @default(1, map: "DF_truck_visit_log_inst")
   appointment                             appointment[]
-  billable_event                          billable_event[]
+  truck_visit_billable_event              billable_event[]
   device_read                             device_read[]
   exception_case                          exception_case[]
   inspection                              inspection[]
@@ -3423,7 +3423,7 @@ model unit_stay {
   createdby                       String                @db.NVarChar(64)
   updatedby                       String?               @db.NVarChar(64)
   log_inst                        Int                   @default(1, map: "DF_unit_stay_log_inst")
-  unit_stay_billable_events       billable_event[]
+  unit_stay_billable_event        billable_event[]
   unit_stay_customs_refs          customs_ref[]
   unit_stay_disbursements         disbursement[]
   unit_stay_dwell_predictions     dwell_prediction[]
@@ -3433,7 +3433,7 @@ model unit_stay {
   unit_stay_handling_job_lines    handling_job_line[]
   unit_stay_holds                 hold[]
   unit_stay_inspections           inspection[]
-  unit_stay_invoice_lines         invoice_line[]
+  unit_stay_invoice_line          invoice_line[]
   unit_stay_key_custody           key_custody?
   unit_stay_lot_balances          lot_balance?
   unit_stay_lot_deliveries        lot_delivery[]

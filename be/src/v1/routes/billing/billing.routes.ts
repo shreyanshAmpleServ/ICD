@@ -16,13 +16,13 @@ import {
 export const billingRoutes = Router();
 
 // Charges
-billingRoutes.get('/charges', requireSite(false), requirePermission('billing.invoice.view'), billingChargesController.getCharges);
-billingRoutes.get('/charges/open', requireSite(false), requirePermission('billing.invoice.view'), billingChargesController.getOpenCharges);
+billingRoutes.get('/charges', requireSite(false), billingChargesController.getCharges);
+billingRoutes.get('/charges/open', requireSite(false), billingChargesController.getOpenCharges);
 
 // Invoices
-billingRoutes.get('/invoices', requireSite(false), requirePermission('billing.invoice.view'), billingInvoicesController.getInvoices);
-billingRoutes.post('/invoices', requireSite(false), requirePermission('billing.invoice.view', 'DO'), billingInvoicesController.createInvoice);
-billingRoutes.get('/invoices/:invoiceId', requireSite(false), requirePermission('billing.invoice.view'), billingInvoicesController.getInvoiceById);
+billingRoutes.get('/invoices', requireSite(false), billingInvoicesController.getInvoices);
+billingRoutes.post('/invoices', requireSite(false), billingInvoicesController.createInvoice);
+billingRoutes.get('/invoices/:invoiceId', requireSite(false), billingInvoicesController.getInvoiceById);
 
 // Cashier & Payments
 billingRoutes.get('/payments', requireSite(false), requirePermission('payment.record'), billingCashierController.getPayments);
@@ -39,7 +39,7 @@ billingRoutes.get('/disbursements', requireSite(false), requirePermission('finan
 billingRoutes.post('/disbursements', requireSite(false), requirePermission('finance.disbursement.record', 'DO'), billingDisbursementsController.createDisbursement);
 
 // Statements
-billingRoutes.get('/statements', requireSite(false), requirePermission('billing.invoice.view'), billingStatementsController.getStatements);
+billingRoutes.get('/statements', requireSite(false), billingStatementsController.getStatements);
 
 // Tariffs & Rates
 billingRoutes.get('/tariffs', requireSite(false), requirePermission('billing.rates.view'), billingTariffsController.getTariffs);

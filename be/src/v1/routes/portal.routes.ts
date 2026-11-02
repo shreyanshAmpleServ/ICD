@@ -29,7 +29,6 @@ router.get(
 router.get(
   "/portal/invoices",
   requireSite(false),
-  requirePermission("billing.invoice.view"),
   validateQuery(portalQuerySchema),
   asyncHandler(portalController.getInvoices),
 );
@@ -123,7 +122,6 @@ router.post(
 router.post(
   "/portal/invoices/:invoiceId/pay",
   requireSite(false),
-  requirePermission("billing.invoice.view"),
   validateParams(numericIdParamSchema("invoiceId")),
   validateBody(portalPaymentSchema),
   asyncHandler(portalController.payInvoice),
@@ -132,7 +130,6 @@ router.post(
 router.post(
   "/invoices/:invoiceId:pay",
   requireSite(false),
-  requirePermission("billing.invoice.view"),
   validateParams(numericIdParamSchema("invoiceId")),
   validateBody(portalPaymentSchema),
   asyncHandler(portalController.payInvoice),

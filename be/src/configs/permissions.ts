@@ -39,13 +39,7 @@ export const ROLES: Record<string, RoleDef> = {
   ICD_ADMIN: {
     code: 'ICD_ADMIN',
     name: 'ICD administrator',
-    grants: {
-      'admin.site.manage': 'DO', 'admin.yard.design': 'DO', 'admin.gate.configure': 'DO',
-      'admin.users.manage': 'DO', 'admin.roles.manage': 'DO', 'admin.config.manage': 'DO',
-      'admin.device.manage': 'DO', 'admin.audit.view': 'VIEW', 'masters.view': 'VIEW',
-      'masters.local.edit': 'DO', 'device.configure': 'DO', 'integration.monitor': 'DO',
-      'portal.invite': 'DO', 'appointment.manage': 'DO', 'appointment.book': 'DO'
-    }
+    grants: ALL_PERMISSIONS.reduce((acc, p) => ({ ...acc, [p]: 'DO' }), {})
   },
   GATE_OFFICER: {
     code: 'GATE_OFFICER',
