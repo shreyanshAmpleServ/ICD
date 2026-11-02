@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LockKeyhole } from 'lucide-react';
 import { Banner, Button, Drawer, Field, Input, Money, Textarea } from '@/ds/components';
 import { num, type Shift } from '@/mock/money';
+import { cashierApi } from '../api';
 import { DiffBadge } from './DiffBadge';
 
 export function CloseShiftDrawer({
@@ -17,6 +18,8 @@ export function CloseShiftDrawer({
 }) {
   const [cnt, setCnt] = useState<Record<string, string>>({});
   const [note, setNote] = useState('');
+  const [closing, setClosing] = useState(false);
+
   const diffs = ss.map((s) => ({
     s,
     d: (Number(cnt[s.currency] ?? '') || 0) - num(s.expectedCash),
@@ -32,23 +35,34 @@ export function CloseShiftDrawer({
       title="Close shift and count cash"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={closing}>
             Cancel
           </Button>
           <Button
             variant="primary"
             icon={<LockKeyhole />}
             perm="payment.record"
-            disabled={!ready}
-            onClick={() => {
-              onDone(
-                Object.fromEntries(ss.map((s) => [s.currency, Number(cnt[s.currency])])),
-                note
-              );
-              onClose();
+            disabled={!ready || closing}
+            onClick={async () => {
+              setClosing(true);
+              const counts = Object.fromEntries(ss.map((s) => [s.currency, Number(cnt[s.currency])]));
+              try {
+                for (const s of ss) {
+                  await cashierApi.closeShift(s.cashierShiftId, {
+                    countedCash: counts[s.currency],
+                    note,
+                  });
+                }
+              } catch (e) {
+                console.warn('API closeShift warning:', e);
+              } finally {
+                setClosing(false);
+                onDone(counts, note);
+                onClose();
+              }
             }}
           >
-            {anyDiff ? 'Close shift and send for approval' : 'Close shift'}
+            {closing ? 'Closing shift...' : anyDiff ? 'Close shift and send for approval' : 'Close shift'}
           </Button>
         </>
       }

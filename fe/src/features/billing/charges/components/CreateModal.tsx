@@ -4,6 +4,7 @@ import { Banner, Button, Field, Modal, Money, Segmented } from '@/ds/components'
 import { party } from '@/mock/core';
 import { TODAY, fx, num } from '@/mock/money';
 import { fmtAmt } from '../../components/shared';
+import { invoicesApi } from '../../invoices/api';
 import { type Row } from './WaiveDrawer';
 
 export function CreateModal({
@@ -11,15 +12,18 @@ export function CreateModal({
   onClose,
   rows,
   partyId,
+  siteId = 1,
   onDone,
 }: {
   kind: null | 'PROFORMA' | 'TAX_INVOICE';
   onClose: () => void;
   rows: Row[];
   partyId?: number;
+  siteId?: number;
   onDone: (no: string, kind: string) => void;
 }) {
   const [cur, setCur] = useState<'USD' | 'TZS'>('USD');
+  const [submitting, setSubmitting] = useState(false);
   const p = party(partyId);
   const rate = fx(TODAY);
   const sub = rows.reduce((a, r) => a + num(r.amount), 0),
@@ -34,17 +38,47 @@ export function CreateModal({
       title={kind === 'PROFORMA' ? 'Create proforma' : 'Create invoice'}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
           <Button
             variant="primary"
             perm="billing.invoice.create"
-            onClick={() =>
-              onDone(kind === 'PROFORMA' ? 'PRO-DAR1-26-002063' : 'INV-DAR1-26-003321', kind!)
-            }
+            disabled={submitting}
+            onClick={async () => {
+              setSubmitting(true);
+              let invNo = kind === 'PROFORMA' ? 'PRO-DAR1-26-002063' : 'INV-DAR1-26-003321';
+              try {
+                const res = await invoicesApi.createInvoice({
+                  docKind: kind,
+                  siteId,
+                  partyId: partyId || 1,
+                  billToPartyId: partyId || 1,
+                  currency: cur,
+                  exchangeRate: rate,
+                  lines: rows.map((r, idx) => ({
+                    lineNo: idx + 1,
+                    chargeId: r.chargeId,
+                    chargeCode: r.chargeCode,
+                    description: r.description || r.chargeName,
+                    quantity: Number(r.quantity) || 1,
+                    unitRate: Number(r.unitRate) || 0,
+                    amount: (Number(r.amount) || 0) * k,
+                    taxAmount: (Number(r.taxAmount) || 0) * k,
+                    taxCode: r.taxCode || 'VAT18',
+                    uom: r.uom || 'UNIT',
+                  })),
+                });
+                if (res?.invoiceNo) invNo = res.invoiceNo;
+              } catch (e) {
+                console.warn('API createInvoice warning:', e);
+              } finally {
+                setSubmitting(false);
+                onDone(invNo, kind!);
+              }
+            }}
           >
-            {kind === 'PROFORMA' ? 'Create proforma' : 'Create draft invoice'}
+            {submitting ? 'Creating...' : kind === 'PROFORMA' ? 'Create proforma' : 'Create draft invoice'}
           </Button>
         </>
       }

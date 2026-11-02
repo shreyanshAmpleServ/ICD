@@ -171,7 +171,11 @@ export class ChargesController {
       }
 
       // Dynamic Fallback store when DB is in standby
-      let fallbackItems: ChargeItem[] = (siteId ? mockOpenCharges(siteId) : mockCharges).map((c: any) => ({
+      let rawFallback = siteId ? mockOpenCharges(siteId) : mockCharges;
+      if (!rawFallback || rawFallback.length === 0) {
+        rawFallback = mockCharges;
+      }
+      let fallbackItems: ChargeItem[] = rawFallback.map((c: any) => ({
         chargeId: c.chargeId,
         key: c.key || `chg-${c.chargeId}`,
         unitStayId: c.unitStayId || null,
@@ -363,13 +367,43 @@ export class ChargesController {
             tax_rate_pct: taxRate,
             tax_amount: taxAmt,
             charge_kind: 'MANUAL',
-            status: 'OPEN',
+            status: 'MANUAL_PENDING',
             createdby: (req as any).userSub || 'system',
           },
         });
 
+        const createdResult: ChargeItem = {
+          chargeId: Number(newCharge.charge_id),
+          key: `m-${Date.now()}-${chargeCode || 'WEIGHING'}`,
+          unitStayId: unitStayId ? Number(unitStayId) : null,
+          consignmentId: consignmentId ? Number(consignmentId) : null,
+          consignmentRef: getMockConsignment(Number(consignmentId))?.refNo || null,
+          billToPartyId: Number(billToPartyId || 1),
+          partyName: getMockParty(Number(billToPartyId))?.partyName || `Party #${billToPartyId}`,
+          chargeCode: chargeCode || 'WEIGHING',
+          chargeName: CHARGE_NAMES[chargeCode] || 'Manual charge',
+          description: description || `${CHARGE_NAMES[chargeCode] || 'Charge'} (manual)`,
+          serviceFrom: req.body.serviceDate || new Date().toISOString().slice(0, 10),
+          serviceTo: req.body.serviceDate || new Date().toISOString().slice(0, 10),
+          quantity: String(quantity || 1),
+          uom: 'visit',
+          unitRate: String(unitRate || numAmount),
+          amount: String(numAmount),
+          taxCode: taxCode || 'VAT18',
+          taxPct: taxRate,
+          taxAmount: String(taxAmt.toFixed(2)),
+          how: ['Manual charge requested for approval'],
+          kind: 'MANUAL',
+          status: 'MANUAL_PENDING' as any,
+          ratedAt: new Date().toISOString(),
+        };
+
+        // Also add to in-memory fallback list so it appears everywhere immediately
+        mockCharges.unshift(createdResult as any);
+
         return res.status(201).json({
           success: true,
+          charge: createdResult,
           chargeId: Number(newCharge.charge_id),
           amount: Number(newCharge.amount),
           status: newCharge.status,
@@ -379,35 +413,44 @@ export class ChargesController {
 
       // Fallback
       const newId = 70250 + mockCharges.length;
+      const numAmount = Number(amount || 25.0);
+      const taxRate = 18.0;
+      const taxAmt = numAmount * (taxRate / 100);
+
       const createdFallback: any = {
         chargeId: newId,
         key: `man-${newId}`,
+        siteId: req.body.siteId ? Number(req.body.siteId) : 1,
         unitStayId: unitStayId ? Number(unitStayId) : null,
         consignmentId: consignmentId ? Number(consignmentId) : null,
+        consignmentRef: getMockConsignment(Number(consignmentId))?.refNo || null,
         billToPartyId: Number(billToPartyId || 1),
+        partyName: getMockParty(Number(billToPartyId))?.partyName || `Party #${billToPartyId}`,
         chargeCode: chargeCode || 'WEIGHING',
         chargeName: CHARGE_NAMES[chargeCode] || 'Manual charge',
-        description: description || 'Manual charge ticket',
-        serviceFrom: new Date().toISOString().slice(0, 10),
-        serviceTo: new Date().toISOString().slice(0, 10),
+        description: description || `${CHARGE_NAMES[chargeCode] || 'Charge'} (manual)`,
+        serviceFrom: req.body.serviceDate || new Date().toISOString().slice(0, 10),
+        serviceTo: req.body.serviceDate || new Date().toISOString().slice(0, 10),
         quantity: String(quantity || 1),
         uom: 'visit',
-        unitRate: String(unitRate || amount || 25.0),
-        amount: String(amount || 25.0),
+        unitRate: String(unitRate || numAmount),
+        amount: String(numAmount),
         taxCode: taxCode || 'VAT18',
-        taxPct: 18,
-        taxAmount: String((Number(amount || 25.0) * 0.18).toFixed(2)),
+        taxPct: taxRate,
+        taxAmount: String(taxAmt.toFixed(2)),
+        how: ['Manual charge requested for approval'],
         kind: 'MANUAL',
-        status: 'OPEN',
+        status: 'MANUAL_PENDING',
         ratedAt: new Date().toISOString(),
       };
-      mockCharges.push(createdFallback);
+      mockCharges.unshift(createdFallback);
 
       return res.status(201).json({
         success: true,
+        charge: createdFallback,
         chargeId: newId,
         amount: Number(createdFallback.amount),
-        status: 'OPEN',
+        status: 'MANUAL_PENDING',
       });
     } catch (err: any) {
       console.error('[ChargesController.addManualCharge] Error:', err);

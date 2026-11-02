@@ -1,4 +1,5 @@
-import { chargesController, invoicesController } from '../../v1/controllers';
+import { chargesController, invoicesController, cashierController, billingControllers } from '../../v1/controllers';
+const { billingRefundsController } = billingControllers;
 import { Router } from "express";
 import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
@@ -161,12 +162,12 @@ router.get(
       const prisma = getPrisma();
       if (prisma) {
         try {
-          const dbRates = await prisma.exchange_rates.findMany({
+          const dbRates = await (prisma as any).m_exchange_rate.findMany({
             orderBy: { exchange_rate_id: "desc" },
           });
 
           if (dbRates && dbRates.length > 0) {
-            const mapped = dbRates.map((r) => ({
+            const mapped = dbRates.map((r: any) => ({
               exchangeRateId: r.exchange_rate_id,
               baseCurrency: r.base_currency || "USD",
               quoteCurrency: r.quote_currency || "TZS",
@@ -188,7 +189,7 @@ router.get(
             }));
 
             const dbPairs = new Set(
-              mapped.map((m) => `${m.baseCurrency}_${m.quoteCurrency}`),
+              mapped.map((m: any) => `${m.baseCurrency}_${m.quoteCurrency}`),
             );
             items = [
               ...mapped,
@@ -459,7 +460,7 @@ router.get(
       const prisma = getPrisma();
       if (prisma) {
         try {
-          const dbTariffs = await prisma.tariffs.findMany({
+          const dbTariffs = await (prisma as any).tariff.findMany({
             include: {
               tariff_rules: true,
             },
@@ -467,7 +468,7 @@ router.get(
           });
 
           if (dbTariffs && dbTariffs.length > 0) {
-            const mapped = dbTariffs.map((t) => ({
+            const mapped = dbTariffs.map((t: any) => ({
               tariffId: t.tariff_id,
               tariffCode: t.tariff_code,
               tariffName: t.tariff_name,
@@ -476,7 +477,7 @@ router.get(
               status: t.is_active ? "ACTIVE" : "INACTIVE",
               effectiveFrom:
                 t.valid_from?.toISOString() || new Date().toISOString(),
-              rules: t.tariff_rules.map((r) => ({
+              rules: t.tariff_rules.map((r: any) => ({
                 ruleId: r.tariff_rule_id,
                 chargeCode: r.charge_code,
                 chargeName: r.charge_code.replace(/_/g, " "),
@@ -489,7 +490,7 @@ router.get(
               logInst: 1,
             }));
 
-            const dbCodes = new Set(mapped.map((m) => m.tariffCode));
+            const dbCodes = new Set(mapped.map((m: any) => m.tariffCode));
             items = [
               ...mapped,
               ...tariffs.filter((t) => !dbCodes.has(t.tariffCode)),
@@ -849,343 +850,25 @@ router.post(
 );
 
 // ------------------------------------------------------------------ 5. Cashier (Site-scoped)
-router.get(
-  "/cashier-shifts",
-  requireSite(false),
-  requirePermission("payment.record"),
-  async (req, res) => {
-    let items = shifts as any[];
+router.get("/cashier-shifts", requireSite(false), cashierController.getShifts);
+router.post("/cashier-shifts", requireSite(false), cashierController.openShift);
+router.get("/cashier-shifts/current", requireSite(false), cashierController.getCurrentShift);
+router.post("/cashier-shifts/:shiftId([0-9a-zA-Z_.-]+):close", requireSite(false), cashierController.closeShift);
+router.post("/cashier-shifts/:shiftId([0-9a-zA-Z_.-]+):approve", requireSite(false), cashierController.approveShift);
 
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbShifts = await prisma.cashier_shifts.findMany({
-            include: { users: true },
-            orderBy: { cashier_shift_id: "desc" },
-          });
+router.get("/payments", requireSite(false), cashierController.getPayments);
+router.post("/payments", requireSite(false), cashierController.recordPayment);
+router.get("/payments/:paymentId", requireSite(false), cashierController.getPaymentById);
+router.post("/payments/:paymentId([0-9a-zA-Z_.-]+):allocate", requireSite(false), cashierController.allocatePayment);
+router.post("/payments/:paymentId([0-9a-zA-Z_.-]+):reverse", requireSite(false), cashierController.reversePayment);
+router.get("/payments/:paymentId/receipt", requireSite(false), cashierController.getPaymentReceipt);
 
-          if (dbShifts && dbShifts.length > 0) {
-            const mapped = dbShifts.map((s) => ({
-              cashierShiftId: s.cashier_shift_id,
-              shiftNo: `SH-2026-${String(s.cashier_shift_id).padStart(4, "0")}`,
-              cashierName: s.users?.user_name || "Ashok Kumar",
-              status: s.status || "OPEN",
-              openingFloatTzs: Number(s.opening_balance || 500000),
-              openedAt: s.opened_at?.toISOString() || new Date().toISOString(),
-              closedAt: s.closed_at?.toISOString(),
-              totalCollectedTzs: 165.2 * 2650,
-              logInst: 1,
-            }));
-
-            const dbIds = new Set(mapped.map((m) => m.cashierShiftId));
-            items = [
-              ...mapped,
-              ...shifts.filter((s) => !dbIds.has(s.cashierShiftId)),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Cashier Shifts API] DB query fallback:", err.message);
-        }
-      }
-    }
-
-    res.json({ items, total: items.length, nextCursor: null });
-  },
-);
-
-router.post(
-  "/cashier-shifts",
-  requireSite(false),
-  requirePermission("payment.record", "DO"),
-  (req, res) => {
-    const newShift = {
-      cashierShiftId: shifts.length + 1,
-      shiftNo: `SH-2026-${String(shifts.length + 1).padStart(4, "0")}`,
-      cashierName: req.user?.username || "Mary T.",
-      status: "OPEN",
-      openingFloatTzs: req.body.openingFloatTzs || 250000,
-      openedAt: new Date().toISOString(),
-      totalCollectedTzs: 0,
-      logInst: 1,
-      ...req.body,
-    };
-    shifts.push(newShift as any);
-    res.status(201).json(newShift);
-  },
-);
-
-router.get(
-  "/cashier-shifts/current",
-  requireSite(false),
-  requirePermission("payment.record"),
-  (req, res) => {
-    const cur = (shifts as any[]).find((s) => s.status === "OPEN") || shifts[0];
-    res.json(cur);
-  },
-);
-
-router.post(
-  "/cashier-shifts/:cashierShiftId([0-9a-zA-Z_.-]+):close",
-  requireSite(false),
-  requirePermission("payment.record", "DO"),
-  (req, res) => {
-    const s = (shifts as any[]).find(
-      (x) => String(x.cashierShiftId) === req.params.cashierShiftId,
-    );
-    if (s) {
-      s.status = "CLOSED";
-      s.closedAt = new Date().toISOString();
-    }
-    res.json({ success: true, shift: s });
-  },
-);
-
-router.post(
-  "/cashier-shifts/:cashierShiftId([0-9a-zA-Z_.-]+):approve",
-  requireSite(false),
-  requirePermission("payment.cashup.approve", "DO"),
-  (req, res) => {
-    const s = (shifts as any[]).find(
-      (x) => String(x.cashierShiftId) === req.params.cashierShiftId,
-    );
-    if (s) {
-      s.status = "APPROVED";
-      s.approvedBy = req.user?.username || "Finance Manager";
-    }
-    res.json({ success: true, shift: s });
-  },
-);
-
-router.get(
-  "/payments",
-  requireSite(false),
-  requirePermission("payment.record"),
-  async (req, res) => {
-    let items = payments as any[];
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbPayments = await prisma.payments.findMany({
-            include: { parties: true },
-            orderBy: { payment_id: "desc" },
-          });
-
-          if (dbPayments && dbPayments.length > 0) {
-            const mapped = dbPayments.map((p) => ({
-              paymentId: p.payment_id,
-              paymentRef: p.payment_ref,
-              partyName: p.parties?.party_name || "Twiga Cement Ltd",
-              method: p.payment_channel || "BANK_TRANSFER",
-              currency: p.currency || "USD",
-              amount: Number(p.amount),
-              referenceNo: p.payment_ref,
-              status: p.status || "COMPLETED",
-              paidAt: p.paid_at?.toISOString() || new Date().toISOString(),
-              cashierName: "Ashok Kumar",
-              logInst: 1,
-            }));
-
-            const dbRefs = new Set(mapped.map((m) => m.paymentRef));
-            items = [
-              ...mapped,
-              ...payments.filter(
-                (p) =>
-                  !dbRefs.has((p as any).paymentRef || (p as any).receiptNo),
-              ),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Payments API] DB query fallback:", err.message);
-        }
-      }
-    }
-
-    res.json({ items, total: items.length, nextCursor: null });
-  },
-);
-
-router.post(
-  "/payments",
-  requireSite(false),
-  requirePermission("payment.record", "DO"),
-  (req, res) => {
-    const newPay = {
-      paymentId: payments.length + 55001,
-      paymentRef: `RCT-2026-${String(Date.now()).slice(-6)}`,
-      invoiceId: req.body.invoiceId || 3318,
-      partyName: req.body.partyName || "Customer",
-      method: req.body.method || "MPESA",
-      currency: req.body.currency || "TZS",
-      amount: req.body.amount || 1180000,
-      referenceNo: req.body.referenceNo || `REF-${Date.now()}`,
-      status: "COMPLETED",
-      paidAt: new Date().toISOString(),
-      cashierName: req.user?.username || "Mary T.",
-      logInst: 1,
-      ...req.body,
-    };
-    payments.push(newPay as any);
-    res.status(201).json(newPay);
-  },
-);
-
-router.get(
-  "/payments/:paymentId",
-  requireSite(false),
-  requirePermission("payment.record"),
-  (req, res) => {
-    const p = (payments as any[]).find(
-      (x) =>
-        String(x.paymentId) === req.params.paymentId ||
-        x.paymentRef === req.params.paymentId,
-    );
-    if (!p) return res.status(404).json({ error: "Payment record not found" });
-    res.json(p);
-  },
-);
-
-router.post(
-  "/payments/:paymentId([0-9a-zA-Z_.-]+):allocate",
-  requireSite(false),
-  requirePermission("payment.record", "DO"),
-  (req, res) => {
-    const p = (payments as any[]).find(
-      (x) => String(x.paymentId) === req.params.paymentId,
-    );
-    if (p) p.allocatedInvoiceId = req.body.invoiceId;
-    res.json({ success: true, payment: p });
-  },
-);
-
-router.post(
-  "/payments/:paymentId([0-9a-zA-Z_.-]+):reverse",
-  requireSite(false),
-  requirePermission("payment.refund", "DO"),
-  (req, res) => {
-    const p = (payments as any[]).find(
-      (x) => String(x.paymentId) === req.params.paymentId,
-    );
-    if (p) {
-      p.status = "REVERSED";
-      p.reversedReason = req.body.reason || "Customer request";
-    }
-    res.json({ success: true, payment: p });
-  },
-);
-
-router.get(
-  "/payments/:paymentId/receipt",
-  requireSite(false),
-  requirePermission("payment.record"),
-  (req, res) => {
-    const p = (payments as any[]).find(
-      (x) => String(x.paymentId) === req.params.paymentId,
-    );
-    res.json({
-      paymentId: p?.paymentId || req.params.paymentId,
-      receiptNo: p?.paymentRef || "RCT-2026-004472",
-      amount: p?.amount || 1180000,
-      currency: p?.currency || "TZS",
-      receiptHtml: `<html><body><h1>Cashier Receipt ${p?.paymentRef}</h1></body></html>`,
-    });
-  },
-);
-
-router.get(
-  "/refunds",
-  requireSite(false),
-  requirePermission("payment.refund"),
-  async (req, res) => {
-    let items = refunds as any[];
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbRefunds = await prisma.refunds.findMany({
-            include: {
-              invoices: {
-                include: { parties: true },
-              },
-              payments: true,
-            },
-            orderBy: { refund_id: "desc" },
-          });
-
-          if (dbRefunds && dbRefunds.length > 0) {
-            const mapped = dbRefunds.map((r) => ({
-              refundId: r.refund_id,
-              refundNo: `RFD-DAR1-26-0000${r.refund_id}`,
-              invoiceId: r.invoice_id,
-              invoiceNo: r.invoices?.invoice_no || `INV-2026-00${r.invoice_id}`,
-              partyId: r.invoices?.bill_to_party_id || 201,
-              partyName: r.invoices?.parties?.party_name || "Twiga Cement Ltd",
-              amount: Number(r.refund_amount),
-              currency: "USD",
-              reason: "Excess demurrage deposit refund",
-              status: r.status || "APPROVED",
-              requestedBy: "Neema Mushi",
-              requestedAt:
-                r.created_at?.toISOString() || new Date().toISOString(),
-              method: "Bank transfer CRDB",
-              levels: [],
-            }));
-
-            const dbIds = new Set(mapped.map((m) => m.refundId));
-            items = [
-              ...mapped,
-              ...refunds.filter((r) => !dbIds.has(r.refundId)),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Refunds API] DB query fallback:", err.message);
-        }
-      }
-    }
-
-    res.json({ items, total: items.length, nextCursor: null });
-  },
-);
-
-router.post(
-  "/refunds",
-  requireSite(false),
-  requirePermission("payment.refund", "DO"),
-  (req, res) => {
-    const newRef = {
-      refundId: refunds.length + 1,
-      invoiceId: req.body.invoiceId,
-      partyName: req.body.partyName || "Customer",
-      amount: req.body.amount || 250.0,
-      currency: "USD",
-      reason: req.body.reason || "Overpayment refund",
-      status: "PENDING",
-      requestedAt: new Date().toISOString(),
-      ...req.body,
-    };
-    refunds.push(newRef as any);
-    res.status(201).json(newRef);
-  },
-);
-
-router.post(
-  "/refunds/:refundId([0-9a-zA-Z_.-]+):mark-paid",
-  requireSite(false),
-  requirePermission("payment.refund", "DO"),
-  (req, res) => {
-    const r = (refunds as any[]).find(
-      (x) => String(x.refundId) === req.params.refundId,
-    );
-    if (r) {
-      r.status = "PAID";
-      r.paidAt = new Date().toISOString();
-    }
-    res.json({ success: true, refund: r });
-  },
-);
+router.get("/refunds", requireSite(false), billingRefundsController.getRefunds);
+router.post("/refunds", requireSite(false), billingRefundsController.createRefund);
+router.post("/refunds/:refundId/decide", requireSite(false), billingRefundsController.decideRefund);
+router.post("/refunds/:refundId([0-9a-zA-Z_.-]+):decide", requireSite(false), billingRefundsController.decideRefund);
+router.post("/refunds/:refundId/mark-paid", requireSite(false), billingRefundsController.markPaid);
+router.post("/refunds/:refundId([0-9a-zA-Z_.-]+):mark-paid", requireSite(false), billingRefundsController.markPaid);
 
 // ------------------------------------------------------------------ 6. Disbursements (Site-scoped)
 router.get(
@@ -1199,13 +882,13 @@ router.get(
       const prisma = getPrisma();
       if (prisma) {
         try {
-          const dbDisbs = await prisma.disbursements.findMany({
+          const dbDisbs = await (prisma as any).disbursement.findMany({
             include: { parties: true },
             orderBy: { disbursement_id: "desc" },
           });
 
           if (dbDisbs && dbDisbs.length > 0) {
-            const mapped = dbDisbs.map((d) => ({
+            const mapped = dbDisbs.map((d: any) => ({
               disbursementId: d.disbursement_id,
               consignmentId: 101,
               authority: d.parties?.party_name || "Bollore Logistics",
@@ -1216,7 +899,7 @@ router.get(
               paidAt: d.created_at?.toISOString() || new Date().toISOString(),
             }));
 
-            const dbIds = new Set(mapped.map((m) => m.disbursementId));
+            const dbIds = new Set(mapped.map((m: any) => m.disbursementId));
             items = [
               ...mapped,
               ...disbursements.filter((d) => !dbIds.has(d.disbursementId)),

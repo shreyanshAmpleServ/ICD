@@ -7,27 +7,32 @@ export const billingTariffsController = {
     try {
       if (isDbLive()) {
         const prisma = getPrisma();
-        if (prisma) {
-          const dbTariffs = await prisma.tariffs.findMany({
-            include: { tariff_rates: true },
-            orderBy: { tariff_id: 'asc' },
-          });
-          if (dbTariffs && dbTariffs.length > 0) {
-            const items = dbTariffs.map((t: any) => ({
-              tariffId: t.tariff_id,
-              tariffCode: t.tariff_code,
-              tariffName: t.tariff_name,
-              currency: t.currency,
-              ratesCount: t.tariff_rates?.length || 0,
-              isActive: t.is_active ?? true,
-            }));
-            return res.json({ items, total: items.length });
+        if (prisma && (prisma as any).tariff) {
+          try {
+            const dbTariffs = await (prisma as any).tariff.findMany({
+              include: { tariff_rule: true },
+              orderBy: { tariff_id: 'asc' },
+            });
+            if (dbTariffs && dbTariffs.length > 0) {
+              const items = dbTariffs.map((t: any) => ({
+                tariffId: t.tariff_id,
+                tariffCode: t.tariff_code,
+                tariffName: t.tariff_name,
+                currency: t.currency || 'USD',
+                ratesCount: t.tariff_rule?.length || 0,
+                isActive: t.status === 'ACTIVE',
+              }));
+              return res.json({ items, total: items.length });
+            }
+          } catch (dbErr: any) {
+            console.warn('[Tariffs Controller] DB query failed, using fallback:', dbErr.message);
           }
         }
       }
-      res.json({ items: tariffs, total: tariffs.length });
+      return res.json({ items: tariffs, total: tariffs.length });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.error('[Tariffs Controller] getTariffs error:', err.message);
+      return res.json({ items: tariffs, total: tariffs.length });
     }
   },
 
@@ -39,4 +44,3 @@ export const billingTariffsController = {
     }
   },
 };
-

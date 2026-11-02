@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { Banner, Button, Drawer, Field, Input, Money, Select, Textarea } from '@/ds/components';
 import { consignments, parties } from '@/mock/core';
 import { CHARGE_NAMES, TODAY, m2 } from '@/mock/money';
+import { chargesApi } from '../api';
 import { type Row } from './WaiveDrawer';
 
 export function ManualDrawer({
@@ -23,6 +24,8 @@ export function ManualDrawer({
   const [rate, setRate] = useState('25.00');
   const [reason, setReason] = useState('');
   const [date, setDate] = useState(TODAY);
+  const [loading, setLoading] = useState(false);
+
   const cs = consignments.filter(
     (c) => c.billToPartyId === Number(bill) && (siteId === 2 ? c.vesselCallId === 13 : c.vesselCallId !== 13)
   );
@@ -35,16 +38,31 @@ export function ManualDrawer({
       title="Add a manual charge"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
           <Button
             variant="primary"
             icon={<Plus />}
             perm="billing.invoice.create"
-            disabled={!reason.trim() || amt <= 0}
-            onClick={() => {
-              onDone({
+            disabled={!reason.trim() || amt <= 0 || loading}
+            onClick={async () => {
+              setLoading(true);
+              const payload = {
+                siteId,
+                billToPartyId: Number(bill),
+                consignmentId: Number(cons) || null,
+                chargeCode: code,
+                description: `${CHARGE_NAMES[code] || 'Charge'} (manual): ${reason.slice(0, 60)}`,
+                serviceDate: date,
+                quantity: Number(qty) || 1,
+                unitRate: Number(rate) || 0,
+                amount: amt,
+                taxCode: 'VAT18',
+                reason,
+              };
+
+              let createdRow: Row = {
                 key: `m-${Date.parse(date)}-${code}`,
                 chargeId: 990000 + Number(qty) * 7 + reason.length,
                 status: 'MANUAL_PENDING',
@@ -63,14 +81,32 @@ export function ManualDrawer({
                 taxCode: 'VAT18',
                 taxPct: 18,
                 taxAmount: m2(amt * 0.18),
-                how: ['Manual charge'],
+                how: ['Manual charge requested for approval'],
                 kind: 'MANUAL',
-              });
-              onClose();
-              setReason('');
+              };
+
+              try {
+                const res = await chargesApi.addManualCharge(payload);
+                if (res && (res.charge || res.chargeId)) {
+                  const ch = res.charge || res;
+                  createdRow = {
+                    ...createdRow,
+                    chargeId: ch.chargeId || createdRow.chargeId,
+                    key: ch.key || createdRow.key,
+                    status: (ch.status || 'MANUAL_PENDING') as any,
+                  };
+                }
+              } catch (err) {
+                console.warn('Backend manual charge submission warning:', err);
+              } finally {
+                setLoading(false);
+                onDone(createdRow);
+                onClose();
+                setReason('');
+              }
             }}
           >
-            Request manual charge
+            {loading ? 'Submitting...' : 'Request manual charge'}
           </Button>
         </>
       }

@@ -18,6 +18,7 @@ import { devicesRouter } from './devices.routes';
 import { partiesRouter } from './parties.routes';
 import { chargesRouter } from './charges.routes';
 import { invoicesRouter } from './invoices.routes';
+import { cashierRouter } from './cashier.routes';
 import { searchRouter } from './search.routes';
 import { notificationsRouter } from './notifications.routes';
 
@@ -62,6 +63,7 @@ v1Router.use(devicesRouter);
 v1Router.use(partiesRouter);
 v1Router.use(chargesRouter);
 v1Router.use(invoicesRouter);
+v1Router.use(cashierRouter);
 
 // Mount legacy routers
 v1Router.use(sessionRouter);

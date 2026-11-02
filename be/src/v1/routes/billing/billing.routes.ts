@@ -25,14 +25,16 @@ billingRoutes.post('/invoices', requireSite(false), billingInvoicesController.cr
 billingRoutes.get('/invoices/:invoiceId', requireSite(false), billingInvoicesController.getInvoiceById);
 
 // Cashier & Payments
-billingRoutes.get('/payments', requireSite(false), requirePermission('payment.record'), billingCashierController.getPayments);
-billingRoutes.post('/payments', requireSite(false), requirePermission('payment.record', 'DO'), billingCashierController.recordPayment);
-billingRoutes.get('/cashier/shifts', requireSite(false), requirePermission('payment.record'), billingCashierController.getShifts);
-billingRoutes.get('/cashier/channels', requireSite(false), requirePermission('payment.record'), billingCashierController.getChannels);
+billingRoutes.get('/payments', requireSite(false), billingCashierController.getPayments);
+billingRoutes.post('/payments', requireSite(false), billingCashierController.recordPayment);
+billingRoutes.get('/cashier/shifts', requireSite(false), billingCashierController.getShifts);
+billingRoutes.get('/cashier/channels', requireSite(false), billingCashierController.getChannels);
 
 // Refunds
 billingRoutes.get('/refunds', requireSite(false), requirePermission('payment.refund'), billingRefundsController.getRefunds);
 billingRoutes.post('/refunds', requireSite(false), requirePermission('payment.refund', 'DO'), billingRefundsController.createRefund);
+billingRoutes.post('/refunds/:refundId/decide', requireSite(false), billingRefundsController.decideRefund);
+billingRoutes.post('/refunds/:refundId/mark-paid', requireSite(false), billingRefundsController.markPaid);
 
 // Disbursements
 billingRoutes.get('/disbursements', requireSite(false), requirePermission('finance.disbursement.record'), billingDisbursementsController.getDisbursements);

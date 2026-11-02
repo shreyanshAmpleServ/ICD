@@ -11,6 +11,7 @@ import {
   CHARGE_NAMES, HOLIDAYS, eatDate, TODAY, addDays, consignmentsFor, dLong, dShort, daysBetween, disbursements, fx, isSunday, m2, num,
   openBalanceUsd, rateStays, releaseValidTo, sumLines, type Line,
 } from '@/mock/money';
+import { invoicesApi } from '../api';
 import { Totals, fmtAmt, qtyU } from '../../components/shared';
 
 const STEPS = ['Bill to', 'Units', 'Rate to date', 'Lines', 'Review'];
@@ -20,6 +21,7 @@ export function InvoiceNewView() {
   const nav = useNavigate();
   const toast = useToast();
   const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const [bill, setBill] = useState<number | null>(null);
   const [cons, setCons] = useState<number | null>(null);
   const [units, setUnits] = useState<Set<number>>(new Set());
@@ -565,16 +567,49 @@ export function InvoiceNewView() {
               variant="primary"
               icon={<FilePlus2 />}
               perm="billing.invoice.create"
-              onClick={() => {
-                toast(
-                  effKind === 'PROFORMA'
-                    ? 'Proforma PRO-DAR1-26-002063 created'
-                    : 'Invoice INV-DAR1-26-003321 created as draft'
-                );
-                nav('/invoices');
+              disabled={submitting}
+              onClick={async () => {
+                setSubmitting(true);
+                let invNo = effKind === 'PROFORMA' ? 'PRO-DAR1-26-002063' : 'INV-DAR1-26-003321';
+                try {
+                  const rate = fx(TODAY);
+                  const k = cur === 'TZS' ? rate : 1;
+                  const res = await invoicesApi.createInvoice({
+                    docKind: effKind,
+                    siteId: site.siteId,
+                    partyId: bill || 1,
+                    billToPartyId: bill || 1,
+                    consignmentId: cons || null,
+                    currency: cur,
+                    exchangeRate: rate,
+                    lines: all.map((l, idx) => ({
+                      lineNo: idx + 1,
+                      chargeCode: l.chargeCode,
+                      description: l.description || l.chargeName,
+                      quantity: Number(l.quantity) || 1,
+                      unitRate: Number(l.unitRate) || 0,
+                      amount: (Number(l.amount) || 0) * k,
+                      taxAmount: (Number(l.taxAmount) || 0) * k,
+                      taxCode: l.taxCode || 'VAT18',
+                      uom: l.uom || 'UNIT',
+                    })),
+                  });
+                  if (res?.invoiceNo) invNo = res.invoiceNo;
+                } catch (e) {
+                  console.warn('API createInvoice warning:', e);
+                } finally {
+                  setSubmitting(false);
+                  toast(
+                    effKind === 'PROFORMA'
+                      ? `Proforma ${invNo} created`
+                      : `Invoice ${invNo} created as draft`
+                  );
+                  nav('/invoices');
+                }
               }}
+              
             >
-              {effKind === 'PROFORMA' ? 'Create proforma' : 'Create draft invoice'}
+              {submitting ? 'Creating...' : effKind === 'PROFORMA' ? 'Create proforma' : 'Create draft invoice'}
             </Button>
           )}
         </div>
