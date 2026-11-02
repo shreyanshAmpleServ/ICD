@@ -16,7 +16,9 @@
     "prisma:seed:charges": "node ./node_modules/tsx/dist/cli.mjs src/scripts/seed-charges.ts",
     "prisma:seed:invoices": "node ./node_modules/tsx/dist/cli.mjs src/scripts/seed-invoices.ts",
     "prisma:seed:cashier": "node ./node_modules/tsx/dist/cli.mjs src/scripts/seed-cashier.ts",
-    "prisma:seed:refunds": "node ./node_modules/tsx/dist/cli.mjs src/scripts/seed-refunds.ts"
+    "prisma:seed:refunds": "node ./node_modules/tsx/dist/cli.mjs src/scripts/seed-refunds.ts",
+    "prisma:seed:disbursements": "node ./node_modules/tsx/dist/cli.mjs src/scripts/seed-disbursements.ts",
+    "prisma:seed:statements": "node ./node_modules/tsx/dist/cli.mjs src/scripts/seed-statements.ts"
   },
   "keywords": [
     "icd",

@@ -1,5 +1,5 @@
-import { chargesController, invoicesController, cashierController, billingControllers } from '../../v1/controllers';
-const { billingRefundsController } = billingControllers;
+import { chargesController, invoicesController, cashierController, billingControllers, tariffsController, exchangeRatesController, ledgerController } from '../../v1/controllers';
+const { billingRefundsController, billingDisbursementsController, billingStatementsController } = billingControllers;
 import { Router } from "express";
 import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
@@ -97,39 +97,21 @@ router.get(
   "/accounting-periods",
   requireSite(false),
   requirePermission("finance.period.close"),
-  (req, res) => {
-    res.json({ items: periods, total: periods.length, nextCursor: null });
-  },
+  ledgerController.getPeriods,
 );
 
 router.post(
-  "/accounting-periods/:accountingPeriodId([0-9a-zA-Z_.-]+):close",
+  ["/accounting-periods/:accountingPeriodId([0-9a-zA-Z_.-]+):close", "/accounting-periods/:accountingPeriodId([0-9a-zA-Z_.-]+)/close"],
   requireSite(false),
   requirePermission("finance.period.close", "DO"),
-  (req, res) => {
-    const p = (periods as any[]).find(
-      (x) =>
-        String(x.periodId) === req.params.accountingPeriodId ||
-        x.periodCode === req.params.accountingPeriodId,
-    );
-    if (p) p.status = "CLOSED";
-    res.json({ success: true, period: p });
-  },
+  ledgerController.closePeriod,
 );
 
 router.post(
-  "/accounting-periods/:accountingPeriodId([0-9a-zA-Z_.-]+):reopen",
+  ["/accounting-periods/:accountingPeriodId([0-9a-zA-Z_.-]+):reopen", "/accounting-periods/:accountingPeriodId([0-9a-zA-Z_.-]+)/reopen"],
   requireSite(false),
   requirePermission("finance.period.close", "DO"),
-  (req, res) => {
-    const p = (periods as any[]).find(
-      (x) =>
-        String(x.periodId) === req.params.accountingPeriodId ||
-        x.periodCode === req.params.accountingPeriodId,
-    );
-    if (p) p.status = "OPEN";
-    res.json({ success: true, period: p });
-  },
+  ledgerController.reopenPeriod,
 );
 
 router.get(
@@ -155,108 +137,28 @@ router.get(
   "/exchange-rates",
   requireSite(false),
   requirePermission("billing.rates.view"),
-  async (req, res) => {
-    let items = exchangeRates as any[];
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbRates = await (prisma as any).m_exchange_rate.findMany({
-            orderBy: { exchange_rate_id: "desc" },
-          });
-
-          if (dbRates && dbRates.length > 0) {
-            const mapped = dbRates.map((r: any) => ({
-              exchangeRateId: r.exchange_rate_id,
-              baseCurrency: r.base_currency || "USD",
-              quoteCurrency: r.quote_currency || "TZS",
-              rate: String(Number(r.rate).toFixed(2)),
-              rateDate: r.effective_date
-                ? r.effective_date.toISOString().split("T")[0]
-                : "2026-10-07",
-              rateKind: "DAILY" as const,
-              sourceNote: "Bank of Tanzania mean rate 09:00",
-              enteredBy: "Neema Mushi",
-              enteredAt:
-                (r as any).created_at?.toISOString() ||
-                new Date().toISOString(),
-              effectiveFrom:
-                r.effective_date?.toISOString() || new Date().toISOString(),
-              isCurrent: r.is_current ?? true,
-              usedBy: 14,
-              logInst: 1,
-            }));
-
-            const dbPairs = new Set(
-              mapped.map((m: any) => `${m.baseCurrency}_${m.quoteCurrency}`),
-            );
-            items = [
-              ...mapped,
-              ...exchangeRates.filter(
-                (r) => !dbPairs.has(`${r.baseCurrency}_${r.quoteCurrency}`),
-              ),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Exchange Rates API] DB query fallback:", err.message);
-        }
-      }
-    }
-
-    res.json({ items, total: items.length, nextCursor: null });
-  },
+  exchangeRatesController.getExchangeRates,
 );
 
 router.post(
   "/exchange-rates",
   requireSite(false),
   requirePermission("finance.exchange_rate.edit", "DO"),
-  (req, res) => {
-    const newRate = {
-      exchangeRateId: exchangeRates.length + 1,
-      baseCurrency: req.body.baseCurrency || "USD",
-      quoteCurrency: req.body.quoteCurrency || "TZS",
-      rate: Number(req.body.rate || 2650.0),
-      effectiveFrom: req.body.effectiveFrom || new Date().toISOString(),
-      isCurrent: true,
-      logInst: 1,
-      ...req.body,
-    };
-    exchangeRates.forEach((r) => {
-      if (
-        r.baseCurrency === newRate.baseCurrency &&
-        r.quoteCurrency === newRate.quoteCurrency
-      )
-        r.isCurrent = false;
-    });
-    exchangeRates.push(newRate);
-    res.status(201).json(newRate);
-  },
+  exchangeRatesController.createExchangeRate,
 );
 
 router.get(
   "/exchange-rates/effective",
   requireSite(false),
   requirePermission("billing.rates.view"),
-  (req, res) => {
-    const current = exchangeRates.filter((r) => r.isCurrent);
-    res.json({ items: current, total: current.length, nextCursor: null });
-  },
+  exchangeRatesController.getEffectiveRate,
 );
 
 router.patch(
   "/exchange-rates/:exchangeRateId",
   requireSite(false),
   requirePermission("finance.exchange_rate.edit", "DO"),
-  (req, res) => {
-    const r = exchangeRates.find(
-      (x) => String(x.exchangeRateId) === req.params.exchangeRateId,
-    );
-    if (!r) return res.status(404).json({ error: "Exchange rate not found" });
-    Object.assign(r, req.body);
-    res.json(r);
-  },
+  exchangeRatesController.updateExchangeRate,
 );
 
 router.get(
@@ -453,177 +355,49 @@ router.get(
   "/tariffs",
   requireSite(false),
   requirePermission("billing.rates.view"),
-  async (req, res) => {
-    let items = tariffs as any[];
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbTariffs = await (prisma as any).tariff.findMany({
-            include: {
-              tariff_rules: true,
-            },
-            orderBy: { tariff_id: "desc" },
-          });
-
-          if (dbTariffs && dbTariffs.length > 0) {
-            const mapped = dbTariffs.map((t: any) => ({
-              tariffId: t.tariff_id,
-              tariffCode: t.tariff_code,
-              tariffName: t.tariff_name,
-              currency: "USD",
-              versionNo: 1,
-              status: t.is_active ? "ACTIVE" : "INACTIVE",
-              effectiveFrom:
-                t.valid_from?.toISOString() || new Date().toISOString(),
-              rules: t.tariff_rules.map((r: any) => ({
-                ruleId: r.tariff_rule_id,
-                chargeCode: r.charge_code,
-                chargeName: r.charge_code.replace(/_/g, " "),
-                chargeCategory: "HANDLING",
-                currency: r.currency || "USD",
-                baseRate: Number(r.base_rate),
-                calcBasis: r.calculation_basis || "FLAT",
-                freeDays: r.free_days ?? 0,
-              })),
-              logInst: 1,
-            }));
-
-            const dbCodes = new Set(mapped.map((m: any) => m.tariffCode));
-            items = [
-              ...mapped,
-              ...tariffs.filter((t) => !dbCodes.has(t.tariffCode)),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Tariffs API] DB query fallback:", err.message);
-        }
-      }
-    }
-
-    res.json({ items, total: items.length, nextCursor: null });
-  },
+  tariffsController.getTariffs,
 );
 
 router.post(
   "/tariffs",
   requireSite(false),
   requirePermission("billing.tariff.change", "DO"),
-  (req, res) => {
-    const newT = {
-      tariffId: tariffs.length + 1,
-      tariffCode: req.body.tariffCode || `TAR-${tariffs.length + 1}`,
-      tariffName: req.body.tariffName || "Standard ICD Tariff",
-      currency: req.body.currency || "USD",
-      versionNo: 1,
-      status: "ACTIVE",
-      effectiveFrom: new Date().toISOString(),
-      rules: req.body.rules || [],
-      logInst: 1,
-      ...req.body,
-    };
-    tariffs.push(newT as any);
-    res.status(201).json(newT);
-  },
+  tariffsController.createTariff,
 );
 
 router.get(
   "/tariffs/:tariffId",
   requireSite(false),
   requirePermission("billing.rates.view"),
-  (req, res) => {
-    const t = (tariffs as any[]).find(
-      (x) =>
-        String(x.tariffId) === req.params.tariffId ||
-        x.tariffCode === req.params.tariffId,
-    );
-    if (!t) return res.status(404).json({ error: "Tariff not found" });
-    res.json(t);
-  },
+  tariffsController.getTariffById,
 );
 
 router.patch(
   "/tariffs/:tariffId",
   requireSite(false),
   requirePermission("billing.tariff.change", "DO"),
-  (req, res) => {
-    const t = (tariffs as any[]).find(
-      (x) =>
-        String(x.tariffId) === req.params.tariffId ||
-        x.tariffCode === req.params.tariffId,
-    );
-    if (!t) return res.status(404).json({ error: "Tariff not found" });
-    Object.assign(t, req.body);
-    res.json(t);
-  },
+  tariffsController.updateTariff,
 );
 
 router.get(
   "/tariffs/:tariffId/rules",
   requireSite(false),
   requirePermission("billing.rates.view"),
-  (req, res) => {
-    const t = (tariffs as any[]).find(
-      (x) =>
-        String(x.tariffId) === req.params.tariffId ||
-        x.tariffCode === req.params.tariffId,
-    );
-    res.json({
-      items: t?.rules || [],
-      total: (t?.rules || []).length,
-      nextCursor: null,
-    });
-  },
-);
-
-router.put(
-  "/tariffs/:tariffId/rules",
-  requireSite(false),
-  requirePermission("billing.tariff.change", "DO"),
-  (req, res) => {
-    const t = (tariffs as any[]).find(
-      (x) =>
-        String(x.tariffId) === req.params.tariffId ||
-        x.tariffCode === req.params.tariffId,
-    );
-    if (!t) return res.status(404).json({ error: "Tariff not found" });
-    t.rules = req.body;
-    res.json({ success: true, rules: t.rules });
-  },
+  tariffsController.getTariffRules,
 );
 
 router.post(
   "/tariffs/:tariffId([0-9a-zA-Z_.-]+):submit",
   requireSite(false),
   requirePermission("billing.tariff.change", "DO"),
-  (req, res) => {
-    const t = (tariffs as any[]).find(
-      (x) => String(x.tariffId) === req.params.tariffId,
-    );
-    if (t) t.status = "PENDING_APPROVAL";
-    res.json({ success: true, tariff: t });
-  },
+  tariffsController.submitTariff,
 );
 
 router.post(
   "/tariffs/:tariffId([0-9a-zA-Z_.-]+):new-version",
   requireSite(false),
   requirePermission("billing.tariff.change", "DO"),
-  (req, res) => {
-    const t = (tariffs as any[]).find(
-      (x) => String(x.tariffId) === req.params.tariffId,
-    );
-    const version = {
-      ...t,
-      tariffId: tariffs.length + 1,
-      versionNo: (t?.versionNo || 1) + 1,
-      status: "DRAFT",
-      createdFromId: t?.tariffId,
-    };
-    tariffs.push(version);
-    res.status(201).json(version);
-  },
+  tariffsController.newVersion,
 );
 
 router.post(
@@ -875,92 +649,35 @@ router.get(
   "/disbursements",
   requireSite(false),
   requirePermission("finance.disbursement.record"),
-  async (req, res) => {
-    let items = disbursements as any[];
-
-    if (isDbLive()) {
-      const prisma = getPrisma();
-      if (prisma) {
-        try {
-          const dbDisbs = await (prisma as any).disbursement.findMany({
-            include: { parties: true },
-            orderBy: { disbursement_id: "desc" },
-          });
-
-          if (dbDisbs && dbDisbs.length > 0) {
-            const mapped = dbDisbs.map((d: any) => ({
-              disbursementId: d.disbursement_id,
-              consignmentId: 101,
-              authority: d.parties?.party_name || "Bollore Logistics",
-              description: "Terminal port wharfage fee paid on customer behalf",
-              amountUsd: Number(d.amount),
-              receiptRef: `DISB-RCPT-2026-00${d.disbursement_id}`,
-              status: d.status || "BILLED",
-              paidAt: d.created_at?.toISOString() || new Date().toISOString(),
-            }));
-
-            const dbIds = new Set(mapped.map((m: any) => m.disbursementId));
-            items = [
-              ...mapped,
-              ...disbursements.filter((d) => !dbIds.has(d.disbursementId)),
-            ] as any;
-          }
-        } catch (err: any) {
-          console.warn("[Disbursements API] DB query fallback:", err.message);
-        }
-      }
-    }
-
-    res.json({ items, total: items.length, nextCursor: null });
-  },
+  billingDisbursementsController.getDisbursements
 );
 
 router.post(
   "/disbursements",
   requireSite(false),
   requirePermission("finance.disbursement.record", "DO"),
-  (req, res) => {
-    const newD = {
-      disbursementId: disbursements.length + 1,
-      consignmentId: req.body.consignmentId || 101,
-      authority: req.body.authority || "TPA",
-      description:
-        req.body.description || "Port wharfage fee paid on customer behalf",
-      amountUsd: req.body.amountUsd || 320.0,
-      receiptRef: req.body.receiptRef || "TPA-RCPT-2026-99",
-      status: "BILLED",
-      paidAt: new Date().toISOString(),
-      ...req.body,
-    };
-    disbursements.push(newD as any);
-    res.status(201).json(newD);
-  },
+  billingDisbursementsController.createDisbursement
 );
 
 router.get(
   "/disbursements/:disbursementId",
   requireSite(false),
   requirePermission("finance.disbursement.record"),
-  (req, res) => {
-    const d = (disbursements as any[]).find(
-      (x) => String(x.disbursementId) === req.params.disbursementId,
-    );
-    if (!d) return res.status(404).json({ error: "Disbursement not found" });
-    res.json(d);
-  },
+  billingDisbursementsController.getDisbursementById
 );
 
 router.post(
   "/disbursements/:disbursementId([0-9a-zA-Z_.-]+):write-off",
   requireSite(false),
   requirePermission("finance.disbursement.record", "DO"),
-  (req, res) => {
-    const d = (disbursements as any[]).find(
-      (x) => String(x.disbursementId) === req.params.disbursementId,
-    );
-    if (d) d.status = "WRITTEN_OFF";
-    res.json({ success: true, disbursement: d });
-  },
+  billingDisbursementsController.writeOffDisbursement
+);
+
+router.post(
+  "/disbursements/:disbursementId/write-off",
+  requireSite(false),
+  requirePermission("finance.disbursement.record", "DO"),
+  billingDisbursementsController.writeOffDisbursement
 );
 
 // ------------------------------------------------------------------ 7. Accounting & Statements (Site-scoped)
@@ -968,43 +685,32 @@ router.get(
   ["/gl-postings", "/ledger/entries"],
   requireSite(false),
   requirePermission("finance.period.close"),
-  (req, res) => {
-    res.json({ items: glPostings, total: glPostings.length, nextCursor: null });
-  },
+  ledgerController.getLedgerPostings,
 );
 
 router.post(
-  "/gl-postings/:glPostingId([0-9a-zA-Z_.-]+):retry",
+  ["/gl-postings/:glPostingId([0-9a-zA-Z_.-]+):retry", "/gl-postings/:glPostingId([0-9a-zA-Z_.-]+)/retry"],
   requireSite(false),
   requirePermission("finance.period.close", "DO"),
-  (req, res) => {
-    const p = (glPostings as any[]).find(
-      (x) => String(x.glPostingId) === req.params.glPostingId,
-    );
-    if (p) p.status = "POSTED";
-    res.json({ success: true, glPosting: p });
-  },
+  ledgerController.retryPosting,
+);
+
+router.get(
+  "/statements",
+  requireSite(false),
+  billingStatementsController.getStatements,
 );
 
 router.get(
   "/statements/:partyId",
   requireSite(false),
-  (req, res) => {
-    const st = statement(Number(req.params.partyId || 1));
-    res.json(st);
-  },
+  billingStatementsController.getStatementByPartyId,
 );
 
 router.get(
   "/statements/:partyId/pdf",
   requireSite(false),
-  (req, res) => {
-    res.json({
-      partyId: req.params.partyId,
-      pdfUrl: `/api/statements/party-${req.params.partyId}.pdf`,
-      contentBase64: "JVBERi0xLjQKJcTl8uXr...",
-    });
-  },
+  billingStatementsController.getStatementPdf,
 );
 
 export const commercialRouter = router;

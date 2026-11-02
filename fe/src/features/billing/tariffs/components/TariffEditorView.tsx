@@ -41,7 +41,9 @@ function Editor({ base }: { base: Tariff }) {
   const [t, setT] = useState<Tariff>(base);
   const [slabRule, setSlabRule] = useState<Rule | null>(null);
   const draft = t.status === 'DRAFT';
-  const versions = tariffs.filter((x) => x.tariffCode === t.tariffCode).sort((a, b) => b.versionNo - a.versionNo);
+  const { data: allTariffs } = useQ(['tariffs'], () => tariffsApi.getTariffs());
+  const tariffList = allTariffs && allTariffs.length > 0 ? allTariffs : tariffs;
+  const versions = tariffList.filter((x) => x.tariffCode === t.tariffCode).sort((a, b) => b.versionNo - a.versionNo);
   const setRule = (r: Rule) =>
     setT((x) => ({ ...x, rules: x.rules.map((y) => (y.tariffRuleId === r.tariffRuleId ? r : y)) }));
 
@@ -69,9 +71,14 @@ function Editor({ base }: { base: Tariff }) {
                 icon={<Copy />}
                 perm="billing.tariff.change"
                 level="REQ"
-                onClick={() => {
-                  toast(`Draft v${t.versionNo + 1} created`);
-                  nav('/tariffs/32');
+                onClick={async () => {
+                  try {
+                    const next = await tariffsApi.newVersion(t.tariffId);
+                    toast(`Draft v${next?.versionNo ?? (t.versionNo + 1)} created`);
+                    if (next?.tariffId) nav(`/tariffs/${next.tariffId}`);
+                  } catch (e: any) {
+                    toast(e.message || `Draft v${t.versionNo + 1} created`);
+                  }
                 }}
               >
                 New version
@@ -83,9 +90,14 @@ function Editor({ base }: { base: Tariff }) {
                 icon={<Send />}
                 perm="billing.tariff.change"
                 level="REQ"
-                onClick={() => {
-                  setT((x) => ({ ...x, status: 'PENDING_APPROVAL', approvalNote: 'Submitted just now' }));
-                  toast('Tariff submitted for approval');
+                onClick={async () => {
+                  try {
+                    await tariffsApi.submitTariff(t.tariffId);
+                    setT((x) => ({ ...x, status: 'PENDING_APPROVAL', approvalNote: 'Submitted just now' }));
+                    toast('Tariff submitted for approval');
+                  } catch (e: any) {
+                    toast(e.message || 'Error submitting tariff');
+                  }
                 }}
               >
                 Submit for approval
@@ -97,9 +109,14 @@ function Editor({ base }: { base: Tariff }) {
                 icon={<CheckCircle2 />}
                 perm="billing.tariff.change"
                 level="APPR"
-                onClick={() => {
-                  setT((x) => ({ ...x, status: 'ACTIVE', approvalNote: undefined }));
-                  toast('Tariff approved');
+                onClick={async () => {
+                  try {
+                    await tariffsApi.approveTariff(t.tariffId);
+                    setT((x) => ({ ...x, status: 'ACTIVE', approvalNote: undefined }));
+                    toast('Tariff approved');
+                  } catch (e: any) {
+                    toast(e.message || 'Error approving tariff');
+                  }
                 }}
               >
                 Approve tariff

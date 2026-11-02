@@ -39,19 +39,33 @@ billingRoutes.post('/refunds/:refundId/mark-paid', requireSite(false), billingRe
 // Disbursements
 billingRoutes.get('/disbursements', requireSite(false), requirePermission('finance.disbursement.record'), billingDisbursementsController.getDisbursements);
 billingRoutes.post('/disbursements', requireSite(false), requirePermission('finance.disbursement.record', 'DO'), billingDisbursementsController.createDisbursement);
+billingRoutes.get('/disbursements/:disbursementId', requireSite(false), requirePermission('finance.disbursement.record'), billingDisbursementsController.getDisbursementById);
+billingRoutes.post('/disbursements/:disbursementId/write-off', requireSite(false), requirePermission('finance.disbursement.record', 'DO'), billingDisbursementsController.writeOffDisbursement);
 
 // Statements
 billingRoutes.get('/statements', requireSite(false), billingStatementsController.getStatements);
+billingRoutes.get('/statements/:partyId', requireSite(false), billingStatementsController.getStatementByPartyId);
+billingRoutes.get('/statements/:partyId/pdf', requireSite(false), billingStatementsController.getStatementPdf);
 
 // Tariffs & Rates
 billingRoutes.get('/tariffs', requireSite(false), requirePermission('billing.rates.view'), billingTariffsController.getTariffs);
+billingRoutes.post('/tariffs', requireSite(false), requirePermission('billing.tariff.change', 'DO'), billingTariffsController.createTariff);
 billingRoutes.get('/tariffs/rates', requireSite(false), requirePermission('billing.rates.view'), billingTariffsController.getTariffRates);
+billingRoutes.get('/tariffs/:tariffId', requireSite(false), requirePermission('billing.rates.view'), billingTariffsController.getTariffById);
+billingRoutes.patch('/tariffs/:tariffId', requireSite(false), requirePermission('billing.tariff.change', 'DO'), billingTariffsController.updateTariff);
+billingRoutes.get('/tariffs/:tariffId/rules', requireSite(false), requirePermission('billing.rates.view'), billingTariffsController.getTariffRules);
+billingRoutes.post('/tariffs/:tariffId:submit', requireSite(false), requirePermission('billing.tariff.change', 'DO'), billingTariffsController.submitTariff);
+billingRoutes.post('/tariffs/:tariffId:new-version', requireSite(false), requirePermission('billing.tariff.change', 'DO'), billingTariffsController.newVersion);
 
 // Exchange Rates
 billingRoutes.get('/exchange-rates', requireSite(false), requirePermission('billing.rates.view'), billingExchangeRatesController.getExchangeRates);
-billingRoutes.post('/exchange-rates', requireSite(false), requirePermission('billing.rates.view', 'DO'), billingExchangeRatesController.createExchangeRate);
+billingRoutes.get('/exchange-rates/effective', requireSite(false), requirePermission('billing.rates.view'), billingExchangeRatesController.getEffectiveRate);
+billingRoutes.post('/exchange-rates', requireSite(false), requirePermission('finance.exchange_rate.edit', 'DO'), billingExchangeRatesController.createExchangeRate);
+billingRoutes.patch('/exchange-rates/:exchangeRateId', requireSite(false), requirePermission('finance.exchange_rate.edit', 'DO'), billingExchangeRatesController.updateExchangeRate);
 
 // Ledger
 billingRoutes.get('/ledger/postings', requireSite(false), requirePermission('finance.period.close'), billingLedgerController.getLedgerPostings);
+billingRoutes.post('/ledger/postings/:glPostingId/retry', requireSite(false), requirePermission('finance.period.close', 'DO'), billingLedgerController.retryPosting);
 billingRoutes.get('/ledger/periods', requireSite(false), requirePermission('finance.period.close'), billingLedgerController.getPeriods);
-
+billingRoutes.post('/ledger/periods/:accountingPeriodId/close', requireSite(false), requirePermission('finance.period.close', 'DO'), billingLedgerController.closePeriod);
+billingRoutes.post('/ledger/periods/:accountingPeriodId/reopen', requireSite(false), requirePermission('finance.period.close', 'DO'), billingLedgerController.reopenPeriod);
