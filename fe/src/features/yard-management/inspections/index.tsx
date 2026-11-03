@@ -37,7 +37,7 @@ const order = (i: Insp) =>
 export function InspectionsView() {
   const nav = useNavigate();
   const { site } = useSession();
-  const { data = [], refetch } = useQ(['inspections', site.siteId], () =>
+  const { data = [], isLoading: inspectionsLoading, refetch } = useQ(['inspections', site.siteId], () =>
     inspectionsApi.getInspections(site.siteId)
   );
     const [k, setK] = useState<K>('all');
@@ -98,6 +98,7 @@ export function InspectionsView() {
               />
             </div>
             <DataTable
+              loading={inspectionsLoading}
               rows={rows}
               rowKey={(i) => i.inspectionId!}
               onRow={(i) => nav(`/inspections/${i.inspectionId}`)}

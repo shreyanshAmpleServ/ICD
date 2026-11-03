@@ -8,7 +8,6 @@ import {
 } from '@/ds/components';
 import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { allStays, parties, partyName, vesselCalls } from '@/mock/core';
 import { Progress } from '@/features/container-management/shared';
 
 export { consignmentsApi } from './api';
@@ -21,7 +20,7 @@ const REF: Record<string, string> = { BL: 'BL', BOOKING: 'Booking', EMPTY_RELEAS
 const REGIME: Record<string, string> = { IMPORT_HOME: 'Import (home use)', TRANSIT: 'Transit', EXPORT: 'Export', EMPTY: 'Empty' };
 export const regimeName = (r?: string | null) => (r ? REGIME[r] ?? r.toLowerCase().replace(/_/g, ' ') : '—');
 export const refTypeName = (r?: string | null) => (r ? REF[r] ?? r : '—');
-export const vcName = (id?: number | null, vcList: any[] = vesselCalls) => { const v = vcList.find((x) => x.vesselCallId === id); return v ? `${v.vesselName} ${v.voyageNo}` : null; };
+export const vcName = (id?: number | null, vcList: any[] = []) => { const v = vcList.find((x) => x.vesselCallId === id); return v ? `${v.vesselName} ${v.voyageNo || ''}` : null; };
 
 export function Consignments() {
   const nav = useNavigate();
@@ -38,16 +37,24 @@ export function Consignments() {
   const { data: dbVesselCalls = [] } = useQ(['vessel-calls'], () =>
     api.get<any>('/vessel-calls').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
+  const { data: dbParties = [] } = useQ(['parties'], () =>
+    api.get<any>('/parties').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
 
   const data = Array.isArray(dbConsignments) ? dbConsignments : [];
   const calls = Array.isArray(dbVesselCalls) ? dbVesselCalls : [];
+  const partiesList = Array.isArray(dbParties) ? dbParties : [];
 
-  const held = useMemo(() => new Set(allStays.filter((s) => (s.activeHoldCount ?? 0) > 0).map((s) => s.consignmentId)), []);
+  const partyName = (id?: number | null) => {
+    if (!id) return '';
+    const p = partiesList.find((x: any) => x.partyId === id);
+    return p?.partyName || p?.shortName || `Party #${id}`;
+  };
 
   const counts = {
     open: data.filter((c: any) => c.status === 'OPEN').length,
     waiting: data.filter((c: any) => (c.unitsReceived ?? 0) < (c.unitsExpected ?? 0)).length,
-    held: data.filter((c: any) => held.has(c.consignmentId) || c.hasActiveHolds).length,
+    held: data.filter((c: any) => (c.activeHoldCount ?? 0) > 0 || c.hasActiveHolds).length,
     transit: data.filter((c: any) => c.cargoRegimeCode === 'TRANSIT').length,
   };
   const rows = data.filter((c: any) => {
@@ -57,7 +64,7 @@ export function Consignments() {
     if (kind !== 'ALL' && c.refType !== kind) return false;
     if (quick === 'open') return c.status === 'OPEN';
     if (quick === 'waiting') return (c.unitsReceived ?? 0) < (c.unitsExpected ?? 0);
-    if (quick === 'held') return held.has(c.consignmentId) || c.hasActiveHolds;
+    if (quick === 'held') return (c.activeHoldCount ?? 0) > 0 || c.hasActiveHolds;
     if (quick === 'transit') return c.cargoRegimeCode === 'TRANSIT';
     return true;
   });
@@ -160,7 +167,7 @@ export function Consignments() {
           {
             key: 'held',
             header: '',
-            render: (c: any) => (held.has(c.consignmentId) || c.hasActiveHolds ? <Pill tone="hold">Held units</Pill> : null)
+            render: (c: any) => ((c.activeHoldCount ?? 0) > 0 || c.hasActiveHolds ? <Pill tone="hold">Held units</Pill> : null)
           },
           {
             key: 'status',
@@ -179,6 +186,7 @@ export function Consignments() {
         <CreateConsignmentDrawer
           open={createOpen}
           calls={calls}
+          parties={partiesList}
           onClose={() => setCreateOpen(false)}
           onCreated={() => {
             qc.invalidateQueries({ queryKey: ['consignments'] });
@@ -194,25 +202,30 @@ export function Consignments() {
 function CreateConsignmentDrawer({
   open,
   calls,
+  parties,
   onClose,
   onCreated,
 }: {
   open: boolean;
   calls: any[];
+  parties: any[];
   onClose: () => void;
   onCreated: () => void;
 }) {
   const [refNo, setRefNo] = useState('');
   const [refType, setRefType] = useState('BL');
   const [vesselCallId, setVesselCallId] = useState(String(calls[0]?.vesselCallId || '1'));
-  const [consigneePartyId, setConsigneePartyId] = useState('1');
+  const [consigneePartyId, setConsigneePartyId] = useState(String(parties[0]?.partyId || '1'));
   const [cargoRegimeCode, setCargoRegimeCode] = useState('IMPORT_HOME');
   const [destinationCountry, setDestinationCountry] = useState('Tanzania');
   const [cargoDescription, setCargoDescription] = useState('');
   const [unitsExpected, setUnitsExpected] = useState('1');
   const [submitting, setSubmitting] = useState(false);
 
-  const consignees = useMemo(() => parties.filter((p) => p.roles.includes('CONSIGNEE' as never)), []);
+  const consignees = useMemo(() => {
+    const list = parties.filter((p) => p.roles?.includes('CONSIGNEE') || p.roles?.includes('CUSTOMER'));
+    return list.length > 0 ? list : parties;
+  }, [parties]);
 
   const handleSubmit = async () => {
     if (!refNo.trim()) return;
@@ -271,7 +284,7 @@ function CreateConsignmentDrawer({
             <Select
               value={vesselCallId}
               onChange={(e) => setVesselCallId(e.target.value)}
-              options={calls.map((c) => [String(c.vesselCallId), `${c.vesselName} ${c.voyageNo} · ${(c.status || '').toLowerCase()}`])}
+              options={calls.map((c) => [String(c.vesselCallId), `${c.vesselName || 'Vessel'} ${c.voyageNo || ''} · ${(c.status || '').toLowerCase()}`])}
             />
           </Field>
           <Field label="Consignee" required>

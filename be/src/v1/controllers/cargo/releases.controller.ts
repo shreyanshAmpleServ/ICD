@@ -42,5 +42,27 @@ export const cargoReleasesController = {
       res.status(500).json({ error: err.message });
     }
   },
+
+  cancelReleaseOrder: async (req: Request, res: Response) => {
+    try {
+      const { releaseOrderId } = req.params;
+      const { reason } = req.body;
+      const result = await cargoService.cancelReleaseOrder(releaseOrderId, reason);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  revalidateReleaseOrder: async (req: Request, res: Response) => {
+    try {
+      const { releaseOrderId } = req.params;
+      const { validTo } = req.body;
+      const result = await cargoService.revalidateReleaseOrder(releaseOrderId, validTo);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
 };
 

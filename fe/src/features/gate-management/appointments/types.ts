@@ -7,6 +7,29 @@ export interface SlotSelection {
   h: number;
 }
 
+export type Appt = {
+  appointmentId?: number;
+  appointmentNo?: string;
+  apptNo?: string;
+  date: string;
+  hour: number;
+  slotStart: string;
+  slotEnd: string;
+  visitTypeCode: string;
+  visitType?: string;
+  status: 'BOOKED' | 'ARRIVED' | 'COMPLETED' | 'MISSED' | 'CANCELLED' | string;
+  plateNo: string;
+  truckPlate?: string;
+  driverName: string;
+  driverPhone?: string;
+  refNo?: string;
+  transporterPartyId?: number;
+  partyName?: string;
+  transporterName?: string;
+  bookedVia?: string;
+  truckVisitId?: number;
+};
+
 export const APPOINTMENT_STATUS: Record<string, [string, Tone]> = {
   BOOKED: ['Booked', 'info'],
   ARRIVED: ['Arrived', 'go'],

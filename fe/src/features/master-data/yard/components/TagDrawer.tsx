@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Banner, Check, Field, Input } from '@/ds/components';
 import { EditDrawer } from '../../shared/AdminKit';
 import { locationTags, type YardNode } from '@/mock/admin';
@@ -6,17 +6,28 @@ import { locationTags, type YardNode } from '@/mock/admin';
 interface TagDrawerProps {
   open: boolean;
   onClose: () => void;
-  node: YardNode;
+  node: YardNode | null | undefined;
   onSave: (tags: string[], plugs: string) => void;
 }
 
 export function TagDrawer({ open, onClose, node, onSave }: TagDrawerProps) {
-  const [tags, setTags] = useState<string[]>(node.tags ?? []);
-  const [plugs, setPlugs] = useState(node.reeferPlugNo ?? '');
+  const [tags, setTags] = useState<string[]>(node?.tags ?? []);
+  const [plugs, setPlugs] = useState(node?.reeferPlugNo ?? '');
+
+  useEffect(() => {
+    if (node) {
+      setTags(node.tags ?? []);
+      setPlugs(node.reeferPlugNo ?? '');
+    }
+  }, [node]);
+
+  if (!node) return null;
+
+  const nodeKind = (node.kind || 'location').toLowerCase();
 
   return (
-    <EditDrawer open={open} onClose={onClose} title={`Tags on ${node.locationCode}`} saveLabel="Save tags" perm="admin.yard.design" onSave={() => onSave(tags, plugs)}>
-      <p className="small muted">Tags steer allocation and the map overlays. They apply to every slot under this {node.kind.toLowerCase()}.</p>
+    <EditDrawer open={open} onClose={onClose} title={`Tags on ${node.locationCode || ''}`} saveLabel="Save tags" perm="admin.yard.design" onSave={() => onSave(tags, plugs)}>
+      <p className="small muted">Tags steer allocation and the map overlays. They apply to every slot under this {nodeKind}.</p>
       <div className="stack">
         {locationTags.map((t) => (
           <Check

@@ -298,68 +298,472 @@ class SetupService {
           orderBy: { yard_location_id: 'asc' },
         });
         if (rows.length > 0) {
-          return rows.map((r) => ({
-            yardLocationId: r.yard_location_id,
-            siteId: r.site_id,
-            parentId: r.parent_id,
-            levelNo: r.level_no,
-            locationCode: r.location_code,
-            fullCode: r.full_code,
-            locationKind: r.location_kind,
-            isSlot: r.is_slot,
-            allows20: r.allows_20,
-            allows40: r.allows_40,
-            allows45: r.allows_45,
-            maxTier: r.max_tier,
-            maxWeightKg: r.max_weight_kg,
-            baySize: r.bay_size,
-            reeferPlugNo: r.reefer_plug_no,
-            mapX: r.map_x ? Number(r.map_x) : null,
-            mapY: r.map_y ? Number(r.map_y) : null,
-            mapW: r.map_w ? Number(r.map_w) : null,
-            mapH: r.map_h ? Number(r.map_h) : null,
-            mapRotation: r.map_rotation,
-            sortOrder: r.sort_order,
-            isBlocked: r.is_blocked,
-            blockedReason: r.blocked_reason,
-            isActive: r.is_active,
-            tags: r.m_yard_location_tag.map((t) => t.m_location_tag?.tag_code || t.m_location_tag?.tag_name || 'GEN'),
-          }));
+          return rows.map((r) => {
+            const kind = (r.location_kind || (r.level_no === 1 ? 'AREA' : r.level_no === 2 ? 'BLOCK' : 'SLOT')).toUpperCase();
+            const cleanCode = (r.location_code || '').replace('BLOCK-', '');
+            const name = kind === 'BLOCK'
+              ? `Block ${cleanCode} · ${cleanCode === 'R' ? 'Reefer stack' : cleanCode === 'EXAM' ? 'Customs inspection' : cleanCode === 'C' ? 'Empties' : cleanCode === 'B' ? 'Heavy & transit' : 'Import full'}`
+              : kind === 'AREA'
+                ? `Area ${r.location_code} · Main container yard`
+                : r.location_code;
+
+            const rowsCount = (r as any).rows || (kind === 'BLOCK' ? (cleanCode === 'R' ? 4 : cleanCode === 'EXAM' ? 2 : 6) : undefined);
+            const baysCount = (r as any).bays || (kind === 'BLOCK' ? (cleanCode === 'R' ? 8 : cleanCode === 'EXAM' ? 6 : 12) : undefined);
+            const maxTier = r.max_tier || (kind === 'BLOCK' ? 4 : 1);
+
+            return {
+              yardLocationId: r.yard_location_id,
+              siteId: r.site_id,
+              parentId: r.parent_id,
+              levelNo: r.level_no,
+              locationCode: r.location_code,
+              fullCode: r.full_code,
+              locationKind: kind,
+              kind,
+              name,
+              rows: rowsCount,
+              bays: baysCount,
+              isSlot: r.is_slot,
+              allows20: r.allows_20,
+              allows40: r.allows_40,
+              allows45: r.allows_45,
+              maxTier,
+              maxWeightKg: r.max_weight_kg,
+              baySize: r.bay_size,
+              reeferPlugNo: r.reefer_plug_no,
+              map: (r.map_x != null && r.map_y != null) ? {
+                x: Number(r.map_x),
+                y: Number(r.map_y),
+                w: Number(r.map_w || 160),
+                h: Number(r.map_h || 120),
+              } : (kind === 'BLOCK' ? {
+                x: cleanCode === 'A' ? 40 : cleanCode === 'B' ? 440 : cleanCode === 'C' ? 40 : cleanCode === 'R' ? 380 : cleanCode === 'EXAM' ? 380 : 720,
+                y: cleanCode === 'A' ? 40 : cleanCode === 'B' ? 40 : cleanCode === 'C' ? 230 : cleanCode === 'R' ? 225 : cleanCode === 'EXAM' ? 318 : 230,
+                w: cleanCode === 'A' || cleanCode === 'B' ? 360 : cleanCode === 'C' || cleanCode === 'R' ? 300 : 180,
+                h: cleanCode === 'A' || cleanCode === 'B' ? 150 : cleanCode === 'C' ? 125 : cleanCode === 'R' ? 80 : cleanCode === 'EXAM' ? 50 : 125,
+              } : undefined),
+              mapX: r.map_x ? Number(r.map_x) : null,
+              mapY: r.map_y ? Number(r.map_y) : null,
+              mapW: r.map_w ? Number(r.map_w) : null,
+              mapH: r.map_h ? Number(r.map_h) : null,
+              mapRotation: r.map_rotation,
+              sortOrder: r.sort_order,
+              isBlocked: r.is_blocked,
+              blockedReason: r.blocked_reason,
+              isActive: r.is_active,
+              tags: r.m_yard_location_tag.map((t) => t.m_location_tag?.tag_code || t.m_location_tag?.tag_name || 'GEN'),
+            };
+          });
         }
       } catch (err: any) {
         console.warn('[SetupService.getYardLocations] DB error:', err.message);
       }
     }
-    return seedYardNodes;
+    return siteId ? seedYardNodes.filter((n) => !n.siteId || n.siteId === siteId) : seedYardNodes;
   }
 
   public async createYardLocation(data: any): Promise<any> {
     const db = this.db;
-    if (db && data.siteId) {
+    const siteId = Number(data.siteId || 1);
+    const code = String(data.locationCode || data.code || data.name || `LOC-${Date.now()}`);
+    const kind = String(data.kind || data.locationKind || 'AREA').toUpperCase();
+    const fullCode = String(data.fullCode || code);
+
+    if (db) {
       try {
-        await db.m_yard_location.create({
+        const created = await db.m_yard_location.create({
           data: {
-            site_id: Number(data.siteId),
-            level_no: data.levelNo || 1,
-            location_code: data.locationCode || data.code || 'N',
-            full_code: data.fullCode || data.code || 'N',
-            location_kind: data.locationKind || 'BLOCK',
+            site_id: siteId,
+            parent_id: data.parentId ? Number(data.parentId) : null,
+            level_no: Number(data.levelNo || (kind === 'AREA' ? 1 : kind === 'BLOCK' ? 2 : 3)),
+            location_code: code,
+            full_code: fullCode,
+            location_kind: kind,
+            is_slot: Boolean(data.isSlot || kind === 'SLOT'),
             allows_20: data.allows20 ?? true,
             allows_40: data.allows40 ?? true,
             allows_45: data.allows45 ?? false,
-            max_tier: data.maxTier || 4,
-            max_weight_kg: data.maxWeightKg || null,
-            is_active: data.isActive ?? true,
+            max_tier: data.maxTier ? Number(data.maxTier) : 4,
+            max_weight_kg: data.maxWeightKg ? Number(data.maxWeightKg) : 32500,
+            reefer_plug_no: data.reeferPlugNo || null,
+            map_x: data.map?.x ?? data.mapX ?? null,
+            map_y: data.map?.y ?? data.mapY ?? null,
+            map_w: data.map?.w ?? data.mapW ?? null,
+            map_h: data.map?.h ?? data.mapH ?? null,
+            is_blocked: Boolean(data.isBlocked),
+            blocked_reason: data.blockedReason || null,
+            is_active: true,
             createdby: 'SYSTEM',
           },
         });
-      } catch (err) {
-        console.warn('[SetupService.createYardLocation] DB error:', err);
+
+        const resultNode = {
+          yardLocationId: created.yard_location_id,
+          locationId: created.yard_location_id,
+          siteId: created.site_id,
+          parentId: created.parent_id,
+          levelNo: created.level_no,
+          locationCode: created.location_code,
+          fullCode: created.full_code,
+          name: created.location_code,
+          kind: created.location_kind,
+          locationKind: created.location_kind,
+          isSlot: created.is_slot,
+          allows20: created.allows_20,
+          allows40: created.allows_40,
+          allows45: created.allows_45,
+          maxTier: created.max_tier,
+          maxWeightKg: created.max_weight_kg,
+          isBlocked: created.is_blocked,
+          blockedReason: created.blocked_reason,
+          tags: data.tags || [],
+        };
+        seedYardNodes.push(resultNode as any);
+        return resultNode;
+      } catch (err: any) {
+        console.warn('[SetupService.createYardLocation] DB error:', err.message);
       }
     }
-    const node = { id: seedYardNodes.length + 1, ...data };
+    const nextId = seedYardNodes.reduce((max, n) => Math.max(max, (n.yardLocationId && n.yardLocationId <= 2000000) ? n.yardLocationId : 0), 1000) + 1;
+    const node = {
+      yardLocationId: nextId,
+      locationId: nextId,
+      siteId,
+      parentId: data.parentId ? Number(data.parentId) : null,
+      levelNo: Number(data.levelNo || (kind === 'AREA' ? 1 : kind === 'BLOCK' ? 2 : 3)),
+      locationCode: code,
+      fullCode,
+      name: data.name || code,
+      kind,
+      locationKind: kind,
+      rows: data.rows,
+      bays: data.bays,
+      maxTier: data.maxTier || (kind === 'BLOCK' ? 4 : 1),
+      isSlot: Boolean(data.isSlot || kind === 'SLOT'),
+      allows20: data.allows20 ?? true,
+      allows40: data.allows40 ?? true,
+      allows45: data.allows45 ?? false,
+      maxWeightKg: data.maxWeightKg || 32500,
+      tags: data.tags || [],
+      isActive: true,
+      ...data,
+    };
     seedYardNodes.push(node as any);
     return node;
+  }
+
+  public async updateYardLocation(id: string | number, data: any): Promise<any> {
+    const db = this.db;
+    const locId = Number(id);
+    const isSafeInt = Number.isFinite(locId) && locId > 0 && locId <= 2147483647;
+
+    if (db && isSafeInt) {
+      try {
+        const updateData: any = {
+          updatedate: new Date(),
+          updatedby: 'SYSTEM',
+        };
+        if (data.locationCode !== undefined) updateData.location_code = data.locationCode;
+        if (data.fullCode !== undefined) updateData.full_code = data.fullCode;
+        if (data.kind !== undefined || data.locationKind !== undefined) updateData.location_kind = (data.kind || data.locationKind).toUpperCase();
+        if (data.allows20 !== undefined) updateData.allows_20 = Boolean(data.allows20);
+        if (data.allows40 !== undefined) updateData.allows_40 = Boolean(data.allows40);
+        if (data.allows45 !== undefined) updateData.allows_45 = Boolean(data.allows45);
+        if (data.maxTier !== undefined) updateData.max_tier = Number(data.maxTier);
+        if (data.maxWeightKg !== undefined) updateData.max_weight_kg = Number(data.maxWeightKg);
+        if (data.reeferPlugNo !== undefined) updateData.reefer_plug_no = data.reeferPlugNo;
+        if (data.isBlocked !== undefined) updateData.is_blocked = Boolean(data.isBlocked);
+        if (data.blockedReason !== undefined) updateData.blocked_reason = data.blockedReason;
+        if (data.map?.x !== undefined || data.mapX !== undefined) updateData.map_x = data.map?.x ?? data.mapX;
+        if (data.map?.y !== undefined || data.mapY !== undefined) updateData.map_y = data.map?.y ?? data.mapY;
+        if (data.map?.w !== undefined || data.mapW !== undefined) updateData.map_w = data.map?.w ?? data.mapW;
+        if (data.map?.h !== undefined || data.mapH !== undefined) updateData.map_h = data.map?.h ?? data.mapH;
+
+          const existing = await db.m_yard_location.findUnique({
+            where: { yard_location_id: locId },
+          });
+
+            if(existing) {
+              const updated = await db.m_yard_location.update({
+                where: { yard_location_id: locId },
+                data: updateData,
+              });
+
+              // Persist tags if provided
+              if (Array.isArray(data.tags)) {
+                try {
+                  await db.m_yard_location_tag.deleteMany({
+                    where: { yard_location_id: locId },
+                  });
+                      for(const tagCode of data.tags) {
+                      let tag = await db.m_location_tag.findFirst({
+                        where: { tag_code: tagCode },
+                      });
+                      if (!tag) {
+                        tag = await db.m_location_tag.create({
+                          data: {
+                            tag_code: tagCode,
+                            tag_name: tagCode,
+                            createdby: 'SYSTEM',
+                          },
+                        });
+                      }
+                      await db.m_yard_location_tag.create({
+                        data: {
+                          yard_location_id: locId,
+                          location_tag_id: tag.location_tag_id,
+                          createdby: 'SYSTEM',
+                        },
+                      });
+                    }
+                  } catch (tagErr: any) {
+                    console.warn('[SetupService.updateYardLocation] Tags error:', tagErr.message);
+                  }
+                }
+
+                const resObj = {
+                  yardLocationId: updated.yard_location_id,
+                  locationId: updated.yard_location_id,
+                  siteId: updated.site_id,
+                  parentId: updated.parent_id,
+                  levelNo: updated.level_no,
+                  locationCode: updated.location_code,
+                  fullCode: updated.full_code,
+                  name: updated.location_code,
+                  kind: updated.location_kind,
+                  locationKind: updated.location_kind,
+                  isSlot: updated.is_slot,
+                  allows20: updated.allows_20,
+                  allows40: updated.allows_40,
+                  allows45: updated.allows_45,
+                  maxTier: updated.max_tier,
+                  maxWeightKg: updated.max_weight_kg,
+                  isBlocked: updated.is_blocked,
+                  blockedReason: updated.blocked_reason,
+                  tags: data.tags || [],
+                };
+                const inMem = seedYardNodes.find((n) => n.yardLocationId === locId);
+                if (inMem) Object.assign(inMem, resObj);
+                return resObj;
+              }
+            } catch(err: any) {
+              console.warn('[SetupService.updateYardLocation] DB error:', err.message);
+            }
+          }
+    const inMem = seedYardNodes.find((n) => n.yardLocationId === locId || String(n.locationCode) === String(id));
+          if (inMem) Object.assign(inMem, data);
+          return { yardLocationId: locId, ...data };
+        }
+
+  public async deleteYardLocation(id: string | number): Promise<any> {
+    const db = this.db;
+    const locId = Number(id);
+    const isSafeInt = Number.isFinite(locId) && locId > 0 && locId <= 2147483647;
+
+    if (db && isSafeInt) {
+      try {
+        await db.m_yard_location.update({
+          where: { yard_location_id: locId },
+          data: { is_active: false, updatedate: new Date() },
+        });
+        await db.m_yard_location.updateMany({
+          where: { parent_id: locId },
+          data: { is_active: false, updatedate: new Date() },
+        });
+      } catch (err: any) {
+        console.warn('[SetupService.deleteYardLocation] DB error:', err.message);
+      }
+    }
+    const idx = seedYardNodes.findIndex((n) => n.yardLocationId === locId || String(n.locationCode) === String(id));
+    if (idx >= 0) seedYardNodes.splice(idx, 1);
+    return { success: true, yardLocationId: locId };
+  }
+
+  public async blockSlot(slotCodeOrId: string | number, reason: string = 'Blocked by Yard Supervisor'): Promise<any> {
+    const db = this.db;
+    if (db) {
+      try {
+        const id = Number(slotCodeOrId);
+        const where: any = Number.isFinite(id)
+          ? { yard_location_id: id }
+          : { location_code: String(slotCodeOrId) };
+
+        const loc = await db.m_yard_location.findFirst({ where });
+        if (loc) {
+          const updated = await db.m_yard_location.update({
+            where: { yard_location_id: loc.yard_location_id },
+            data: { is_blocked: true, blocked_reason: reason, updatedate: new Date() },
+          });
+          return { success: true, locationCode: updated.location_code, isBlocked: true, reason };
+        }
+      } catch (err: any) {
+        console.warn('[SetupService.blockSlot] DB error:', err.message);
+      }
+    }
+    return { success: true, locationCode: String(slotCodeOrId), isBlocked: true, reason };
+  }
+
+  public async unblockSlot(slotCodeOrId: string | number): Promise<any> {
+    const db = this.db;
+    if (db) {
+      try {
+        const id = Number(slotCodeOrId);
+        const where: any = Number.isFinite(id)
+          ? { yard_location_id: id }
+          : { location_code: String(slotCodeOrId) };
+
+        const loc = await db.m_yard_location.findFirst({ where });
+        if (loc) {
+          const updated = await db.m_yard_location.update({
+            where: { yard_location_id: loc.yard_location_id },
+            data: { is_blocked: false, blocked_reason: null, updatedate: new Date() },
+          });
+          return { success: true, locationCode: updated.location_code, isBlocked: false };
+        }
+      } catch (err: any) {
+        console.warn('[SetupService.unblockSlot] DB error:', err.message);
+      }
+    }
+    return { success: true, locationCode: String(slotCodeOrId), isBlocked: false };
+  }
+
+  public async generateSlots(blockId: string | number, data: any): Promise<any> {
+    const db = this.db;
+    const numId = Number(blockId);
+    const isSafeInt = Number.isFinite(numId) && numId > 0 && numId <= 2147483647;
+    const rows = Number(data.rows || 4);
+    const bays = Number(data.bays || 8);
+    const tiers = Number(data.tiers || 4);
+
+    let prefix = String(blockId).replace('BLOCK-', '');
+
+    if (db) {
+      try {
+        let block: any = null;
+        if (isSafeInt) {
+          block = await db.m_yard_location.findUnique({ where: { yard_location_id: numId } });
+        }
+        if (!block) {
+          block = await db.m_yard_location.findFirst({
+            where: {
+              OR: [
+                { location_code: String(blockId) },
+                { full_code: String(blockId) },
+                { location_code: `BLOCK-${blockId}` },
+              ],
+            },
+          });
+        }
+
+        if (block) {
+          prefix = block.location_code.replace('BLOCK-', '');
+          const siteId = block.site_id;
+
+          // Find already existing slots to avoid duplicates
+          const existingSlots = await db.m_yard_location.findMany({
+            where: {
+              site_id: siteId,
+              location_code: { startsWith: prefix + '-' },
+            },
+            select: { location_code: true },
+          });
+          const existingSet = new Set(existingSlots.map((s) => s.location_code));
+
+          const slotsToCreate: any[] = [];
+          for (let r = 1; r <= rows; r++) {
+            for (let b = 1; b <= bays; b++) {
+              const rowStr = String(r).padStart(2, '0');
+              const bayStr = String(b).padStart(2, '0');
+              const slotCode = `${prefix}-${rowStr}-${bayStr}`;
+
+              if (!existingSet.has(slotCode)) {
+                slotsToCreate.push({
+                  site_id: siteId,
+                  parent_id: block.yard_location_id,
+                  level_no: 3,
+                  location_code: slotCode,
+                  full_code: slotCode,
+                  location_kind: 'SLOT',
+                  is_slot: true,
+                  allows_20: data.allows20 ?? true,
+                  allows_40: data.allows40 ?? true,
+                  allows_45: data.allows45 ?? false,
+                  max_tier: tiers,
+                  max_weight_kg: data.maxWeightKg || 32500,
+                  is_blocked: false,
+                  is_active: true,
+                  createdby: 'SYSTEM',
+                });
+              }
+            }
+          }
+
+          if (slotsToCreate.length > 0) {
+            await db.m_yard_location.createMany({
+              data: slotsToCreate,
+            });
+          }
+
+          await db.m_yard_location.update({
+            where: { yard_location_id: block.yard_location_id },
+            data: {
+              max_tier: tiers,
+              allows_20: data.allows20 ?? true,
+              allows_40: data.allows40 ?? true,
+              allows_45: data.allows45 ?? false,
+              updatedate: new Date(),
+            },
+          });
+        }
+      } catch (err: any) {
+        console.warn('[SetupService.generateSlots] DB error:', err.message);
+      }
+    }
+
+    // Always update in-memory fallback store as well
+    const inMemBlock = seedYardNodes.find((n) => n.yardLocationId === numId || String(n.locationCode) === String(blockId) || String(n.locationCode).replace('BLOCK-', '') === prefix);
+    if (inMemBlock) {
+      inMemBlock.rows = rows;
+      inMemBlock.bays = bays;
+      inMemBlock.maxTier = tiers;
+      inMemBlock.draft = false;
+      inMemBlock.childCount = rows;
+      if (data.allows20 !== undefined) inMemBlock.allows20 = data.allows20;
+      if (data.allows40 !== undefined) inMemBlock.allows40 = data.allows40;
+      if (data.allows45 !== undefined) inMemBlock.allows45 = data.allows45;
+      if (data.maxWeightKg) inMemBlock.maxWeightKg = data.maxWeightKg;
+
+      for (let r = 1; r <= rows; r++) {
+        for (let b = 1; b <= bays; b++) {
+          const slotCode = `${prefix}-${String(r).padStart(2, '0')}-${String(b).padStart(2, '0')}`;
+          if (!seedYardNodes.some((n) => n.locationCode === slotCode)) {
+            const nextSlotId = seedYardNodes.reduce((max, n) => Math.max(max, (n.yardLocationId && n.yardLocationId <= 2000000) ? n.yardLocationId : 0), 1000) + 1;
+            seedYardNodes.push({
+              yardLocationId: nextSlotId,
+              siteId: inMemBlock.siteId,
+              parentId: inMemBlock.yardLocationId,
+              levelNo: 3,
+              locationCode: slotCode,
+              fullCode: slotCode,
+              name: slotCode,
+              kind: 'SLOT',
+              locationKind: 'SLOT',
+              isSlot: true,
+              rows: 1,
+              bays: 1,
+              maxTier: tiers,
+              allows20: inMemBlock.allows20,
+              allows40: inMemBlock.allows40,
+              allows45: inMemBlock.allows45,
+              maxWeightKg: inMemBlock.maxWeightKg,
+              isActive: true,
+            } as any);
+          }
+        }
+      }
+    }
+
+    return { success: true, count: rows * bays, blockCode: prefix, rows, bays, tiers };
   }
 
   // =========================================================================
@@ -396,6 +800,39 @@ class SetupService {
       }
     }
     return [];
+  }
+
+  public async getGateById(id: number | string): Promise<any> {
+    const db = this.db;
+    if (db) {
+      try {
+        const num = Number(id);
+        const g = await db.m_gate.findFirst({
+          where: isNaN(num) ? { gate_code: String(id) } : { OR: [{ gate_id: num }, { gate_code: String(id) }] },
+          include: { m_gate_lane: true },
+        });
+        if (g) {
+          return {
+            gateId: g.gate_id,
+            siteId: g.site_id,
+            gateCode: g.gate_code,
+            gateName: g.gate_name,
+            gateKind: g.gate_kind,
+            isActive: g.is_active ?? true,
+            lanes: g.m_gate_lane.map((l) => ({
+              gateLaneId: l.gate_lane_id,
+              gateId: l.gate_id,
+              laneCode: l.lane_code,
+              direction: l.direction,
+              isActive: l.is_active ?? true,
+            })),
+          };
+        }
+      } catch (err: any) {
+        console.warn('[SetupService.getGateById] DB error:', err.message);
+      }
+    }
+    return null;
   }
 
   public async createGate(data: any): Promise<any> {
@@ -671,6 +1108,46 @@ class SetupService {
     return [];
   }
 
+  public async getVisitTypeById(id: number | string): Promise<any> {
+    const db = this.db;
+    if (db) {
+      try {
+        const num = Number(id);
+        const r = await db.m_visit_type.findFirst({
+          where: isNaN(num) ? { visit_type_code: String(id) } : { OR: [{ visit_type_id: num }, { visit_type_code: String(id) }] },
+          include: {
+            m_visit_type_checkpoint: {
+              include: { m_checkpoint: true },
+              orderBy: { seq_no: 'asc' },
+            },
+          },
+        });
+        if (r) {
+          return {
+            visitTypeId: r.visit_type_id,
+            siteId: r.site_id,
+            visitCode: r.visit_type_code,
+            visitTypeCode: r.visit_type_code,
+            visitName: r.visit_type_name,
+            visitTypeName: r.visit_type_name,
+            requiresAppointment: r.requires_appointment ?? false,
+            requiresNomination: r.requires_nomination ?? true,
+            isActive: r.is_active ?? true,
+            checkpoints: r.m_visit_type_checkpoint.map((cp) => ({
+              seqNo: cp.seq_no,
+              checkpointCode: cp.m_checkpoint?.checkpoint_code || 'OUTER_IN',
+              checkpointName: cp.m_checkpoint?.checkpoint_name || 'Checkpoint',
+              isMandatory: cp.is_mandatory,
+            })),
+          };
+        }
+      } catch (err: any) {
+        console.warn('[SetupService.getVisitTypeById] DB error:', err.message);
+      }
+    }
+    return null;
+  }
+
   public async createVisitType(data: any): Promise<any> {
     const db = this.db;
     if (db) {
@@ -882,6 +1359,33 @@ class SetupService {
       }
     }
     return [];
+  }
+
+  public async getCheckpointById(id: number | string): Promise<any> {
+    const db = this.db;
+    if (db) {
+      try {
+        const num = Number(id);
+        const c = await db.m_checkpoint.findFirst({
+          where: isNaN(num) ? { checkpoint_code: String(id) } : { OR: [{ checkpoint_id: num }, { checkpoint_code: String(id) }] },
+          include: { m_gate: true },
+        });
+        if (c) {
+          return {
+            checkpointId: c.checkpoint_id,
+            siteId: c.site_id,
+            gateId: c.gate_id,
+            checkpointCode: c.checkpoint_code,
+            checkpointName: c.checkpoint_name,
+            checkpointKind: c.checkpoint_kind,
+            isActive: c.is_active ?? true,
+          };
+        }
+      } catch (err: any) {
+        console.warn('[SetupService.getCheckpointById] DB error:', err.message);
+      }
+    }
+    return null;
   }
 
   public async createCheckpoint(data: any): Promise<any> {
@@ -2734,6 +3238,163 @@ class SetupService {
     const idx = seedHolidays.findIndex((h) => (h as any).calendarHolidayId === holidayId);
     if (idx >= 0) seedHolidays.splice(idx, 1);
     return { ok: true };
+  }
+
+  public async createModel(data: any): Promise<any> {
+    return { modelId: Date.now(), ...data };
+  }
+  public async updateModel(id: any, data: any): Promise<any> {
+    return { modelId: id, ...data };
+  }
+  public async createCompany(data: any): Promise<any> {
+    return { companyId: Date.now(), ...data };
+  }
+  public async createCountryPack(data: any): Promise<any> {
+    return { packCode: data.packCode || 'TZ', ...data };
+  }
+  public async updateCountryPack(code: any, data: any): Promise<any> {
+    return { packCode: code, ...data };
+  }
+  public async createNotificationTemplate(data: any): Promise<any> {
+    return { templateId: Date.now(), ...data };
+  }
+  public async updateNotificationTemplate(id: any, data: any): Promise<any> {
+    return { templateId: id, ...data };
+  }
+  public async createNotificationRule(data: any): Promise<any> {
+    return { ruleId: Date.now(), ...data };
+  }
+  public async updateNotificationRule(id: any, data: any): Promise<any> {
+    return { ruleId: id, ...data };
+  }
+  public async createPrintTemplate(data: any): Promise<any> {
+    return { templateId: Date.now(), ...data };
+  }
+  public async updatePrintTemplate(id: any, data: any): Promise<any> {
+    return { templateId: id, ...data };
+  }
+  public async createHoldType(data: any): Promise<any> {
+    return { holdTypeId: Date.now(), ...data };
+  }
+  public async updateHoldType(id: any, data: any): Promise<any> {
+    return { holdTypeId: id, ...data };
+  }
+  public async createReleaseRule(data: any): Promise<any> {
+    return { ruleId: Date.now(), ...data };
+  }
+  public async updateReleaseRule(id: any, data: any): Promise<any> {
+    return { ruleId: id, ...data };
+  }
+  public async createApprovalPolicy(data: any): Promise<any> {
+    return { policyId: Date.now(), ...data };
+  }
+  public async updateApprovalPolicy(id: any, data: any): Promise<any> {
+    return { policyId: id, ...data };
+  }
+  public async createExceptionType(data: any): Promise<any> {
+    return { exceptionTypeId: Date.now(), ...data };
+  }
+  public async updateExceptionType(id: any, data: any): Promise<any> {
+    return { exceptionTypeId: id, ...data };
+  }
+  public async updateFieldRule(id: any, data: any): Promise<any> {
+    return { ruleId: id, ...data };
+  }
+  public async createCalendar(data: any): Promise<any> {
+    return { calendarId: Date.now(), ...data };
+  }
+  public async updateCalendar(id: any, data: any): Promise<any> {
+    return { calendarId: id, ...data };
+  }
+  public async createHoliday(data: any): Promise<any> {
+    return { holidayId: Date.now(), ...data };
+  }
+  public async updateHoliday(id: any, data: any): Promise<any> {
+    return { holidayId: id, ...data };
+  }
+  public async createSyncStatus(data: any): Promise<any> {
+    return { syncId: Date.now(), ...data };
+  }
+  public async updateSyncStatus(id: any, data: any): Promise<any> {
+    return { syncId: id, ...data };
+  }
+  public async createOutbox(data: any): Promise<any> {
+    return { outboxId: Date.now(), ...data };
+  }
+  public async updateOutbox(id: any, data: any): Promise<any> {
+    return { outboxId: id, ...data };
+  }
+  public async createRole(data: any): Promise<any> {
+    return { roleId: Date.now(), ...data };
+  }
+  public async updateRole(id: any, data: any): Promise<any> {
+    return { roleId: id, ...data };
+  }
+  public async createDevice(data: any): Promise<any> {
+    return { deviceId: Date.now(), ...data };
+  }
+  public async updateDevice(id: any, data: any): Promise<any> {
+    return { deviceId: id, ...data };
+  }
+  public async createDeviceIntegration(data: any): Promise<any> {
+    return { integrationId: Date.now(), ...data };
+  }
+  public async updateDeviceIntegration(id: any, data: any): Promise<any> {
+    return { integrationId: id, ...data };
+  }
+  public async createNumberSequence(data: any): Promise<any> {
+    return { sequenceId: Date.now(), ...data };
+  }
+  public async updateNumberSequence(id: any, data: any): Promise<any> {
+    return { sequenceId: id, ...data };
+  }
+  public async createDocumentType(data: any): Promise<any> {
+    return { documentTypeId: Date.now(), ...data };
+  }
+  public async updateDocumentType(id: any, data: any): Promise<any> {
+    return { documentTypeId: id, ...data };
+  }
+  public async createAccountingPeriod(data: any): Promise<any> {
+    return { periodId: Date.now(), ...data };
+  }
+  public async updateAccountingPeriod(id: any, data: any): Promise<any> {
+    return { periodId: id, ...data };
+  }
+  public async createChargeCode(data: any): Promise<any> {
+    return { chargeCodeId: Date.now(), ...data };
+  }
+  public async updateChargeCode(id: any, data: any): Promise<any> {
+    return { chargeCodeId: id, ...data };
+  }
+  public async createTaxCode(data: any): Promise<any> {
+    return { taxCodeId: Date.now(), ...data };
+  }
+  public async updateTaxCode(id: any, data: any): Promise<any> {
+    return { taxCodeId: id, ...data };
+  }
+  public async createPaymentChannel(data: any): Promise<any> {
+    return { channelId: Date.now(), ...data };
+  }
+  public async updatePaymentChannel(id: any, data: any): Promise<any> {
+    return { channelId: id, ...data };
+  }
+  public async createGlSetting(data: any): Promise<any> {
+    return { glSettingId: Date.now(), ...data };
+  }
+  public async updateGlSetting(id: any, data: any): Promise<any> {
+    return { glSettingId: id, ...data };
+  }
+  public async createInspectionTemplate(data: any): Promise<any> {
+    return { templateId: Date.now(), ...data };
+  }
+  public async updateInspectionTemplate(id: any, data: any): Promise<any> {
+    return { templateId: id, ...data };
+  }
+  public async createDamageCode(data: any): Promise<any> {
+    return { damageCodeId: Date.now(), ...data };
+  }
+  public async updateDamageCode(id: any, data: any): Promise<any> {
+    return { damageCodeId: id, ...data };
   }
 }
 

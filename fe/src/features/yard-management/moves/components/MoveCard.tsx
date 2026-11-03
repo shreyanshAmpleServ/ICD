@@ -19,10 +19,10 @@ export function MoveCard({ m, onAssign, onStart, onComplete }: MoveCardProps) {
     m.status === 'DONE'
       ? 'var(--steel)'
       : m.priority === 1
-      ? 'var(--stop)'
-      : m.priority === 2
-      ? 'var(--wait)'
-      : 'var(--steel)';
+        ? 'var(--stop)'
+        : m.priority === 2
+          ? 'var(--wait)'
+          : 'var(--steel)';
   const to = m.toCode ?? m.toLabel ?? '—';
 
   return (
@@ -71,11 +71,11 @@ export function MoveCard({ m, onAssign, onStart, onComplete }: MoveCardProps) {
           <Clock size={12} />
           {m.status === 'DONE' ? `Done ${fmtT(m.completedAt)}` : `Asked ${ago(m.requestedAt)}`}
         </span>
-        {(m.assignedEquipmentId || m.assignedOperatorSub) && (
-          <span>
-            {eqCode(m.assignedEquipmentId) ?? 'Self-driven'} · {OPERATORS[m.assignedOperatorSub ?? ''] ?? '—'}
-          </span>
-        )}
+          {(m.assignedEquipmentId || m.assignedOperatorSub || (m as any).assignedEquipment) && (
+            <span>
+              {((m as any).assignedEquipment || eqCode(m.assignedEquipmentId)) ?? 'Self-driven'} · {m.assignedOperatorSub ?? OPERATORS[m.assignedOperatorSub ?? ''] ?? 'Assigned'}
+            </span>
+          )}
         {m.truckVisitId && <Link to={`/gate/visits/${m.truckVisitId}`}>Truck {m.plateNo}</Link>}
       </div>
       {m.status !== 'DONE' && m.status !== 'CANCELLED' && (

@@ -1,4 +1,4 @@
-import type { Appt } from '@/mock/ops';
+import type { Appt } from '../types';
 
 interface AppointmentsDaySelectorProps {
   days: string[];

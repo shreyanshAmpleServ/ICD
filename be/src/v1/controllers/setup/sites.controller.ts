@@ -23,7 +23,7 @@ export const setupSitesController = {
 
   updateCompany: async (req: Request, res: Response) => {
     try {
-      const updated = await setupService.updateCompany(req.params.companyId, req.body);
+      const updated = await setupService.updateCompany(Number(req.params.companyId), req.body);
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ error: err.message });

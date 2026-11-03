@@ -22,9 +22,9 @@ export function GatesView() {
   const { site } = useSession();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('visits');
-  const [gates, setGates] = useEditable<Gate>('gates', [], () => gatesApi.getGates());
-  const [cps, setCps] = useEditable<any>('checkpoints', [], () => gatesApi.getCheckpoints());
-  const [vts, setVts] = useEditable<any>('visitTypes', [], () => gatesApi.getVisitTypes());
+  const [gates, setGates, gatesLoading] = useEditable<Gate>('gates', [], () => gatesApi.getGates());
+  const [cps, setCps, cpsLoading] = useEditable<any>('checkpoints', [], () => gatesApi.getCheckpoints());
+  const [vts, setVts, vtsLoading] = useEditable<any>('visitTypes', [], () => gatesApi.getVisitTypes());
   const siteGates = gates.filter((g) => g.siteId === site.siteId);
   const [gateId, setGateId] = useState<number | null>(null);
   const [vtId, setVtId] = useState<number | null>(null);
@@ -62,6 +62,7 @@ export function GatesView() {
           list={
             <ListPanel
               title="Gates"
+              loading={gatesLoading}
               selected={gate?.gateId}
               onSelect={(id) => setGateId(Number(id))}
               actions={
@@ -139,225 +140,227 @@ export function GatesView() {
       )}
 
       {tab === 'checkpoints' && (
-          <Panel
-            flush
-            title="Checkpoints"
-            sub="Places where a truck is checked. A checkpoint belongs to a gate; the tablet at that gate shows trucks waiting for it."
-            actions={
-              <Button
-                size="sm"
-                icon={<Plus />}
-                perm="admin.gate.configure"
-                onClick={() =>
-                  setCpEdit({
-                    isNew: true,
-                    checkpointCode: '',
-                    checkpointName: '',
-                    checkpointKind: 'OUTER_IN',
-                    gateId: siteGates[0]?.gateId ?? null,
-                    isActive: true,
-                  })
-                }
-              >
-                Add checkpoint
-              </Button>
-            }
-          >
-            <DataTable
-              rows={cps}
-              rowKey={(c) => c.checkpointId!}
-              onRow={(c) => setCpEdit({ ...c, isNew: false })}
-              cols={[
-                { key: 'c', header: 'Code', render: (c) => <span className="adm-code">{c.checkpointCode}</span> },
-                { key: 'n', header: 'Name', render: (c) => <strong>{c.checkpointName}</strong> },
-                { key: 'k', header: 'Kind', render: (c) => <span className="small">{(c.checkpointKind || '').replace(/_/g, ' ').toLowerCase()}</span> },
-                { key: 'g', header: 'At gate', render: (c) => gates.find((g) => g.gateId === c.gateId)?.gateName ?? '—' },
-                { key: 'u', header: 'Used by', render: (c) => <span className="small">{vts.filter((v: any) => (v.checkpoints ?? []).some((x: any) => x.checkpointCode === c.checkpointCode)).length} visit types</span> },
-                { key: 'a', header: 'Active', render: (c) => <YesNo v={c.isActive} /> },
-              ]}
-            />
-          </Panel>
-      )}
-
-          {tab === 'visits' && vt && (
-            <Split
-              list={
-                <ListPanel
-                  title="Visit types"
-                  selected={vt.visitTypeId}
-                  onSelect={(id) => setVtId(Number(id))}
-                  actions={
-                    <Button
-                      size="sm"
-                      icon={<Plus />}
-                      perm="admin.gate.configure"
-                      onClick={() =>
-                        setVtDrawer({
-                          open: true,
-                          vt: {
-                            siteId: site.siteId,
-                            visitTypeCode: '',
-                            visitTypeName: '',
-                            requiresNomination: true,
-                            requiresAppointment: false,
-                            isActive: true,
-                          },
-                          isNew: true,
-                        })
-                      }
-                    >
-                      Add
-                    </Button>
-                  }
-                  items={vts.map((v: any) => ({
-                    id: v.visitTypeId!,
-                    title: v.visitTypeName,
-                    sub: `${(v.checkpoints ?? []).length} checkpoints${v.requiresAppointment ? ' · appointment' : ''}`,
-                  }))}
-                />
+        <Panel
+          flush
+          title="Checkpoints"
+          sub="Places where a truck is checked. A checkpoint belongs to a gate; the tablet at that gate shows trucks waiting for it."
+          actions={
+            <Button
+              size="sm"
+              icon={<Plus />}
+              perm="admin.gate.configure"
+              onClick={() =>
+                setCpEdit({
+                  isNew: true,
+                  checkpointCode: '',
+                  checkpointName: '',
+                  checkpointKind: 'OUTER_IN',
+                  gateId: siteGates[0]?.gateId ?? null,
+                  isActive: true,
+                })
               }
             >
-              <VisitTypeEditor
-                key={vt.visitTypeId}
-                vt={vt}
-                cps={cps}
-                onEditDetails={() => setVtDrawer({ open: true, vt, isNew: false })}
-                onSave={(nv) => {
-                  if (nv.visitTypeId) {
-                    gatesApi
-                      .updateVisitType(Number(nv.visitTypeId), nv)
-                      .then((updated) => {
-                        setVts((all: any[]) => all.map((x) => (x.visitTypeId === updated.visitTypeId ? updated : x)));
-                        toast('Visit type saved');
-                      })
-                      .catch((err) => {
-                        console.error('Error saving visit type:', err);
-                        toast('Error saving visit type');
-                      });
+              Add checkpoint
+            </Button>
+          }
+        >
+          <DataTable
+            loading={cpsLoading}
+            rows={cps}
+            rowKey={(c) => c.checkpointId!}
+            onRow={(c) => setCpEdit({ ...c, isNew: false })}
+            cols={[
+              { key: 'c', header: 'Code', render: (c) => <span className="adm-code">{c.checkpointCode}</span> },
+              { key: 'n', header: 'Name', render: (c) => <strong>{c.checkpointName}</strong> },
+              { key: 'k', header: 'Kind', render: (c) => <span className="small">{(c.checkpointKind || '').replace(/_/g, ' ').toLowerCase()}</span> },
+              { key: 'g', header: 'At gate', render: (c) => gates.find((g) => g.gateId === c.gateId)?.gateName ?? '—' },
+              { key: 'u', header: 'Used by', render: (c) => <span className="small">{vts.filter((v: any) => (v.checkpoints ?? []).some((x: any) => x.checkpointCode === c.checkpointCode)).length} visit types</span> },
+              { key: 'a', header: 'Active', render: (c) => <YesNo v={c.isActive} /> },
+            ]}
+          />
+        </Panel>
+      )}
+
+      {tab === 'visits' && vt && (
+        <Split
+          list={
+            <ListPanel
+              title="Visit types"
+              loading={vtsLoading}
+              selected={vt.visitTypeId}
+              onSelect={(id) => setVtId(Number(id))}
+              actions={
+                <Button
+                  size="sm"
+                  icon={<Plus />}
+                  perm="admin.gate.configure"
+                  onClick={() =>
+                    setVtDrawer({
+                      open: true,
+                      vt: {
+                        siteId: site.siteId,
+                        visitTypeCode: '',
+                        visitTypeName: '',
+                        requiresNomination: true,
+                        requiresAppointment: false,
+                        isActive: true,
+                      },
+                      isNew: true,
+                    })
                   }
-                }}
-              />
-            </Split>
-          )}
-
-          {gateDrawer?.open && (
-            <GateDrawer
-              gate={gateDrawer.gate}
-              isNew={gateDrawer.isNew}
-              onClose={() => setGateDrawer(null)}
-              onSave={(form) => {
-                if (gateDrawer.isNew) {
-                  gatesApi
-                    .createGate(form)
-                    .then((g) => {
-                      if (g?.gateId) {
-                        setGates((all) => [...all, g]);
-                        setGateId(g.gateId);
-                      }
-                      setGateDrawer(null);
-                      toast('Gate added');
-                    })
-                    .catch(() => toast('Error adding gate'));
-                } else {
-                  gatesApi
-                    .updateGate(Number(form.gateId), form)
-                    .then((g) => {
-                      setGates((all) => all.map((x) => (x.gateId === g.gateId ? g : x)));
-                      setGateDrawer(null);
-                      toast('Gate saved');
-                    })
-                    .catch(() => toast('Error saving gate'));
-                }
-              }}
+                >
+                  Add
+                </Button>
+              }
+              items={vts.map((v: any) => ({
+                id: v.visitTypeId!,
+                title: v.visitTypeName,
+                sub: `${(v.checkpoints ?? []).length} checkpoints${v.requiresAppointment ? ' · appointment' : ''}`,
+              }))}
             />
-          )}
+          }
+        >
+          <VisitTypeEditor
+            key={vt.visitTypeId}
+            vt={vt}
+            cps={cps}
+            onEditDetails={() => setVtDrawer({ open: true, vt, isNew: false })}
+            onSave={(nv) => {
+              if (nv.visitTypeId) {
+                gatesApi
+                  .updateVisitType(Number(nv.visitTypeId), nv)
+                  .then((updated) => {
+                    setVts((all: any[]) => all.map((x) => (x.visitTypeId === updated.visitTypeId ? updated : x)));
+                    toast('Visit type saved');
+                  })
+                  .catch((err) => {
+                    console.error('Error saving visit type:', err);
+                    toast('Error saving visit type');
+                  });
+              }
+            }}
+          />
+        </Split>
+      )}
 
-          {vtDrawer?.open && (
-            <VisitTypeDrawer
-              visitType={vtDrawer.vt}
-              isNew={vtDrawer.isNew}
-              onClose={() => setVtDrawer(null)}
-              onSave={(form) => {
-                if (vtDrawer.isNew) {
-                  gatesApi
-                    .createVisitType(form)
-                    .then((newVt) => {
-                      setVts((all: any[]) => [...all, newVt]);
-                      setVtId(newVt.visitTypeId);
-                      setVtDrawer(null);
-                      toast('Visit type added');
-                    })
-                    .catch(() => toast('Error adding visit type'));
-                } else {
-                  gatesApi
-                    .updateVisitType(Number(form.visitTypeId), form)
-                    .then((upVt) => {
-                      setVts((all: any[]) => all.map((x) => (x.visitTypeId === upVt.visitTypeId ? upVt : x)));
-                      setVtDrawer(null);
-                      toast('Visit type saved');
-                    })
-                    .catch(() => toast('Error saving visit type'));
-                }
-              }}
-            />
-          )}
+      {gateDrawer?.open && (
+        <GateDrawer
+          gate={gateDrawer.gate}
+          isNew={gateDrawer.isNew}
+          onClose={() => setGateDrawer(null)}
+          onSave={(form) => {
+            if (gateDrawer.isNew) {
+              gatesApi
+                .createGate(form)
+                .then((g) => {
+                  if (g?.gateId) {
+                    setGates((all) => [...all, g]);
+                    setGateId(g.gateId);
+                  }
+                  setGateDrawer(null);
+                  toast('Gate added');
+                })
+                .catch(() => toast('Error adding gate'));
+            } else {
+              gatesApi
+                .updateGate(Number(form.gateId), form)
+                .then((g) => {
+                  setGates((all) => all.map((x) => (x.gateId === g.gateId ? g : x)));
+                  setGateDrawer(null);
+                  toast('Gate saved');
+                })
+                .catch(() => toast('Error saving gate'));
+            }
+          }}
+        />
+      )}
 
-          {lane && (
-            <LaneDrawer
-              key={lane.lane?.gateLaneId ?? 'new'}
-              gate={lane.gate}
-              lane={lane.lane}
-              onClose={() => setLane(null)}
-              onSave={(l) => {
-                const updatedLanes = lane.lane
-                  ? lane.gate.lanes!.map((x) => (x.gateLaneId === l.gateLaneId ? l : x))
-                  : [...(lane.gate.lanes ?? []), l];
-                if (lane.gate.gateId) {
-                  gatesApi
-                    .updateGate(Number(lane.gate.gateId), { lanes: updatedLanes })
-                    .then((fresh) => {
-                      setGates((all) => all.map((g) => (g.gateId !== fresh.gateId ? g : fresh)));
-                      setLane(null);
-                      toast(lane.lane ? 'Lane saved' : 'Lane added');
-                    })
-                    .catch(() => toast('Error saving lane'));
-                }
-              }}
-            />
-          )}
+      {vtDrawer?.open && (
+        <VisitTypeDrawer
+          visitType={vtDrawer.vt}
+          isNew={vtDrawer.isNew}
+          onClose={() => setVtDrawer(null)}
+          onSave={(form) => {
+            if (vtDrawer.isNew) {
+              gatesApi
+                .createVisitType(form)
+                .then((newVt) => {
+                  setVts((all: any[]) => [...all, newVt]);
+                  setVtId(newVt.visitTypeId);
+                  setVtDrawer(null);
+                  toast('Visit type added');
+                })
+                .catch(() => toast('Error adding visit type'));
+            } else {
+              gatesApi
+                .updateVisitType(Number(form.visitTypeId), form)
+                .then((upVt) => {
+                  setVts((all: any[]) => all.map((x) => (x.visitTypeId === upVt.visitTypeId ? upVt : x)));
+                  setVtDrawer(null);
+                  toast('Visit type saved');
+                })
+                .catch(() => toast('Error saving visit type'));
+            }
+          }}
+        />
+      )}
 
-          {cpEdit && (
-            <CheckpointDrawer
-              cpEdit={cpEdit}
-              siteGates={siteGates}
-              onClose={() => setCpEdit(null)}
-              setCpEdit={setCpEdit}
-              onSave={(c) => {
-                if (c.isNew) {
-                  gatesApi
-                    .createCheckpoint(c)
-                    .then((newCp) => {
-                      setCps((all: any[]) => [...all, newCp]);
-                      setCpEdit(null);
-                      toast('Checkpoint added');
-                    })
-                    .catch(() => toast('Error adding checkpoint'));
-                } else {
-                  gatesApi
-                    .updateCheckpoint(Number(c.checkpointId), c)
-                    .then((upCp) => {
-                      setCps((all: any[]) => all.map((x: any) => (x.checkpointId === upCp.checkpointId ? upCp : x)));
-                      setCpEdit(null);
-                      toast('Checkpoint saved');
-                    })
-                    .catch(() => toast('Error saving checkpoint'));
-                }
-              }}
-            />
-          )}
-        </SetupPage>
-      );
+      {lane && (
+        <LaneDrawer
+          key={lane.lane?.gateLaneId ?? 'new'}
+          gate={lane.gate}
+          lane={lane.lane}
+          onClose={() => setLane(null)}
+          onSave={(l) => {
+            const updatedLanes = lane.lane
+              ? lane.gate.lanes!.map((x) => (x.gateLaneId === l.gateLaneId ? l : x))
+              : [...(lane.gate.lanes ?? []), l];
+            if (lane.gate.gateId) {
+              gatesApi
+                .updateGate(Number(lane.gate.gateId), { lanes: updatedLanes })
+                .then((fresh) => {
+                  setGates((all) => all.map((g) => (g.gateId !== fresh.gateId ? g : fresh)));
+                  setLane(null);
+                  toast(lane.lane ? 'Lane saved' : 'Lane added');
+                })
+                .catch(() => toast('Error saving lane'));
+            }
+          }}
+        />
+      )}
+
+      {cpEdit && (
+        <CheckpointDrawer
+          cpEdit={cpEdit}
+          siteGates={siteGates}
+          onClose={() => setCpEdit(null)}
+          setCpEdit={setCpEdit}
+          onSave={(c) => {
+            if (c.isNew) {
+              gatesApi
+                .createCheckpoint(c)
+                .then((newCp) => {
+                  setCps((all: any[]) => [...all, newCp]);
+                  setCpEdit(null);
+                  toast('Checkpoint added');
+                })
+                .catch(() => toast('Error adding checkpoint'));
+            } else {
+              gatesApi
+                .updateCheckpoint(Number(c.checkpointId), c)
+                .then((upCp) => {
+                  setCps((all: any[]) => all.map((x: any) => (x.checkpointId === upCp.checkpointId ? upCp : x)));
+                  setCpEdit(null);
+                  toast('Checkpoint saved');
+                })
+                .catch(() => toast('Error saving checkpoint'));
+            }
+          }}
+        />
+      )}
+    </SetupPage>
+  );
 }
 
-      export {GatesView as Gates};
-      export default GatesView;
+export { GatesView as Gates };
+export default GatesView;

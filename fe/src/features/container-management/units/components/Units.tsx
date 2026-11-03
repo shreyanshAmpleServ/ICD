@@ -214,6 +214,12 @@ function AddExpectedUnitDrawer({
     api.get<any>('/consignments').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
   const consList = Array.isArray(dbConsignments) ? dbConsignments : [];
+  const { data: dbUnitTypes = [] } = useQ(['unit-types'], () =>
+    api.get<any>('/unit-types').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const typeOptions: [string, string][] = Array.isArray(dbUnitTypes) && dbUnitTypes.length > 0
+    ? dbUnitTypes.map((t: any) => [t.typeCode, `${t.typeCode} · ${t.typeName || t.typeCode}`] as [string, string])
+    : [['40HC', '40HC · High Cube'], ['20GP', '20GP · General Purpose'], ['40GP', '40GP · General Purpose'], ['45HC', '45HC · 45ft High Cube'], ['20RF', '20RF · Reefer']];
 
   const handleSubmit = async () => {
     if (!unitNo.trim()) return;
@@ -282,7 +288,7 @@ function AddExpectedUnitDrawer({
             <Select
               value={unitTypeCode}
               onChange={(e) => setUnitTypeCode(e.target.value)}
-              options={[['40HC', '40HC - High Cube'], ['20GP', '20GP - General Purpose'], ['40GP', '40GP - General Purpose'], ['45HC', '45HC - 45ft High Cube'], ['20RF', '20RF - Reefer']]}
+              options={typeOptions}
             />
           </Field>
           <Field label="Full / Empty">

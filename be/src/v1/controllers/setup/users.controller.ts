@@ -22,7 +22,7 @@ export const setupUsersController = {
 
   updateUser: async (req: Request, res: Response) => {
     try {
-      const updated = await setupService.updateUser(req.params.userId, req.body);
+      const updated = await setupService.updateUser(Number(req.params.userId), req.body);
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ error: err.message });

@@ -1,0 +1,75 @@
+flowchart TD
+    subgraph Client_Layer ["Client & Presentation Tier (React 18 + Vite + TS)"]
+        User["Operational Staff / External Agent"]
+        UI["React Feature Views (fe/src/features/*)"]
+        DS["DCC Design System Primitives (fe/src/ds)"]
+        State["State Management: TanStack Query + authService"]
+        ClientSvc["API Client Pipeline (apiClient.ts)"]
+        ReqInt["Request Interceptors (Auth, Site, Role, Idempotency)"]
+        ResInt["Response Interceptors (401 Redirect, 403 Alert, RFC 7807 Parser)"]
+    end
+
+    subgraph Transport_Layer ["Transport & Network Wire"]
+        HTTP["HTTP / HTTPS REST JSON (Port 4000)"]
+    end
+
+    subgraph Backend_Gateway ["Express Application Gateway (be/src)"]
+        App["Express Application (app.ts)"]
+        CORS["CORS & JSON Body Parser"]
+        RespEnhance["Response Enhancer Middleware"]
+        Router["API Route Aggregator (be/src/routes/index.ts)"]
+    end
+
+    subgraph Middleware_Pipeline ["Backend Security & Validation Middlewares"]
+        SiteScope["requireSite (X-Site-Id multi-tenancy validation)"]
+        RBAC["requirePermission (X-Role-Code & Grant Precedence: DO/APPR/REQ/VIEW)"]
+        Idemp["requireIdempotency (UUID Cache Lookup & Deduplication)"]
+        Concurrency["verifyIfMatch (Optimistic log_inst Concurrency Check)"]
+        ZodVal["validateRequest (Zod Schema Validation)"]
+    end
+
+    subgraph Business_Layer ["Controllers & Domain Services"]
+        Controllers["V1 Controllers (be/src/v1/controllers/*)"]
+        Services["Domain Services (CargoService, SetupService)"]
+        Rules["ICD Business Rules (5 Pillars, Tolerance, Segregation)"]
+    end
+
+    subgraph Data_Layer ["Persistence & ORM Layer"]
+        PrismaORM["Prisma Client ORM (be/src/configs/prisma.ts)"]
+        MSSQL[("Microsoft SQL Server (127 Relational Models)")]
+        Fallback[("In-Memory Development Fallback Store (fallbackStore.ts)")]
+        GlobalErr["Global Error Handler (RFC 7807 Problem Details)"]
+    end
+
+    User --> UI
+    UI --> DS
+    UI --> State
+    State --> ClientSvc
+    ClientSvc --> ReqInt
+    ReqInt --> HTTP
+    HTTP --> App
+    App --> CORS
+    CORS --> RespEnhance
+    RespEnhance --> Router
+    Router --> SiteScope
+    SiteScope --> RBAC
+    RBAC --> Idemp
+    Idemp --> Concurrency
+    Concurrency --> ZodVal
+    ZodVal --> Controllers
+    Controllers --> Services
+    Services --> Rules
+    Rules --> PrismaORM
+    PrismaORM -->|isDbLive == true| MSSQL
+    PrismaORM -.->|isDbLive == false| Fallback
+    MSSQL --> PrismaORM
+    PrismaORM --> Controllers
+    Controllers -->|Error Thrown| GlobalErr
+    GlobalErr --> HTTP
+    Controllers --> HTTP
+    HTTP --> ResInt
+    ResInt --> ClientSvc
+    ClientSvc --> State
+    State --> UI
+    UI --> User
+

@@ -3,11 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Landmark } from 'lucide-react';
 import type { S } from '@/api/types';
 import { Banner, Button, Drawer, Field, Input, Segmented, Select, useToast } from '@/ds/components';
-import { allStays, consignments } from '@/mock/core';
 import { REF_TYPES } from '@/mock/cargo';
-import { day } from '@/mock/gen';
 import { Evidence } from '@/features/container-management/shared';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { api } from '@/api/client';
 
 let nextId = 100;
@@ -17,19 +15,23 @@ export function CustomsRefDrawer({ open, onClose, consignmentId, onSaved }: {
 }) {
   const toast = useToast();
   const qc = useQueryClient();
-  const { data: dbConsignments = [] } = useQ(['consignments'], () => delay(consignments));
-  const { data: dbUnits = [] } = useQ(['units'], () => delay(allStays));
+  const { data: dbConsignments = [] } = useQ(['consignments'], () =>
+    api.get<any>('/consignments').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbUnits = [] } = useQ(['units'], () =>
+    api.get<any>('/units').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
 
-  const allCons = dbConsignments.length ? dbConsignments : consignments;
-  const allStaysPool = dbUnits.length ? dbUnits : allStays;
+  const allCons = Array.isArray(dbConsignments) ? dbConsignments : [];
+  const allStaysPool = Array.isArray(dbUnits) ? dbUnits : [];
 
   const [type, setType] = useState('CUSTOMS_RELEASE');
-  const [cid, setCid] = useState<number>(consignmentId ?? (allCons[0]?.consignmentId || 104));
+  const [cid, setCid] = useState<number>(consignmentId ?? (allCons[0]?.consignmentId || 1));
   const [scope, setScope] = useState<'all' | 'one'>('all');
   const [unitId, setUnitId] = useState<number | null>(null);
   const [refNo, setRefNo] = useState('');
-  const [refDate, setRefDate] = useState(day(0));
-  const [validTo, setValidTo] = useState(day(30));
+  const [refDate, setRefDate] = useState(new Date().toISOString().slice(0, 10));
+  const [validTo, setValidTo] = useState(new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
   const [amount, setAmount] = useState('');
   const [cur, setCur] = useState('USD');
   const [file, setFile] = useState<string | null>(null);

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarPlus } from 'lucide-react';
 import { Banner, Button, Drawer, Field, Input, Select, useToast } from '@/ds/components';
-import { partyName } from '@/mock/core';
+import { useQ } from '@/api/query';
 import { VISIT_TYPES } from '@/features/gate-management/types';
-import { APPT_TYPES, HOURS, type Appt } from '@/mock/ops';
+import { APPT_TYPES, HOURS } from '@/mock/ops';
+import { appointmentsApi } from '../api';
+import type { Appt } from '../types';
 
 const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
 const dayLabel = (date: string) =>
@@ -32,16 +34,34 @@ export function BookAppointmentDrawer({
   const toast = useToast();
   const [t, setT] = useState<string>('IMPORT_PICKUP');
   const [h, setH] = useState(13);
-  const [co, setCo] = useState('7');
+  const [co, setCo] = useState<string>('');
   const [plate, setPlate] = useState('');
   const [driver, setDriver] = useState('');
   const [ref, setRef] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: parties = [] } = useQ<any[]>(['parties-appointments'], () => appointmentsApi.getParties());
+
+  useEffect(() => {
+    if (parties.length > 0 && !co) {
+      const firstId = String(parties[0].partyId || parties[0].party_id || parties[0].id || '1');
+      setCo(firstId);
+    }
+  }, [parties, co]);
+
   const c = cap(t, h),
     b = booked(t, h);
   const full = c > 0 && b >= c;
-  const plateOk = /^T\s?\d{3}\s?[A-Z]{3}$/.test(plate.trim().toUpperCase());
-  const refOk = t !== 'IMPORT_PICKUP' || /^RO-/.test(ref.trim().toUpperCase());
-  const ok = c > 0 && !full && plateOk && driver.trim().length > 2 && refOk;
+  const plateOk = /^T\s?\d{3}\s?[A-Z]{3}$/i.test(plate.trim());
+  const refOk = t !== 'IMPORT_PICKUP' || /^RO-/i.test(ref.trim());
+  const ok = c > 0 && !full && plateOk && driver.trim().length > 2 && refOk && !isSubmitting;
+
+  const partyOptions: [string, string][] = parties.length > 0
+    ? parties.map((p: any) => [
+        String(p.partyId || p.party_id || p.id),
+        p.partyName || p.party_name || p.name || `Party #${p.partyId || p.party_id}`,
+      ])
+    : [['1', 'General Transporter']];
 
   return (
     <Drawer
@@ -50,35 +70,60 @@ export function BookAppointmentDrawer({
       title={`Book an appointment · ${dayLabel(date)}`}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button
             variant="primary"
             icon={<CalendarPlus />}
             disabled={!ok}
-            onClick={() => {
+            onClick={async () => {
+              setIsSubmitting(true);
               const start = new Date(`${date}T${hh(h)}:00+03:00`);
-              onBook({
-                appointmentId: 90000 + (Math.round(start.getTime() / 60000) % 9999),
-                appointmentNo: `AP-26-${19000 + h * 10}`,
+              const end = new Date(start.getTime() + 3600_000);
+              const apptPayload = {
+                siteId: 1,
                 visitTypeCode: t,
                 slotStart: start.toISOString(),
-                slotEnd: new Date(start.getTime() + 3600_000).toISOString(),
-                transporterPartyId: Number(co),
-                status: 'BOOKED',
+                slotEnd: end.toISOString(),
+                transporterPartyId: Number(co) || undefined,
+                partyId: Number(co) || undefined,
+                truckPlate: plate.trim().toUpperCase(),
+                driverName: driver.trim(),
+                refNo: ref.trim().toUpperCase() || undefined,
                 bookedVia: 'DESK',
-                plateNo: plate.toUpperCase(),
-                driverName: driver,
-                refNo: ref.toUpperCase() || undefined,
-                date,
-                hour: h,
-              });
-              toast(`Appointment booked for ${plate.toUpperCase()} at ${hh(h)}`);
-              onClose();
+                status: 'BOOKED',
+              };
+
+              try {
+                const res = await appointmentsApi.createAppointment(apptPayload);
+                const bookedItem: Appt = {
+                  appointmentId: res.appointmentId || (90000 + (Math.round(start.getTime() / 60000) % 9999)),
+                  appointmentNo: res.appointmentNo || `AP-26-${19000 + h * 10}`,
+                  visitTypeCode: t,
+                  slotStart: start.toISOString(),
+                  slotEnd: end.toISOString(),
+                  transporterPartyId: Number(co) || 1,
+                  partyName: parties.find((p) => String(p.partyId || p.party_id) === String(co))?.partyName,
+                  status: 'BOOKED',
+                  bookedVia: 'DESK',
+                  plateNo: plate.toUpperCase(),
+                  driverName: driver,
+                  refNo: ref.toUpperCase() || undefined,
+                  date,
+                  hour: h,
+                };
+                onBook(bookedItem);
+                toast(`Appointment booked for ${plate.toUpperCase()} at ${hh(h)}`);
+                onClose();
+              } catch (err: any) {
+                toast(`Failed to book appointment: ${err?.message || 'Error'}`);
+              } finally {
+                setIsSubmitting(false);
+              }
             }}
           >
-            Book appointment
+            {isSubmitting ? 'Booking...' : 'Book appointment'}
           </Button>
         </>
       }
@@ -86,7 +131,7 @@ export function BookAppointmentDrawer({
       <div className="stack">
         <div className="form-grid">
           <Field label="Visit type" required>
-            <Select value={t} onChange={(e) => setT(e.target.value)} options={APPT_TYPES.map((x) => [x, VISIT_TYPES[x]])} />
+            <Select value={t} onChange={(e) => setT(e.target.value)} options={APPT_TYPES.map((x) => [x, VISIT_TYPES[x] || x])} />
           </Field>
           <Field
             label="Slot"
@@ -109,12 +154,7 @@ export function BookAppointmentDrawer({
           <Select
             value={co}
             onChange={(e) => setCo(e.target.value)}
-            options={[
-              ['7', partyName(7)],
-              ['8', partyName(8)],
-              ['11', partyName(11)],
-              ['2', partyName(2)],
-            ]}
+            options={partyOptions}
           />
         </Field>
         <div className="form-grid">

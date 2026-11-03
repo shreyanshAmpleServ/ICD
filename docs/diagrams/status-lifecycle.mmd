@@ -1,0 +1,48 @@
+stateDiagram-v2
+    state "Truck Visit Lifecycle (truck_visit.status)" as TruckVisits {
+        [*] --> ANNOUNCED: Pre-booking
+        ANNOUNCED --> AT_OUTER_GATE: Arrived at Outer Gate
+        AT_OUTER_GATE --> ADMITTED: Checked In (current_seq_no=2)
+        ADMITTED --> WORKING: Yard operations in progress
+        WORKING --> CHECKED_OUT: Final weighing complete
+        CHECKED_OUT --> EXITED: Gated out (current_seq_no=4)
+        AT_OUTER_GATE --> REJECTED: Turn back / Bad papers
+        AT_OUTER_GATE --> CANCELLED: Retracted
+    }
+
+    state "Container Operational Lifecycle (unit_stay.physical_status)" as ContainerPhysical {
+        [*] --> EXPECTED: Manifest Ingested
+        EXPECTED --> IN_YARD: Gated In & Stacked
+        IN_YARD --> CFS: CFS Stripping Bay
+        CFS --> IN_YARD: De-stuffed (Empty)
+        IN_YARD --> CUSTOMS_EXAM: Inspection Dock
+        CUSTOMS_EXAM --> IN_YARD: Exam Concluded
+        IN_YARD --> DEPARTED: Gate-Out Exit
+    }
+
+    state "Container Customs Clearance (unit_stay.customs_status)" as ContainerCustoms {
+        [*] --> NOT_LODGED: Initial
+        NOT_LODGED --> LODGED: TANSAD Filed
+        LODGED --> QUERY: Customs Discrepancy
+        QUERY --> LODGED: Corrected
+        LODGED --> EXAM_REQ: Physical Exam Ordered
+        EXAM_REQ --> CLEARED: Exam Passed & Seal Applied
+        LODGED --> CLEARED: Direct Green Release
+    }
+
+    state "Yard Move Order (move_order.status)" as YardMoves {
+        [*] --> OPEN: Created by Planner
+        OPEN --> ASSIGNED: Equipment Allocated
+        ASSIGNED --> IN_PROGRESS: Lift in Progress
+        IN_PROGRESS --> DONE: Container Placed
+        OPEN --> CANCELLED: Superseded
+    }
+
+    state "5-Pillar Release Order (release_order.status)" as ReleaseOrders {
+        [*] --> REQUESTED: Applied by Agent
+        REQUESTED --> APPROVED: All 5 Pillars Validated
+        APPROVED --> REVALIDATED: Extended
+        APPROVED --> COMPLETED: Container Departed
+        REQUESTED --> CANCELLED: Revoked
+    }
+

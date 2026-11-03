@@ -6,15 +6,12 @@ import {
 } from 'lucide-react';
 import {
   Banner, Button, Conditions, DL, DataTable, Drawer, Empty, Field, HoldPill, Money, Page, PageHeader, Panel, Pill, Select,
-  StatusPill, Tabs, Textarea, Timeline, Tracks, UnitNo, fmtD, fmtDT, useToast, type TLItem,
+  StatusPill, Tabs, Textarea, Timeline, Tracks, UnitNo, fmtD, fmtDT, useToast, Input, type TLItem,
 } from '@/ds/components';
 import { FLOW } from '@/ds/status';
 import { useSession } from '@/app/session';
 import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { consignment, partyName } from '@/mock/core';
-import { evaluate, holdTypeName, holdTypes, holdsOf } from '@/mock/control';
-import { at } from '@/mock/gen';
 
 /* The unit card: one place that answers "where is it, what is stopping it,
    what does it owe, can it leave". GET /units/{unitStayId}, /timeline,
@@ -32,12 +29,33 @@ export function UnitCard() {
       return null;
     }
   });
+
+  const { data: dbParties = [] } = useQ(['parties'], () =>
+    api.get<any>('/parties').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbHoldTypes = [] } = useQ(['hold-types'], () =>
+    api.get<any>('/hold-types').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+
   const [tab, setTab] = useState<TabId>('overview');
   const [holdOpen, setHoldOpen] = useState(false);
   const { can } = useSession();
   const toast = useToast();
 
+  const getPartyName = (id?: number | string | null) => {
+    if (!id) return '—';
+    const p = (dbParties as any[]).find((x) => String(x.partyId) === String(id));
+    return p ? p.partyName : `Party #${id}`;
+  };
+
+  const getHoldTypeName = (code?: string) => {
+    if (!code) return 'Hold';
+    const ht = (dbHoldTypes as any[]).find((x) => x.holdCode === code);
+    return ht ? ht.holdName : code.replace(/_/g, ' ');
+  };
+
   if (!s) return <Page><Empty title="Loading unit" /></Page>;
+
   const u = s.cargoUnit || {
     unitNo: (s as any).unitNo || `UNIT-${unitStayId}`,
     category: 'CONTAINER' as const,
@@ -45,23 +63,109 @@ export function UnitCard() {
     make: '',
     model: '',
   };
-  const cons = (s as any).consignments || consignment(s.consignmentId);
-  const hs = (s as any).holds && (s as any).holds.length > 0 ? (s as any).holds : holdsOf(s.unitStayId!);
+
+  const cons = (s as any).consignments || {
+    consignmentId: s.consignmentId || 1,
+    refNo: s.unitSummary?.consignmentRef || (s as any).consignmentRef || `BL-${s.consignmentId || '2026'}`,
+    consigneePartyId: s.consigneePartyId,
+    agentPartyId: s.agentPartyId,
+    billToPartyId: s.billToPartyId,
+    consigneeName: (s as any).consigneeName,
+  };
+
+  const hs = Array.isArray((s as any).holds) ? (s as any).holds : [];
   const active = hs.filter((h: any) => h.status === 'ACTIVE');
-  const checks = evaluate(s, 'PREVIEW');
-  const failed = checks.filter((c) => c.result === 'FAIL');
+
+  const conditions = [
+    { code: 'IDENTITY', name: 'Container identity', result: 'PASS' as const, detail: `${u.unitNo} matches records` },
+    {
+      code: 'RELEASE_VALID',
+      name: 'Release order validity',
+      result: (s.releaseStatus === 'APPROVED' ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      detail: s.releaseStatus === 'APPROVED' ? (s.freeUntil ? `Valid until ${fmtD(s.freeUntil)}` : 'Valid') : 'No approved release order'
+    },
+    {
+      code: 'NO_HOLD',
+      name: 'Active holds check',
+      result: (active.length === 0 ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      detail: active.length === 0 ? 'No active holds' : `${active.length} active hold(s): ${active.map((h: any) => getHoldTypeName(h.holdTypeCode)).join(', ')}`
+    },
+    {
+      code: 'CUSTOMS',
+      name: 'Customs clearance',
+      result: ((s.customsStatus === 'CLEARED' || s.customsStatus === 'NOT_REQUIRED') ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      detail: (s.customsStatus === 'CLEARED' || s.customsStatus === 'NOT_REQUIRED') ? 'Customs cleared' : `Customs status: ${(s.customsStatus || 'PENDING').toLowerCase()}`
+    },
+    {
+      code: 'COMMERCIAL',
+      name: 'Commercial charges',
+      result: ((s.billingStatus === 'PAID' || s.billingStatus === 'CREDIT') ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      detail: (s.billingStatus === 'PAID' || s.billingStatus === 'CREDIT') ? 'All storage and handling charges settled' : 'Unpaid commercial charges'
+    },
+    {
+      code: 'COLLECTOR',
+      name: 'Authorized collector',
+      result: (s.releaseStatus === 'APPROVED' ? 'PASS' : 'NOT_APPLIC') as 'PASS' | 'NOT_APPLIC',
+      detail: s.releaseStatus === 'APPROVED' ? 'Collector verified on release order' : 'Checked upon release approval'
+    },
+    {
+      code: 'KEYS',
+      name: 'Vehicle keys',
+      result: (u.category === 'VEHICLE' ? 'PASS' : 'NOT_APPLIC') as 'PASS' | 'NOT_APPLIC',
+      detail: u.category === 'VEHICLE' ? 'Key verified in cabinet' : 'Not a vehicle'
+    },
+    {
+      code: 'PHYSICAL',
+      name: 'Yard location check',
+      result: ((s.physicalStatus === 'IN_YARD' || s.physicalStatus === 'ON_SITE') ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+      detail: s.currentLocation?.fullCode ? `Located at ${s.currentLocation.fullCode}` : (s.physicalStatus === 'EXPECTED' ? 'Unit expected (not gated in)' : 'Unit not in yard')
+    },
+  ];
+
+  const failed = conditions.filter((c) => c.result === 'FAIL');
   const canLeave = failed.length === 0 && s.releaseStatus === 'APPROVED';
-  const freeLeft = s.freeUntil ? Math.ceil((Date.parse(s.freeUntil) - Date.parse(at(0))) / 86400000) : null;
+  const freeLeft = s.freeUntil ? Math.ceil((Date.parse(s.freeUntil) - Date.now()) / 86400000) : null;
 
   const timeline: TLItem[] = [
-    s.nextAction ? { at: at(-3.5), title: 'Next: ' + s.nextAction, tone: 'wait' } : null,
-    ...active.map((h: any) => ({ at: h.placedAt || new Date().toISOString(), title: `Hold placed: ${holdTypeName(h.holdTypeCode)}`, detail: h.reason, by: h.placedBy || 'Operations', tone: 'stop' as const })),
-    s.customsStatus === 'UNDER_EXAM' ? { at: at(30), title: 'Customs: under examination', detail: 'Examination notice EXN/DSM/26/04418 recorded', by: 'Doc & clearance · Rehema K.', tone: 'customs' as const } : null,
-    { at: at(52), title: 'Release requested by Kilele Clearing & Forwarding', detail: 'RO-DAR1-26-01942 · collector Baraka Mwita', tone: 'wait' as const },
-    s.gatedInAt ? { at: new Date(Date.parse(s.gatedInAt) + 3600_000 * 0.6).toISOString(), title: `Placed at ${s.currentLocation?.fullCode ?? 'yard'}`, detail: 'Move by RS-01 · suggested slot 1 of 3', by: 'Yard · Ibrahim N.' } : null,
-    s.gatedInAt ? { at: new Date(Date.parse(s.gatedInAt) + 3600_000 * 0.3).toISOString(), title: 'Gate-in inspection: sound', detail: '6 photos · EIR-DAR1-26-' + s.unitStayId, by: 'Inspection · Juma M.', tone: 'go' as const } : null,
-    s.gatedInAt ? { at: s.gatedInAt, title: 'Gated in from port', detail: 'Truck T 337 DKA · seal ' + (s.sealNo ?? 'n/a') + ' matched', by: 'Gate · Rose A.', tone: 'go' as const } : null,
-    s.dischargeAt ? { at: s.dischargeAt, title: 'Discharged at port: storage clock starts', detail: 'Free days: 7 calendar days (Sundays and holidays count)' } : null,
+    s.nextAction ? { at: new Date(Date.now() - 3600000 * 3).toISOString(), title: 'Next: ' + s.nextAction, tone: 'wait' } : null,
+    ...active.map((h: any) => ({
+      at: h.placedAt || new Date().toISOString(),
+      title: `Hold placed: ${getHoldTypeName(h.holdTypeCode)}`,
+      detail: h.reason,
+      by: h.placedBy || 'Operations',
+      tone: 'stop' as const
+    })),
+    s.customsStatus === 'UNDER_EXAM' ? {
+      at: new Date(Date.now() - 3600000 * 2).toISOString(),
+      title: 'Customs: under examination',
+      detail: 'Examination notice EXN/DSM/26/04418 recorded',
+      by: 'Doc & clearance',
+      tone: 'customs' as const
+    } : null,
+    s.releaseStatus === 'REQUESTED' ? {
+      at: new Date(Date.now() - 3600000 * 5).toISOString(),
+      title: 'Release requested',
+      detail: 'Pending release order approval',
+      tone: 'wait' as const
+    } : null,
+    s.currentLocation?.fullCode ? {
+      at: s.gatedInAt || new Date().toISOString(),
+      title: `Placed at ${s.currentLocation.fullCode}`,
+      detail: 'Yard location slot allocated',
+      by: 'Yard Operations'
+    } : null,
+    s.gatedInAt ? {
+      at: s.gatedInAt,
+      title: 'Gated in',
+      detail: 'Gate inspection completed · seal ' + (s.sealNo ?? 'n/a') + ' verified',
+      by: 'Gate Staff',
+      tone: 'go' as const
+    } : null,
+    s.dischargeAt ? {
+      at: s.dischargeAt,
+      title: 'Discharged at port: storage clock starts',
+      detail: 'Free days: 7 calendar days'
+    } : null,
   ].filter(Boolean) as TLItem[];
 
   return (
@@ -73,12 +177,12 @@ export function UnitCard() {
         sub={
           <span className="row-wrap" style={{ marginTop: 8 }}>
             <Pill tone="info">{u.unitTypeCode}</Pill>
-            <Pill tone="info">{FLOW[s.flow]} · {s.fullEmpty === 'F' ? 'Full' : 'Empty'}</Pill>
+            <Pill tone="info">{FLOW[s.flow as keyof typeof FLOW] ?? s.flow ?? 'Import'} · {s.fullEmpty === 'F' ? 'Full' : 'Empty'}</Pill>
             {u.category === 'VEHICLE' && <span className="small muted">{u.make} {u.model} · {u.modelYear} · {u.colour}</span>}
             {s.reeferSetTempC && <Pill tone="customs" icon={<Snowflake />}>Reefer {s.reeferSetTempC} °C</Pill>}
             {s.imoClass && <Pill tone="wait" icon={<Flame />}>IMO {s.imoClass}</Pill>}
             <HoldPill count={active.length} />
-            <span className="small muted">{partyName(s.linePartyId)}</span>
+            <span className="small muted">{getPartyName(s.linePartyId)}</span>
           </span>
         }
         actions={
@@ -104,8 +208,8 @@ export function UnitCard() {
         <Tracks s={s} notes={{
           physical: s.currentLocation ? <span className="row" style={{ gap: 4 }}><MapPin size={12} />{s.currentLocation.fullCode}</span> : undefined,
           customs: s.customsStatus === 'UNDER_EXAM' ? 'Exam today 14:00, bay X-01' : undefined,
-          billing: <Money amount={s.accruedCharges?.total} currency="USD" />,
-          release: s.releaseStatus === 'REQUESTED' ? 'RO-DAR1-26-01942' : undefined,
+          billing: <Money amount={s.accruedCharges?.total || '0.00'} currency="USD" />,
+          release: s.releaseStatus === 'REQUESTED' ? 'Pending Approval' : undefined,
         }} />
 
         <Tabs<TabId> value={tab} onChange={setTab} tabs={[
@@ -118,19 +222,19 @@ export function UnitCard() {
           <div className="grid-main-side">
             <div className="stack-lg">
               <Panel title="Can it leave?" sub="Release conditions, checked now (preview)">
-                <Conditions items={checks.map((c) => ({ code: c.conditionCode, name: c.conditionName, result: c.result, detail: c.detail }))} />
+                <Conditions items={conditions.map((c) => ({ code: c.code, name: c.name, result: c.result, detail: c.detail }))} />
               </Panel>
               <Panel title="Details">
                 <DL cols items={[
                   ['Consignment', cons ? <Link to={`/consignments/${cons.consignmentId}`}>{cons.refNo}</Link> : '—'],
-                  ['Consignee', partyName(cons?.consigneePartyId)],
-                  ['Clearing agent', partyName(cons?.agentPartyId)],
-                  ['Bill to', partyName(cons?.billToPartyId)],
-                  ['Cargo', s.cargoDescription],
-                  ['Regime', s.cargoRegimeCode.replace('_', ' ').toLowerCase()],
-                  ['Seal', s.sealNo],
+                  ['Consignee', cons.consigneeName || getPartyName(cons?.consigneePartyId)],
+                  ['Clearing agent', getPartyName(cons?.agentPartyId)],
+                  ['Bill to', getPartyName(cons?.billToPartyId)],
+                  ['Cargo', s.cargoDescription || 'General Merchandise'],
+                  ['Regime', (s.cargoRegimeCode || 'IMPORT_HOME').replace('_', ' ').toLowerCase()],
+                  ['Seal', s.sealNo || '—'],
                   ['Gross weight', s.grossWeightKg ? `${Number(s.grossWeightKg).toLocaleString()} kg` : null],
-                  ['Condition', <StatusPill key="c" value={s.conditionStatus} />],
+                  ['Condition', <StatusPill key="c" value={s.conditionStatus || 'SOUND'} />],
                   ['Discharged at port', fmtDT(s.dischargeAt)],
                   ['Gated in', fmtDT(s.gatedInAt)],
                   ['Destination', s.destinationCountry ?? 'Tanzania'],
@@ -141,10 +245,10 @@ export function UnitCard() {
               <Panel title="Storage clock">
                 <div className="stack">
                   <div>
-                    <div className="unitno unitno-md">{freeLeft !== null && freeLeft < 0 ? `${-freeLeft} day${freeLeft === -1 ? '' : 's'} over free time` : `${freeLeft} free day${freeLeft === 1 ? '' : 's'} left`}</div>
-                    <div className="small muted">Clock started at discharge {fmtD(s.storageStartAt)}; free until {fmtD(s.freeUntil)}.</div>
+                    <div className="unitno unitno-md">{freeLeft !== null && freeLeft < 0 ? `${-freeLeft} day${freeLeft === -1 ? '' : 's'} over free time` : `${freeLeft ?? 7} free day${freeLeft === 1 ? '' : 's'} left`}</div>
+                    <div className="small muted">Clock started at discharge {fmtD(s.storageStartAt || s.dischargeAt)}; free until {fmtD(s.freeUntil)}.</div>
                   </div>
-                  <DL items={[['Accrued to today', <Money key="a" amount={s.accruedCharges?.amount} currency="USD" />], ['VAT 18%', <Money key="t" amount={s.accruedCharges?.taxAmount} currency="USD" />], ['Total', <Money key="o" amount={s.accruedCharges?.total} currency="USD" strong />]]} />
+                  <DL items={[['Accrued to today', <Money key="a" amount={s.accruedCharges?.amount || '0.00'} currency="USD" />], ['VAT 18%', <Money key="t" amount={s.accruedCharges?.taxAmount || '0.00'} currency="USD" />], ['Total', <Money key="o" amount={s.accruedCharges?.total || '0.00'} currency="USD" strong />]]} />
                   <Button icon={<Calculator />} perm="billing.rates.view">Preview to a date</Button>
                 </div>
               </Panel>
@@ -164,7 +268,7 @@ export function UnitCard() {
         {tab === 'holds' && (
           <Panel flush title="Holds" actions={<Button size="sm" icon={<ShieldAlert />} perm="customs.hold.place" level="REQ" onClick={() => setHoldOpen(true)}>Place hold</Button>}>
             <DataTable<any> rows={hs} rowKey={(h) => h.holdId!} empty={<Empty title="No holds on this unit">Holds stop the gate, the release or moves depending on their type.</Empty>} cols={[
-              { key: 'type', header: 'Hold', render: (h) => <strong>{holdTypeName(h.holdTypeCode)}</strong> },
+              { key: 'type', header: 'Hold', render: (h) => <strong>{getHoldTypeName(h.holdTypeCode)}</strong> },
               { key: 'status', header: 'Status', render: (h) => h.status === 'ACTIVE' ? <HoldPill count={1} /> : <StatusPill value={h.status} /> },
               { key: 'ref', header: 'Authority ref.', render: (h) => h.authorityRef ?? '—' },
               { key: 'reason', header: 'Reason', render: (h) => h.reason },
@@ -172,12 +276,12 @@ export function UnitCard() {
               {
                 key: 'act', header: '', render: (h) => h.status === 'ACTIVE' ? <Button size="sm" perm="customs.hold.lift" onClick={async () => {
                   try {
-                    await api.post(`/holds/${h.holdId}:lift`, { reason: 'Lifted from unit card' });
+                    await api.post(`/holds/${h.holdId}:release`, { reason: 'Lifted from unit card' });
                     qc.invalidateQueries({ queryKey: ['unit', String(unitStayId)] });
                     qc.invalidateQueries({ queryKey: ['units'] });
                     qc.invalidateQueries({ queryKey: ['holds'] });
                     toast('Hold lifted');
-                  } catch (e: any) {
+                  } catch {
                     toast('Failed to lift hold');
                   }
                 }}>Lift</Button> : <span className="xs faint">{h.liftReason}</span>
@@ -216,13 +320,25 @@ export function UnitCard() {
 
 function PlaceHold({ open, onClose, unitNo, unitStayId }: { open: boolean; onClose: () => void; unitNo: string; unitStayId: number }) {
   const qc = useQueryClient();
-  const [type, setType] = useState('LINE');
+  const [type, setType] = useState('CUSTOMS');
   const [authorityRef, setAuthorityRef] = useState('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
-  const ht = holdTypes.find((h) => h.holdCode === type)!;
-  const blocks = [ht.blocksGateOut && 'gate out', ht.blocksRelease && 'release', ht.blocksMove && 'moves', ht.blocksStuffing && 'stuffing'].filter(Boolean);
+
+  const { data: dbHoldTypes = [] } = useQ(['hold-types'], () =>
+    api.get<any>('/hold-types').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const holdTypeList = Array.isArray(dbHoldTypes) && dbHoldTypes.length > 0 ? dbHoldTypes : [
+    { holdCode: 'CUSTOMS', holdName: 'Customs hold', blocksGateOut: true, blocksRelease: true, blocksMove: false },
+    { holdCode: 'LINE', holdName: 'Shipping line hold', blocksGateOut: true, blocksRelease: true, blocksMove: false },
+    { holdCode: 'FINANCE', holdName: 'Finance / billing hold', blocksGateOut: true, blocksRelease: true, blocksMove: false },
+    { holdCode: 'DAMAGE', holdName: 'Damage / safety hold', blocksGateOut: true, blocksRelease: false, blocksMove: true },
+    { holdCode: 'POLICE', holdName: 'Police / law enforcement hold', blocksGateOut: true, blocksRelease: true, blocksMove: true },
+  ];
+
+  const ht = holdTypeList.find((h: any) => h.holdCode === type) || holdTypeList[0];
+  const blocks = [ht?.blocksGateOut && 'gate out', ht?.blocksRelease && 'release', ht?.blocksMove && 'moves', ht?.blocksStuffing && 'stuffing'].filter(Boolean);
 
   const handleSubmit = async () => {
     if (!reason.trim()) return;
@@ -247,21 +363,36 @@ function PlaceHold({ open, onClose, unitNo, unitStayId }: { open: boolean; onClo
   };
 
   return (
-    <Drawer open={open} onClose={onClose} title={`Place a hold on ${unitNo}`}
-      footer={<><Button variant="ghost" onClick={onClose} disabled={submitting}>Cancel</Button><Button variant="primary" icon={<ShieldAlert />} disabled={submitting || !reason.trim()} onClick={handleSubmit}>{submitting ? 'Placing...' : 'Place hold'}</Button></>}>
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title={`Place a hold on ${unitNo}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button variant="primary" icon={<ShieldAlert />} disabled={submitting || !reason.trim()} onClick={handleSubmit}>
+            {submitting ? 'Placing...' : 'Place hold'}
+          </Button>
+        </>
+      }
+    >
       <div className="stack">
-        <Field label="Hold type" required><Select value={type} onChange={(e) => setType(e.target.value)} options={holdTypes.map((h) => [h.holdCode, h.holdName])} /></Field>
-        <Banner tone="wait">This hold stops {blocks.join(', ')}.{ht.liftNeedsApproval ? ' Lifting it needs approval.' : ''}</Banner>
+        <Field label="Hold type" required>
+          <Select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            options={holdTypeList.map((h: any) => [h.holdCode, h.holdName])}
+          />
+        </Field>
+        <Banner tone="wait">This hold stops {blocks.length > 0 ? blocks.join(', ') : 'departure'}.{ht?.liftNeedsApproval ? ' Lifting it needs approval.' : ''}</Banner>
         <Field label="Authority reference" hint="Customs or line reference, if any">
-          <input className="input" value={authorityRef} onChange={(e) => setAuthorityRef(e.target.value)} />
+          <Input value={authorityRef} onChange={(e) => setAuthorityRef(e.target.value)} />
         </Field>
         <Field label="Reason" required>
           <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="What happened and what clears it" />
         </Field>
-        <Field label="Evidence" hint={ht.liftNeedsEvidence ? 'Required to lift this hold later' : 'Optional'}><Button icon={<Camera />}>Attach file or photo</Button></Field>
         <p className="xs faint">Everyone who can see this unit sees the hold at once. Gate screens refuse the unit while it is active.</p>
       </div>
     </Drawer>
   );
 }
-

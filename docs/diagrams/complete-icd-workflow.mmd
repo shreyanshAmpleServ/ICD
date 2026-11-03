@@ -1,0 +1,52 @@
+flowchart TD
+    subgraph Pre_Arrival ["1. Pre-Arrival & Cargo Planning"]
+        M1["Shipping Line EDI / Manifest File"] --> M2["Manifest Ingest (/manifests)"]
+        M2 --> M3["Consignment & Pre-Advised unit_stay (EXPECTED)"]
+        M3 --> M4["Truck Appointment Booking (/appointments)"]
+    end
+
+    subgraph Gate_In ["2. Gate-In & Vehicle Ingestion"]
+        M4 --> G1["Truck Arrives at Outer Gate"]
+        G1 --> G2["Gate Queue Check-In (/gate or /gate/lane)"]
+        G2 --> G3["Create truck_visit (AT_OUTER_GATE) & visit_unit_txn"]
+        G3 --> G4["Inbound Weighbridge: Gross Weight Scale Ticket (/weighbridge)"]
+        G4 --> G5["Admit Truck: truck_visit (ADMITTED), unit_stay (IN_YARD)"]
+    end
+
+    subgraph Yard_Operations ["3. Yard Stacking & Handling"]
+        G5 --> Y1["Yard Planner Dispatches move_order: OFFLOAD (/moves)"]
+        Y1 --> Y2["Reach Stacker Operator Places Container in Bay/Row/Tier (/yard)"]
+        Y2 --> Y3["Move Complete: unit_stay.current_location_id Updated & yard_move Audit"]
+        Y3 --> Y4["Container Survey & Damage Inspection (/inspections)"]
+    end
+
+    subgraph Branching_Operations ["4. Specialized Operational Processing"]
+        Y4 --> Branch{Container Category & Flow}
+        Branch -- Reefer Container --> R1["Plug-in Power & Hourly Temperature Log (/reefers)"]
+        Branch -- LCL Freight / CFS --> C1["CFS De-stuffing, Tally Sheet & Lot Balances (/cfs)"]
+        Branch -- FCL Customs Hold --> X1["Move to Customs Bay & Physical Exam (/customs)"]
+        Branch -- Direct FCL Delivery --> B1["Commercial Rating"]
+        R1 --> B1
+        C1 --> B1
+        X1 --> B1
+    end
+
+    subgraph Commercial_Settlement ["5. Invoicing & Payment"]
+        B1 --> B2["Aggregate billable_event (Storage, LOLO, Power, Exam)"]
+        B2 --> B3["Generate Commercial Invoice (/invoices/new) -> unit_stay (INVOICED)"]
+        B3 --> B4["Cashier Desk Payment (/cashier) -> Cash, Bank, Mobile Money"]
+        B4 --> B5["Settlement & Fiscal Receipt -> unit_stay.billing_status (PAID)"]
+    end
+
+    subgraph Clearance_Gate_Out ["6. 5-Pillar Clearance & Gate-Out"]
+        B5 --> CL1["Cargo Release Order Application (/releases)"]
+        CL1 --> CL2{"5-Pillar Verification:<br/>1. Customs CLEARED<br/>2. Commercial DO Valid<br/>3. Invoices PAID<br/>4. Zero ACTIVE Holds<br/>5. Valid Transporter"}
+        CL2 -- Fails Any Pillar --> CL3["Release Blocked / Exception Escalated (/exceptions)"]
+        CL2 -- Passes All 5 --> CL4["Release Approved: Issue Dynamic QR Token (/releases/:id)"]
+        CL4 --> G6["Outbound Transport Truck Enters Terminal"]
+        G6 --> G7["Yard Crane Loads Container onto Truck (LOAD move_order)"]
+        G7 --> G8["Outbound Weighbridge: Tare Weight Scale Ticket (/weighbridge)"]
+        G8 --> G9["Outer Gate Out: Scan Release QR & Gate Pass Check-Out (/gate/lane)"]
+        G9 --> G10["truck_visit (EXITED) & unit_stay (DEPARTED) -> Lifecycle Complete"]
+    end
+

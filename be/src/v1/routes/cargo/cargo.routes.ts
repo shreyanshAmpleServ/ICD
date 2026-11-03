@@ -6,6 +6,7 @@ import {
   cargoConsignmentsController,
   cargoVesselCallsController,
   cargoManifestsController,
+  cargoReferenceController,
   cargoCustomsController,
   cargoHoldsController,
   cargoReleasesController,
@@ -13,6 +14,14 @@ import {
 } from '../../controllers/cargo';
 
 export const cargoRoutes = Router();
+
+// Reference Data (Parties, Unit Types, Regimes, Holds, IMO)
+cargoRoutes.get(['/cargo/parties', '/parties'], requireSite(true), cargoReferenceController.getParties);
+cargoRoutes.get(['/cargo/unit-types', '/unit-types'], requireSite(true), cargoReferenceController.getUnitTypes);
+cargoRoutes.get(['/cargo/regimes', '/cargo-regimes'], requireSite(true), cargoReferenceController.getRegimes);
+cargoRoutes.get(['/cargo/hold-types', '/hold-types'], requireSite(true), cargoReferenceController.getHoldTypes);
+cargoRoutes.get(['/cargo/imo-classes', '/imo-classes'], requireSite(true), cargoReferenceController.getImoClasses);
+cargoRoutes.get(['/cargo/customs-ref-types', '/customs-ref-types'], requireSite(true), cargoReferenceController.getCustomsRefTypes);
 
 // Units
 cargoRoutes.get('/units', requireSite(false), requirePermission('consignment.view'), cargoUnitsController.getUnits);
@@ -39,10 +48,11 @@ cargoRoutes.patch('/vessel-calls/:vesselCallId', requireSite(true), requirePermi
 // Manifests
 cargoRoutes.get('/manifests', requireSite(true), requirePermission('manifest.import'), cargoManifestsController.getManifests);
 cargoRoutes.post(['/manifests', '/manifests:import'], requireSite(true), requirePermission('manifest.import', 'DO'), cargoManifestsController.createManifest);
+cargoRoutes.post(['/manifests/evaluate', '/manifests:evaluate'], requireSite(true), requirePermission('manifest.import', 'DO'), cargoManifestsController.evaluateManifest);
 cargoRoutes.get('/manifests/:manifestId', requireSite(true), requirePermission('manifest.import'), cargoManifestsController.getManifestById);
 cargoRoutes.get('/manifests/:manifestId/lines', requireSite(true), requirePermission('manifest.import'), cargoManifestsController.getManifestLines);
 cargoRoutes.patch('/manifests/:manifestId/lines/:manifestLineId', requireSite(true), requirePermission('manifest.import', 'DO'), cargoManifestsController.updateManifestLine);
-cargoRoutes.post('/manifests/:manifestId([0-9a-zA-Z_.-]+):apply', requireSite(true), requirePermission('manifest.import', 'DO'), cargoManifestsController.applyManifest);
+cargoRoutes.post(['/manifests/:manifestId([0-9a-zA-Z_.-]+):apply', '/manifests/:manifestId/apply'], requireSite(true), requirePermission('manifest.import', 'DO'), cargoManifestsController.applyManifest);
 
 // Customs & Exams
 cargoRoutes.get('/customs/refs', requireSite(false), requirePermission('consignment.view'), cargoCustomsController.getCustomsRefs);
@@ -60,6 +70,11 @@ cargoRoutes.get('/release-orders', requireSite(false), requirePermission('consig
 cargoRoutes.post('/release-orders', requireSite(false), requirePermission('consignment.edit', 'DO'), cargoReleasesController.createReleaseOrder);
 cargoRoutes.get('/release-orders/:releaseOrderId', requireSite(false), requirePermission('consignment.view'), cargoReleasesController.getReleaseOrderById);
 cargoRoutes.post('/release-orders/:releaseOrderId([0-9a-zA-Z_.-]+):approve', requireSite(false), requirePermission('consignment.edit', 'DO'), cargoReleasesController.approveReleaseOrder);
+cargoRoutes.post('/release-orders/:releaseOrderId/approve', requireSite(false), requirePermission('consignment.edit', 'DO'), cargoReleasesController.approveReleaseOrder);
+cargoRoutes.post('/release-orders/:releaseOrderId([0-9a-zA-Z_.-]+):cancel', requireSite(false), requirePermission('consignment.edit', 'DO'), cargoReleasesController.cancelReleaseOrder);
+cargoRoutes.post('/release-orders/:releaseOrderId/cancel', requireSite(false), requirePermission('consignment.edit', 'DO'), cargoReleasesController.cancelReleaseOrder);
+cargoRoutes.post('/release-orders/:releaseOrderId([0-9a-zA-Z_.-]+):revalidate', requireSite(false), requirePermission('consignment.edit', 'DO'), cargoReleasesController.revalidateReleaseOrder);
+cargoRoutes.post('/release-orders/:releaseOrderId/revalidate', requireSite(false), requirePermission('consignment.edit', 'DO'), cargoReleasesController.revalidateReleaseOrder);
 
 // Dangerous Goods
 cargoRoutes.get('/dg-lines', requireSite(false), requirePermission('consignment.view'), cargoDangerousGoodsController.getDgLines);

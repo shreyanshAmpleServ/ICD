@@ -11,29 +11,30 @@ interface LocalTableProps<T> {
   toolbar: ReactNode;
   onAdd?: () => void;
   onRow?: (item: T) => void;
+  loading?: boolean;
 }
 
-export function LocalTable<T>({ title, addLabel, rows, rowKey, cols, toolbar, onAdd, onRow }: LocalTableProps<T>) {
-  return (
-    <Panel
-      flush
-      title={title}
-      sub="Master data from ICD database; add or edit freely"
-      actions={
-        onAdd && (
-          <Button
-            size="sm"
-            icon={<Plus />}
-            perm="masters.local.edit"
-            onClick={onAdd}
-          >
-            {addLabel}
-          </Button>
-        )
-      }
-    >
-      {toolbar}
-      <DataTable rows={rows} rowKey={rowKey} cols={cols} onRow={onRow} />
-    </Panel>
-  );
-}
+  export function LocalTable<T>({ title, addLabel, rows, rowKey, cols, toolbar, onAdd, onRow, loading }: LocalTableProps<T>) {
+    return (
+      <Panel
+        flush
+        title={title}
+        sub="Master data from ICD database; add or edit freely"
+        actions={
+          onAdd && (
+            <Button
+              size="sm"
+              icon={<Plus />}
+              perm="masters.local.edit"
+              onClick={onAdd}
+            >
+              {addLabel}
+            </Button>
+          )
+        }
+      >
+        {toolbar}
+        <DataTable loading={loading} rows={rows} rowKey={rowKey} cols={cols} onRow={onRow} />
+      </Panel>
+    );
+  }

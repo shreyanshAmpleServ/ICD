@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Check, Database, History, Minus, RefreshCw, Search } from 'lucide-react';
 import {
-  Banner, Button, Drawer, Field, Page, PageHeader, Panel, Pill, SearchInput, Textarea, cx,
+  Banner, Button, Drawer, Field, Page, PageHeader, Panel, Pill, SearchInput, SkeletonRow, Textarea, cx,
 } from '@/ds/components';
 import type { Grant } from '@/app/roles';
 import { useQ } from '@/api/query';
@@ -60,9 +60,9 @@ export function Split({ list, children, narrow }: { list: ReactNode; children: R
 }
 
 export interface ListItem { id: string | number; title: ReactNode; sub?: ReactNode; aside?: ReactNode; lead?: ReactNode }
-export function ListPanel({ title, items, selected, onSelect, actions, searchable, filter, empty }: {
+export function ListPanel({ title, items, selected, onSelect, actions, searchable, filter, empty, loading }: {
   title: ReactNode; items: ListItem[]; selected?: string | number | null; onSelect: (id: string | number) => void;
-  actions?: ReactNode; searchable?: string; filter?: ReactNode; empty?: ReactNode;
+  actions?: ReactNode; searchable?: string; filter?: ReactNode; empty?: ReactNode; loading?: boolean;
 }) {
   const [q, setQ] = useState('');
   const shown = q ? items.filter((i) => `${typeof i.title === 'string' ? i.title : ''} ${typeof i.sub === 'string' ? i.sub : ''} ${i.id}`.toLowerCase().includes(q.toLowerCase())) : items;
@@ -74,19 +74,25 @@ export function ListPanel({ title, items, selected, onSelect, actions, searchabl
           {filter}
         </div>
       )}
-      {shown.length === 0 ? (empty ?? <p className="small muted" style={{ padding: 16, margin: 0 }}>Nothing matches. Clear the search to see everything.</p>) : (
-        <ul className="adm-list">
-          {shown.map((i) => (
-            <li key={i.id}>
-              <button aria-current={selected === i.id} onClick={() => onSelect(i.id)}>
-                {i.lead}
-                <span className="grow"><span className="t" style={{ display: 'block' }}>{i.title}</span>{i.sub && <span className="s">{i.sub}</span>}</span>
-                {i.aside}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+        { loading && items.length === 0 ? (
+          <div className="stack" style={{ padding: '4px 0', gap: 0 }} aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <SkeletonRow key={idx} />
+            ))}
+          </div>
+        ) : shown.length === 0 ? (empty ?? <p className="small muted" style={{ padding: 16, margin: 0 }}>Nothing matches. Clear the search to see everything.</p>) : (
+          <ul className="adm-list">
+            {shown.map((i) => (
+              <li key={i.id}>
+                <button aria-current={selected === i.id} onClick={() => onSelect(i.id)}>
+                  {i.lead}
+                  <span className="grow"><span className="t" style={{ display: 'block' }}>{i.title}</span>{i.sub && <span className="s">{i.sub}</span>}</span>
+                  {i.aside}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
     </Panel>
   );
 }

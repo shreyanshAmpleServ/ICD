@@ -39,20 +39,44 @@ setupRoutes.get('/yard/locations', requireSite(false), requirePermission('yard.m
 setupRoutes.post('/yard/locations', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.createYardLocation);
 setupRoutes.patch('/yard/locations/:locationId', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.updateYardLocation);
 setupRoutes.delete('/yard/locations/:locationId', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.deleteYardLocation);
+setupRoutes.post('/yard/locations/:locationId/generate', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.generateSlots);
+setupRoutes.post('/yard/locations/:locationId:generate', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.generateSlots);
+setupRoutes.post('/yard/locations:generate', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.generateSlots);
+setupRoutes.post('/yard/locations/generate', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.generateSlots);
+setupRoutes.post(
+  ['/yard/slots/:slotCode/block', '/yard/slots/block', '/yard/locations/:locationId/block', '/yard/locations/:locationId([0-9a-zA-Z_.-]+):block'],
+  requireSite(false),
+  requirePermission('admin.yard.design', 'DO'),
+  setupYardDesignerController.blockSlot
+);
+setupRoutes.post(
+  ['/yard/slots/:slotCode/unblock', '/yard/slots/unblock', '/yard/locations/:locationId/unblock', '/yard/locations/:locationId([0-9a-zA-Z_.-]+):unblock'],
+  requireSite(false),
+  requirePermission('admin.yard.design', 'DO'),
+  setupYardDesignerController.unblockSlot
+);
 
 // 3. Gates & Visit Types
 setupRoutes.get('/gates', requireSite(false), requirePermission('masters.view'), setupGatesController.getGates);
+setupRoutes.get('/gates/:gateId', requireSite(false), requirePermission('masters.view'), setupGatesController.getGateById);
 setupRoutes.post('/gates', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.createGate);
 setupRoutes.patch('/gates/:gateId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.updateGate);
+setupRoutes.delete('/gates/:gateId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.deleteGate);
+setupRoutes.post('/gates/:gateId/lanes', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.createLane);
+setupRoutes.patch('/gate-lanes/:laneId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.updateLane);
+setupRoutes.delete('/gate-lanes/:laneId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.deleteLane);
 
 setupRoutes.get('/checkpoints', requireSite(false), requirePermission('masters.view'), setupGatesController.getCheckpoints);
+setupRoutes.get('/checkpoints/:checkpointId', requireSite(false), requirePermission('masters.view'), setupGatesController.getCheckpointById);
 setupRoutes.post('/checkpoints', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.createCheckpoint);
 setupRoutes.patch('/checkpoints/:checkpointId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.updateCheckpoint);
 setupRoutes.delete('/checkpoints/:checkpointId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.deleteCheckpoint);
 
 setupRoutes.get('/visit-types', requireSite(false), requirePermission('masters.view'), setupGatesController.getVisitTypes);
+setupRoutes.get('/visit-types/:visitTypeId', requireSite(false), requirePermission('masters.view'), setupGatesController.getVisitTypeById);
 setupRoutes.post('/visit-types', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.createVisitType);
 setupRoutes.patch('/visit-types/:visitTypeId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.updateVisitType);
+setupRoutes.delete('/visit-types/:visitTypeId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.deleteVisitType);
 
 // 4. Unit Types & Cargo Regimes
 setupRoutes.get('/unit-types', requireSite(true), requirePermission('masters.view'), setupUnitTypesController.getUnitTypes);

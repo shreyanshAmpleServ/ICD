@@ -8,14 +8,14 @@ const router = Router();
 
 // Slot Rules
 router.get(
-  "/appointment-slot-rules",
+  ["/appointment-slot-rules", "/appointments/slot-rules"],
   requireSite(false),
   requirePermission("appointment.manage"),
   asyncHandler(appointmentsController.getSlotRules)
 );
 
 router.post(
-  "/appointment-slot-rules",
+  ["/appointment-slot-rules", "/appointments/slot-rules"],
   requireSite(false),
   requirePermission("appointment.manage", "DO"),
   asyncHandler(appointmentsController.createSlotRule)
@@ -77,6 +77,13 @@ router.post(
   requireSite(false),
   requirePermission("appointment.book", "DO"),
   asyncHandler(appointmentsController.rescheduleAppointment)
+);
+
+router.patch(
+  ["/appointments/:appointmentId/status", "/appointments/:appointmentId"],
+  requireSite(false),
+  requirePermission("appointment.book", "DO"),
+  asyncHandler(appointmentsController.updateAppointmentStatus)
 );
 
 export const appointmentsRouter = router;

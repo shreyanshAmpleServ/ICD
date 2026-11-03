@@ -7,8 +7,7 @@ import {
 } from '@/ds/components';
 import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { consignment, partyName } from '@/mock/core';
-import { RO_KIND, hoursUntil, type RO } from '@/mock/cargo';
+import { RO_KIND, type RO } from '@/mock/cargo';
 import { RequestRelease } from './components/RequestRelease';
 import { Countdown } from '@/features/container-management/shared';
 
@@ -20,7 +19,16 @@ export { RequestRelease } from './components/RequestRelease';
    waiting for checks, what is out there and valid, what has expired. */
 type Quick = 'waiting' | 'valid' | 'expired' | 'closed' | 'all';
 const GROUP: Record<Quick, RO['status'][]> = {
-  waiting: ['REQUESTED', 'PENDING_CHECKS'], valid: ['APPROVED', 'PARTLY_USED'], expired: ['EXPIRED'], closed: ['USED', 'CANCELLED', 'REJECTED'], all: [],
+  waiting: ['REQUESTED', 'PENDING_CHECKS'],
+  valid: ['APPROVED', 'PARTLY_USED'],
+  expired: ['EXPIRED'],
+  closed: ['USED', 'CANCELLED', 'REJECTED'],
+  all: [],
+};
+
+const hoursUntil = (iso?: string | null) => {
+  if (!iso) return 0;
+  return (Date.parse(iso) - Date.now()) / 3600000;
 };
 
 export function Releases() {
@@ -29,12 +37,39 @@ export function Releases() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [, bump] = useState(0);
+
   const { data: dbData = [] } = useQ(['release-orders'], () =>
     api.get<any>('/release-orders').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
+  const { data: dbConsignments = [] } = useQ(['consignments'], () =>
+    api.get<any>('/consignments').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbParties = [] } = useQ(['parties'], () =>
+    api.get<any>('/parties').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+
+  const getConsignment = (id?: number | string | null) => {
+    if (!id) return null;
+    return (dbConsignments as any[]).find((c) => String(c.consignmentId) === String(id)) || null;
+  };
+  const getPartyName = (id?: number | string | null) => {
+    if (!id) return '';
+    const p = (dbParties as any[]).find((x) => String(x.partyId) === String(id));
+    return p ? p.partyName : '';
+  };
+
   const list = Array.isArray(dbData) ? dbData : [];
   const count = (k: Quick) => list.filter((r) => GROUP[k].includes(r.status)).length;
-  const rows = list.filter((r) => (quick === 'all' || GROUP[quick].includes(r.status)) && (!q || (r.releaseNo ?? '').includes(q.toUpperCase()) || (consignment(r.consignmentId)?.refNo ?? '').includes(q.toUpperCase()) || (r.collectorName ?? '').toUpperCase().includes(q.toUpperCase())));
+  const rows = list.filter((r) => {
+    if (quick !== 'all' && !GROUP[quick].includes(r.status)) return false;
+    if (!q) return true;
+    const cons = getConsignment(r.consignmentId);
+    return (
+      (r.releaseNo ?? '').toUpperCase().includes(q.toUpperCase()) ||
+      (r.consignmentRef ?? cons?.refNo ?? '').toUpperCase().includes(q.toUpperCase()) ||
+      (r.collectorName ?? '').toUpperCase().includes(q.toUpperCase())
+    );
+  });
   const expSoon = list.filter((r) => GROUP.valid.includes(r.status) && hoursUntil(r.validTo) < 24).length;
 
   return (
@@ -89,12 +124,15 @@ export function Releases() {
             {
               key: 'c',
               header: 'Consignment',
-              render: (r) => (
-                <div className="stack" style={{ gap: 2 }}>
-                  <span className="small">{r.consignmentRef || (consignment(r.consignmentId)?.refNo ?? '—')}</span>
-                  <div className="xs faint">{r.requestedByPartyName || partyName(consignment(r.consignmentId)?.consigneePartyId)}</div>
-                </div>
-              )
+              render: (r) => {
+                const c = getConsignment(r.consignmentId);
+                return (
+                  <div className="stack" style={{ gap: 2 }}>
+                    <span className="small">{r.consignmentRef || c?.refNo || '—'}</span>
+                    <div className="xs faint">{r.requestedByPartyName || getPartyName(c?.consigneePartyId) || '—'}</div>
+                  </div>
+                );
+              }
             },
             {
               key: 'u',
@@ -108,7 +146,7 @@ export function Releases() {
               render: (r) => (
                 <PartyCell
                   name={r.collectorName ?? 'Not named yet'}
-                  sub={partyName(r.transporterPartyId)}
+                  sub={getPartyName(r.transporterPartyId)}
                 />
               )
             },
@@ -118,7 +156,7 @@ export function Releases() {
               render: (r) => (
                 <div className="stack" style={{ gap: 2 }}>
                   <DateCell value={r.requestedAt} withTime />
-                  <div className="xs faint">by {partyName(r.requestedByPartyId)}</div>
+                  <div className="xs faint">by {getPartyName(r.requestedByPartyId)}</div>
                 </div>
               )
             },

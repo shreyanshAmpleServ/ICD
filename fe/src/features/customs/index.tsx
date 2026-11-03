@@ -11,7 +11,7 @@ import {
 } from '@/ds/components';
 import { REF_TYPE_NAME } from '@/mock/control';
 import { useQ } from '@/api/query';
-import { allStays, consignment, unitsOf } from '@/mock/core';
+import { allStays, consignment } from '@/mock/core';
 import { at, day } from '@/mock/gen';
 import { EXAM_BAYS, hoursUntil, type ExamRow } from '@/mock/cargo';
 import { CustomsRefDrawer } from './components/CustomsRefDrawer';
@@ -31,6 +31,16 @@ export function Customs() {
   const { data: dbExams = [] } = useQ(['customs-exams'], () =>
     api.get<any>('/exams').then(r => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
+  const { data: dbUnits = [] } = useQ(['units'], () =>
+    api.get<any>('/units').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbConsignments = [] } = useQ(['consignments'], () =>
+    api.get<any>('/consignments').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+
+  const liveUnits = Array.isArray(dbUnits) && dbUnits.length > 0 ? dbUnits : allStays;
+  const liveCons = Array.isArray(dbConsignments) ? dbConsignments : [];
+
   const [added, setAdded] = useState<S<'CustomsRef'>[]>([]);
   const [lastEffect, setLastEffect] = useState<{ ref: string; n: number; cons?: string } | null>(null);
   const [refOpen, setRefOpen] = useState(false);
@@ -50,7 +60,7 @@ export function Customs() {
         <div className="kpi-strip">
           <Kpi label="Exams today" value={exams.length} delta={`${exams.filter((e: ExamRow) => e.status === 'COMPLETED').length} done · ${exams.filter((e: ExamRow) => e.status === 'IN_PROGRESS').length} in progress`} />
           <Kpi label="Waiting for an exam slot" value={waiting.length} />
-          <Kpi label="Units not yet cleared" value={allStays.filter((s) => s.physicalStatus === 'IN_YARD' && ['LODGED', 'UNDER_EXAM', 'NOT_LODGED', 'QUERY'].includes(s.customsStatus ?? '')).length} />
+          <Kpi label="Units not yet cleared" value={liveUnits.filter((s: any) => s.physicalStatus === 'IN_YARD' && ['LODGED', 'UNDER_EXAM', 'NOT_LODGED', 'QUERY'].includes(s.customsStatus ?? '')).length} />
           <Kpi label="Bonds ending within 7 days" value={expiring.length} delta={expiring.length ? 'Agent must extend or exit' : undefined} />
         </div>
         {lastEffect && (
@@ -63,9 +73,9 @@ export function Customs() {
             { id: 'refs', label: 'Customs references', count: refs.length }, { id: 'exams', label: 'Examinations', count: exams.length + waiting.length },
             { id: 'bonds', label: 'Transit bonds', count: expiring.length },
           ]} />
-          {tab === 'refs' && <Refs refs={refs} added={added} onAdd={() => setRefOpen(true)} />}
-          {tab === 'exams' && <Exams exams={exams} setExams={setExams} waiting={waiting} setWaiting={setWaiting} />}
-          {tab === 'bonds' && <Bonds bonds={bonds} />}
+          {tab === 'refs' && <Refs refs={refs} added={added} liveCons={liveCons} liveUnits={liveUnits} onAdd={() => setRefOpen(true)} />}
+          {tab === 'exams' && <Exams exams={exams} setExams={setExams} waiting={waiting} setWaiting={setWaiting} liveUnits={liveUnits} />}
+          {tab === 'bonds' && <Bonds bonds={bonds} liveCons={liveCons} liveUnits={liveUnits} />}
         </div>
       </div>
       <CustomsRefDrawer open={refOpen} onClose={() => setRefOpen(false)} onSaved={(r, affected, sets) => {
@@ -77,10 +87,41 @@ export function Customs() {
   );
 }
 
-function Refs({ refs, added, onAdd }: { refs: S<'CustomsRef'>[]; added: S<'CustomsRef'>[]; onAdd: () => void }) {
+function Refs({
+  refs,
+  added,
+  liveCons,
+  liveUnits,
+  onAdd,
+}: {
+  refs: S<'CustomsRef'>[];
+  added: S<'CustomsRef'>[];
+  liveCons: any[];
+  liveUnits: any[];
+  onAdd: () => void;
+}) {
   const [q, setQ] = useState('');
   const [type, setType] = useState('ALL');
-  const rows = refs.filter((r) => (type === 'ALL' || r.refTypeCode === type) && (!q || r.refNo.includes(q.toUpperCase()) || (consignment(r.consignmentId)?.refNo ?? '').includes(q.toUpperCase())));
+
+  const getConsRef = (cid?: number | null) => {
+    if (!cid) return '';
+    const found = liveCons.find((c: any) => c.consignmentId === cid);
+    return found?.refNo || (consignment(cid ?? undefined)?.refNo ?? '');
+  };
+
+  const getUnitNo = (uid?: number | null) => {
+    if (!uid) return '';
+    const found = liveUnits.find((u: any) => u.unitStayId === uid);
+    return found?.cargoUnit?.unitNo || found?.unitNo || (unitNoOf(uid ?? undefined) ?? '');
+  };
+
+  const rows = refs.filter((r) => {
+    if (type !== 'ALL' && r.refTypeCode !== type) return false;
+    if (!q) return true;
+    const qUpper = q.toUpperCase();
+    const consRef = getConsRef(r.consignmentId);
+    return r.refNo.includes(qUpper) || consRef.toUpperCase().includes(qUpper);
+  });
 
   return (
     <CommonTable
@@ -99,7 +140,13 @@ function Refs({ refs, added, onAdd }: { refs: S<'CustomsRef'>[]; added: S<'Custo
       cols={[
         { key: 't', header: 'Type', render: (r) => <strong className="small">{REF_TYPE_NAME[r.refTypeCode] ?? r.refTypeCode}</strong> },
         { key: 'n', header: 'Number', render: (r) => <ReferenceCell refNo={r.refNo} /> },
-        { key: 'on', header: 'Applies to', render: (r: any) => r.unitStayId ? <UnitNo no={r.unitNo || (unitNoOf(r.unitStayId) ?? '—')} to={`/units/${r.unitStayId}`} /> : <Link className="small" to={`/consignments/${r.consignmentId}`}>{r.consignmentRef || consignment(r.consignmentId)?.refNo || `Consignment #${r.consignmentId}`}</Link> },
+        {
+          key: 'on',
+          header: 'Applies to',
+          render: (r: any) => r.unitStayId
+            ? <UnitNo no={r.unitNo || getUnitNo(r.unitStayId) || '—'} to={`/units/${r.unitStayId}`} />
+            : <Link className="small" to={`/consignments/${r.consignmentId}`}>{r.consignmentRef || getConsRef(r.consignmentId) || `Consignment #${r.consignmentId}`}</Link>
+        },
         { key: 'd', header: 'Date', render: (r) => <DateCell value={r.refDate} /> },
         { key: 'v', header: 'Valid to', render: (r) => <DateCell value={r.validTo} /> },
         { key: 'a', header: 'Amount', num: true, render: (r) => <MoneyCell amount={r.amount} currency={r.amountCurrency || 'USD'} /> },
@@ -110,7 +157,19 @@ function Refs({ refs, added, onAdd }: { refs: S<'CustomsRef'>[]; added: S<'Custo
   );
 }
 
-function Exams({ exams, setExams, waiting, setWaiting }: { exams: ExamRow[]; setExams: (f: (x: ExamRow[]) => ExamRow[]) => void; waiting: ExamRow[]; setWaiting: (f: (x: ExamRow[]) => ExamRow[]) => void }) {
+function Exams({
+  exams,
+  setExams,
+  waiting,
+  setWaiting,
+  liveUnits,
+}: {
+  exams: ExamRow[];
+  setExams: (f: (x: ExamRow[]) => ExamRow[]) => void;
+  waiting: ExamRow[];
+  setWaiting: (f: (x: ExamRow[]) => ExamRow[]) => void;
+  liveUnits: any[];
+}) {
   const [sched, setSched] = useState<ExamRow | 'new' | null>(null);
   const [rec, setRec] = useState<ExamRow | null>(null);
   return (
@@ -144,26 +203,53 @@ function Exams({ exams, setExams, waiting, setWaiting }: { exams: ExamRow[]; set
         <DataTable rows={waiting} rowKey={(e) => e.examId!} empty={<Empty title="Nobody waiting">Every exam notice has a slot.</Empty>} cols={[
           { key: 'u', header: 'Unit', render: (e) => <UnitNo no={e.unitNo} to={`/units/${e.unitStayId}`} /> },
           { key: 'n', header: 'Notice', render: (e) => <span className="small">{e.noticeRef}</span> },
-          { key: 'l', header: 'Now at', render: (e) => <span className="unitno">{allStays.find((s) => s.unitStayId === e.unitStayId)?.currentLocation?.fullCode ?? '—'}</span> },
+          {
+            key: 'l',
+            header: 'Now at',
+            render: (e) => {
+              const u = liveUnits.find((s: any) => s.unitStayId === e.unitStayId);
+              return <span className="unitno">{u?.currentLocation?.fullCode || (allStays.find((s) => s.unitStayId === e.unitStayId)?.currentLocation?.fullCode ?? '—')}</span>;
+            }
+          },
           { key: 'a', header: '', render: (e) => <Button size="sm" perm="customs.exam.record" onClick={() => setSched(e)}>Book slot</Button> },
         ]} />
       </Panel>
-      {sched && <ScheduleExam ex={sched === 'new' ? null : sched} exams={exams} onClose={() => setSched(null)} onDone={(e) => { setExams((x) => [...x, e]); setWaiting((w) => w.filter((x) => x.examId !== e.examId)); }} />}
+      {sched && (
+        <ScheduleExam
+          ex={sched === 'new' ? null : sched}
+          exams={exams}
+          liveUnits={liveUnits}
+          onClose={() => setSched(null)}
+          onDone={(e) => { setExams((x) => [...x, e]); setWaiting((w) => w.filter((x) => x.examId !== e.examId)); }}
+        />
+      )}
       {rec && <RecordResult ex={rec} onClose={() => setRec(null)} onDone={(r) => setExams((x) => x.map((e) => (e.examId === rec.examId ? { ...e, status: 'COMPLETED', result: r, sealApplied: 'TRA-0088' + (e.examId! % 1000), completedAt: at(0) } : e)))} />}
     </div>
   );
 }
 
-function ScheduleExam({ ex, exams, onClose, onDone }: { ex: ExamRow | null; exams: ExamRow[]; onClose: () => void; onDone: (e: ExamRow) => void }) {
+function ScheduleExam({
+  ex,
+  exams,
+  liveUnits,
+  onClose,
+  onDone,
+}: {
+  ex: ExamRow | null;
+  exams: ExamRow[];
+  liveUnits: any[];
+  onClose: () => void;
+  onDone: (e: ExamRow) => void;
+}) {
   const toast = useToast();
   const qc = useQueryClient();
-  const candidates = allStays.filter((s) => s.physicalStatus === 'IN_YARD' && ['LODGED', 'UNDER_EXAM'].includes(s.customsStatus ?? '')).slice(0, 40);
-  const [unit, setUnit] = useState(String(ex?.unitStayId ?? candidates[0]?.unitStayId));
+  const candidates = liveUnits.filter((s: any) => s.physicalStatus === 'IN_YARD' && ['LODGED', 'UNDER_EXAM', 'QUERY', 'NOT_LODGED'].includes(s.customsStatus ?? '')).slice(0, 40);
+  const [unit, setUnit] = useState(String(ex?.unitStayId ?? candidates[0]?.unitStayId ?? '1'));
   const [bay, setBay] = useState('X-06');
   const [time, setTime] = useState('16:00');
   const [type, setType] = useState<ExamRow['examType']>('PHYSICAL');
   const clash = exams.some((e) => e.bay === bay && fmtT(e.scheduledAt) === time && e.status !== 'COMPLETED');
-  const s = allStays.find((x) => String(x.unitStayId) === unit);
+  const s = liveUnits.find((x: any) => String(x.unitStayId) === unit) || allStays.find((x) => String(x.unitStayId) === unit);
   return (
     <Drawer open onClose={onClose} title="Schedule examination"
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<CalendarPlus />} perm="customs.exam.record" disabled={clash} onClick={async () => {
@@ -175,7 +261,15 @@ function ScheduleExam({ ex, exams, onClose, onDone }: { ex: ExamRow | null; exam
         toast(`Exam scheduled at ${bay}, ${time}. Move order created.`); onClose();
       }}>Schedule exam</Button></>}>
       <div className="stack-lg">
-        <Field label="Unit" required>{ex ? <UnitNo no={ex.unitNo} size="md" /> : <Select value={unit} onChange={(e) => setUnit(e.target.value)} options={candidates.map((c) => [String(c.unitStayId), `${c.cargoUnit.unitNo} · ${c.currentLocation?.fullCode ?? ''}`])} />}</Field>
+        <Field label="Unit" required>
+          {ex ? <UnitNo no={ex.unitNo} size="md" /> : (
+            <Select
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              options={candidates.map((c: any) => [String(c.unitStayId), `${c.cargoUnit?.unitNo || c.unitNo || `UNIT-${c.unitStayId}`} · ${c.currentLocation?.fullCode ?? 'In yard'}`])}
+            />
+          )}
+        </Field>
         <div className="form-grid">
           <Field label="Exam type"><Select value={type} onChange={(e) => setType(e.target.value as ExamRow['examType'])} options={[['PHYSICAL', 'Physical exam'], ['SCAN', 'Scan'], ['DOCUMENT', 'Document check']]} /></Field>
           <Field label="Bay" required><Select value={bay} onChange={(e) => setBay(e.target.value)} options={EXAM_BAYS} /></Field>
@@ -222,9 +316,23 @@ function RecordResult({ ex, onClose, onDone }: { ex: ExamRow; onClose: () => voi
   );
 }
 
-function Bonds({ bonds }: { bonds: S<'CustomsRef'>[] }) {
+function Bonds({
+  bonds,
+  liveCons,
+  liveUnits,
+}: {
+  bonds: S<'CustomsRef'>[];
+  liveCons: any[];
+  liveUnits: any[];
+}) {
   const toast = useToast();
   const rows = [...bonds].sort((a, b) => (a.validTo ?? '').localeCompare(b.validTo ?? ''));
+
+  const getCons = (cid?: number | null) => {
+    if (!cid) return null;
+    return liveCons.find((c: any) => c.consignmentId === cid) || consignment(cid ?? undefined);
+  };
+
   return (
     <div className="stack-lg">
       <Banner tone="wait" title="Transit cargo must leave before the bond ends">If a bond expires with units still here, customs may treat the cargo as home use and duty becomes payable. Ask the agent to extend the bond or move the units.</Banner>
@@ -237,9 +345,9 @@ function Bonds({ bonds }: { bonds: S<'CustomsRef'>[] }) {
         cols={[
           { key: 't', header: 'Type', render: (r) => <span className="small strong">{REF_TYPE_NAME[r.refTypeCode]}</span> },
           { key: 'n', header: 'Number', render: (r) => <ReferenceCell refNo={r.refNo} /> },
-          { key: 'c', header: 'Consignment', render: (r) => <Link className="small" to={`/consignments/${r.consignmentId}`}>{consignment(r.consignmentId)?.refNo}</Link> },
-          { key: 'd', header: 'Destination', render: (r) => <span className="small">{consignment(r.consignmentId)?.destinationCountry ?? '—'}</span> },
-          { key: 'u', header: 'Units still here', num: true, render: (r) => unitsOf(r.consignmentId ?? 0).filter((s) => s.physicalStatus === 'IN_YARD').length },
+          { key: 'c', header: 'Consignment', render: (r) => <Link className="small" to={`/consignments/${r.consignmentId}`}>{getCons(r.consignmentId)?.refNo || `Consignment #${r.consignmentId}`}</Link> },
+          { key: 'd', header: 'Destination', render: (r) => <span className="small">{getCons(r.consignmentId)?.destinationCountry ?? '—'}</span> },
+          { key: 'u', header: 'Units still here', num: true, render: (r) => liveUnits.filter((s: any) => s.consignmentId === r.consignmentId && s.physicalStatus === 'IN_YARD').length },
           { key: 'a', header: 'Amount', num: true, render: (r) => <MoneyCell amount={r.amount} currency={r.amountCurrency || 'USD'} /> },
           {
             key: 'v', header: 'Valid to', render: (r) => {

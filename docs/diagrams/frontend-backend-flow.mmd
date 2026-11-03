@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor User as User / Tablet Clerk
+    participant Comp as React View (fe/src/features/*)
+    participant Client as apiClient.ts & interceptors.ts
+    participant Gateway as Express Server (app.ts)
+    participant Middlewares as Middleware Pipeline
+    participant Ctrl as Express Controller (be/src/v1/controllers/*)
+    participant Service as Domain Service (CargoService / SetupService)
+    participant Prisma as Prisma Client ORM
+    participant DB as Microsoft SQL Server
+
+    User->>Comp: Submits Action (e.g. Check In Truck, Complete Move, Pay Invoice)
+    Comp->>Client: api.post('/endpoint', payload)
+    Note over Client: Request Interceptors:<br/>1. Attach Bearer JWT<br/>2. Attach X-Site-Id: DAR1<br/>3. Attach X-Role-Code: ICD_ADMIN<br/>4. Generate Idempotency-Key: UUID
+    Client->>Gateway: HTTP POST /api/v1/... (with headers)
+    Gateway->>Middlewares: Execute Middleware Pipeline
+    Note over Middlewares: 1. requireSite: Validate siteId<br/>2. requirePermission: Check grant precedence<br/>3. requireIdempotency: Check key cache<br/>4. verifyIfMatch: Compare If-Match vs log_inst<br/>5. validateRequest: Zod body/query parsing
+    Middlewares->>Ctrl: Invoke Controller Handler
+    Ctrl->>Service: Call Business Logic Function
+    Service->>Prisma: prisma.model.mutation({ data, where })
+    Prisma->>DB: T-SQL Execution (INSERT / UPDATE ... OUTPUT inserted.*)
+    DB-->>Prisma: Committed Row & Updated log_inst
+    Prisma-->>Service: Typed Model Record
+    Service-->>Ctrl: DTO Result
+    Ctrl-->>Gateway: res.success(dto) via responseEnhancer
+    Gateway-->>Client: HTTP 200/201 (application/json)
+    Note over Client: Response Interceptors:<br/>1. Check response.ok<br/>2. If 401: clearToken & redirect /login<br/>3. Parse JSON / Problem Details
+    Client-->>Comp: Resolves TanStack Mutation Promise
+    Comp-->>User: Optimistic re-render, Drawer closes, Success Toast
+

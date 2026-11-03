@@ -1,9 +1,9 @@
-import { Ban, Move, Tag as TagIcon, Wand2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Ban, MapPin, Move, Plus, Tag as TagIcon, Trash2, Wand2 } from 'lucide-react';
 import { Banner, Button, DL, Panel } from '@/ds/components';
 import { locationTags, type YardNode } from '@/mock/admin';
 
 const pad = (n: number, w = 2) => String(n).padStart(w, '0');
-const KIND_LABEL: Record<string, string> = { AREA: 'Area', BLOCK: 'Block', AISLE: 'Aisle', KEY_CABINET: 'Key cabinet', ROW: 'Row' };
 
 interface NodeDetailProps {
   n: YardNode;
@@ -14,22 +14,53 @@ interface NodeDetailProps {
   onTags: () => void;
   onSel: (id: number) => void;
   siteNodes: YardNode[];
+  onAddBlock?: () => void;
+  onDelete?: (id: number) => void;
 }
 
-export function NodeDetail({ n, kids, blocked, onSlot, onGen, onTags, onSel, siteNodes }: NodeDetailProps) {
+export function NodeDetail({ n, kids, blocked, onSlot, onGen, onTags, onSel, siteNodes, onAddBlock, onDelete }: NodeDetailProps) {
+  const navigate = useNavigate();
+  const rawCode = String(n.locationCode || n.name || '').trim();
+  const cleanCode = rawCode.replace(/^BLOCK-?/i, '');
+  const rawKind = String(n.kind || (n as any).locationKind || (n.levelNo === 1 ? 'AREA' : n.levelNo === 2 ? 'BLOCK' : 'SLOT') || '').trim().toUpperCase();
+  const isArea = rawKind === 'AREA' || n.levelNo === 1 || /^AREA/i.test(cleanCode) || /^AREA/i.test(rawCode);
+
   const ground = (n.rows ?? 0) * (n.bays ?? 0);
   const cap = ground * (n.maxTier ?? 1);
   const isVehicle = (n.tags ?? []).includes('VEHICLE');
   const tagNames = (n.tags ?? []).map((t) => locationTags.find((x) => x.tagCode === t)?.tagName ?? t);
 
-  if (n.kind === 'AREA') {
+  if (isArea) {
     const blocks = siteNodes.filter((x) => x.parentId === n.yardLocationId && x.map);
+    const areaCode = cleanCode.replace(/^AREA-?/i, '') || cleanCode;
+    const areaName = n.name && n.name !== cleanCode && n.name !== `Area ${areaCode}` ? n.name : 'Container Yard Area';
     return (
       <>
         <Panel
-          title={`${KIND_LABEL[n.kind]} ${n.locationCode} · ${n.name}`}
-          sub={`${kids.length} children`}
-          actions={<Button size="sm" icon={<Wand2 />} perm="admin.yard.design" onClick={onGen}>Add block</Button>}
+          title={`Area ${areaCode} · ${areaName}`}
+          sub={`${kids.length} ${kids.length === 1 ? 'block' : 'blocks'} · ${kids.reduce((a, k) => a + (k.rows ?? 0) * (k.bays ?? 0) * (k.maxTier ?? 1), 0)} total slot capacity`}
+          actions={
+            <div className="row" style={{ gap: 8 }}>
+              <Button size="sm" icon={<MapPin />} onClick={() => navigate('/yard')}>View on Yard map</Button>
+              <Button size="sm" variant="primary" icon={<Plus />} perm="admin.yard.design" onClick={onAddBlock}>Add block</Button>
+              {onDelete && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={<Trash2 />}
+                  perm="admin.yard.design"
+                  onClick={() => {
+                      if (window.confirm(`Delete Area ${areaCode} and all its blocks?`)) {
+                        onDelete(n.yardLocationId!);
+                      }
+                    }
+                  }
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          }
         >
           <DL cols items={[
             ['Ground slots', kids.reduce((a, k) => a + (k.rows ?? 0) * (k.bays ?? 0), 0)],
@@ -38,7 +69,7 @@ export function NodeDetail({ n, kids, blocked, onSlot, onGen, onTags, onSel, sit
             ['Draft blocks', kids.filter((k) => k.draft).length],
           ]} />
         </Panel>
-        {blocks.length > 0 && (
+        {blocks.length > 0 ? (
           <Panel title="Site plan" sub="Select a block to edit it">
             <svg viewBox="0 0 940 380" className="chart" role="img" aria-label="Site plan with blocks">
               <rect x={0} y={0} width={940} height={380} fill="var(--concrete)" rx={8} />
@@ -67,12 +98,26 @@ export function NodeDetail({ n, kids, blocked, onSlot, onGen, onTags, onSel, sit
               <Move size={14} /> In the real build you drag and resize blocks on this plan; the position saves to the block's map rectangle.
             </div>
           </Panel>
+        ) : (
+          <Panel title="Blocks in this Area" sub="No blocks created yet">
+            <Banner
+              tone="info"
+              title="No blocks in this area yet"
+              action={
+                <Button size="sm" variant="primary" icon={<Plus />} perm="admin.yard.design" onClick={onAddBlock}>
+                  Add block
+                </Button>
+              }
+            >
+              An area organizes blocks of container or vehicle slots. Click <strong>Add block</strong> to create a new block (e.g. Block A, Block V1) with rows, bays, and tiers.
+            </Banner>
+          </Panel>
         )}
       </>
     );
   }
 
-  if (n.kind === 'KEY_CABINET') {
+  if (rawKind === 'KEY_CABINET') {
     return (
       <Panel title={`Key cabinet ${n.locationCode}`} sub={n.name}>
         <div className="stack">
@@ -86,6 +131,13 @@ export function NodeDetail({ n, kids, blocked, onSlot, onGen, onTags, onSel, sit
     );
   }
 
+  const blockTitle = cleanCode.toLowerCase().startsWith('block ') ? cleanCode : `Block ${cleanCode}`;
+  const subText = ground > 0
+    ? `${n.rows} rows × ${n.bays} bays × ${n.maxTier || 1} tiers (${cap} slots) · ${isVehicle ? 'Vehicle storage' : (n.tags ?? []).includes('REEFER') ? 'Reefer stack' : 'Container storage'}`
+    : n.name && n.name !== blockTitle
+      ? n.name
+      : 'Standard container storage';
+
   return (
     <>
       {n.draft && (
@@ -94,13 +146,35 @@ export function NodeDetail({ n, kids, blocked, onSlot, onGen, onTags, onSel, sit
         </Banner>
       )}
       <Panel
-        title={`${KIND_LABEL[n.kind]} ${n.locationCode}`}
-        sub={n.name}
+        title={blockTitle}
+        sub={subText}
         actions={
-          <>
+          <div className="row" style={{ gap: 8 }}>
+            <Button
+              size="sm"
+              icon={<MapPin />}
+              onClick={() => navigate(`/yard?block=${encodeURIComponent(cleanCode)}`)}
+            >
+              View on Yard map
+            </Button>
             <Button size="sm" icon={<TagIcon />} perm="admin.yard.design" onClick={onTags}>Edit tags</Button>
             <Button size="sm" icon={<Wand2 />} perm="admin.yard.design" onClick={onGen}>Generate rows and bays</Button>
-          </>
+            {onDelete && (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<Trash2 />}
+                perm="admin.yard.design"
+                onClick={() => {
+                  if (window.confirm(`Delete ${n.name || n.locationCode} and all its slots?`)) {
+                    onDelete(n.yardLocationId!);
+                  }
+                }}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
         }
       >
         <div className="stack">

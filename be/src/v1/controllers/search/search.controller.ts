@@ -190,7 +190,7 @@ export const searchController = {
               hits: invoices.map((inv) => ({
                 id: Number(inv.invoice_id),
                 title: inv.invoice_no,
-                subtitle: `Amount: ${inv.total_amount ? `$${inv.total_amount}` : '—'}`,
+                subtitle: `Amount: ${(inv as any).total_amount ? `$${(inv as any).total_amount}` : '—'}`,
                 status: inv.status,
                 link: { entityName: 'invoice', entityId: Number(inv.invoice_id) },
                 to: '/billing/invoices',

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getPrisma, isDbLive } from "../../db/prisma";
 import { cargoService } from "../cargo/cargo.service";
 import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
@@ -20,6 +21,48 @@ let segregationMatrix = {
 
 // In-memory handling job lines store
 const jobLinesStore: Record<string, any[]> = {};
+
+let appointmentSlotRules: any[] = [
+  { appointmentSlotRuleId: 1, flow: "IMPORT_PICKUP", startHour: 8, endHour: 17, maxSlotsPerHour: 20, isActive: true, logInst: 1 },
+  { appointmentSlotRuleId: 2, flow: "EXPORT_DELIVERY", startHour: 8, endHour: 17, maxSlotsPerHour: 20, isActive: true, logInst: 1 },
+  { appointmentSlotRuleId: 3, flow: "EMPTY_DROP", startHour: 8, endHour: 17, maxSlotsPerHour: 30, isActive: true, logInst: 1 },
+  { appointmentSlotRuleId: 4, flow: "EMPTY_PICKUP", startHour: 8, endHour: 17, maxSlotsPerHour: 30, isActive: true, logInst: 1 },
+];
+
+let appointments: any[] = [
+  {
+    appointmentId: 1,
+    apptNo: "APT-2026-001",
+    date: new Date().toISOString().slice(0, 10),
+    hour: 9,
+    slotStart: `${new Date().toISOString().slice(0, 10)}T09:00:00Z`,
+    slotEnd: `${new Date().toISOString().slice(0, 10)}T10:00:00Z`,
+    visitTypeCode: "IMPORT_PICKUP",
+    plateNo: "T 118 DPE",
+    partyId: 1,
+    driverName: "Juma Ramadhani",
+    driverPhone: "+255 712 111 222",
+    unitNo: "MSKU 882014 9",
+    status: "BOOKED",
+    logInst: 1,
+  },
+  {
+    appointmentId: 2,
+    apptNo: "APT-2026-002",
+    date: new Date().toISOString().slice(0, 10),
+    hour: 11,
+    slotStart: `${new Date().toISOString().slice(0, 10)}T11:00:00Z`,
+    slotEnd: `${new Date().toISOString().slice(0, 10)}T12:00:00Z`,
+    visitTypeCode: "EXPORT_DELIVERY",
+    plateNo: "T 492 EFA",
+    partyId: 2,
+    driverName: "Baraka Omari",
+    driverPhone: "+255 754 333 444",
+    unitNo: "MEDU 391024 1",
+    status: "ARRIVED",
+    logInst: 1,
+  },
+];
 
 // ------------------------------------------------------------------ 1. Appointments (Site-scoped)
 router.get(

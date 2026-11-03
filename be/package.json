@@ -29,6 +29,7 @@
     "express": "^4.21.1",
     "morgan": "^1.10.0",
     "mssql": "^11.0.1",
+    "ng-icd": "file:..",
     "swagger-ui-express": "^5.0.1",
     "yaml": "^2.9.1",
     "yamljs": "^0.3.0",

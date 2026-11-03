@@ -1,9 +1,20 @@
 import { Settings2 } from 'lucide-react';
 import { Button, Panel } from '@/ds/components';
-import { APPT_TYPES, slotRules } from '@/mock/ops';
 import { VISIT_TYPES } from '@/features/gate-management/types';
 
-export function AppointmentsRulesPanel() {
+export interface SlotRuleItem {
+  weekday: number;
+  visitTypeCode: string;
+  slotStart: string;
+  slotEnd: string;
+  capacityTrucks: number;
+  lateGraceMin: number;
+}
+
+export function AppointmentsRulesPanel({ rules = [] }: { rules?: SlotRuleItem[] }) {
+  const visitTypes = Array.from(new Set(rules.map((r) => r.visitTypeCode))).filter(Boolean);
+  const typesToRender = visitTypes.length > 0 ? visitTypes : ['IMPORT_PICKUP', 'EXPORT_DROP', 'EMPTY_RETURN', 'EMPTY_PICKUP', 'TRANSFER_IN'];
+
   return (
     <Panel
       title="Slot rules"
@@ -24,25 +35,25 @@ export function AppointmentsRulesPanel() {
             </tr>
           </thead>
           <tbody>
-            {APPT_TYPES.map((t) => {
-              const wk = slotRules.find((r) => r.weekday === 1 && r.visitTypeCode === t)!;
-              const sat = slotRules.find((r) => r.weekday === 6 && r.visitTypeCode === t)!;
+            {typesToRender.map((t) => {
+              const wk = rules.find((r) => r.weekday >= 1 && r.weekday <= 5 && r.visitTypeCode === t) || rules.find((r) => r.visitTypeCode === t);
+              const sat = rules.find((r) => r.weekday === 6 && r.visitTypeCode === t) || wk;
               return (
                 <tr key={t}>
                   <td className="small">
-                    {VISIT_TYPES[t]}
-                    <div className="xs faint">Late grace {wk.lateGraceMin} min</div>
+                    {VISIT_TYPES[t] || t.replace(/_/g, ' ')}
+                    <div className="xs faint">Late grace {wk?.lateGraceMin ?? 30} min</div>
                   </td>
                   <td className="small">
-                    {wk.capacityTrucks}/h
+                    {wk?.capacityTrucks ?? 6}/h
                     <div className="xs faint">
-                      {wk.slotStart}–{wk.slotEnd}
+                      {wk?.slotStart || '06:00'}–{wk?.slotEnd || '22:00'}
                     </div>
                   </td>
                   <td className="small">
-                    {sat.capacityTrucks}/h
+                    {sat?.capacityTrucks ?? 4}/h
                     <div className="xs faint">
-                      {sat.slotStart}–{sat.slotEnd}
+                      {sat?.slotStart || '06:00'}–{sat?.slotEnd || '18:00'}
                     </div>
                   </td>
                 </tr>

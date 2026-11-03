@@ -3,14 +3,17 @@ import { CHECKPOINTS, VISIT_TYPES, type DynamicTruckVisit } from '@/features/gat
 
 export function QueueList({
   data,
+  loading,
   onSelectVisit,
 }: {
   data: DynamicTruckVisit[];
+  loading?: boolean;
   onSelectVisit: (v: DynamicTruckVisit) => void;
 }) {
   return (
     <Panel flush>
       <DataTable
+        loading={loading}
         rows={data}
         rowKey={(v) => v.truckVisitId!}
         onRow={onSelectVisit}

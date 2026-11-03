@@ -4,10 +4,7 @@ import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
 import { unitTypes, identityRules, plateFormats } from "../../data/admin";
 import { allStays } from "../../data/core";
-import { holdsOf } from "../../data/control";
-import { search } from "../../data/search";
 import { searchController } from "../../v1/controllers/search/search.controller";
-import { getPrisma, isDbLive } from "../../db/prisma";
 import { cargoService } from "../cargo/cargo.service";
 import {
   NotFoundError,
@@ -28,7 +25,6 @@ const validateIdentityBodySchema = z.object({
     .default("CONTAINER"),
   rawValue: z.string().min(1, "Value to validate cannot be empty"),
 });
-*/
 
 const createUnitTypeSchema = z
   .object({
@@ -144,10 +140,9 @@ router.post(
         errors: parseResult.success
           ? []
           : [
-              "Unit number must consist of 4 letters and 7 digits (e.g. MSKU 123456 7)",
-            ],
+            "Unit number must consist of 4 letters and 7 digits (e.g. MSKU 123456 7)",
+          ],
       });
-*/
       return;
     }
 
@@ -162,10 +157,9 @@ router.post(
         errors: parseResult.success
           ? []
           : [
-              "VIN must be exactly 17 alphanumeric characters, excluding I, O, Q",
-            ],
+            "VIN must be exactly 17 alphanumeric characters, excluding I, O, Q",
+          ],
       });
-*/
       return;
     }
 
@@ -177,7 +171,6 @@ router.post(
       ruleApplied: "NONE",
       errors: [],
     });
-*/
   },
 );
 
@@ -193,17 +186,6 @@ router.get(
 );
 
 router.get("/search", requireSite(true), searchController.globalSearch);
-/*
-  const q = String(req.query.q || "").trim();
-  const results = search(q);
-  res.json({
-    query: q,
-    results,
-    total: results.reduce((acc, g) => acc + (g.hits?.length || 0), 0),
-  });
-*/
-});
-*/
 
 router.get(
   "/units",
@@ -290,7 +272,6 @@ router.get(
   requirePermission("consignment.view"),
   asyncHandler(async (req, res) => {
     const holds = await cargoService.getHolds({ unitStayId: req.params.unitStayId });
-*/
     const params = parsePaginationParams(req.query);
     const paginated = paginateArray(holds, params);
     res.json(paginated);
@@ -318,7 +299,6 @@ router.get(
         },
       ],
     });
-*/
   }),
 );
 
