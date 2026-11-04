@@ -2,6 +2,10 @@ node_modules/
 .pnp/
 .pnp.js
 
+fe/node_modules
+be/node_modules
+UI/
+API/
 dist/
 dist-single/
 build/
@@ -55,3 +59,8 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# Scratch & skill files
+scratch_*.json
+skills-lock.json
+

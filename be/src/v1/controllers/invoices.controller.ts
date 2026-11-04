@@ -4,15 +4,17 @@ import { invoices as mockInvoices, invoice as getMockInvoice } from '../../data/
 import { party as getMockParty, consignment as getMockConsignment } from '../../data/core';
 
 // Standard error / response helpers
-const sendError = (res: Response, message: string, code = 400) =>
-  res.status(code).json({
-    type: 'https://api.icd.dcc/errors/validation',
-    title: 'Validation Error',
+const sendError = (res: Response, message: string, code = 400) => {
+  const is404 = code === 404;
+  return res.status(code).json({
+    type: is404 ? 'https://api.icd.dcc/errors/not-found' : 'https://api.icd.dcc/errors/validation',
+    title: is404 ? 'Not Found' : 'Validation Error',
     status: code,
     detail: message,
-    code: 'VALIDATION_ERROR',
+    code: is404 ? 'NOT_FOUND' : 'VALIDATION_ERROR',
     timestamp: new Date().toISOString(),
   });
+};
 
 export interface InvoiceItem {
   invoiceId: number;
