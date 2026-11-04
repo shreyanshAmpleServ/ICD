@@ -8,13 +8,17 @@ type Hol = (typeof seedHol)[number];
 
 export function CalendarTab({
   hols,
+  calendar,
   onAddHoliday,
   onRemoveHoliday,
 }: {
   hols: Hol[];
+  calendar?: any;
   onAddHoliday: () => void;
   onRemoveHoliday: (h: Hol) => void;
 }) {
+  const calTitle = calendar?.calendarName || calendars[0]?.calendarName || 'Public holidays';
+
   return (
     <>
       <Banner tone="wait" title="Verify the 2026 holiday list" action={<VerifyPill>Verify</VerifyPill>}>
@@ -24,7 +28,7 @@ export function CalendarTab({
       <div className="grid-main-side">
         <Panel
           flush
-          title={calendars[0].calendarName}
+          title={calTitle}
           sub="Used by DAR1, DAR2 and KBH1"
           actions={
             <Button size="sm" icon={<Plus />} perm="admin.config.manage" onClick={onAddHoliday}>

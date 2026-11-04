@@ -253,6 +253,7 @@ setupRoutes.patch('/models/:modelId', requireSite(true), requirePermission('admi
 setupRoutes.get('/field-rules', requireSite(true), requirePermission('masters.view'), setupSettingsController.getFieldRules);
 setupRoutes.post('/field-rules', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupSettingsController.createFieldRule);
 setupRoutes.patch('/field-rules/:fieldRuleId', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupSettingsController.updateFieldRule);
+setupRoutes.delete('/field-rules/:fieldRuleId', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupSettingsController.deleteFieldRule);
 
 setupRoutes.get('/calendars', requireSite(true), requirePermission('masters.view'), setupSettingsController.getCalendars);
 setupRoutes.post('/calendars', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupSettingsController.createCalendar);
@@ -261,4 +262,6 @@ setupRoutes.patch('/calendars/:calendarId', requireSite(true), requirePermission
 setupRoutes.get('/calendars/:calendarId/holidays', requireSite(true), requirePermission('masters.view'), setupSettingsController.getHolidays);
 setupRoutes.post('/calendars/:calendarId/holidays', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupSettingsController.createHoliday);
 setupRoutes.patch('/calendars/:calendarId/holidays/:holidayId', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupSettingsController.updateHoliday);
+setupRoutes.delete('/calendars/:calendarId/holidays/:holidayId', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupSettingsController.deleteHoliday);
+setupRoutes.delete('/calendars/:calendarId/holidays/:calendarHolidayId', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupSettingsController.deleteHoliday);
 

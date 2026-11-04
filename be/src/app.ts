@@ -9,6 +9,30 @@ import { responseEnhancer } from "./utils";
 export function createApp(): Application {
   const app = express();
 
+  //   const allowedOrigins = [
+  //   "http://localhost:5173",
+  //   "http://localhost:3000",
+  //   "https://yourdomain.com",
+  // ];
+
+  // app.use(
+  //   cors({
+  //     origin: (origin, callback) => {
+  //       if (!origin || allowedOrigins.includes(origin)) {
+  //         callback(null, true);
+  //       } else {
+  //         callback(new Error("Not allowed by CORS"));
+  //       }
+  //     },
+  //     credentials: true,
+  //     exposedHeaders: [
+  //       "Idempotency-Key",
+  //       "If-Match",
+  //       "ETag",
+  //       "X-Site-Id",
+  //     ],
+  //   }),
+  // );
   // Cross-Origin Resource Sharing (CORS)
   app.use(
     cors({

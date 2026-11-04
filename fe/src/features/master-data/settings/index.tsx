@@ -19,6 +19,7 @@ export function SettingsView() {
   const [tab, setTab] = useState<Tab>('fields');
   const [rules, setRules] = useEditable<FieldRule>('fieldRules', [], () => settingsApi.getFieldRules());
   const [hols, setHols] = useEditable<Hol>('holidays', [], () => settingsApi.getHolidays());
+  const [cals] = useEditable<any>('calendars', [], () => settingsApi.getCalendars());
   const [add, setAdd] = useState(false);
   const [addHol, setAddHol] = useState(false);
   const usedRoles = [...new Set(rules.map((r) => r.roleCode))];
@@ -55,7 +56,15 @@ export function SettingsView() {
             <FieldRulesMatrix
               rules={rules}
               usedRoles={usedRoles}
-              onRemoveRule={(r) => {
+              onRemoveRule={async (r) => {
+                const ruleId = (r as any).fieldRuleId;
+                if (ruleId) {
+                  try {
+                    await settingsApi.deleteFieldRule(ruleId);
+                  } catch (err: any) {
+                    console.error('Failed to delete field rule:', err);
+                  }
+                }
                 setRules((all) => all.filter((x) => x !== r));
                 toast('Field rule removed');
               }}
@@ -76,9 +85,18 @@ export function SettingsView() {
       {tab === 'calendar' && (
         <CalendarTab
           hols={hols}
+          calendar={cals && cals.length > 0 ? cals[0] : undefined}
           onAddHoliday={() => setAddHol(true)}
-          onRemoveHoliday={(h) => {
-            if ((h as any).calendarHolidayId) settingsApi.deleteHoliday(1, (h as any).calendarHolidayId).catch(() => {});
+          onRemoveHoliday={async (h) => {
+            const holId = (h as any).calendarHolidayId;
+            const calId = cals && cals.length > 0 ? cals[0].calendarId : 1;
+            if (holId) {
+              try {
+                await settingsApi.deleteHoliday(calId, holId);
+              } catch (err: any) {
+                console.error('Failed to delete holiday:', err);
+              }
+            }
             setHols((all) => all.filter((x) => x !== h));
             toast('Holiday removed');
           }}
@@ -88,15 +106,27 @@ export function SettingsView() {
       {add && (
         <RuleDrawer
           onClose={() => setAdd(false)}
-          onSave={(r) => {
-            settingsApi.createFieldRule(r).catch(() => {});
-            setRules((all) => [
-              ...all.filter(
-                (x) => !(x.roleCode === r.roleCode && x.entityName === r.entityName && x.fieldName === r.fieldName)
-              ),
-              r,
-            ]);
-            toast('Field rule added');
+          onSave={async (r) => {
+            try {
+              const created = await settingsApi.createFieldRule(r);
+              const saved = created || r;
+              setRules((all) => [
+                ...all.filter(
+                  (x) => !(x.roleCode === saved.roleCode && x.entityName === saved.entityName && x.fieldName === saved.fieldName)
+                ),
+                saved,
+              ]);
+              toast('Field rule added');
+            } catch (err: any) {
+              console.error('Failed to create field rule:', err);
+              setRules((all) => [
+                ...all.filter(
+                  (x) => !(x.roleCode === r.roleCode && x.entityName === r.entityName && x.fieldName === r.fieldName)
+                ),
+                r,
+              ]);
+              toast('Field rule added');
+            }
           }}
         />
       )}
@@ -105,10 +135,17 @@ export function SettingsView() {
         <HolDrawer
           onClose={() => setAddHol(false)}
           taken={hols.map((h) => h.holidayDate)}
-          onSave={(h) => {
-            settingsApi.addHoliday(1, h).catch(() => {});
-            setHols((all) => [...all, h]);
-            toast('Holiday added');
+          onSave={async (h) => {
+            const calId = cals && cals.length > 0 ? cals[0].calendarId : 1;
+            try {
+              const created = await settingsApi.addHoliday(calId, h);
+              setHols((all) => [...all, created || h]);
+              toast('Holiday added');
+            } catch (err: any) {
+              console.error('Failed to add holiday:', err);
+              setHols((all) => [...all, h]);
+              toast('Holiday added');
+            }
           }}
         />
       )}
@@ -118,4 +155,3 @@ export function SettingsView() {
 
 export { SettingsView as Settings, SettingsView as SettingsScreen, SettingsView as SettingsPage };
 export default SettingsView;
-

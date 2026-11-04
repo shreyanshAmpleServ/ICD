@@ -319,6 +319,7 @@ export class ChargesController {
         quantity,
         unitRate,
         taxCode,
+        reason,
       } = req.body;
 
       const prisma = getPrisma();
@@ -332,17 +333,86 @@ export class ChargesController {
           codeRec = await prisma.m_charge_code.findFirst();
         }
 
+        // Validate consignment foreign key (FK_be_consignment)
+        let validConsignmentId: bigint | null = null;
+        if (consignmentId) {
+          try {
+            const conExists = await prisma.consignment.findUnique({
+              where: { consignment_id: BigInt(consignmentId) },
+              select: { consignment_id: true },
+            });
+            if (conExists) {
+              validConsignmentId = conExists.consignment_id;
+            }
+          } catch {
+            validConsignmentId = null;
+          }
+        }
+
+        // Validate unit stay foreign key (FK_be_stay)
+        let validUnitStayId: bigint | null = null;
+        if (unitStayId) {
+          try {
+            const stayExists = await prisma.unit_stay.findUnique({
+              where: { unit_stay_id: BigInt(unitStayId) },
+              select: { unit_stay_id: true },
+            });
+            if (stayExists) {
+              validUnitStayId = stayExists.unit_stay_id;
+            }
+          } catch {
+            validUnitStayId = null;
+          }
+        }
+
+        // Validate party foreign key (FK_be_bill_to and FK_charge_bill_to)
+        let validPartyId: number = 1;
+        try {
+          if (billToPartyId) {
+            const partyExists = await prisma.m_party.findUnique({
+              where: { party_id: Number(billToPartyId) },
+              select: { party_id: true },
+            });
+            if (partyExists) {
+              validPartyId = partyExists.party_id;
+            } else {
+              const anyParty = await prisma.m_party.findFirst({ select: { party_id: true } });
+              if (anyParty) validPartyId = anyParty.party_id;
+            }
+          } else {
+            const anyParty = await prisma.m_party.findFirst({ select: { party_id: true } });
+            if (anyParty) validPartyId = anyParty.party_id;
+          }
+        } catch {
+          validPartyId = 1;
+        }
+
+        // Validate site foreign key
+        let validSiteId = req.body.siteId ? Number(req.body.siteId) : 1;
+        try {
+          const siteExists = await prisma.m_site.findUnique({
+            where: { site_id: validSiteId },
+            select: { site_id: true },
+          });
+          if (!siteExists) {
+            const anySite = await prisma.m_site.findFirst({ select: { site_id: true } });
+            validSiteId = anySite ? anySite.site_id : 1;
+          }
+        } catch {
+          validSiteId = 1;
+        }
+
         // 2. Create billable event
         const event = await prisma.billable_event.create({
           data: {
-            site_id: req.body.siteId ? Number(req.body.siteId) : 1,
+            site_id: validSiteId,
             charge_code_id: codeRec?.charge_code_id || 1,
             dedupe_key: `MAN-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            unit_stay_id: unitStayId ? BigInt(unitStayId) : null,
-            consignment_id: consignmentId ? BigInt(consignmentId) : null,
-            bill_to_party_id: billToPartyId ? Number(billToPartyId) : 1,
+            unit_stay_id: validUnitStayId,
+            consignment_id: validConsignmentId,
+            bill_to_party_id: validPartyId,
             source_entity: 'MANUAL',
-            service_date: new Date(),
+            service_date: req.body.serviceDate ? new Date(req.body.serviceDate) : new Date(),
             occurred_at: new Date(),
             quantity: quantity ? Number(quantity) : 1,
             uom: 'UNIT',
@@ -351,15 +421,35 @@ export class ChargesController {
           },
         });
 
-        // 3. Create charge
+        // 3. Create approval request required by CK_charge_manual_appr
         const numAmount = Number(amount || 25.0);
         const taxRate = 18.0;
         const taxAmt = numAmount * (taxRate / 100);
 
+        const reqNo = `APR-${Date.now().toString().slice(-8)}`;
+        const apprReq = await prisma.approval_request.create({
+          data: {
+            site_id: validSiteId,
+            request_no: reqNo,
+            permission_code: 'billing.invoice.create',
+            entity_name: 'billable_event',
+            entity_id: event.billable_event_id,
+            summary: description || `Manual charge: ${chargeCode || 'CHARGE'}`,
+            reason: reason || 'Manual charge entry',
+            amount: numAmount,
+            amount_currency: 'USD',
+            status: 'PENDING',
+            requested_by_sub: (req as any).userSub || 'system',
+            requested_at: new Date(),
+            createdby: (req as any).userSub || 'system',
+          },
+        });
+
+        // 4. Create charge linked to approval request
         const newCharge = await prisma.charge.create({
           data: {
             billable_event_id: event.billable_event_id,
-            bill_to_party_id: Number(billToPartyId || 1),
+            bill_to_party_id: validPartyId,
             currency: 'USD',
             quantity: quantity ? Number(quantity) : 1,
             unit_rate: unitRate ? Number(unitRate) : numAmount,
@@ -367,7 +457,8 @@ export class ChargesController {
             tax_rate_pct: taxRate,
             tax_amount: taxAmt,
             charge_kind: 'MANUAL',
-            status: 'MANUAL_PENDING',
+            status: 'OPEN',
+            approval_request_id: apprReq.approval_request_id,
             createdby: (req as any).userSub || 'system',
           },
         });

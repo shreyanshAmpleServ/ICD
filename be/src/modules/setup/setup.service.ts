@@ -3616,7 +3616,10 @@ class SetupService {
             roleCode: f.m_role?.role_code || 'CLERK',
             entityName: f.entity_name,
             fieldName: f.field_name,
+            accessLevel: f.access_level,
             fieldBehavior: f.access_level,
+            mandatory: f.field_name === 'seal_no' || f.field_name === 'odometer_km',
+            uiOnly: f.field_name === 'seal_no' || f.field_name === 'odometer_km',
             logInst: f.log_inst,
           }));
         }
@@ -3650,6 +3653,7 @@ class SetupService {
           roleCode: created.m_role?.role_code || data.roleCode,
           entityName: created.entity_name,
           fieldName: created.field_name,
+          accessLevel: created.access_level,
           fieldBehavior: created.access_level,
           logInst: created.log_inst,
         };
@@ -3692,7 +3696,8 @@ class SetupService {
           return rows.map((h) => ({
             calendarHolidayId: h.calendar_holiday_id,
             calendarId: h.calendar_id,
-            holidayDate: h.holiday_date.toISOString().split('T')[0],
+            holidayDate: h.holiday_date instanceof Date ? h.holiday_date.toISOString().split('T')[0] : String(h.holiday_date).split('T')[0],
+            moves: ['Eid al-Fitr', 'Eid al-Adha', 'Maulid'].some((m) => h.holiday_name.toLowerCase().includes(m.toLowerCase())),
             holidayName: h.holiday_name,
             logInst: h.log_inst,
           }));
@@ -3743,6 +3748,20 @@ class SetupService {
     }
     const idx = seedHolidays.findIndex((h) => (h as any).calendarHolidayId === holidayId);
     if (idx >= 0) seedHolidays.splice(idx, 1);
+    return { ok: true };
+  }
+
+  public async deleteFieldRule(fieldRuleId: number): Promise<any> {
+    const db = this.db;
+    if (db) {
+      try {
+        await db.m_field_rule.delete({ where: { field_rule_id: fieldRuleId } });
+      } catch (err) {
+        console.warn('[SetupService.deleteFieldRule] DB error:', err);
+      }
+    }
+    const idx = seedFieldRules.findIndex((r) => (r as any).fieldRuleId === fieldRuleId);
+    if (idx >= 0) seedFieldRules.splice(idx, 1);
     return { ok: true };
   }
 
@@ -4180,8 +4199,8 @@ class SetupService {
   public async updateCalendar(id: any, data: any): Promise<any> {
     return { calendarId: id, ...data };
   }
-  public async createHoliday(data: any): Promise<any> {
-    return { holidayId: Date.now(), ...data };
+  public async createHoliday(data: any, calendarId = 1): Promise<any> {
+    return this.addHoliday(calendarId, data);
   }
   public async updateHoliday(id: any, data: any): Promise<any> {
     return { holidayId: id, ...data };

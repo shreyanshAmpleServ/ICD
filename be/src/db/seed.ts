@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
 import { seedPortalData } from '../scripts/seed-portal';
 import { seedAllServiceRequests } from '../scripts/seed-service-requests';
@@ -8,10 +8,50 @@ import { seedCharges } from '../scripts/seed-charges';
 import { seedInvoices } from '../scripts/seed-invoices';
 import { seedCashier } from '../scripts/seed-cashier';
 import { seedRefunds } from '../scripts/seed-refunds';
+import { seedSettings } from '../scripts/seed-settings';
 
 dotenv.config();
 
-const prisma = new PrismaClient();
+const prisma: any = new PrismaClient();
+prisma.companies = prisma.m_company;
+prisma.sites = prisma.m_site;
+prisma.roles = prisma.m_role;
+prisma.permissions = prisma.m_permission;
+prisma.users = prisma.app_user;
+prisma.unit_types = prisma.m_unit_type;
+prisma.cargo_regimes = prisma.m_cargo_regime;
+prisma.parties = prisma.m_party;
+prisma.trucks = prisma.m_truck;
+prisma.drivers = prisma.m_driver;
+prisma.equipment = prisma.m_equipment;
+prisma.yard_blocks = prisma.m_yard_location;
+prisma.yard_locations = prisma.m_yard_location;
+prisma.consignments = prisma.consignment;
+prisma.unit_stays = prisma.unit_stay;
+prisma.gates = prisma.m_gate;
+prisma.gate_lanes = prisma.m_gate_lane;
+prisma.checkpoints = prisma.m_checkpoint;
+prisma.visit_types = prisma.m_visit_type;
+prisma.truck_visits = prisma.truck_visit;
+prisma.truck_visit_units = prisma.truck_visit;
+prisma.yard_moves = prisma.yard_move;
+prisma.weighing_tickets = prisma.weighing;
+prisma.inspections = prisma.inspection;
+prisma.inspection_findings = prisma.inspection_finding;
+prisma.holds = prisma.hold;
+prisma.approval_requests = prisma.approval_request;
+prisma.exception_cases = prisma.exception_case;
+prisma.exception_comments = prisma.exception_comment;
+prisma.billable_charges = prisma.billable_event;
+prisma.invoices = prisma.invoice;
+prisma.invoice_lines = prisma.invoice_line;
+prisma.appointments = prisma.appointment;
+prisma.handling_jobs = prisma.handling_job;
+prisma.handling_job_lines = prisma.handling_job_line;
+prisma.reefer_sessions = prisma.reefer_session;
+prisma.reefer_readings = prisma.reefer_reading;
+prisma.repair_estimates = prisma.repair_estimate;
+prisma.notifications = prisma.notification;
 
 export async function seedDatabase() {
   console.log('🌱 Starting full database seed for ICD_New on MSSQL...');
@@ -777,6 +817,9 @@ export async function seedDatabase() {
   await seedInvoices();
   await seedCashier();
   await seedRefunds();
+
+  // 20. Master Data Settings (Field Rules, Calendars & Holidays)
+  await seedSettings();
 
   console.log('🎉 Full database seeding finished successfully! All tables seeded in MSSQL ICD_New.');
 }

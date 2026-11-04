@@ -5,10 +5,15 @@ export const settingsApi = {
     try {
       const res = await api.get<any>('/field-rules');
       return res?.items ?? (Array.isArray(res) ? res : []);
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
   createFieldRule: async (data: any) => {
     return api.post<any>('/field-rules', data);
+  },
+  deleteFieldRule: async (fieldRuleId: number) => {
+    return api.delete<any>(`/field-rules/${fieldRuleId}`);
   },
   getCalendars: async () => {
     try {
@@ -22,7 +27,9 @@ export const settingsApi = {
     try {
       const res = await api.get<any>(`/calendars/${calendarId}/holidays`);
       return res?.items ?? (Array.isArray(res) ? res : []);
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
   addHoliday: async (calendarId: number, data: any) => {
     return api.post<any>(`/calendars/${calendarId}/holidays`, data);
