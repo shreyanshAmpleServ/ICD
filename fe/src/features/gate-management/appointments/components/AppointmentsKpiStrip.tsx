@@ -1,5 +1,5 @@
 import { Kpi, Meter } from '@/ds/components';
-import type { Appt } from '@/mock/ops';
+import type { Appt } from '../types';
 
 interface AppointmentsKpiStripProps {
   totalBooked: number;

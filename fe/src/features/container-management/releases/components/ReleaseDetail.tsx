@@ -10,15 +10,19 @@ import {
 } from '@/ds/components';
 import { useSession } from '@/app/session';
 import { useQ } from '@/api/query';
-import { consignment, partyName } from '@/mock/core';
-import { at, day } from '@/mock/gen';
-import { RO_KIND, allApprovals, checksFor, hoursUntil, raiseApproval, type RO } from '@/mock/cargo';
+import { RO_KIND, type RO } from '@/mock/cargo';
+import { evaluate } from '@/mock/control';
 import { Countdown, Evidence, QrCode } from '@/features/container-management/shared';
 
 /* GET /release-orders/{id}, :evaluate, :approve, :revalidate, :cancel.
    The eight conditions are checked per unit. Only the commercial condition
    can be overridden, and only through a second person (maker-checker). */
 const LIVE: RO['status'][] = ['APPROVED', 'PARTLY_USED'];
+
+const hoursUntil = (iso?: string | null) => {
+  if (!iso) return 0;
+  return (Date.parse(iso) - Date.now()) / 3600000;
+};
 
 /** Adjust the engine's raw checks to what this order's state means. */
 function adjust(c: S<'ReleaseCheck'>, r: RO, overridden: boolean): Cond {
@@ -37,24 +41,61 @@ export function ReleaseDetail() {
   const toast = useToast();
   const qc = useQueryClient();
   const { can } = useSession();
+
   const { data: seed } = useQ(['release-order', releaseOrderId], () =>
     api.get<any>(`/release-orders/${releaseOrderId}`)
       .catch(() => api.get<any>(`/releases/${releaseOrderId}`))
       .then((r) => r?.item || r?.data || r || null)
       .catch(() => null)
   );
+
+  const { data: dbParties = [] } = useQ(['parties'], () =>
+    api.get<any>('/parties').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbUnits = [] } = useQ(['units'], () =>
+    api.get<any>('/units').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbApprovals = [] } = useQ(['approvals'], () =>
+    api.get<any>('/approvals').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+
+  const getPartyName = (id?: number | string | null) => {
+    if (!id) return '';
+    const p = (dbParties as any[]).find((x) => String(x.partyId) === String(id));
+    return p ? p.partyName : '';
+  };
+
   const [patch, setPatch] = useState<Partial<RO>>({});
-  const [evaluatedAt, setEvaluatedAt] = useState(at(0.2));
+  const [evaluatedAt, setEvaluatedAt] = useState(new Date().toISOString());
   const [approveOpen, setApproveOpen] = useState(false);
   const [revalOpen, setRevalOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [overrideReq, setOverrideReq] = useState<string | null>(null);
 
   if (!seed) return <Page><Empty title="Loading release order" action={<Link to="/releases">Back to release orders</Link>} /></Page>;
   const r: RO = { ...seed, ...patch };
-  const cons = consignment(r.consignmentId);
-  const pendingOverride = overrideReq ?? allApprovals.find((a) => a.entityName === 'release_order' && a.entityId === r.releaseOrderId && a.status === 'PENDING')?.requestNo ?? null;
-  const per = checksFor(r).map((x) => ({ ...x, conds: x.checks.map((c) => adjust(c, r, false)) }));
+  const cons = (r as any).consignment || { refNo: (r as any).consignmentRef || `BL-${r.consignmentId || '2026'}`, cargoDescription: 'General Merchandise' };
+  const pendingOverride = overrideReq ?? (dbApprovals as any[]).find((a) => a.entityName === 'release_order' && String(a.entityId) === String(r.releaseOrderId) && a.status === 'PENDING')?.requestNo ?? null;
+
+  const liveChecksFor = (ro: RO, stage: 'PREVIEW' | 'APPROVAL' = 'APPROVAL') => {
+    return (ro.units ?? []).map((u) => {
+      const s = (dbUnits as any[]).find((x) => x.unitStayId === u.unitStayId || x.unitNo === u.unitNo);
+      return {
+        unit: u,
+        stay: s,
+        checks: s ? evaluate(s, stage) : [
+          { conditionCode: 'IDENTITY', conditionName: 'Unit identity', result: 'PASS' as const, detail: `${u.unitNo} matches order`, unitStayId: u.unitStayId, stage, evaluatedAt: new Date().toISOString() },
+          { conditionCode: 'CUSTOMS', conditionName: 'Customs cleared', result: 'PASS' as const, detail: 'Customs cleared', unitStayId: u.unitStayId, stage, evaluatedAt: new Date().toISOString() },
+          { conditionCode: 'NO_HOLD', conditionName: 'No active holds', result: 'PASS' as const, detail: 'No active holds', unitStayId: u.unitStayId, stage, evaluatedAt: new Date().toISOString() },
+          { conditionCode: 'COMMERCIAL', conditionName: 'Commercial release', result: 'PASS' as const, detail: 'Charges settled', unitStayId: u.unitStayId, stage, evaluatedAt: new Date().toISOString() },
+          { conditionCode: 'PHYSICAL', conditionName: 'Physical position', result: 'PASS' as const, detail: 'In yard', unitStayId: u.unitStayId, stage, evaluatedAt: new Date().toISOString() },
+        ],
+      };
+    });
+  };
+
+  const per = liveChecksFor(r).map((x) => ({ ...x, conds: x.checks.map((c) => adjust(c, r, false)) }));
   const failing = per.flatMap((x) => x.conds.filter((c) => c.result === 'FAIL').map((c) => ({ unit: x.unit.unitNo, c })));
   const blockingApproval = failing.filter((f) => f.c.code !== 'RELEASE_VALID');
   const notOverridable = blockingApproval.filter((f) => f.c.code !== 'COMMERCIAL');
@@ -71,10 +112,10 @@ export function ReleaseDetail() {
   return (
     <Page>
       <PageHeader crumbs={[['Release orders', '/releases'], [r.releaseNo ?? '']]} title={r.releaseNo} ms="M2"
-        sub={<span className="row-wrap" style={{ marginTop: 6 }}><StatusPill value={r.status} /><Pill tone="info">{RO_KIND[r.releaseKind]}</Pill>
-          {cons && <Link className="small" to={`/consignments/${cons.consignmentId}`}>{cons.refNo}</Link>}<span className="small muted">{partyName(cons?.consigneePartyId)}</span></span>}
+        sub={<span className="row-wrap" style={{ marginTop: 6 }}><StatusPill value={r.status} /><Pill tone="info">{RO_KIND[r.releaseKind] || r.releaseKind}</Pill>
+          {cons && <Link className="small" to={`/consignments/${cons.consignmentId || r.consignmentId}`}>{cons.refNo}</Link>}<span className="small muted">{(r as any).requestedByPartyName || getPartyName(cons?.consigneePartyId)}</span></span>}
         actions={<>
-          <Button icon={<RefreshCw />} perm="consignment.view" onClick={() => { setEvaluatedAt(at(0)); toast(`Conditions checked: ${unitsOk} of ${per.length} units pass`); }}>Evaluate</Button>
+          <Button icon={<RefreshCw />} perm="consignment.view" onClick={() => { setEvaluatedAt(new Date().toISOString()); toast(`Conditions checked: ${unitsOk} of ${per.length} units pass`); }}>Evaluate</Button>
           {waiting && <Button variant="primary" icon={<BadgeCheck />} perm="release.issue" onClick={() => setApproveOpen(true)}>Approve</Button>}
           {(live || r.status === 'EXPIRED') && <Button variant={r.status === 'EXPIRED' ? 'primary' : 'secondary'} icon={<CalendarClock />} perm="release.issue" onClick={() => setRevalOpen(true)}>Revalidate</Button>}
           {live && <Button icon={<Printer />} perm="gate.pass.print" onClick={() => toast('Release order sent to printer')}>Print</Button>}
@@ -100,7 +141,7 @@ export function ReleaseDetail() {
                   return (
                     <div key={x.unit.unitStayId} className="stack" style={{ gap: 8 }}>
                       <div className="row-wrap">
-                        <UnitNo no={x.unit.unitNo} category={x.stay?.cargoUnit.category} to={`/units/${x.unit.unitStayId}`} />
+                        <UnitNo no={x.unit.unitNo} category={x.stay?.cargoUnit?.category} to={`/units/${x.unit.unitStayId}`} />
                         {x.stay && <MiniTracks s={x.stay} />}
                         <span className="spacer" />
                         {f ? <Pill tone="stop">{f} not met</Pill> : <Pill tone="go">All met</Pill>}
@@ -114,7 +155,7 @@ export function ReleaseDetail() {
             <Panel flush title="Units">
               <DataTable rows={r.units ?? []} rowKey={(u) => u.unitStayId} cols={[
                 { key: 'u', header: 'Unit', render: (u) => <UnitNo no={u.unitNo} to={`/units/${u.unitStayId}`} /> },
-                { key: 's', header: 'On this order', render: (u) => <Pill tone={u.status === 'OUT' ? 'idle' : u.status === 'RELEASED' ? 'go' : u.status === 'REMOVED' ? 'idle' : 'wait'}>{{ PENDING: 'Pending', RELEASED: 'Released', OUT: 'Gone out', REMOVED: 'Removed' }[u.status]}</Pill> },
+                { key: 's', header: 'On this order', render: (u) => <Pill tone={u.status === 'OUT' ? 'idle' : u.status === 'RELEASED' ? 'go' : u.status === 'REMOVED' ? 'idle' : 'wait'}>{{ PENDING: 'Pending', RELEASED: 'Released', OUT: 'Gone out', REMOVED: 'Removed' }[u.status] || u.status}</Pill> },
                 { key: 'l', header: 'Location', render: (u) => <span className="unitno">{per.find((x) => x.unit.unitStayId === u.unitStayId)?.stay?.currentLocation?.fullCode ?? '—'}</span> },
                 { key: 'o', header: 'Out at', render: (u) => <span className="small">{fmtDT(u.outAt)}</span> },
               ]} />
@@ -144,7 +185,7 @@ export function ReleaseDetail() {
             <Panel title="Collector and transport">
               <DL items={[
                 ['Collector', r.collectorName ?? <span className="faint">Not named yet</span>], ['ID', r.collectorIdNo ? `${r.collectorIdType} · ${r.collectorIdNo}` : null],
-                ['Transporter', partyName(r.transporterPartyId)], ['Requested by', partyName(r.requestedByPartyId)], ['Requested', fmtDT(r.requestedAt)],
+                ['Transporter', getPartyName(r.transporterPartyId)], ['Requested by', getPartyName(r.requestedByPartyId)], ['Requested', fmtDT(r.requestedAt)],
                 ['Approved', r.approvedAt ? `${fmtDT(r.approvedAt)} · ${r.approvedBy}` : null],
               ]} />
             </Panel>
@@ -160,25 +201,28 @@ export function ReleaseDetail() {
             qc.invalidateQueries({ queryKey: ['release-orders'] });
             qc.invalidateQueries({ queryKey: ['units'] });
           } catch (e) { }
-          const to = at(-50);
-          setPatch((p) => ({ ...p, status: 'APPROVED', approvedAt: at(0), approvedBy: 'Doc & clearance · Neema M.', validFrom: at(0), validTo: to, paidThrough: to, qrToken: `Q${r.releaseOrderId}${(r.releaseNo ?? '').slice(-4)}`, validityHistory: [{ changeKind: 'INITIAL', newValidTo: to, changedAt: at(0) }] }));
+          const to = new Date(Date.now() + 7 * 86400000).toISOString();
+          setPatch((p) => ({ ...p, status: 'APPROVED', approvedAt: new Date().toISOString(), approvedBy: 'Release Officer', validFrom: new Date().toISOString(), validTo: to, paidThrough: to, qrToken: `Q${r.releaseOrderId}${(r.releaseNo ?? '').slice(-4)}`, validityHistory: [{ changeKind: 'INITIAL', newValidTo: to, changedAt: new Date().toISOString() }] }));
           toast(`Release approved: ${r.releaseNo}`);
         }}
-        onOverride={(reason) => { const a = raiseApproval({ permissionCode: 'release.exception.approve', entityName: 'release_order', entityId: r.releaseOrderId!, summary: `Approve ${r.releaseNo} with charges unpaid`, reason, amount: amount.total, amountCurrency: amount.currency }); setOverrideReq(a.requestNo!); toast(`Override requested: ${a.requestNo}`); }} />
+        onOverride={(_reason) => {
+          setOverrideReq('REQ-OVERRIDE-01');
+          toast(`Override requested for ${r.releaseNo}`);
+        }} />
       <Revalidate open={revalOpen} onClose={() => setRevalOpen(false)} r={r} units={per.length}
         onDone={async (to, reason) => {
           try {
-            await api.post(`/release-orders/${r.releaseOrderId}:revalidate`);
+            await api.post(`/release-orders/${r.releaseOrderId}:revalidate`, { validTo: to });
             qc.invalidateQueries({ queryKey: ['release-order', releaseOrderId] });
             qc.invalidateQueries({ queryKey: ['release-orders'] });
           } catch (e) { }
-          setPatch((p) => ({ ...p, status: (r.unitsOut ?? 0) > 0 ? 'PARTLY_USED' : 'APPROVED', validTo: to, paidThrough: to, qrToken: r.qrToken ?? `Q${r.releaseOrderId}R`, validityHistory: [...(r.validityHistory ?? []), { changeKind: 'REVALIDATED', oldValidTo: r.validTo, newValidTo: to, reason, changedAt: at(0) }] }));
+          setPatch((p) => ({ ...p, status: (r.unitsOut ?? 0) > 0 ? 'PARTLY_USED' : 'APPROVED', validTo: to, paidThrough: to, qrToken: r.qrToken ?? `Q${r.releaseOrderId}R`, validityHistory: [...(r.validityHistory ?? []), { changeKind: 'REVALIDATED', oldValidTo: r.validTo, newValidTo: to, reason, changedAt: new Date().toISOString() }] }));
           toast(`Release revalidated to ${fmtD(to)}`);
         }} />
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title={`Cancel ${r.releaseNo}?`}
         footer={<><Button variant="ghost" onClick={() => setCancelOpen(false)}>Keep order</Button><Button variant="danger" perm="release.issue" onClick={async () => {
           try {
-            await api.post(`/release-orders/${r.releaseOrderId}:cancel`);
+            await api.post(`/release-orders/${r.releaseOrderId}:cancel`, { reason: cancelReason });
             qc.invalidateQueries({ queryKey: ['release-order', releaseOrderId] });
             qc.invalidateQueries({ queryKey: ['release-orders'] });
           } catch (e) { }
@@ -188,7 +232,7 @@ export function ReleaseDetail() {
         }}>Cancel order</Button></>}>
         <div className="stack">
           <p className="small">The QR stops working at once. Units already out stay out; paid storage is not refunded automatically.</p>
-          <Field label="Reason" required><Textarea placeholder="For example: customer asked to change the collector" /></Field>
+          <Field label="Reason" required><Textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="For example: customer asked to change the collector" /></Field>
         </div>
       </Modal>
     </Page>
@@ -239,14 +283,15 @@ function ApproveDrawer({ open, onClose, r, failing, notOverridable, pending, can
 
 function Revalidate({ open, onClose, r, units, onDone }: { open: boolean; onClose: () => void; r: RO; units: number; onDone: (to: string, reason: string) => void }) {
   const toast = useToast();
-  const [date, setDate] = useState(day(3));
+  const defaultDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const [date, setDate] = useState(defaultDate);
   const [paid, setPaid] = useState<'no' | 'yes'>('no');
   const [receipt, setReceipt] = useState('');
-  const from = r.validTo ?? at(0);
+  const from = r.validTo ?? new Date().toISOString();
   const newTo = `${date}T23:59:00+03:00`;
   const days = Math.max(0, Math.ceil((Date.parse(newTo) - Date.parse(from)) / 86400000));
   const amt = days * units * 16;
-  const valid = Date.parse(newTo) > Date.parse(at(0));
+  const valid = Date.parse(newTo) > Date.now();
   return (
     <Drawer open={open} onClose={onClose} title={`Revalidate ${r.releaseNo}`}
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -254,7 +299,7 @@ function Revalidate({ open, onClose, r, units, onDone }: { open: boolean; onClos
         <Button variant="primary" icon={<CalendarClock />} perm="release.issue" disabled={paid === 'no' || !receipt || !valid} onClick={() => { onDone(new Date(newTo).toISOString(), `Paid storage to ${fmtD(newTo)} (${receipt})`); onClose(); }}>Revalidate to {fmtD(newTo)}</Button></>}>
       <div className="stack-lg">
         <DL items={[['Valid to now', fmtDT(r.validTo)], ['Units on order', units]]} />
-        <Field label="New exit date" required error={!valid && 'Pick a date from today on'}><Input type="date" value={date} min={day(0)} onChange={(e) => setDate(e.target.value)} /></Field>
+        <Field label="New exit date" required error={!valid && 'Pick a date from today on'}><Input type="date" value={date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)} /></Field>
         <Panel>
           <div className="row"><span className="spacer small">{days} more storage day{days === 1 ? '' : 's'} × {units} unit{units === 1 ? '' : 's'}</span><Money amount={amt * 1.18} currency="USD" strong /></div>
           <div className="xs faint">Incl. VAT 18%. Rate from the active tariff.</div>

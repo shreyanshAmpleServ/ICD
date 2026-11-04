@@ -66,17 +66,17 @@ v1Router.use(invoicesRouter);
 v1Router.use(cashierRouter);
 
 // Mount legacy routers
-v1Router.use(sessionRouter);
-v1Router.use(setupRouter);
-v1Router.use(mastersRouter);
-v1Router.use(accessRouter);
-v1Router.use(cargoRouter);
-v1Router.use(gateRouter);
-v1Router.use(yardRouter);
-v1Router.use(operationsRouter);
-v1Router.use(controlRouter);
-v1Router.use(commercialRouter);
-v1Router.use(insightRouter);
-v1Router.use(depthRouter);
+// v1Router.use(sessionRouter);
+// v1Router.use(setupRouter);
+// v1Router.use(mastersRouter);
+// v1Router.use(accessRouter);
+// v1Router.use(cargoRouter);
+// v1Router.use(gateRouter);
+// v1Router.use(yardRouter);
+// v1Router.use(operationsRouter);
+// v1Router.use(controlRouter);
+// v1Router.use(commercialRouter);
+// v1Router.use(insightRouter);
+// v1Router.use(depthRouter);
 
 export default v1Router;

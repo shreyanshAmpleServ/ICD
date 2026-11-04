@@ -12,31 +12,52 @@ export const rulesApi = {
   createHoldType: async (data: any) => {
     return api.post<any>('/hold-types', data);
   },
+  updateHoldType: async (id: number | string, data: any) => {
+    return api.patch<any>(`/hold-types/${id}`, data);
+  },
+
   getReleaseRules: async () => {
     try {
       const res = await api.get<any>('/release-rules');
       return res?.items ?? (Array.isArray(res) ? res : []);
-    } catch { return []; }
+    } catch {
+      return [];
+    }
+  },
+  createReleaseRule: async (data: any) => {
+    return api.post<any>('/release-rules', data);
   },
   updateReleaseRule: async (id: number, data: any) => {
     return api.patch<any>(`/release-rules/${id}`, data);
   },
+
   getApprovalPolicies: async () => {
     try {
       const res = await api.get<any>('/approval-policies');
       return res?.items ?? (Array.isArray(res) ? res : []);
-    } catch { return []; }
+    } catch {
+      return [];
+    }
+  },
+  createApprovalPolicy: async (data: any) => {
+    return api.post<any>('/approval-policies', data);
   },
   updateApprovalPolicy: async (id: number, data: any) => {
     return api.patch<any>(`/approval-policies/${id}`, data);
   },
+
   getExceptionTypes: async () => {
     try {
       const res = await api.get<any>('/exception-types');
       return res?.items ?? (Array.isArray(res) ? res : []);
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
-  updateExceptionType: async (id: number, data: any) => {
+  createExceptionType: async (data: any) => {
+    return api.post<any>('/exception-types', data);
+  },
+  updateExceptionType: async (id: number | string, data: any) => {
     return api.patch<any>(`/exception-types/${id}`, data);
   },
 };

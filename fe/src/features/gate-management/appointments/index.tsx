@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Page, useToast } from '@/ds/components';
 import { useQ } from '@/api/query';
-import { day } from '@/mock/gen';
-import { APPT_TYPES, HOURS, appointments, ruleFor, type Appt } from '@/mock/ops';
+import { APPT_TYPES, HOURS } from '@/mock/ops';
 import { appointmentsApi } from './api';
 import { AppointmentsHeader } from './components/AppointmentsHeader';
 import { AppointmentsDaySelector } from './components/AppointmentsDaySelector';
@@ -12,25 +11,37 @@ import { AppointmentsSlotMatrix } from './components/AppointmentsSlotMatrix';
 import { AppointmentsTable } from './components/AppointmentsTable';
 import { AppointmentsRulesPanel } from './components/AppointmentsRulesPanel';
 import { BookAppointmentDrawer } from './components/BookAppointmentDrawer';
-import { weekday, dayLabel, hh, type SlotSelection, type StatusFilter } from './types';
+import { weekday, dayLabel, hh, type SlotSelection, type StatusFilter, type Appt } from './types';
 
 export { appointmentsApi } from './api';
 export * from './types';
 
 export function AppointmentsView() {
   const toast = useToast();
-  const { data: dbAppts = [], refetch } = useQ<Appt[]>(['appointments'], async () => {
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const { data: dbAppts = [], isLoading: apptsLoading, refetch } = useQ<Appt[]>(['appointments'], async () => {
     try {
       const res = await appointmentsApi.getAppointments();
-      return Array.isArray(res) && res.length > 0 ? (res as Appt[]) : appointments;
+      return Array.isArray(res) ? (res as Appt[]) : [];
     } catch {
-      return appointments;
+      return [];
     }
   });
-  const data: Appt[] = Array.isArray(dbAppts) && dbAppts.length > 0 ? (dbAppts as Appt[]) : appointments;
+
+  const { data: slotRules = [] } = useQ<any[]>(['appointment-slot-rules'], async () => {
+    try {
+      const res = await appointmentsApi.getSlotRules();
+      return Array.isArray(res) ? res : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const data: Appt[] = Array.isArray(dbAppts) ? (dbAppts as Appt[]) : [];
   const [extra, setExtra] = useState<Appt[]>([]);
   const [changed, setChanged] = useState<Record<number, Appt['status']>>({});
-  const [date, setDate] = useState(day(0));
+  const [date, setDate] = useState(todayStr);
   const [slot, setSlot] = useState<SlotSelection | null>(null);
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [bookOpen, setBookOpen] = useState(false);
@@ -41,7 +52,14 @@ export function AppointmentsView() {
     [data, extra, changed]
   );
 
-  const days = Array.from({ length: 8 }, (_, i) => day(i - 1));
+  const days = useMemo(() => {
+    const base = new Date();
+    return Array.from({ length: 8 }, (_, i) => {
+      const d = new Date(base.getTime() + (i - 1) * 86400000);
+      return d.toISOString().slice(0, 10);
+    });
+  }, []);
+
   const wd = weekday(date);
   const ofDay = all.filter((a) => a.date === date);
   const live = (a: Appt) => a.status !== 'CANCELLED';
@@ -50,8 +68,16 @@ export function AppointmentsView() {
     ofDay.filter((a) => a.visitTypeCode === t && a.hour === h && live(a)).length;
 
   const cap = (t: string, h: number) => {
-    const r = ruleFor(wd, t);
-    return r && h < Number(r.slotEnd.slice(0, 2)) ? r.capacityTrucks : 0;
+    if (wd === 0) return 0; // Depot closed on Sundays
+    const rule =
+      slotRules.find((r) => r.weekday === wd && r.visitTypeCode === t) ||
+      slotRules.find((r) => r.visitTypeCode === t && r.weekday === 1);
+    if (!rule) {
+      return h >= 6 && h < 22 ? 6 : 0;
+    }
+    const startH = parseInt(String(rule.slotStart).slice(0, 2), 10) || 6;
+    const endH = parseInt(String(rule.slotEnd).slice(0, 2), 10) || 22;
+    return h >= startH && h < endH ? Number(rule.capacityTrucks) : 0;
   };
 
   const totalCap = APPT_TYPES.reduce((a, t) => a + HOURS.reduce((b, h) => b + cap(t, h), 0), 0);
@@ -67,7 +93,7 @@ export function AppointmentsView() {
       if (a.appointmentId && s) {
         await appointmentsApi.updateAppointmentStatus(a.appointmentId, s);
       }
-    } catch {}
+    } catch { }
     setChanged((c) => ({ ...c, [a.appointmentId!]: s }));
     toast(msg);
     refetch();
@@ -87,7 +113,7 @@ export function AppointmentsView() {
           live={live}
           weekday={weekday}
           dayLabel={dayLabel}
-          today={day(0)}
+          today={todayStr}
           onSelectDate={(d) => {
             setDate(d);
             setSlot(null);
@@ -105,7 +131,7 @@ export function AppointmentsView() {
               totalCap={totalCap}
               ofDay={ofDay}
               date={date}
-              today={day(0)}
+              today={todayStr}
             />
 
             {/* 4. Hourly Slot Heatmap Matrix (06:00 - 22:00) */}
@@ -123,6 +149,7 @@ export function AppointmentsView() {
             <div className="grid-main-side ops-gms">
               <style>{'.ops-gms > * { min-width: 0; }'}</style>
               <AppointmentsTable
+                loading={apptsLoading}
                 list={list}
                 filter={filter}
                 onFilterChange={setFilter}
@@ -131,7 +158,7 @@ export function AppointmentsView() {
                 onCancel={(a) => setStatus(a, 'CANCELLED', `Appointment ${a.appointmentNo} cancelled`)}
                 onClearSlot={() => setSlot(null)}
               />
-              <AppointmentsRulesPanel />
+              <AppointmentsRulesPanel rules={slotRules} />
             </div>
           </>
         )}
@@ -141,13 +168,10 @@ export function AppointmentsView() {
       <BookAppointmentDrawer
         open={bookOpen}
         onClose={() => setBookOpen(false)}
-        date={wd === 0 ? day(1) : date}
+        date={wd === 0 ? days[2] || todayStr : date}
         booked={booked}
         cap={cap}
-        onBook={async (a) => {
-          try {
-            await appointmentsApi.createAppointment(a);
-          } catch {}
+        onBook={(a) => {
           setExtra((x) => [...x, a]);
           setDate(a.date);
           refetch();

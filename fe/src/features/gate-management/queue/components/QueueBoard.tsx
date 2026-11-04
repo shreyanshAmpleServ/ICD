@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Timer, WifiOff } from 'lucide-react';
-import { StatusPill, UnitNo, cx } from '@/ds/components';
+import { Skeleton, StatusPill, UnitNo, cx } from '@/ds/components';
 import { CHECKPOINTS, VISIT_TYPES, type DynamicTruckVisit } from '@/features/gate-management/types';
 
 export function QueueBoard({
   getColItems,
+  loading,
 }: {
   getColItems: (code: string) => DynamicTruckVisit[];
+  loading?: boolean;
 }) {
   return (
     <div className="grid-4" style={{ alignItems: 'start' }}>
@@ -16,14 +18,33 @@ export function QueueBoard({
           <section key={c.code} className="panel">
             <div className="panel-head">
               <h2 className="spacer">{c.name}</h2>
-              <span className="pill pill-info">{items.length}</span>
+              <span className="pill pill-info">{loading && items.length === 0 ? '...' : items.length}</span>
             </div>
             <div className="stack" style={{ padding: 12 }}>
-              {items.length === 0 && (
-                <div className="small faint" style={{ padding: 8 }}>
-                  No trucks waiting.
-                </div>
-              )}
+                { loading && items.length === 0 ? (
+                  <>
+                    <div className="panel" style={{ padding: 12, borderLeft: '4px solid var(--steel)' }}>
+                      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+                        <Skeleton width={110} height={16} />
+                        <Skeleton width={50} height={14} />
+                      </div>
+                      <Skeleton width={150} height={12} style={{ marginBottom: 8 }} />
+                      <Skeleton width={90} height={18} />
+                    </div>
+                    <div className="panel" style={{ padding: 12, borderLeft: '4px solid var(--steel)' }}>
+                      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+                        <Skeleton width={95} height={16} />
+                        <Skeleton width={50} height={14} />
+                      </div>
+                      <Skeleton width={130} height={12} style={{ marginBottom: 8 }} />
+                      <Skeleton width={90} height={18} />
+                    </div>
+                  </>
+                ) : items.length === 0 ? (
+                  <div className="small faint" style={{ padding: 8 }}>
+                    No trucks waiting.
+                  </div>
+              ) : null}
               {items.map((v) => (
                 <Link
                   key={v.truckVisitId}
@@ -33,13 +54,12 @@ export function QueueBoard({
                     padding: 12,
                     textDecoration: 'none',
                     color: 'inherit',
-                    borderLeft: `4px solid ${
-                      v.status === 'HELD'
+                    borderLeft: `4px solid ${v.status === 'HELD'
                         ? 'var(--stop)'
                         : (v.waitingMin ?? 0) > 60
-                        ? 'var(--wait)'
-                        : 'var(--steel)'
-                    }`,
+                          ? 'var(--wait)'
+                          : 'var(--steel)'
+                      }`,
                   }}
                 >
                   <div className="row">

@@ -29,6 +29,28 @@ export const setupFinanceController = {
     }
   },
 
+  closePeriod: async (req: Request, res: Response) => {
+    try {
+      const periodKey = req.params.periodKey || (req.params as any).accountingPeriodId || req.body.periodKey || req.params.periodId;
+      const cleanKey = String(periodKey).replace(':close', '').replace('/close', '');
+      const closed = await setupService.closeAccountingPeriod(cleanKey, req.body.reason);
+      res.json(closed);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  reopenPeriod: async (req: Request, res: Response) => {
+    try {
+      const periodKey = req.params.periodKey || (req.params as any).accountingPeriodId || req.body.periodKey || req.params.periodId;
+      const cleanKey = String(periodKey).replace(':reopen', '').replace('/reopen', '');
+      const reopened = await setupService.reopenAccountingPeriod(cleanKey, req.body.reason);
+      res.json(reopened);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
   getChargeCodes: async (_req: Request, res: Response) => {
     try {
       const items = await setupService.getChargeCodes();

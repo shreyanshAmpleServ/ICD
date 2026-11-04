@@ -12,6 +12,7 @@ export interface CommonTableProps<T> {
   selected?: string | number | null;
   dense?: boolean;
   foot?: ReactNode;
+  loading?: boolean;
 
   // Search & Filtering
   searchPlaceholder?: string;
@@ -42,6 +43,7 @@ export function CommonTable<T>({
   selected,
   dense,
   foot,
+  loading,
   searchPlaceholder = 'Search records...',
   searchValue,
   onSearchChange,
@@ -98,7 +100,7 @@ export function CommonTable<T>({
 
           <div className="row" style={{ gap: 8 }}>
             <span className="xs muted" style={{ whiteSpace: 'nowrap' }}>
-              {rows.length} {itemLabel}
+              {loading && rows.length === 0 ? 'Loading...' : `${rows.length} ${itemLabel}`}
             </span>
             {toolbarActions}
           </div>
@@ -113,6 +115,7 @@ export function CommonTable<T>({
         selected={selected}
         dense={dense}
         foot={foot}
+        loading={loading}
         empty={
           <Empty title={emptyTitle} action={emptyAction}>
             {emptySubtitle}

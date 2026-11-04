@@ -42,13 +42,13 @@ export function MastersView() {
     '—';
 
   // Live editable state backed by API
-  const [trucks, setTrucks, , refetchTrucks] = useEditable<Truck>('trucks', [], () => mastersApi.getTrucks());
-  const [drivers, setDrivers, , refetchDrivers] = useEditable<Driver>('drivers', [], () => mastersApi.getDrivers());
+  const [trucks, setTrucks, trucksLoading, refetchTrucks] = useEditable<Truck>('trucks', [], () => mastersApi.getTrucks());
+  const [drivers, setDrivers, driversLoading, refetchDrivers] = useEditable<Driver>('drivers', [], () => mastersApi.getDrivers());
 
-  const { data: vesselData, refetch: refetchVessels } = useQ<any[]>(['admin', 'vessels'], () => mastersApi.getVessels());
-  const { data: portData, refetch: refetchPorts } = useQ<any[]>(['admin', 'ports'], () => mastersApi.getPorts());
-  const { data: commData, refetch: refetchCommodities } = useQ<any[]>(['admin', 'commodities'], () => mastersApi.getCommodities());
-  const { data: eqData, refetch: refetchEquipment } = useQ<any[]>(['admin', 'equipment'], () => mastersApi.getEquipment());
+  const { data: vesselData, isLoading: vesselsLoading, refetch: refetchVessels } = useQ<any[]>(['admin', 'vessels'], () => mastersApi.getVessels());
+  const { data: portData, isLoading: portsLoading, refetch: refetchPorts } = useQ<any[]>(['admin', 'ports'], () => mastersApi.getPorts());
+  const { data: commData, isLoading: commsLoading, refetch: refetchCommodities } = useQ<any[]>(['admin', 'commodities'], () => mastersApi.getCommodities());
+  const { data: eqData, isLoading: eqLoading, refetch: refetchEquipment } = useQ<any[]>(['admin', 'equipment'], () => mastersApi.getEquipment());
 
   const vessels = Array.isArray(vesselData) ? vesselData : [];
   const ports = Array.isArray(portData) ? portData : [];
@@ -152,6 +152,7 @@ export function MastersView() {
             </>
           )}
           <DataTable
+            loading={trucksLoading}
             rows={trucks.filter((t) =>
               !n ||
               (t.plateNo && t.plateNo.includes(n)) ||
@@ -192,6 +193,7 @@ export function MastersView() {
               </Button>
             )}
             <DataTable
+              loading={driversLoading}
               rows={drivers.filter((d) =>
                 !n ||
                 (d.driverName && d.driverName.toUpperCase().replace(/\s/g, '').includes(n)) ||
@@ -222,6 +224,7 @@ export function MastersView() {
             </Button>
           )}
           <DataTable
+            loading={vesselsLoading}
             rows={vessels.filter((v) =>
               !q ||
               (v.vesselName && v.vesselName.toUpperCase().includes(q.toUpperCase())) ||
@@ -245,6 +248,7 @@ export function MastersView() {
 
       {tab === 'ports' && (
         <LocalTable
+          loading={portsLoading}
           title="Ports, dry ports and border posts"
           addLabel="Add port"
           rows={ports.filter((p) =>
@@ -269,6 +273,7 @@ export function MastersView() {
 
       {tab === 'commodities' && (
         <LocalTable
+          loading={commsLoading}
           title="Commodities"
           addLabel="Add commodity"
           rows={commodities.filter((c) =>
@@ -292,6 +297,7 @@ export function MastersView() {
 
       {tab === 'equipment' && (
         <LocalTable
+          loading={eqLoading}
           title="Yard equipment"
           addLabel="Add equipment"
           rows={equipment.filter((e) =>
@@ -352,7 +358,7 @@ export function MastersView() {
         />
       )}
 
-        {/* Add / Edit Truck Drawer */ }
+      {/* Add / Edit Truck Drawer */}
       {(addTruckOpen || editingTruck) && (
         <TruckFormDrawer
           open
@@ -415,7 +421,7 @@ export function MastersView() {
         />
       )}
 
-        {/* Add / Edit Driver Drawer */ }
+      {/* Add / Edit Driver Drawer */}
       {(addDriverOpen || editingDriver) && (
         <DriverFormDrawer
           open

@@ -1,0 +1,44 @@
+flowchart TD
+    subgraph Client_Level ["Client Exception Detection"]
+        ClientReq["Client Submits Form / Action"]
+        TokenExpired["Token Expired / Missing"]
+        RoleBlocked["Unauthorized / Low Grant Level"]
+        ZodInvalid["Form Validation Fails"]
+    end
+
+    subgraph Wire_Level ["HTTP Status & Problem Details (RFC 7807)"]
+        HTTP401["HTTP 401 Unauthorized -> Clear Session & Redirect to /login"]
+        HTTP403["HTTP 403 Forbidden -> Display Permission Denied Toast"]
+        HTTP404["HTTP 404 Site Not Found -> Validate X-Site-Id Header"]
+        HTTP412["HTTP 412 Precondition Failed -> Concurrency Conflict Alert"]
+        HTTP422["HTTP 422 Validation Failed -> Inline Field Errors"]
+        HTTP409["HTTP 409 Conflict -> Record Already Exists / Duplicate"]
+        HTTP500["HTTP 500 Database Error -> Log Stack & Alert Admin"]
+    end
+
+    subgraph Database_Recovery ["Server & Database State Recovery"]
+        Rollback["Prisma Transaction Rollback ($transaction)"]
+        CacheHit["Idempotency Cache Replay (X-Cache-Lookup: HIT)"]
+        OptimisticReload["Client TanStack Cache Invalidation & Silent Refetch"]
+        FallbackStore["Switch to In-Memory Dev Store (isDbLive == false)"]
+    end
+
+    ClientReq --> ZodInvalid
+    ZodInvalid --> HTTP422
+    ClientReq --> TokenExpired
+    TokenExpired --> HTTP401
+    ClientReq --> RoleBlocked
+    RoleBlocked --> HTTP403
+
+    ClientReq -->|If-Match mismatch| HTTP412
+    HTTP412 --> OptimisticReload
+
+    ClientReq -->|Duplicate key| HTTP409
+    HTTP409 --> CacheHit
+
+    ClientReq -->|Invalid siteId| HTTP404
+
+    ClientReq -->|DB Constraint Violation| HTTP500
+    HTTP500 --> Rollback
+    HTTP500 --> FallbackStore
+

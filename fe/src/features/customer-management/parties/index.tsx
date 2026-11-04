@@ -39,7 +39,7 @@ export function PartiesView() {
   const nav = useNavigate();
   const [q, setQ] = useState('');
   const [role, setRole] = useState<Role>('all');
-  const { data = [] } = useQ(['parties'], () => partiesApi.getParties());
+  const { data = [], isLoading: partiesLoading } = useQ(['parties'], () => partiesApi.getParties());
   const counts = useMemo(
     () => new Map(data.map((p: any) => [p.partyId!, p.openUnits ?? openUnits(p.partyId!)])),
     [data]
@@ -89,6 +89,7 @@ export function PartiesView() {
           />
         </div>
         <DataTable
+          loading={partiesLoading}
           rows={rows}
           rowKey={(p: any) => p.partyId!}
           onRow={(p: any) => nav(`/parties/${p.partyId}`)}

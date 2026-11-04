@@ -781,7 +781,7 @@ export async function seedDatabase() {
   console.log('🎉 Full database seeding finished successfully! All tables seeded in MSSQL ICD_New.');
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedDatabase()
     .catch((e) => {
       console.error('Seed error:', e);

@@ -18,7 +18,22 @@ export function CompleteDrawer({ m, onClose, onDone }: CompleteDrawerProps) {
   const [requested, setRequested] = useState(false);
   const [pending, setPending] = useState(false);
   const { can } = useSession();
-  const cands = useMemo(() => (m ? candidatesFor(m) : []), [m]);
+  const cands = useMemo(() => {
+    if (!m) return [];
+    const list = candidatesFor(m);
+    if (m.toCode && !list.some((c) => c.fullCode === m.toCode)) {
+      list.unshift({
+        rank: 1,
+        fullCode: m.toCode,
+        why: 'Suggested target slot',
+        stackHeight: 2,
+        maxTier: 4,
+        score: 95,
+        reasons: ['Suggested target slot', 'Optimal tier placement'],
+      } as any);
+    }
+    return list;
+  }, [m]);
 
   if (!m) return null;
   const truck = m.moveKind === 'PICK_FOR_VISIT';

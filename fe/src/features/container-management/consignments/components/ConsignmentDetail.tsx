@@ -10,8 +10,6 @@ import {
 import { REF_TYPE_NAME } from '@/mock/control';
 import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { consignment, parties, partyName, unitsOf, vesselCalls } from '@/mock/core';
-import { allCustomsRefs, documentsOf, linesOf, releasesFor } from '@/mock/cargo';
 import { regimeName, refTypeName } from '../index';
 import { CustomsRefDrawer } from '@/features/customs';
 import { RequestRelease } from '@/features/container-management/releases';
@@ -29,6 +27,31 @@ export function ConsignmentDetail() {
   const { data: c } = useQ(['consignment', id], () =>
     api.get<any>(`/consignments/${id}`).then((r) => r?.item || r || null).catch(() => null)
   );
+  const { data: dbParties = [] } = useQ(['parties'], () =>
+    api.get<any>('/parties').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbUnits = [] } = useQ(['consignment-units', id], () =>
+    api.get<any>(`/consignments/${id}/units`).then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbCustomsRefs = [] } = useQ(['customs-refs'], () =>
+    api.get<any>('/customs/refs').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbReleases = [] } = useQ(['release-orders'], () =>
+    api.get<any>('/release-orders').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbLines = [] } = useQ(['consignment-lines', id], () =>
+    api.get<any>(`/consignments/${id}/lines`).then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbVesselCalls = [] } = useQ(['vessel-calls'], () =>
+    api.get<any>('/vessel-calls').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+
+  const partiesList = Array.isArray(dbParties) ? dbParties : [];
+  const partyName = (partyId?: number | null) => {
+    if (!partyId) return '—';
+    const p = partiesList.find((x: any) => x.partyId === partyId);
+    return p?.partyName || p?.shortName || `Party #${partyId}`;
+  };
   const [tab, setTab] = useState<TabId>('units');
   const [edit, setEdit] = useState(false);
   const [refOpen, setRefOpen] = useState(false);
@@ -37,62 +60,73 @@ export function ConsignmentDetail() {
   const [cleared, setCleared] = useState<Record<number, string>>({});
   const [, bump] = useState(0);
 
+  const rawUnits = (c as any)?.units?.length ? (c as any).units : (Array.isArray(dbUnits) ? dbUnits : []);
   const baseUnits = useMemo(() => {
-    if ((c as any)?.units && (c as any).units.length > 0) {
-      return (c as any).units.map((u: any) => ({
-        unitStayId: u.unitStayId,
-        unitNo: u.unitNo,
-        cargoUnit: {
-          unitNo: u.unitNo,
-          category: u.category || 'CONTAINER',
-          unitTypeCode: u.unitTypeCode || '40HC',
-        },
-        currentLocation: { fullCode: u.location || 'In yard' },
-        physicalStatus: u.physicalStatus || 'ON_SITE',
-        customsStatus: u.customsStatus || 'PENDING',
-        releaseStatus: u.releaseStatus || 'PENDING_CHARGES',
-        billingStatus: u.billingStatus || 'UNBILLED',
-        activeHoldCount: u.activeHoldCount || 0,
-        sealNo: u.sealNo || 'SEAL-01',
-        freeUntil: u.freeUntil || new Date(Date.now() + 5 * 86400000).toISOString(),
-        accruedCharges: { total: 0 },
-      }));
-    }
-    return unitsOf(id);
-  }, [c, id]);
+    return rawUnits.map((u: any) => ({
+      unitStayId: u.unitStayId || u.unit_stay_id,
+      unitNo: u.unitNo || u.unit_no,
+      cargoUnit: {
+        unitNo: u.unitNo || u.unit_no,
+        category: u.category || u.cargoUnit?.category || 'CONTAINER',
+        unitTypeCode: u.unitTypeCode || u.cargoUnit?.unitTypeCode || '40HC',
+      },
+      currentLocation: { fullCode: u.location || u.currentLocation?.fullCode || 'In yard' },
+      physicalStatus: u.physicalStatus || 'ON_SITE',
+      customsStatus: u.customsStatus || 'PENDING',
+      releaseStatus: u.releaseStatus || 'PENDING_CHARGES',
+      billingStatus: u.billingStatus || 'UNBILLED',
+      activeHoldCount: u.activeHoldCount || 0,
+      sealNo: u.sealNo || 'SEAL-01',
+      freeUntil: u.freeUntil || new Date(Date.now() + 5 * 86400000).toISOString(),
+      accruedCharges: { total: 0 },
+    }));
+  }, [c, rawUnits]);
 
   const units = useMemo(() => baseUnits.map((s: any) => (cleared[s.unitStayId!] ? { ...s, customsStatus: cleared[s.unitStayId!] as S<'UnitStay'>['customsStatus'] } : s)), [baseUnits, cleared]);
 
   if (!c) {
-    return <Page><Empty title={consignment(id) === undefined && Number.isFinite(id) ? 'Loading consignment' : 'Consignment not found'} action={<Link to="/consignments">Back to consignments</Link>} /></Page>;
+    return <Page><Empty title={Number.isFinite(id) ? 'Loading consignment' : 'Consignment not found'} action={<Link to="/consignments">Back to consignments</Link>} /></Page>;
   }
 
+  const vesselCallsList = Array.isArray(dbVesselCalls) ? dbVesselCalls : [];
   const vc = (c as any).vesselName
     ? {
         vesselName: (c as any).vesselName,
         voyageNo: (c as any).voyageNo,
         portCallRef: (c as any).portCallRef || 'PC-2601',
         status: (c as any).status || 'ALONGSIDE',
+        ata: (c as any).ata || new Date().toISOString(),
+        eta: (c as any).eta || new Date().toISOString(),
+        dischargeCompletedAt: null,
+      }
+    : (vesselCallsList.find((v: any) => v.vesselCallId === c.vesselCallId) || {
+        vesselName: 'M/V Kilimanjaro Express',
+        voyageNo: 'V-2601',
+        portCallRef: 'PC-2601',
+        status: 'ALONGSIDE',
         ata: new Date().toISOString(),
         eta: new Date().toISOString(),
         dischargeCompletedAt: null,
-      }
-    : vesselCalls.find((v) => v.vesselCallId === c.vesselCallId);
+      });
 
-  const refs = [...newRefs, ...allCustomsRefs.filter((r) => r.consignmentId === id || units.some((u: any) => u.unitStayId === r.unitStayId))];
-  const ros = releasesFor(id);
-  const lines = (c as any)?.lines && (c as any).lines.length > 0 ? (c as any).lines.map((l: any) => ({
-    consignmentLineId: l.consignmentLineId,
-    lineNo: l.lineNo,
-    unitTypeCode: l.commodityCode || l.packageType || '40HC',
-    description: l.goodsDescription || 'General Merchandise',
-    qtyExpected: l.packageCount || 1,
-    uom: l.packageType || 'PK',
-    qtyReceived: l.packageCount || 1,
-    qtyDelivered: 0,
-    weightKg: l.grossWeightKg || 25000,
-  })) : linesOf(id);
-  const docs = documentsOf(id);
+  const allRefs = Array.isArray(dbCustomsRefs) ? dbCustomsRefs : [];
+  const refs = [...newRefs, ...allRefs.filter((r: any) => r.consignmentId === id || units.some((u: any) => u.unitStayId === r.unitStayId))];
+  const allRos = Array.isArray(dbReleases) ? dbReleases : [];
+  const ros = allRos.filter((r: any) => r.consignmentId === id);
+
+  const rawLines = (c as any)?.lines?.length ? (c as any).lines : (Array.isArray(dbLines) ? dbLines : []);
+  const lines = rawLines.map((l: any, i: number) => ({
+    consignmentLineId: l.consignmentLineId || l.consignment_line_id || i + 1,
+    lineNo: l.lineNo || l.line_no || i + 1,
+    unitTypeCode: l.unitTypeCode || l.commodityCode || l.packageType || '40HC',
+    description: l.description || l.goodsDescription || 'General Merchandise',
+    qtyExpected: l.qtyExpected || l.packageCount || 1,
+    uom: l.uom || l.packageType || 'PK',
+    qtyReceived: l.qtyReceived || l.packageCount || 1,
+    qtyDelivered: l.qtyDelivered || 0,
+    weightKg: l.weightKg || l.grossWeightKg || 25000,
+  }));
+  const docs = (c as any)?.documents || [];
   const held = units.filter((u: any) => (u.activeHoldCount ?? 0) > 0);
   const notCleared = units.filter((u: any) => u.physicalStatus !== 'DEPARTED' && !['CLEARED', 'NOT_REQUIRED'].includes(u.customsStatus ?? ''));
   const accrued = units.reduce((n: number, u: any) => n + (u.physicalStatus === 'DEPARTED' ? 0 : Number(u.accruedCharges?.total ?? 0)), 0);
@@ -233,11 +267,11 @@ export function ConsignmentDetail() {
 
           {tab === 'documents' && (
             <Panel flush title="Documents" actions={<Button size="sm" icon={<Upload />} perm="consignment.edit" onClick={() => toast('Document uploaded')}>Upload</Button>}>
-              <DataTable rows={docs} rowKey={(d) => d.id} empty={<Empty title="No documents">Upload the BL, delivery order or entry.</Empty>} cols={[
-                { key: 'n', header: 'Document', render: (d) => <span className="row"><FileText size={16} /><span className="small strong">{d.name}</span></span> },
-                { key: 'k', header: 'Kind', render: (d) => <span className="small">{d.kind}</span> },
-                { key: 'b', header: 'Added by', render: (d) => <span className="small">{d.by}<div className="xs faint">{fmtDT(d.at)}</div></span> },
-                { key: 's', header: 'Status', render: (d) => <StatusPill value={d.status} /> },
+              <DataTable<any> rows={docs} rowKey={(d: any) => d.id || d.name} empty={<Empty title="No documents">Upload the BL, delivery order or entry.</Empty>} cols={[
+                { key: 'n', header: 'Document', render: (d: any) => <span className="row"><FileText size={16} /><span className="small strong">{d.name}</span></span> },
+                { key: 'k', header: 'Kind', render: (d: any) => <span className="small">{d.kind}</span> },
+                { key: 'b', header: 'Added by', render: (d: any) => <span className="small">{d.by}<div className="xs faint">{fmtDT(d.at)}</div></span> },
+                { key: 's', header: 'Status', render: (d: any) => <StatusPill value={d.status} /> },
               ]} />
             </Panel>
           )}
@@ -267,7 +301,11 @@ function EditConsignment({ open, onClose, c }: { open: boolean; onClose: () => v
   const [cargoDesc, setCargoDesc] = useState(c.cargoDescription ?? '');
   const [saving, setSaving] = useState(false);
 
-  const opts = (role: string) => [['', '—'] as [string, string], ...parties.filter((p) => p.roles.includes(role as never)).map((p) => [String(p.partyId), p.partyName] as [string, string])];
+  const { data: dbParties = [] } = useQ(['parties'], () =>
+    api.get<any>('/parties').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const partyList = Array.isArray(dbParties) ? dbParties : [];
+  const opts = (_role: string) => [['', '—'] as [string, string], ...partyList.map((p: any) => [String(p.partyId), p.partyName] as [string, string])];
 
   const handleSave = async () => {
     setSaving(true);

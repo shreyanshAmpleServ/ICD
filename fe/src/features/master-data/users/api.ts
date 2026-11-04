@@ -90,6 +90,10 @@ export const usersApi = {
     } catch { return []; }
   },
 
+  createRole: async (data: { roleCode: string; roleName: string; description?: string; grants?: Record<string, string> }): Promise<Role> => {
+    return api.post<Role>('/roles', data);
+  },
+
   updateRolePermissions: async (roleIdOrCode: string | number, grants: any) => {
     return api.put<any>(`/roles/${roleIdOrCode}/permissions`, { grants });
   },
@@ -101,6 +105,10 @@ export const usersApi = {
     } catch {
       return [];
     }
+  },
+
+  createPermission: async (data: { code: string; module: string; description: string; isApproval?: boolean; supportsLimit?: boolean }): Promise<any> => {
+    return api.post<any>('/permissions', data);
   },
 
   getDelegations: async () => {

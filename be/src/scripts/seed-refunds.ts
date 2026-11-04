@@ -213,7 +213,7 @@ export async function seedRefunds() {
 }
 
 // Allow direct CLI execution: node seed-refunds.js or ts-node seed-refunds.ts
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedRefunds()
     .catch((err) => {
       console.error('❌ Error seeding refunds:', err);

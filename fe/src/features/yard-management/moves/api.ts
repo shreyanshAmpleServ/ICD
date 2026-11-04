@@ -1,5 +1,5 @@
 import { api } from '@/api/client';
-import { moveOrders, type Move } from '@/mock/ops';
+import { type Move } from '@/mock/ops';
 
 function unwrapList<T>(res: any): T[] {
   if (Array.isArray(res)) return res;
@@ -8,30 +8,91 @@ function unwrapList<T>(res: any): T[] {
   return [];
 }
 
+export interface EquipmentItem {
+  equipmentId: number;
+  equipmentCode: string;
+  equipmentName: string;
+  equipmentType: string;
+  capacityKg?: number | null;
+  isActive?: boolean;
+  siteId?: number;
+}
+
+export interface YardLocationItem {
+  locationId: number;
+  yardLocationId: number;
+  locationCode: string;
+  fullCode: string;
+  locationKind: string;
+  isSlot?: boolean;
+  siteId?: number;
+}
+
+export interface OperatorItem {
+  userId: number;
+  userSub: string;
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
 export const movesApi = {
-  getMoveOrders: async (): Promise<Move[]> => {
-    try {
-      const res = await api.get<any>('/moves');
-      const items = unwrapList<Move>(res);
-      return items && items.length > 0 ? items : moveOrders;
-    } catch {
-      return moveOrders;
-    }
-  },
+    getMoveOrders: async (siteId?: number): Promise<Move[]> => {
+      try {
+        const q = siteId ? `?siteId=${siteId}` : '';
+        const res = await api.get<any>(`/moves${q}`);
+        return unwrapList<Move>(res);
+      } catch (err) {
+        console.error('Failed to fetch moves from backend:', err);
+        return [];
+      }
+    },
 
-  createMoveOrder: async (body: any) => {
-    return api.post<any>('/moves', body);
-  },
+      getEquipment: async (siteId?: number): Promise<EquipmentItem[]> => {
+        try {
+          const q = siteId ? `?siteId=${siteId}` : '';
+          const res = await api.get<any>(`/yard/equipment${q}`);
+          return unwrapList<EquipmentItem>(res);
+        } catch (err) {
+          console.error('Failed to fetch equipment:', err);
+          return [];
+        }
+      },
 
-  startMove: async (moveOrderId: number) => {
-    return api.post<any>(`/moves/${moveOrderId}/start`, {});
-  },
+        getLocations: async (siteId?: number): Promise<YardLocationItem[]> => {
+          try {
+            const q = siteId ? `?siteId=${siteId}` : '';
+            const res = await api.get<any>(`/yard/locations${q}`);
+            return unwrapList<YardLocationItem>(res);
+          } catch (err) {
+            console.error('Failed to fetch locations:', err);
+            return [];
+          }
+        },
 
-  completeMove: async (moveOrderId: number, data: { toCode: string; rank?: number | null; reason?: string }) => {
-    return api.post<any>(`/moves/${moveOrderId}/complete`, data);
-  },
+          getOperators: async (): Promise<OperatorItem[]> => {
+            try {
+              const res = await api.get<any>('/yard/operators');
+              return unwrapList<OperatorItem>(res);
+            } catch (err) {
+              console.error('Failed to fetch operators:', err);
+              return [];
+            }
+          },
 
-  assignMove: async (moveOrderId: number, data: { assignedEquipmentId?: number; assignedOperatorSub?: string }) => {
-    return api.post<any>(`/moves/${moveOrderId}/assign`, data);
-  },
+            createMoveOrder: async (body: any) => {
+              return api.post<any>('/moves', body);
+            },
+
+              startMove: async (moveOrderId: number) => {
+                return api.post<any>(`/moves/${moveOrderId}/start`, {});
+              },
+
+                completeMove: async (moveOrderId: number, data: { toCode: string; rank?: number | null; reason?: string }) => {
+                  return api.post<any>(`/moves/${moveOrderId}/complete`, data);
+                },
+
+                  assignMove: async (moveOrderId: number, data: { assignedEquipmentId?: number; assignedOperatorSub?: string }) => {
+                    return api.post<any>(`/moves/${moveOrderId}/assign`, data);
+                  },
 };

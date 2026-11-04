@@ -22,20 +22,44 @@ export function ChargeMapDrawer({ map, taxCodes, onClose, onSave, setMap }: Char
     <EditDrawer
       open={!!map}
       onClose={onClose}
-      title={`Accounts for ${map.chargeName}`}
-      saveLabel="Save mapping"
-      perm="finance.period.close"
-      disabled={map.isDisbursement}
+      title={`Charge: ${map.chargeName}`}
+      saveLabel="Save charge mapping"
+      perm="admin.config.manage"
       onSave={onSave}
     >
+      <div className="form-grid">
+        <Field label="Charge code">
+          <Input value={map.chargeCode} readOnly className="adm-code" />
+        </Field>
+        <Field label="Print order">
+          <Input
+            type="number"
+            value={map.printOrder ?? 10}
+            onChange={(e) => setMap({ ...map, printOrder: Number(e.target.value) })}
+          />
+        </Field>
+      </div>
+
+      <Field label="Name on invoice" required>
+        <Input
+          value={map.chargeName}
+          onChange={(e) => setMap({ ...map, chargeName: e.target.value })}
+        />
+      </Field>
+
       {map.isDisbursement ? (
         <Banner tone="info">
-          Disbursements are passed through at cost: they debit receivables and credit disbursement clearing ({gl('DISBURSEMENT_CLEARING')}). No revenue account.
+          Disbursements are passed through at cost: they debit receivables and credit disbursement clearing ({gl('DISBURSEMENT_CLEARING')}). No revenue account needed.
         </Banner>
       ) : (
         <>
-          <Field label="Revenue account" required hint="Account code as it is in the ERP chart of accounts">
-            <Input value={map.revenueGlAccount ?? ''} onChange={(e) => setMap({ ...map, revenueGlAccount: e.target.value })} placeholder="e.g. 4700-72" />
+          <Field label="Revenue account" required hint="ERP chart of accounts code, e.g. 4100-10">
+            <Input
+              value={map.revenueGlAccount ?? ''}
+              onChange={(e) => setMap({ ...map, revenueGlAccount: e.target.value })}
+              placeholder="e.g. 4100-10"
+              className="adm-code"
+            />
           </Field>
           <Field label="Default tax code">
             <Select

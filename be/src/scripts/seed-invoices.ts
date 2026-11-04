@@ -171,7 +171,7 @@ export async function seedInvoices() {
   console.log(`✅ Successfully seeded ${count} invoices with lines & fiscal receipts.`);
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedInvoices()
     .catch((err) => {
       console.error('❌ Seeding failed:', err);

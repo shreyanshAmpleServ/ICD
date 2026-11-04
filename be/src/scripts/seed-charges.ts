@@ -145,7 +145,7 @@ export async function seedCharges() {
   await prisma.$disconnect();
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedCharges().catch((err) => {
     console.error('❌ Seeding failed:', err);
     process.exit(1);

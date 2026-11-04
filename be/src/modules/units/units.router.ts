@@ -4,10 +4,7 @@ import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
 import { unitTypes, identityRules, plateFormats } from "../../data/admin";
 import { allStays } from "../../data/core";
-import { holdsOf } from "../../data/control";
-import { search } from "../../data/search";
 import { searchController } from "../../v1/controllers/search/search.controller";
-import { getPrisma, isDbLive } from "../../db/prisma";
 import { cargoService } from "../cargo/cargo.service";
 import {
   NotFoundError,
@@ -143,8 +140,8 @@ router.post(
         errors: parseResult.success
           ? []
           : [
-              "Unit number must consist of 4 letters and 7 digits (e.g. MSKU 123456 7)",
-            ],
+            "Unit number must consist of 4 letters and 7 digits (e.g. MSKU 123456 7)",
+          ],
       });
       return;
     }
@@ -160,8 +157,8 @@ router.post(
         errors: parseResult.success
           ? []
           : [
-              "VIN must be exactly 17 alphanumeric characters, excluding I, O, Q",
-            ],
+            "VIN must be exactly 17 alphanumeric characters, excluding I, O, Q",
+          ],
       });
       return;
     }

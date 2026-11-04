@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getPrisma } from "../../configs/prisma";
+import { getPrisma, isDbLive } from "../../db/prisma";
 import {
   parsePaginationParams,
   paginateArray,
@@ -380,54 +380,66 @@ export class PartiesController {
    */
   public createProvisional = async (req: Request, res: Response) => {
     const prisma = getPrisma();
-    if (!prisma) {
-      return sendError(res, "Database unavailable", 500);
-    }
-
-    try {
-      const b = req.body;
-      const partyCode = b.partyCode || `PROV-${Date.now()}`;
-      const roles: string[] =
-        Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER"];
-
-      const created = await prisma.m_party.create({
-        data: {
-          party_code: partyCode,
-          party_name: b.partyName || "Provisional Party",
-          country_code: b.countryCode || "TZ",
-          city: b.city || "Dar es Salaam",
+      if (!prisma || !isDbLive()) {
+        const b = req.body;
+        const partyId = Date.now();
+        const partyCode = b.partyCode || `PROV-${Date.now().toString().slice(-6)}`;
+        const provParty = {
+          partyId,
+          partyCode,
+          partyName: b.partyName || "Provisional Party",
+          roles: Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER", "CONSIGNEE"],
           source: "LOCAL",
-          sync_status: "PROVISIONAL",
-          credit_status: "CASH",
-          is_active: true,
-          createdby: (req as any).userSub || "system",
-        },
-      });
+          syncStatus: "PROVISIONAL",
+          isActive: true,
+        };
+        return sendCreated(res, provParty);
+      }
 
-      for (const r of roles) {
-        await prisma.m_party_role.create({
+      try {
+        const b = req.body;
+        const partyCode = b.partyCode || `PROV-${Date.now()}`;
+        const roles: string[] =
+          Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER"];
+
+        const created = await prisma.m_party.create({
           data: {
-            party_id: created.party_id,
-            role_code: r.toUpperCase(),
+            party_code: partyCode,
+            party_name: b.partyName || "Provisional Party",
+            country_code: b.countryCode || "TZ",
+            city: b.city || "Dar es Salaam",
+            source: "LOCAL",
+            sync_status: "PROVISIONAL",
+            credit_status: "CASH",
+            is_active: true,
             createdby: (req as any).userSub || "system",
           },
         });
-      }
 
-      return sendCreated(res, {
-        partyId: Number(created.party_id),
-        partyCode: created.party_code,
-        partyName: created.party_name,
-        roles,
-        source: "LOCAL",
-        syncStatus: "PROVISIONAL",
-        isActive: true,
-      });
-    } catch (err: any) {
-      console.error("[PartiesController.createProvisional] Error:", err);
-      return sendError(res, err.message, 500);
-    }
-  };
+        for (const r of roles) {
+          await prisma.m_party_role.create({
+            data: {
+              party_id: created.party_id,
+              role_code: r.toUpperCase(),
+              createdby: (req as any).userSub || "system",
+            },
+          });
+        }
+
+        return sendCreated(res, {
+          partyId: Number(created.party_id),
+          partyCode: created.party_code,
+          partyName: created.party_name,
+          roles,
+          source: "LOCAL",
+          syncStatus: "PROVISIONAL",
+          isActive: true,
+        });
+      } catch (err: any) {
+        console.error("[PartiesController.createProvisional] Error:", err);
+        return sendError(res, err.message, 500);
+      }
+    };
 
   /**
    * POST /parties/:partyId/match & /parties/:partyId:match

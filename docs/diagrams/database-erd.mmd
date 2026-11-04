@@ -1,0 +1,108 @@
+erDiagram
+    cargo_unit ||--o{ unit_stay : "has stays"
+    m_unit_type ||--o{ cargo_unit : "defines size/type"
+    m_site ||--o{ unit_stay : "locates at"
+    consignment ||--o{ unit_stay : "covers"
+    vessel_call ||--o{ consignment : "transports"
+    manifest ||--o{ manifest_line : "contains"
+    manifest_line ||--o{ unit_stay : "pre-advises"
+    m_cargo_regime ||--o{ unit_stay : "regime"
+    m_yard_location ||--o{ unit_stay : "stacked in"
+    
+    m_site ||--o{ truck_visit : "admits"
+    m_truck ||--o{ truck_visit : "truck & trailer"
+    m_driver ||--o{ truck_visit : "drives"
+    m_party ||--o{ truck_visit : "transporter"
+    truck_visit ||--o{ visit_unit_txn : "manifests"
+    unit_stay ||--o{ visit_unit_txn : "carried on"
+    truck_visit ||--o{ weighing : "weighed on"
+    unit_stay ||--o{ weighing : "weighed on"
+
+    unit_stay ||--o{ move_order : "targeted by"
+    m_yard_location ||--o{ move_order : "from / to slot"
+    m_equipment ||--o{ move_order : "assigned to"
+    move_order ||--o{ yard_move : "completed by"
+    unit_stay ||--o{ yard_move : "move history"
+
+    unit_stay ||--o{ customs_ref : "declared under"
+    unit_stay ||--o{ exam : "physically inspected"
+    unit_stay ||--o{ hold : "blocked by"
+    unit_stay ||--o{ release_order_unit : "authorized for release"
+    release_order ||--o{ release_order_unit : "lists"
+    release_order ||--o{ release_check : "5 pillar checks"
+
+    unit_stay ||--o{ inspection : "surveyed"
+    inspection ||--o{ inspection_finding : "damages"
+    inspection ||--o{ repair_estimate : "quoted"
+
+    unit_stay ||--o{ handling_job : "CFS handled"
+    handling_job ||--o{ handling_job_line : "details"
+    unit_stay ||--o{ lot_balance : "warehouse stock"
+
+    unit_stay ||--o{ reefer_session : "power monitored"
+    reefer_session ||--o{ reefer_reading : "hourly logs"
+
+    unit_stay ||--o{ billable_event : "triggers"
+    billable_event ||--o{ charge : "monetizes"
+    charge ||--o{ invoice_line : "consolidated into"
+    invoice ||--o{ invoice_line : "contains"
+    cashier_shift ||--o{ payment : "received in"
+    payment ||--o{ payment_allocation : "settles"
+    invoice ||--o{ payment_allocation : "applied against"
+
+    cargo_unit {
+        BigInt cargo_unit_id PK
+        VarChar unit_category
+        VarChar unit_no
+        Int unit_type_id FK
+    }
+
+    unit_stay {
+        BigInt unit_stay_id PK
+        BigInt cargo_unit_id FK
+        Int site_id FK
+        BigInt consignment_id FK
+        VarChar physical_status
+        VarChar customs_status
+        VarChar billing_status
+        VarChar release_status
+        SmallInt active_hold_count
+        Int current_location_id FK
+    }
+
+    truck_visit {
+        BigInt truck_visit_id PK
+        Int site_id FK
+        VarChar visit_no
+        VarChar status
+        TinyInt current_seq_no
+    }
+
+    move_order {
+        BigInt move_order_id PK
+        BigInt unit_stay_id FK
+        VarChar move_kind
+        VarChar status
+    }
+
+    invoice {
+        BigInt invoice_id PK
+        VarChar invoice_no
+        Decimal total
+        VarChar status
+    }
+
+    payment {
+        BigInt payment_id PK
+        VarChar receipt_no
+        Decimal amount
+        VarChar status
+    }
+
+    release_order {
+        BigInt release_order_id PK
+        VarChar release_no
+        VarChar status
+        VarChar qr_token
+    }
+

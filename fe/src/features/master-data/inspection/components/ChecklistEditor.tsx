@@ -18,7 +18,7 @@ export function ChecklistEditor({ tpl, onSave }: ChecklistEditorProps) {
   const [t, setT] = useState(tpl);
   const [newName, setNewName] = useState('');
   const dirty = JSON.stringify(t) !== JSON.stringify(tpl);
-  const items = [...t.items].sort((a, b) => a.sortOrder - b.sortOrder);
+  const items = [...(t.items ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const setItems = (xs: Item[]) => setT({ ...t, items: xs.map((x, i) => ({ ...x, sortOrder: (i + 1) * 10 })) });
   const move = (i: number, d: -1 | 1) => {
     const s = [...items];
@@ -27,22 +27,26 @@ export function ChecklistEditor({ tpl, onSave }: ChecklistEditorProps) {
   };
   const upd = (i: number, p: Partial<Item>) => setItems(items.map((x, j) => (j === i ? { ...x, ...p } : x)));
 
+  const category = String(t.category || (t as any).unitCategory || 'CONTAINER').toLowerCase();
+  const inspectionKind = String(t.inspectionKind || 'GATE_IN').replace('_', '-').toLowerCase();
+  const versionNo = t.versionNo ?? (tpl as any)?.versionNo ?? 1;
+
   return (
     <>
       <Panel
-        title={t.templateName}
-        sub={<span><span className="adm-code">{t.templateCode}</span> · {t.category.toLowerCase()} · {t.inspectionKind.replace('_', '-').toLowerCase()} · version {t.versionNo}</span>}
+        title={t.templateName || 'Inspection checklist'}
+        sub={<span><span className="adm-code">{t.templateCode}</span> · {category} · {inspectionKind} · version {versionNo}</span>}
       >
         <div className="row-wrap" style={{ gap: 24 }}>
           <Field label="Minimum photos" hint="The inspector cannot finish with fewer">
             <span className="row">
               <Camera size={16} />
-              <Input type="number" min={0} max={20} value={t.minPhotos} onChange={(e) => setT({ ...t, minPhotos: Number(e.target.value) })} style={{ width: 90 }} />
+              <Input type="number" min={0} max={20} value={t.minPhotos ?? 4} onChange={(e) => setT({ ...t, minPhotos: Number(e.target.value) })} style={{ width: 90 }} />
             </span>
           </Field>
           {t.fixedFields && (
             <div className="field">
-              <label>Also recorded on every {t.category.toLowerCase()} inspection</label>
+              <label>Also recorded on every {category} inspection</label>
               <div className="row-wrap">{t.fixedFields.map((f) => <span key={f} className="tag">{f}</span>)}</div>
             </div>
           )}
@@ -55,10 +59,10 @@ export function ChecklistEditor({ tpl, onSave }: ChecklistEditorProps) {
               <span className="n">{i + 1}</span>
               <span style={{ flex: '1 1 200px', minWidth: 0 }}>
                 <strong className="small">{it.itemName}</strong>
-                <div className="xs faint">{it.itemCode} · {it.area.toLowerCase()}</div>
+                <div className="xs faint">{it.itemCode} · {String(it.area || 'EXTERIOR').toLowerCase()}</div>
               </span>
               <Select aria-label={`Answer type for ${it.itemName}`} value={it.inputType} onChange={(e) => upd(i, { inputType: e.target.value as Item['inputType'] })} options={Object.entries(INPUT)} style={{ width: 130 }} />
-              <Check label="Required" checked={it.isMandatory} onChange={(e) => upd(i, { isMandatory: e.target.checked })} />
+              <Check label="Required" checked={!!it.isMandatory} onChange={(e) => upd(i, { isMandatory: e.target.checked })} />
               <Button size="sm" variant="ghost" icon={<ArrowUp />} aria-label={`Move ${it.itemName} up`} disabled={i === 0} onClick={() => move(i, -1)} />
               <Button size="sm" variant="ghost" icon={<ArrowDown />} aria-label={`Move ${it.itemName} down`} disabled={i === items.length - 1} onClick={() => move(i, 1)} />
               <Button size="sm" variant="ghost" icon={<Trash2 />} aria-label={`Remove ${it.itemName}`} onClick={() => setItems(items.filter((_, j) => j !== i))} />
@@ -72,7 +76,7 @@ export function ChecklistEditor({ tpl, onSave }: ChecklistEditorProps) {
             icon={<Plus />}
             disabled={newName.trim().length < 3}
             onClick={() => {
-              setItems([...items, { inspectionItemId: 900 + items.length, itemCode: newName.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 20), itemName: newName, area: AREAS[0], inputType: 'YES_NO', isMandatory: false, sortOrder: 0 }]);
+              setItems([...items, { inspectionItemId: 900 + items.length, itemCode: newName.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 20), itemName: newName, area: AREAS[0], inputType: 'YES_NO', isMandatory: false, sortOrder: (items.length + 1) * 10 }]);
               setNewName('');
             }}
           >
@@ -81,14 +85,14 @@ export function ChecklistEditor({ tpl, onSave }: ChecklistEditorProps) {
         </div>
       </Panel>
       {dirty && (
-        <Banner tone="info" title={`Saving creates version ${tpl.versionNo + 1}`}>
-          Inspections already recorded keep version {tpl.versionNo}. Tablets pick up the new version at their next sync.
+        <Banner tone="info" title={`Saving creates version ${versionNo + 1}`}>
+          Inspections already recorded keep version {versionNo}. Tablets pick up the new version at their next sync.
         </Banner>
       )}
       <SaveBar>
         <Button variant="ghost" disabled={!dirty} onClick={() => setT(tpl)}>Undo changes</Button>
-        <Button variant="primary" perm="admin.config.manage" disabled={!dirty || items.length === 0} onClick={() => onSave({ ...t, items, versionNo: tpl.versionNo + 1 })}>
-          Save as version {tpl.versionNo + 1}
+        <Button variant="primary" perm="admin.config.manage" disabled={!dirty || items.length === 0} onClick={() => onSave({ ...t, items, versionNo: versionNo + 1 })}>
+          Save as version {versionNo + 1}
         </Button>
       </SaveBar>
     </>

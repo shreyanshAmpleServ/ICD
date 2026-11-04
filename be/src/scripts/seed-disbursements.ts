@@ -271,7 +271,7 @@ export async function seedDisbursements() {
 }
 
 // Standalone execution
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedDisbursements()
     .catch((err) => {
       console.error('❌ Seeder failed:', err);

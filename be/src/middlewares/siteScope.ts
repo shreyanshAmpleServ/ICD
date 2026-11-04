@@ -7,14 +7,16 @@ export function requireSite(isGlobal = false) {
       return next();
     }
 
-    const headerSiteId = (
+    const querySite = typeof req.query.siteId === 'string' ? req.query.siteId.trim() : undefined;
+    const isFilterAll = querySite && (querySite.toLowerCase() === 'all' || querySite === '0');
+
+    const rawSite =
       (req.headers["x-site-id"] as string) ||
       (req.headers["x-site"] as string) ||
-      (req.query.siteId as string) ||
-      "DAR1"
-    )
-      ?.trim()
-      .toUpperCase();
+      (!isFilterAll ? querySite : undefined) ||
+      "DAR1";
+
+    const headerSiteId = rawSite.trim().toUpperCase();
 
     const validSite = fallbackStore.sites.find(
       (s) =>

@@ -2,8 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button, Chips, DataTable, Empty, Panel, Pill, fmtT } from '@/ds/components';
 import { partyName } from '@/mock/core';
 import { VISIT_TYPES } from '@/features/gate-management/types';
-import type { Appt } from '@/mock/ops';
-import { APPOINTMENT_STATUS, type SlotSelection, type StatusFilter } from '../types';
+import { APPOINTMENT_STATUS, type SlotSelection, type StatusFilter, type Appt } from '../types';
 
 interface AppointmentsTableProps {
   list: Appt[];
@@ -13,6 +12,7 @@ interface AppointmentsTableProps {
   hh: (h: number) => string;
   onCancel: (a: Appt) => void;
   onClearSlot?: () => void;
+  loading?: boolean;
 }
 
 export function AppointmentsTable({
@@ -22,6 +22,7 @@ export function AppointmentsTable({
   slot,
   hh,
   onCancel,
+  loading,
 }: AppointmentsTableProps) {
   return (
     <Panel
@@ -43,6 +44,7 @@ export function AppointmentsTable({
       }
     >
       <DataTable
+        loading={loading}
         rows={list}
         rowKey={(a) => a.appointmentId!}
         dense
@@ -70,7 +72,7 @@ export function AppointmentsTable({
           {
             key: 'co',
             header: 'Company',
-            render: (a) => <span className="small">{partyName(a.transporterPartyId)}</span>,
+            render: (a: any) => <span className="small">{a.partyName || (a.transporterPartyId ? partyName(a.transporterPartyId) : '—')}</span>,
           },
           {
             key: 'type',

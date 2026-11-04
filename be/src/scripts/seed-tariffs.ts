@@ -464,7 +464,7 @@ export async function seedTariffs() {
   console.log(`\n🎉 Tariffs seeding complete! Total Tariffs in DB: ${count}`);
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedTariffs()
     .catch((err) => {
       console.error('❌ Error seeding tariffs:', err);

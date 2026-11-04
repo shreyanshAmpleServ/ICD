@@ -6,6 +6,8 @@ import { AuditNote, SetupPage, YesNo, label, useEditable } from '../shared/Admin
 import { documentsApi } from './api';
 import { SequenceDrawer } from './components/SequenceDrawer';
 import { DocTypeDrawer } from './components/DocTypeDrawer';
+import { AddDocTypeModal } from './components/AddDocTypeModal';
+import { AddSequenceModal } from './components/AddSequenceModal';
 
 export { documentsApi } from './api';
 
@@ -16,11 +18,14 @@ const RESET: Record<string, string> = { NEVER: 'Never', YEARLY: 'Every 1 January
 
 export function DocumentsView() {
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>('numbers');
-  const [seqs, setSeqs] = useEditable<Seq>('seqs', [], () => documentsApi.getNumberSequences());
-  const [docs, setDocs] = useEditable<Doc>('docTypes', [], () => documentsApi.getDocumentTypes());
+  const [tab, setTab] = useState<Tab>('docs');
+  const [seqs, setSeqs] = useEditable<Seq>('seqs', seedSeq, () => documentsApi.getNumberSequences());
+  const [docs, setDocs] = useEditable<Doc>('docTypes', seedDocs, () => documentsApi.getDocumentTypes());
   const [seq, setSeq] = useState<Seq | null>(null);
   const [doc, setDoc] = useState<Doc | null>(null);
+
+  const [isAddDocOpen, setIsAddDocOpen] = useState(false);
+  const [isAddSeqOpen, setIsAddSeqOpen] = useState(false);
 
   return (
     <SetupPage
@@ -40,7 +45,16 @@ export function DocumentsView() {
 
       {tab === 'numbers' && (
         <>
-          <Panel flush title="Number sequences" sub="One per document kind, company-wide or per site">
+          <Panel
+            flush
+            title="Number sequences"
+            sub="One per document kind, company-wide or per site"
+            actions={
+              <Button size="sm" icon={<Plus />} perm="admin.config.manage" onClick={() => setIsAddSeqOpen(true)}>
+                Add sequence
+              </Button>
+            }
+          >
             <DataTable
               rows={seqs}
               rowKey={(s) => s.numberSequenceId!}
@@ -77,7 +91,7 @@ export function DocumentsView() {
           title="Document types"
           sub="What can be attached, how big it may be, how long it is kept, and where it is required"
           actions={
-            <Button size="sm" icon={<Plus />} perm="admin.config.manage" onClick={() => toast('Document type added')}>
+            <Button size="sm" icon={<Plus />} perm="admin.config.manage" onClick={() => setIsAddDocOpen(true)}>
               Add document type
             </Button>
           }
@@ -102,7 +116,7 @@ export function DocumentsView() {
                 key: 'r',
                 header: 'Required for',
                 render: (d) =>
-                  d.requiredFor.length ? (
+                  d.requiredFor && d.requiredFor.length ? (
                     <span className="row-wrap">
                       {d.requiredFor.map((x) => (
                         <span key={x} className="tag">
@@ -136,18 +150,49 @@ export function DocumentsView() {
         />
       )}
 
+      <AddSequenceModal
+        open={isAddSeqOpen}
+        onClose={() => setIsAddSeqOpen(false)}
+        onSave={async (newSeq) => {
+          try {
+            const created = await documentsApi.createNumberSequence(newSeq);
+            setSeqs((all) => [created, ...all]);
+            toast(`Sequence created: ${created.sample || created.prefix}`);
+          } catch {
+            setSeqs((all) => [newSeq, ...all]);
+            toast(`Sequence created: ${newSeq.sample || newSeq.prefix}`);
+          }
+        }}
+      />
+
       {doc && (
         <DocTypeDrawer
           doc={doc}
           onClose={() => setDoc(null)}
           onChange={setDoc}
           onSave={() => {
-            if ((doc as any).documentTypeId) documentsApi.updateDocumentType((doc as any).documentTypeId, doc).catch(() => {});
+            const id = (doc as any).documentTypeId || doc.docTypeCode;
+            documentsApi.updateDocumentType(id, doc).catch(() => {});
             setDocs((all) => all.map((d) => (d.docTypeCode === doc.docTypeCode ? doc : d)));
             toast('Document type saved');
           }}
         />
       )}
+
+      <AddDocTypeModal
+        open={isAddDocOpen}
+        onClose={() => setIsAddDocOpen(false)}
+        onSave={async (newDoc) => {
+          try {
+            const created = await documentsApi.createDocumentType(newDoc);
+            setDocs((all) => [created, ...all]);
+            toast(`Document type created: ${created.docTypeName || newDoc.docTypeName}`);
+          } catch {
+            setDocs((all) => [newDoc, ...all]);
+            toast(`Document type created: ${newDoc.docTypeName}`);
+          }
+        }}
+      />
     </SetupPage>
   );
 }

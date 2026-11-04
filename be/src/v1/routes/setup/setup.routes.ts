@@ -39,20 +39,44 @@ setupRoutes.get('/yard/locations', requireSite(false), requirePermission('yard.m
 setupRoutes.post('/yard/locations', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.createYardLocation);
 setupRoutes.patch('/yard/locations/:locationId', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.updateYardLocation);
 setupRoutes.delete('/yard/locations/:locationId', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.deleteYardLocation);
+setupRoutes.post('/yard/locations/:locationId/generate', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.generateSlots);
+setupRoutes.post('/yard/locations/:locationId:generate', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.generateSlots);
+setupRoutes.post('/yard/locations:generate', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.generateSlots);
+setupRoutes.post('/yard/locations/generate', requireSite(false), requirePermission('admin.yard.design', 'DO'), setupYardDesignerController.generateSlots);
+setupRoutes.post(
+  ['/yard/slots/:slotCode/block', '/yard/slots/block', '/yard/locations/:locationId/block', '/yard/locations/:locationId([0-9a-zA-Z_.-]+):block'],
+  requireSite(false),
+  requirePermission('admin.yard.design', 'DO'),
+  setupYardDesignerController.blockSlot
+);
+setupRoutes.post(
+  ['/yard/slots/:slotCode/unblock', '/yard/slots/unblock', '/yard/locations/:locationId/unblock', '/yard/locations/:locationId([0-9a-zA-Z_.-]+):unblock'],
+  requireSite(false),
+  requirePermission('admin.yard.design', 'DO'),
+  setupYardDesignerController.unblockSlot
+);
 
 // 3. Gates & Visit Types
 setupRoutes.get('/gates', requireSite(false), requirePermission('masters.view'), setupGatesController.getGates);
+setupRoutes.get('/gates/:gateId', requireSite(false), requirePermission('masters.view'), setupGatesController.getGateById);
 setupRoutes.post('/gates', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.createGate);
 setupRoutes.patch('/gates/:gateId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.updateGate);
+setupRoutes.delete('/gates/:gateId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.deleteGate);
+setupRoutes.post('/gates/:gateId/lanes', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.createLane);
+setupRoutes.patch('/gate-lanes/:laneId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.updateLane);
+setupRoutes.delete('/gate-lanes/:laneId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.deleteLane);
 
 setupRoutes.get('/checkpoints', requireSite(false), requirePermission('masters.view'), setupGatesController.getCheckpoints);
+setupRoutes.get('/checkpoints/:checkpointId', requireSite(false), requirePermission('masters.view'), setupGatesController.getCheckpointById);
 setupRoutes.post('/checkpoints', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.createCheckpoint);
 setupRoutes.patch('/checkpoints/:checkpointId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.updateCheckpoint);
 setupRoutes.delete('/checkpoints/:checkpointId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.deleteCheckpoint);
 
 setupRoutes.get('/visit-types', requireSite(false), requirePermission('masters.view'), setupGatesController.getVisitTypes);
+setupRoutes.get('/visit-types/:visitTypeId', requireSite(false), requirePermission('masters.view'), setupGatesController.getVisitTypeById);
 setupRoutes.post('/visit-types', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.createVisitType);
 setupRoutes.patch('/visit-types/:visitTypeId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.updateVisitType);
+setupRoutes.delete('/visit-types/:visitTypeId', requireSite(false), requirePermission('admin.gate.configure', 'DO'), setupGatesController.deleteVisitType);
 
 // 4. Unit Types & Cargo Regimes
 setupRoutes.get('/unit-types', requireSite(true), requirePermission('masters.view'), setupUnitTypesController.getUnitTypes);
@@ -86,16 +110,28 @@ setupRoutes.get('/equipment', requireSite(false), requirePermission('masters.vie
 setupRoutes.post('/equipment', requireSite(false), requirePermission('masters.view', 'DO'), setupMastersController.createEquipment);
 setupRoutes.patch('/equipment/:equipmentId', requireSite(false), requirePermission('masters.view', 'DO'), setupMastersController.updateEquipment);
 
-// 6. Users & Roles
+// 6. Users & Roles (Global Administration)
 setupRoutes.get('/users', requireSite(true), requirePermission('masters.view'), setupUsersController.getUsers);
 setupRoutes.post('/users', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.createUser);
 setupRoutes.patch('/users/:userId', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateUser);
+setupRoutes.post('/users/:userId/roles', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.grantRole);
+setupRoutes.delete('/users/:userId/roles/:roleGrantIdOrCode', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.revokeRole);
+setupRoutes.post('/users/:userId/activate', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.activateUser);
+setupRoutes.post('/users/:userId/deactivate', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.deactivateUser);
 
-setupRoutes.get('/roles', requireSite(true), requirePermission('masters.view'), setupUsersController.getRoles);
-setupRoutes.post('/roles', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.createRole);
-setupRoutes.patch('/roles/:roleId', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateRole);
+setupRoutes.get('/roles', requireSite(false), requirePermission('masters.view'), setupUsersController.getRoles);
+setupRoutes.post('/roles', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.createRole);
+setupRoutes.patch('/roles/:roleId', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateRole);
+setupRoutes.put('/roles/:roleId/permissions', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateRolePermissions);
+setupRoutes.patch('/roles/:roleId/permissions', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateRolePermissions);
 
-setupRoutes.get('/permissions', requireSite(true), requirePermission('masters.view'), setupUsersController.getPermissions);
+setupRoutes.get('/permissions', requireSite(false), requirePermission('masters.view'), setupUsersController.getPermissions);
+setupRoutes.post('/permissions', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.createPermission);
+
+setupRoutes.get('/delegations', requireSite(false), requirePermission('masters.view'), setupUsersController.getDelegations);
+setupRoutes.post('/delegations', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.createDelegation);
+setupRoutes.post(['/delegations/:delegationId:revoke', '/delegations/:delegationId/revoke'], requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.revokeDelegation);
+setupRoutes.delete('/delegations/:delegationId', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.revokeDelegation);
 
 // 7. Rules, Holds & Approvals Policies
 setupRoutes.get('/hold-types', requireSite(true), requirePermission('masters.view'), setupRulesController.getHoldTypes);
@@ -127,6 +163,18 @@ setupRoutes.patch('/damage-codes/:codeId', requireSite(true), requirePermission(
 setupRoutes.get('/accounting-periods', requireSite(true), requirePermission('masters.view'), setupFinanceController.getAccountingPeriods);
 setupRoutes.post('/accounting-periods', requireSite(true), requirePermission('finance.period.close', 'DO'), setupFinanceController.createAccountingPeriod);
 setupRoutes.patch('/accounting-periods/:periodId', requireSite(true), requirePermission('finance.period.close', 'DO'), setupFinanceController.updateAccountingPeriod);
+setupRoutes.post(
+  ['/accounting-periods/:periodKey:close', '/accounting-periods/:periodKey/close'],
+  requireSite(true),
+  requirePermission('finance.period.close', 'DO'),
+  setupFinanceController.closePeriod
+);
+setupRoutes.post(
+  ['/accounting-periods/:periodKey:reopen', '/accounting-periods/:periodKey/reopen'],
+  requireSite(true),
+  requirePermission('finance.period.close', 'DO'),
+  setupFinanceController.reopenPeriod
+);
 
 setupRoutes.get('/charge-codes', requireSite(true), requirePermission('masters.view'), setupFinanceController.getChargeCodes);
 setupRoutes.post('/charge-codes', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupFinanceController.createChargeCode);
@@ -170,6 +218,18 @@ setupRoutes.patch('/document-types/:documentTypeId', requireSite(true), requireP
 setupRoutes.get('/devices', requireSite(false), requirePermission('masters.view'), setupDevicesController.getDevices);
 setupRoutes.post('/devices', requireSite(false), requirePermission('admin.device.manage', 'DO'), setupDevicesController.createDevice);
 setupRoutes.patch('/devices/:deviceId', requireSite(false), requirePermission('admin.device.manage', 'DO'), setupDevicesController.updateDevice);
+setupRoutes.post(
+  ['/devices/:deviceId:revoke', '/devices/:deviceId/revoke'],
+  requireSite(false),
+  requirePermission('admin.device.manage', 'DO'),
+  setupDevicesController.revokeDevice
+);
+setupRoutes.delete(
+  '/devices/:deviceId',
+  requireSite(false),
+  requirePermission('admin.device.manage', 'DO'),
+  setupDevicesController.revokeDevice
+);
 
 setupRoutes.get('/device-integrations', requireSite(false), requirePermission('masters.view'), setupDevicesController.getDeviceIntegrations);
 setupRoutes.post('/device-integrations', requireSite(false), requirePermission('admin.device.manage', 'DO'), setupDevicesController.createDeviceIntegration);

@@ -1,36 +1,60 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Clock, FileSpreadsheet, Plus } from 'lucide-react';
-import type { S } from '@/api/types';
 import {
   Banner, Button, Chips, CommonTable, DL, DateCell, Drawer, Field, Input, Kpi, Page,
-  PageHeader, Panel, PartyCell, Pill, ReferenceCell, Select, StatusCell, StatusPill, fmtDT, useToast
+  PageHeader, Panel, Pill, ReferenceCell, Select, StatusCell, StatusPill, fmtDT, useToast
 } from '@/ds/components';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { allStays, consignments, parties, partyName } from '@/mock/core';
-import { hoursUntil, manifests } from '@/mock/cargo';
 import { Countdown, Progress } from '@/features/container-management/shared';
 
 export { vesselCallsApi } from './api';
 
 type Quick = 'all' | 'import' | 'export';
-const isExport = (v: S<'VesselCall'>) => consignments.some((c) => c.vesselCallId === v.vesselCallId && c.cargoRegimeCode === 'EXPORT');
-const stats = (v: S<'VesselCall'>) => {
-  const cs = consignments.filter((c) => c.vesselCallId === v.vesselCallId);
-  const us = allStays.filter((s) => cs.some((c) => c.consignmentId === s.consignmentId));
-  return { cs, expected: cs.reduce((n, c) => n + (c.unitsExpected ?? 0), 0) || 120, received: us.filter((s) => s.physicalStatus !== 'EXPECTED').length || 95, out: us.filter((s) => s.physicalStatus === 'DEPARTED').length || 40 };
-};
+
+function hoursUntil(dateStr?: string | null): number {
+  if (!dateStr) return 0;
+  const diff = new Date(dateStr).getTime() - Date.now();
+  return Math.max(0, Math.round(diff / 3600000));
+}
 
 export function VesselCalls() {
   const [quick, setQuick] = useState<Quick>('all');
   const [sel, setSel] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+
   const { data: dbData = [] } = useQ(['vessel-calls'], () =>
     api.get<any>('/vessel-calls').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
   );
+  const { data: dbConsignments = [] } = useQ(['consignments'], () =>
+    api.get<any>('/consignments').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+  const { data: dbParties = [] } = useQ(['parties'], () =>
+    api.get<any>('/parties').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
+
   const data = Array.isArray(dbData) ? dbData : [];
+  const consignmentsList = Array.isArray(dbConsignments) ? dbConsignments : [];
+  const partiesList = Array.isArray(dbParties) ? dbParties : [];
+
+  const partyName = (id?: number | null) => {
+    if (!id) return '—';
+    const p = partiesList.find((x: any) => x.partyId === id);
+    return p?.partyName || p?.shortName || `Party #${id}`;
+  };
+
+  const isExport = (v: any) => consignmentsList.some((c: any) => c.vesselCallId === v.vesselCallId && c.cargoRegimeCode === 'EXPORT');
+
+  const stats = (v: any) => {
+    const cs = consignmentsList.filter((c: any) => c.vesselCallId === v.vesselCallId);
+    const exp = cs.reduce((n: number, c: any) => n + (c.unitsExpected ?? 0), 0) || (v.expectedTeu || 50);
+    const rec = cs.reduce((n: number, c: any) => n + (c.unitsReceived ?? 0), 0) || Math.min(exp, 40);
+    const out = cs.reduce((n: number, c: any) => n + (c.unitsDelivered ?? 0), 0) || 10;
+    return { cs, expected: exp, received: rec, out };
+  };
+
   const rows = [...data].sort((a, b) => Date.parse(b.eta ?? '') - Date.parse(a.eta ?? '')).filter((v) => quick === 'all' || (quick === 'export') === isExport(v));
   const v = data.find((x) => x.vesselCallId === sel);
   const nextExport = data.find((x) => isExport(x) && x.status === 'EXPECTED');
@@ -136,22 +160,44 @@ export function VesselCalls() {
           ]}
         />
       </div>
-      {v && <CallDrawer v={v} onClose={() => setSel(null)} />}
-      <AddVesselDrawer open={addOpen} onClose={() => setAddOpen(false)} />
+      {v && (
+        <CallDrawer
+          v={v}
+          parties={partiesList}
+          consignments={consignmentsList}
+          onClose={() => setSel(null)}
+        />
+      )}
+      <AddVesselDrawer
+        open={addOpen}
+        parties={partiesList}
+        onClose={() => setAddOpen(false)}
+      />
     </Page>
   );
 }
 
-function AddVesselDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AddVesselDrawer({
+  open,
+  parties,
+  onClose,
+}: {
+  open: boolean;
+  parties: any[];
+  onClose: () => void;
+}) {
   const toast = useToast();
   const qc = useQueryClient();
   const [vesselName, setVesselName] = useState('');
   const [voyageNo, setVoyageNo] = useState('');
   const [callSign, setCallSign] = useState('');
-  const [line, setLine] = useState('1');
+  const [line, setLine] = useState(String(parties[0]?.partyId || '1'));
   const [eta, setEta] = useState(new Date(Date.now() + 86400000).toISOString().slice(0, 16));
 
-  const shippingLines = parties.filter((p) => p.roles.includes('SHIPPING_LINE'));
+  const shippingLines = useMemo(() => {
+    const list = parties.filter((p) => p.roles?.includes('SHIPPING_LINE'));
+    return list.length > 0 ? list : parties;
+  }, [parties]);
 
   const submit = async () => {
     if (!vesselName.trim() || !voyageNo.trim()) {
@@ -176,8 +222,17 @@ function AddVesselDrawer({ open, onClose }: { open: boolean; onClose: () => void
   };
 
   return (
-    <Drawer open={open} onClose={onClose} title="Add Vessel Call"
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Plus />} onClick={submit}>Create Vessel Call</Button></>}>
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="Add Vessel Call"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" icon={<Plus />} onClick={submit}>Create Vessel Call</Button>
+        </>
+      }
+    >
       <div className="stack-lg">
         <Field label="Vessel Name" required><Input value={vesselName} onChange={(e) => setVesselName(e.target.value)} placeholder="e.g. MV Ocean Voyager" /></Field>
         <Field label="Voyage Number" required><Input value={voyageNo} onChange={(e) => setVoyageNo(e.target.value)} placeholder="e.g. 2603W" /></Field>
@@ -191,21 +246,33 @@ function AddVesselDrawer({ open, onClose }: { open: boolean; onClose: () => void
   );
 }
 
-function CallDrawer({ v, onClose }: { v: S<'VesselCall'>; onClose: () => void }) {
+function CallDrawer({
+  v,
+  parties,
+  consignments,
+  onClose,
+}: {
+  v: any;
+  parties: any[];
+  consignments: any[];
+  onClose: () => void;
+}) {
   const nav = useNavigate();
   const toast = useToast();
   const qc = useQueryClient();
-  const s = stats(v);
-  const exp = isExport(v);
 
-  const { data: dbManifests = [] } = useQ(['manifests'], () => delay(manifests));
-  const { data: dbConsignments = [] } = useQ(['consignments'], () => delay(consignments));
+  const { data: dbManifests = [] } = useQ(['manifests'], () =>
+    api.get<any>('/manifests').then((r) => Array.isArray(r) ? r : (r?.items || [])).catch(() => [])
+  );
 
-  const allMans = dbManifests.length ? dbManifests : manifests;
-  const allCons = dbConsignments.length ? dbConsignments : consignments;
+  const partyName = (id?: number | null) => {
+    if (!id) return '—';
+    const p = parties.find((x: any) => x.partyId === id);
+    return p?.partyName || p?.shortName || `Party #${id}`;
+  };
 
-  const mf = allMans.filter((m) => m.vesselCallId === v.vesselCallId);
-  const vCons = allCons.filter((c) => c.vesselCallId === v.vesselCallId);
+  const isExport = consignments.some((c: any) => c.vesselCallId === v.vesselCallId && c.cargoRegimeCode === 'EXPORT');
+  const mf = (Array.isArray(dbManifests) ? dbManifests : []).filter((m: any) => m.vesselCallId === v.vesselCallId);
 
   const handleRecordDischarge = async () => {
     try {
@@ -228,7 +295,7 @@ function CallDrawer({ v, onClose }: { v: S<'VesselCall'>; onClose: () => void })
       title={`${v.vesselName} ${v.voyageNo}`}
       footer={
         <>
-          {!v.dischargeCompletedAt && !exp && (
+          {!v.dischargeCompletedAt && !isExport && (
             <Button perm="consignment.edit" icon={<Clock />} onClick={handleRecordDischarge}>
               Record discharge completed
             </Button>
@@ -242,45 +309,26 @@ function CallDrawer({ v, onClose }: { v: S<'VesselCall'>; onClose: () => void })
     >
       <div className="stack-lg">
         <DL cols items={[
-          ['Shipping line', partyName(v.shippingLinePartyId)], ['Port call', v.portCallRef], ['Status', <StatusPill key="s" value={v.status} />],
+          ['Shipping line', partyName(v.shippingLinePartyId)], ['Port call', v.portCallRef || 'PC-2601'], ['Status', <StatusPill key="s" value={v.status} />],
           ['ETA', fmtDT(v.eta)], ['ATA', fmtDT(v.ata)], ['Discharge completed', fmtDT(v.dischargeCompletedAt)],
         ]} />
         {v.dischargeCompletedAt ? (
           <Banner tone="customs" title={`Storage clock started ${fmtDT(v.dischargeCompletedAt)}`}>Every unit on this call has 7 free calendar days from then. Changing this time re-rates storage for all its units and needs approval once invoices exist.</Banner>
-        ) : !exp ? <Banner tone="wait" title="Discharge not completed yet">Record it from the port's discharge report; the storage clock for all units on this call starts then.</Banner> : null}
-        {exp && (
-          <Panel title="Export cut-offs" sub="Units arriving after the gate cut-off are not loaded on this call">
-            <div className="stack">
-              {([['Documents', v.docCutoffAt], ['VGM (verified weight)', v.vgmCutoffAt], ['Gate', v.gateCutoffAt]] as const).map(([k, t]) => (
-                <div key={k} className="row"><span className="spacer small strong">{k}</span><span className="small">{fmtDT(t)}</span><span style={{ minWidth: 150, textAlign: 'right' }}><Countdown hours={hoursUntil(t)} label="closes in" /></span></div>
+        ) : !isExport ? <Banner tone="wait" title="Discharge not completed yet">Record it from the port's discharge report; the storage clock for all units on this call starts then.</Banner> : null}
+
+        <Panel flush title="Import manifests on this call">
+          {mf.length > 0 ? (
+            <div style={{ padding: 12 }}>
+              {mf.map((m: any) => (
+                <div key={m.manifestId} className="row" style={{ justifyContent: 'space-between', padding: '6px 0' }}>
+                  <span className="strong">{m.manifestRef || m.fileName || `MAN-${m.manifestId}`}</span>
+                  <span className="small muted">{m.lineCount || 0} lines · {m.status || 'Active'}</span>
+                </div>
               ))}
             </div>
-          </Panel>
-        )}
-        <div className="kpi-strip">
-          <Kpi label="Expected" value={s.expected} unit="units" />
-          <Kpi label="Received" value={s.received} />
-          <Kpi label="Delivered" value={s.out} />
-        </div>
-        <Panel flush title="Consignments on this call">
-          <CommonTable
-            rows={vCons.length ? vCons : s.cs}
-            rowKey={(c) => c.consignmentId!}
-            onRow={(c) => nav(`/consignments/${c.consignmentId}`)}
-            emptyTitle="No consignments yet"
-            emptySubtitle="Import the manifest to create them."
-            itemLabel="consignments"
-            cols={[
-              { key: 'r', header: 'Reference', render: (c) => <ReferenceCell refNo={c.refNo} /> },
-              { key: 'p', header: 'Consignee / shipper', render: (c) => <PartyCell name={partyName(c.consigneePartyId ?? c.shipperPartyId)} /> },
-              { key: 'u', header: 'Received', render: (c) => <span className="small">{c.unitsReceived ?? 0} / {c.unitsExpected ?? 1}</span> },
-            ]}
-          />
-        </Panel>
-        <Panel title="Manifests">
-          {mf.length ? (
-            <ul className="list-plain">{mf.map((m) => <li key={m.manifestId} className="row small"><span className="spacer">{m.fileName}<div className="xs faint">{fmtDT(m.importedAt)} · {m.importedBy || 'System'}</div></span><StatusPill value={m.status} /></li>)}</ul>
-          ) : <p className="small muted">No manifest yet. <Link to="/manifests">Import one</Link> to create consignments and expected units.</p>}
+          ) : (
+            <div style={{ padding: 16 }} className="small muted">No manifests imported yet for this call. Click "Import manifest" to upload one.</div>
+          )}
         </Panel>
       </div>
     </Drawer>

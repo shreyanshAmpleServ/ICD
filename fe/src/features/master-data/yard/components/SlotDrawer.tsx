@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Unlock } from 'lucide-react';
-import { Banner, Field, Textarea } from '@/ds/components';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, Unlock } from 'lucide-react';
+import { Banner, Button, Field, Textarea } from '@/ds/components';
 import { EditDrawer } from '../../shared/AdminKit';
 
 interface SlotDrawerProps {
@@ -12,8 +13,10 @@ interface SlotDrawerProps {
 }
 
 export function SlotDrawer({ code, reason, onClose, onBlock, onUnblock }: SlotDrawerProps) {
+  const navigate = useNavigate();
   const [why, setWhy] = useState('');
   const toBlock = !reason;
+  const blockCode = code ? code.split('-')[0] : '';
 
   return (
     <EditDrawer
@@ -32,6 +35,18 @@ export function SlotDrawer({ code, reason, onClose, onBlock, onUnblock }: SlotDr
         setWhy('');
       }}
     >
+      <div style={{ marginBottom: 16 }}>
+        <Button
+          size="sm"
+          icon={<MapPin />}
+          onClick={() => {
+            onClose();
+            navigate(`/yard?block=${encodeURIComponent(blockCode)}&slot=${encodeURIComponent(code || '')}`);
+          }}
+        >
+          Locate on Yard map
+        </Button>
+      </div>
       {toBlock ? (
         <>
           <p className="small muted">A blocked slot is never suggested by allocation and refuses moves. Units already in it stay until moved.</p>

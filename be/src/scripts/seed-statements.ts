@@ -289,7 +289,7 @@ export async function seedStatements() {
   console.log('✅ Successfully seeded Statements AR master and transactions into Database!');
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedStatements()
     .catch((err) => {
       console.error('❌ Seeder failed:', err);

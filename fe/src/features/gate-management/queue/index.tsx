@@ -21,7 +21,7 @@ export function GateQueueView() {
   const [view, setView] = useState<View>('board');
   const [showRegister, setShowRegister] = useState(false);
 
-  const { data: rawVisits = [], refetch } = useQ<any[]>(['gate-queue-visits'], () => gateQueueApi.visits());
+  const { data: rawVisits = [], isLoading: visitsLoading, refetch } = useQ<any[]>(['gate-queue-visits'], () => gateQueueApi.visits());
   const data: DynamicTruckVisit[] = Array.isArray(rawVisits) ? rawVisits : [];
   const live = data.filter((v) => !['EXITED', 'CANCELLED', 'EXPIRED'].includes(v.status!));
   const held = live.filter((v) => v.status === 'HELD' || v.status === 'REJECTED');
@@ -84,9 +84,9 @@ export function GateQueueView() {
         )}
 
         {view === 'board' ? (
-          <QueueBoard getColItems={col} />
+          <QueueBoard getColItems={col} loading={visitsLoading} />
         ) : (
-          <QueueList data={data} onSelectVisit={(v) => nav(`/gate/visits/${v.truckVisitId}`)} />
+          <QueueList data={data} loading={visitsLoading} onSelectVisit={(v) => nav(`/gate/visits/${v.truckVisitId}`)} />
         )}
       </div>
 

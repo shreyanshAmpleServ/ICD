@@ -5,6 +5,9 @@ import { yardNodes, locationTags, blockedSlots } from "../../data/admin";
 import { moveOrders, equipmentForMoves } from "../../data/ops";
 import { blocks, allStays } from "../../data/core";
 import { getPrisma, isDbLive } from "../../db/prisma";
+import { yardMovesController } from "../../v1/controllers/yard/moves.controller";
+import { setupYardDesignerController } from "../../v1/controllers/setup/yard-designer.controller";
+import { yardMapController } from "../../v1/controllers/yard/map.controller";
 
 const router = Router();
 
@@ -250,16 +253,7 @@ router.patch(
   "/yard/locations/:yardLocationId",
   requireSite(false),
   requirePermission("admin.yard.design", "DO"),
-  (req, res) => {
-    const loc = yardLocations.find(
-      (l) =>
-        String(l.yardLocationId) === req.params.yardLocationId ||
-        l.fullCode === req.params.yardLocationId,
-    );
-    if (!loc) return res.status(404).json({ error: "Yard location not found" });
-    Object.assign(loc, req.body, { logInst: loc.logInst + 1 });
-    res.json(loc);
-  },
+  setupYardDesignerController.updateYardLocation
 );
 
 router.get(
@@ -283,18 +277,31 @@ router.get(
 );
 
 router.post(
+  "/yard/locations/:yardLocationId/generate",
+  requireSite(false),
+  requirePermission("admin.yard.design", "DO"),
+  setupYardDesignerController.generateSlots
+);
+
+router.post(
+  "/yard/locations/:yardLocationId:generate",
+  requireSite(false),
+  requirePermission("admin.yard.design", "DO"),
+  setupYardDesignerController.generateSlots
+);
+
+router.post(
+  "/yard/locations/generate",
+  requireSite(false),
+  requirePermission("admin.yard.design", "DO"),
+  setupYardDesignerController.generateSlots
+);
+
+router.post(
   "/yard/locations:generate",
   requireSite(false),
   requirePermission("admin.yard.design", "DO"),
-  (req, res) => {
-    const { blockCode, bays, rows, tiers } = req.body;
-    const total = (bays || 10) * (rows || 4) * (tiers || 4);
-    res.status(201).json({
-      message: `Generated ${total} slots for block ${blockCode || "NEW"} successfully.`,
-      blockCode,
-      totalSlots: total,
-    });
-  },
+  setupYardDesignerController.generateSlots
 );
 
 router.post(
@@ -402,54 +409,21 @@ router.get(
   "/yard/map",
   requireSite(false),
   requirePermission("yard.map.view"),
-  (req, res) => {
-    res.json({
-      siteId: 1,
-      siteCode: "DAR1",
-      blocks: blocks.map((b) => ({
-        ...b,
-        totalSlots: 160,
-        occupiedSlots: 98,
-        utilizationPct: 61.25,
-      })),
-    });
-  },
+  yardMapController.getYardMap,
 );
 
 router.get(
   "/yard/blocks/:blockId/slots",
   requireSite(false),
   requirePermission("yard.map.view"),
-  (req, res) => {
-    const slots = yardLocations.filter(
-      (l) => l.blockCode.toUpperCase() === req.params.blockId.toUpperCase(),
-    );
-    res.json({ blockId: req.params.blockId, slots, total: slots.length });
-  },
+  yardMapController.getBlockSlots,
 );
 
 router.get(
   "/yard/occupancy",
   requireSite(false),
   requirePermission("yard.map.view"),
-  (req, res) => {
-    const totalSlots = 800;
-    const occupiedSlots =
-      allStays.filter((s) => s.physicalStatus === "IN_YARD").length || 420;
-    res.json({
-      totalSlots,
-      occupiedSlots,
-      availableSlots: totalSlots - occupiedSlots,
-      utilizationPct: Number(((occupiedSlots / totalSlots) * 100).toFixed(1)),
-      reeferPlugsOccupied: 18,
-      reeferPlugsTotal: 32,
-      byBlock: blocks.map((b) => ({
-        blockCode: b.code,
-        capacity: 160,
-        occupied: 84,
-      })),
-    });
-  },
+  yardMapController.getOccupancy,
 );
 
 router.post(
@@ -682,5 +656,9 @@ router.get(
     });
   },
 );
+
+router.get(["/yard/equipment", "/equipment"], requireSite(false), yardMovesController.getEquipment);
+router.get(["/yard/operators", "/operators"], requireSite(false), yardMovesController.getOperators);
+router.get(["/yard/locations", "/locations"], requireSite(false), yardMovesController.getLocations);
 
 export const yardRouter = router;

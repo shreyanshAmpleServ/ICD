@@ -1,0 +1,68 @@
+flowchart LR
+    subgraph Master_Domain ["Master Data & Configuration"]
+        Setup["setup (Sites, Gates, Calendars)"]
+        Masters["masters (Parties, Unit Types, IMO)"]
+        Access["access (Users, Roles, Grants)"]
+    end
+
+    subgraph Operations_Domain ["Terminal Operations Triad"]
+        Cargo["cargo (Units, Consignments, Manifests)"]
+        Gate["gate (Truck Visits, Checkpoints, Lanes)"]
+        Weighbridge["weighbridge (Gross & Tare Scale Tickets)"]
+        Yard["yard (Move Orders, Stacking, Map)"]
+    end
+
+    subgraph Depth_Domain ["Specialized Terminal Modules"]
+        Inspections["inspections (EIR Surveys, Damages, Repairs)"]
+        CFS["cfs (Stripping, Stuffing, Lot Balances)"]
+        Reefers["reefers (Cold Chain Sessions, Temperatures)"]
+        Keys["keys (Vehicle Key Custody)"]
+    end
+
+    subgraph Governance_Domain ["Customs, Control & Release"]
+        Customs["customs (Declarations, Physical Exams)"]
+        Holds["holds (Customs, Line & Terminal Holds)"]
+        Approvals["approvals (Managerial Overrides, Delegations)"]
+        Exceptions["exceptions (Incident Logging)"]
+        Releases["releases (5-Pillar Release Orders & QR Passes)"]
+    end
+
+    subgraph Commercial_Domain ["Commercial, Cashier & Finance"]
+        Billing["billing (Billable Events, Tariffs, Invoices)"]
+        Cashier["cashier (Shifts, Payments, Fiscal Receipts)"]
+        Finance["finance (Accounting Periods, Ledger Postings)"]
+    end
+
+    Setup --> Cargo
+    Setup --> Gate
+    Setup --> Yard
+    Masters --> Cargo
+    Access --> Operations_Domain
+
+    Cargo --> Gate
+    Gate --> Weighbridge
+    Gate --> Yard
+    Cargo --> Yard
+
+    Yard --> Inspections
+    Yard --> CFS
+    Yard --> Reefers
+    Yard --> Keys
+    Yard --> Customs
+
+    Customs --> Holds
+    Holds --> Releases
+
+    Gate --> Billing
+    Yard --> Billing
+    CFS --> Billing
+    Reefers --> Billing
+    Billing --> Cashier
+    Cashier --> Finance
+
+    Customs --> Releases
+    Cashier --> Releases
+    Releases --> Gate
+    Approvals --> Operations_Domain
+    Approvals --> Commercial_Domain
+

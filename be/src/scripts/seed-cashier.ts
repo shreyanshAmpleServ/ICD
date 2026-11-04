@@ -163,7 +163,7 @@ export async function seedCashier() {
   console.log(`   - Allocations:      ${allocationsCount}`);
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedCashier()
     .then(async () => {
       await prisma.$disconnect();

@@ -152,7 +152,7 @@ export async function seedOpsData() {
   console.log('🎉 Operational master data seeded successfully in database!');
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedOpsData()
     .catch((e) => {
       console.error(e);

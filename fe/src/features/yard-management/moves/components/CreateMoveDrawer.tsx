@@ -1,48 +1,86 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Button, Drawer, Field, Input, Select, useToast } from '@/ds/components';
 import { useQ } from '@/api/query';
 import { api } from '@/api/client';
-import { movesApi } from '../api';
-import { MACHINES } from './AssignDrawer';
-import { OPERATORS, MOVE_KIND } from '@/mock/ops';
+import { movesApi, type EquipmentItem, type YardLocationItem, type OperatorItem } from '../api';
+import { MOVE_KIND } from '@/mock/ops';
 
 export interface CreateMoveDrawerProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  siteId?: number;
 }
 
-export function CreateMoveDrawer({ open, onClose, onSuccess }: CreateMoveDrawerProps) {
+export function CreateMoveDrawer({ open, onClose, onSuccess, siteId }: CreateMoveDrawerProps) {
   const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
 
   // Form State
   const [unitNo, setUnitNo] = useState('');
   const [moveKind, setMoveKind] = useState('RELOCATE');
-  const [fromCode, setFromCode] = useState('A-01-01-1');
-  const [toCode, setToCode] = useState('B-02-02-2');
-  const [equipmentId, setEquipmentId] = useState('1');
-  const [operator, setOperator] = useState('ibrahim.n');
+  const [fromCode, setFromCode] = useState('A-01-01');
+  const [toCode, setToCode] = useState('B-02-01');
+  const [equipmentId, setEquipmentId] = useState('');
+  const [operator, setOperator] = useState('');
   const [priority, setPriority] = useState('NORMAL');
 
   // Load available units from yard
-  const { data: unitsRes = [] } = useQ(['units-for-moves'], async () => {
+  const { data: unitsRes = [] } = useQ(['units-for-moves', siteId], async () => {
     try {
-      const res = await api.get<any>('/units');
+      const res = await api.get<any>(`/units${siteId ? `?siteId=${siteId}` : ''}`);
       return res?.items || (Array.isArray(res) ? res : []);
     } catch {
       return [];
     }
   });
 
+  const { data: equipmentList = [] } = useQ<EquipmentItem[]>(['yard-equipment', siteId], () =>
+    movesApi.getEquipment(siteId)
+  );
+
+  const { data: locationsList = [] } = useQ<YardLocationItem[]>(['yard-locations', siteId], () =>
+    movesApi.getLocations(siteId)
+  );
+
+  const { data: operatorsList = [] } = useQ<OperatorItem[]>(['yard-operators'], () =>
+    movesApi.getOperators()
+  );
+
   const units = Array.isArray(unitsRes) ? unitsRes : [];
+  const moveMachines = equipmentList.filter((e) =>
+    ['REACH_STACKER', 'EMPTY_HANDLER', 'TERMINAL_TRACTOR', 'FORKLIFT'].includes(e.equipmentType)
+  );
+  const activeMachines = moveMachines.length > 0 ? moveMachines : equipmentList;
+
+  useEffect(() => {
+    if (activeMachines.length > 0 && !equipmentId) {
+      setEquipmentId(String(activeMachines[0].equipmentId));
+    }
+  }, [activeMachines, equipmentId]);
+
+  useEffect(() => {
+    if (operatorsList.length > 0 && !operator) {
+      const defaultOp =
+        operatorsList.find(
+          (o) =>
+            o.name.toLowerCase().includes('ibrahim') ||
+            o.userSub.toLowerCase().includes('ibrahim')
+        ) || operatorsList[0];
+      setOperator(defaultOp.name || defaultOp.userSub);
+    }
+  }, [operatorsList, operator]);
 
   const handleSelectUnit = (no: string) => {
     setUnitNo(no);
-    const found = units.find((u) => u.cargoUnit?.unitNo === no || u.unitSummary?.unitNo === no);
+    const found = units.find(
+      (u: any) => (u.cargoUnit?.unitNo || u.unitSummary?.unitNo || u.unitNo) === no
+    );
     if (found?.currentLocation?.fullCode) {
       setFromCode(found.currentLocation.fullCode);
+    } else if (found?.locationCode) {
+      setFromCode(found.locationCode);
     }
   };
 
@@ -54,7 +92,10 @@ export function CreateMoveDrawer({ open, onClose, onSuccess }: CreateMoveDrawerP
 
     setSubmitting(true);
     try {
-      const selectedUnit = units.find((u) => u.cargoUnit?.unitNo === unitNo.trim().toUpperCase());
+      const selectedUnit = units.find(
+        (u: any) => (u.cargoUnit?.unitNo || u.unitSummary?.unitNo || u.unitNo) === unitNo.trim().toUpperCase()
+      );
+
       const payload = {
         unitNo: unitNo.trim().toUpperCase(),
         unitStayId: selectedUnit?.unitStayId,
@@ -63,9 +104,10 @@ export function CreateMoveDrawer({ open, onClose, onSuccess }: CreateMoveDrawerP
         sourceLocation: fromCode,
         toCode,
         targetLocation: toCode,
-        assignedEquipmentId: Number(equipmentId),
+        assignedEquipmentId: equipmentId ? Number(equipmentId) : undefined,
         assignedOperatorSub: operator,
-        priority: priority === 'URGENT' ? 5 : (priority === 'HIGH' ? 4 : 3),
+        priority: priority === 'URGENT' ? 5 : priority === 'HIGH' ? 4 : 3,
+        siteId,
       };
 
       await movesApi.createMoveOrder(payload);
@@ -115,10 +157,10 @@ export function CreateMoveDrawer({ open, onClose, onSuccess }: CreateMoveDrawerP
                 value={unitNo}
                 onChange={(e) => handleSelectUnit(e.target.value)}
                 options={[
-                  ['', '-- Or select from yard units --'] as [string, string],
-                  ...units.slice(0, 20).map((u: any): [string, string] => {
-                    const no = u.cargoUnit?.unitNo || u.unitSummary?.unitNo || String(u.unitStayId);
-                    const loc = u.currentLocation?.fullCode || 'Yard';
+                  ['', '-- Or select from active yard units --'] as [string, string],
+                  ...units.slice(0, 30).map((u: any): [string, string] => {
+                    const no = u.cargoUnit?.unitNo || u.unitSummary?.unitNo || u.unitNo || String(u.unitStayId);
+                    const loc = u.currentLocation?.fullCode || u.locationCode || 'Yard';
                     return [no, `${no} (${loc})`];
                   }),
                 ]}
@@ -137,18 +179,36 @@ export function CreateMoveDrawer({ open, onClose, onSuccess }: CreateMoveDrawerP
 
         <div className="grid-2">
           <Field label="Source Location" required>
-            <Input
-              value={fromCode}
-              onChange={(e) => setFromCode(e.target.value.toUpperCase())}
-              placeholder="e.g. A-01-01-1"
-            />
+            <div className="stack-sm">
+              <Input
+                value={fromCode}
+                onChange={(e) => setFromCode(e.target.value.toUpperCase())}
+                placeholder="e.g. A-01-01"
+              />
+              {locationsList.length > 0 && (
+                <Select
+                  value={fromCode}
+                  onChange={(e) => setFromCode(e.target.value)}
+                  options={locationsList.map((l) => [l.fullCode, l.fullCode])}
+                />
+              )}
+            </div>
           </Field>
           <Field label="Target Location" required>
-            <Input
-              value={toCode}
-              onChange={(e) => setToCode(e.target.value.toUpperCase())}
-              placeholder="e.g. B-02-02-2"
-            />
+            <div className="stack-sm">
+              <Input
+                value={toCode}
+                onChange={(e) => setToCode(e.target.value.toUpperCase())}
+                placeholder="e.g. B-02-01"
+              />
+              {locationsList.length > 0 && (
+                <Select
+                  value={toCode}
+                  onChange={(e) => setToCode(e.target.value)}
+                  options={locationsList.map((l) => [l.fullCode, l.fullCode])}
+                />
+              )}
+            </div>
           </Field>
         </div>
 
@@ -156,7 +216,10 @@ export function CreateMoveDrawer({ open, onClose, onSuccess }: CreateMoveDrawerP
           <Select
             value={equipmentId}
             onChange={(e) => setEquipmentId(e.target.value)}
-            options={MACHINES.map((e) => [String(e.equipmentId), `${e.equipmentCode} · ${e.equipmentName}`])}
+            options={activeMachines.map((e) => [
+              String(e.equipmentId),
+              `${e.equipmentCode} · ${e.equipmentName}`,
+            ])}
           />
         </Field>
 
@@ -164,7 +227,10 @@ export function CreateMoveDrawer({ open, onClose, onSuccess }: CreateMoveDrawerP
           <Select
             value={operator}
             onChange={(e) => setOperator(e.target.value)}
-            options={Object.entries(OPERATORS).map(([k, v]) => [k, v])}
+            options={operatorsList.map((o) => [
+              o.name || o.userSub,
+              `${o.name} (${o.userSub})`,
+            ])}
           />
         </Field>
 

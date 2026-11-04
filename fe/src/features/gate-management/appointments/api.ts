@@ -13,6 +13,21 @@ export const appointmentsApi = {
     return unwrapList(res);
   },
 
+  getSlotRules: async () => {
+    const res = await api.get<any>('/appointments/slot-rules');
+    return unwrapList(res);
+  },
+
+  getParties: async () => {
+    const res = await api.get<any>('/parties');
+    return unwrapList(res);
+  },
+
+  getVisitTypes: async () => {
+    const res = await api.get<any>('/visit-types');
+    return unwrapList(res);
+  },
+
   createAppointment: async (body: any) => {
     return api.post<any>('/appointments', body);
   },

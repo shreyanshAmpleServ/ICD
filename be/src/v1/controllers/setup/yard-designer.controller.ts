@@ -22,7 +22,8 @@ export const setupYardDesignerController = {
 
   updateYardLocation: async (req: Request, res: Response) => {
     try {
-      const updated = await setupService.updateYardLocation(req.params.locationId, req.body);
+      const id = req.params.locationId || (req.params as any).yardLocationId || (req.params as any).id;
+      const updated = await setupService.updateYardLocation(id, req.body);
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -31,7 +32,38 @@ export const setupYardDesignerController = {
 
   deleteYardLocation: async (req: Request, res: Response) => {
     try {
-      const result = await setupService.deleteYardLocation(req.params.locationId);
+      const id = req.params.locationId || (req.params as any).yardLocationId || (req.params as any).id;
+      const result = await setupService.deleteYardLocation(id);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  generateSlots: async (req: Request, res: Response) => {
+    try {
+      const locId = req.params.locationId || (req.params as any).yardLocationId || req.body.locationId || req.body.blockId || req.body.parentLocationId;
+      const result = await setupService.generateSlots(locId, req.body);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  blockSlot: async (req: Request, res: Response) => {
+    try {
+      const codeOrId = req.params.locationId || req.body.locationCode || req.body.slotCode;
+      const result = await setupService.blockSlot(codeOrId, req.body.reason);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  unblockSlot: async (req: Request, res: Response) => {
+    try {
+      const codeOrId = req.params.locationId || req.body.locationCode || req.body.slotCode;
+      const result = await setupService.unblockSlot(codeOrId);
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ error: err.message });

@@ -431,7 +431,7 @@ export async function seedCargoAndMoney() {
   console.log('🎉 Cargo & Money database seeding completed successfully!');
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedCargoAndMoney()
     .catch((e) => {
       console.error('Seed error:', e);

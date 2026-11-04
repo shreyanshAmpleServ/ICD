@@ -25,7 +25,7 @@ export const usdOf = (i: Invoice, field: 'total' | 'balance') =>
 export function InvoicesList() {
   const { site } = useSession();
   const nav = useNavigate();
-  const { data = [] } = useQ(['invoices', site.siteId], () => invoicesApi.getInvoices(site.siteId));
+  const { data = [], isLoading: invoicesLoading } = useQ(['invoices', site.siteId], () => invoicesApi.getInvoices(site.siteId));
   const [kind, setKind] = useState<Kind>('ALL');
   const [quick, setQuick] = useState<Quick>('all');
   const [q, setQ] = useState('');
@@ -126,6 +126,7 @@ export function InvoicesList() {
             />
           </div>
           <CommonTable
+            loading={invoicesLoading}
             rows={rows}
             rowKey={(i: Invoice) => i.invoiceId}
             onRow={(i: Invoice) => nav(`/invoices/${i.invoiceId}`)}

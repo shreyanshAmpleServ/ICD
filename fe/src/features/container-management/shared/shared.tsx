@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Paperclip, Search, X } from 'lucide-react';
 import { Button, Check, MiniTracks, SearchInput, UnitNo, cx } from '@/ds/components';
-import type { Stay } from '@/mock/core';
 
 /* Small pieces the cargo and control screens share. They are local because
    the design system does not have them yet (see the build report). */
@@ -56,32 +55,41 @@ export function Evidence({ label = 'Attach file or photo', value, onChange, requ
 }
 
 /** Choose several units from a list, with a filter box. */
-export function UnitPicker({ stays, value, onChange, max = 200, height = 280 }: { stays: Stay[]; value: number[]; onChange: (v: number[]) => void; max?: number; height?: number }) {
+export function UnitPicker({ stays, value, onChange, max = 200, height = 280 }: { stays: any[]; value: number[]; onChange: (v: number[]) => void; max?: number; height?: number }) {
   const [q, setQ] = useState('');
   const rows = useMemo(() => {
     const n = q.replace(/\s/g, '').toUpperCase();
-    return stays.filter((s) => !n || s.cargoUnit.unitNo.includes(n) || (s.unitSummary.consignmentRef ?? '').includes(n)).slice(0, max);
+    return (stays || []).filter((s: any) => {
+      const uNo = (s.cargoUnit?.unitNo || s.unitNo || '').toUpperCase();
+      const cRef = (s.unitSummary?.consignmentRef || s.consignments?.refNo || s.consignmentRef || '').toUpperCase();
+      return !n || uNo.includes(n) || cRef.includes(n);
+    }).slice(0, max);
   }, [q, stays, max]);
   const toggle = (id: number) => onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
-  const allOn = rows.length > 0 && rows.every((r) => value.includes(r.unitStayId!));
+  const allOn = rows.length > 0 && rows.every((r: any) => value.includes(r.unitStayId!));
   return (
     <div className="stack" style={{ gap: 8 }}>
       <div className="row">
         <div className="spacer"><SearchInput icon={<Search />} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by unit or BL" aria-label="Filter units" /></div>
-        <Button size="sm" variant="ghost" onClick={() => onChange(allOn ? value.filter((v) => !rows.some((r) => r.unitStayId === v)) : [...new Set([...value, ...rows.map((r) => r.unitStayId!)])])}>
+        <Button size="sm" variant="ghost" onClick={() => onChange(allOn ? value.filter((v) => !rows.some((r: any) => r.unitStayId === v)) : [...new Set([...value, ...rows.map((r: any) => r.unitStayId!)])])}>
           {allOn ? 'Clear shown' : 'Select shown'}
         </Button>
       </div>
       <div style={{ maxHeight: height, overflow: 'auto', border: '1px solid var(--steel)', borderRadius: 'var(--r-md)' }}>
         {rows.length === 0 && <div className="small faint" style={{ padding: 12 }}>No units match. Clear the filter.</div>}
-        {rows.map((s) => (
-          <label key={s.unitStayId} className={cx('row')} style={{ padding: '8px 12px', borderBottom: '1px solid var(--steel-2)', cursor: 'pointer', gap: 10, background: value.includes(s.unitStayId!) ? 'var(--hivis-soft)' : undefined }}>
-            <Check label="" checked={value.includes(s.unitStayId!)} onChange={() => toggle(s.unitStayId!)} aria-label={`Select ${s.cargoUnit.unitNo}`} />
-            <UnitNo no={s.cargoUnit.unitNo} category={s.cargoUnit.category} />
-            <span className="spacer xs faint" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.cargoUnit.unitTypeCode} · {s.currentLocation?.fullCode ?? 'not in yard'}</span>
-            <MiniTracks s={s} />
-          </label>
-        ))}
+        {rows.map((s: any) => {
+          const uNo = s.cargoUnit?.unitNo || s.unitNo || `UNIT-${s.unitStayId}`;
+          const cat = s.cargoUnit?.category || 'CONTAINER';
+          const typeCode = s.cargoUnit?.unitTypeCode || '40HC';
+          return (
+            <label key={s.unitStayId} className={cx('row')} style={{ padding: '8px 12px', borderBottom: '1px solid var(--steel-2)', cursor: 'pointer', gap: 10, background: value.includes(s.unitStayId!) ? 'var(--hivis-soft)' : undefined }}>
+              <Check label="" checked={value.includes(s.unitStayId!)} onChange={() => toggle(s.unitStayId!)} aria-label={`Select ${uNo}`} />
+              <UnitNo no={uNo} category={cat} />
+              <span className="spacer xs faint" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{typeCode} · {s.currentLocation?.fullCode ?? 'not in yard'}</span>
+              <MiniTracks s={s} />
+            </label>
+          );
+        })}
       </div>
       <div className="xs muted">{value.length} selected</div>
     </div>

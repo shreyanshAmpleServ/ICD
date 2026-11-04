@@ -1,0 +1,245 @@
+/* ==========================================================================
+   DCC NG ICD Professional Loading System & Skeletons
+   ========================================================================== */
+
+/* 1. Global Top Loading Progress Bar */
+.top-loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 100;
+  overflow: hidden;
+  background: rgba(245, 196, 0, 0.15);
+  pointer-events: none;
+}
+
+.top-loading-bar-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--hivis, #f5c400) 25%,
+    #ffd738 50%,
+    var(--hivis, #f5c400) 75%,
+    transparent 100%
+  );
+  animation: dcc-top-progress 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  box-shadow: 0 0 8px rgba(245, 196, 0, 0.8), 0 0 16px rgba(245, 196, 0, 0.4);
+}
+
+@keyframes dcc-top-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* 2. Micro Pulse Indicator in Topbar */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(245, 196, 0, 0.12);
+  border: 1px solid rgba(245, 196, 0, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  animation: dcc-fade-in 0.2s ease-out;
+  white-space: nowrap;
+}
+
+.sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hivis, #f5c400);
+  box-shadow: 0 0 6px var(--hivis, #f5c400);
+  animation: dcc-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dcc-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes dcc-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 3. Spinner Component */
+.dcc-spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  border-color: var(--steel-2);
+  border-top-color: var(--hivis, #f5c400);
+  animation: dcc-spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
+.dcc-spinner-xs {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}
+
+.dcc-spinner-sm {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
+.dcc-spinner-md {
+  width: 26px;
+  height: 26px;
+  border-width: 3px;
+}
+
+.dcc-spinner-lg {
+  width: 36px;
+  height: 36px;
+  border-width: 3.5px;
+}
+
+.dcc-spinner-xl {
+  width: 48px;
+  height: 48px;
+  border-width: 4px;
+}
+
+.dcc-spinner-primary {
+  border-top-color: var(--ink);
+}
+
+.dcc-spinner-customs {
+  border-top-color: var(--customs);
+}
+
+.dcc-spinner-hivis {
+  border-top-color: var(--hivis, #f5c400);
+}
+
+@keyframes dcc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 4. Full Page & Panel Loader Container */
+.dcc-loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 12px;
+  min-height: 160px;
+  width: 100%;
+}
+
+.dcc-loader-message {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 5. Shimmer Skeleton Primitives */
+.dcc-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--steel-2) 0%,
+    var(--steel) 50%,
+    var(--steel-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: dcc-shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--r-sm, 3px);
+  display: block;
+}
+
+@keyframes dcc-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Skeleton Row for Lists & Tables */
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--steel-2);
+  width: 100%;
+}
+
+.skeleton-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Skeleton Table Wrapper */
+.skeleton-table-wrap {
+  width: 100%;
+  overflow: hidden;
+}
+
+.skeleton-table-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--steel-2);
+}
+
+.skeleton-table-row:last-child {
+  border-bottom: 0;
+}
+
+/* Skeleton Detail Panel */
+.skeleton-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+

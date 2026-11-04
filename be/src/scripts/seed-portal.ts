@@ -407,7 +407,7 @@ export async function seedPortalData() {
   console.log('🎉 Customer Portal DB seeding complete!');
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedPortalData()
     .catch((err) => {
       console.error('❌ Portal seed error:', err);

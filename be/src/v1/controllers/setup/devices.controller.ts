@@ -29,6 +29,15 @@ export const setupDevicesController = {
     }
   },
 
+  revokeDevice: async (req: Request, res: Response) => {
+    try {
+      const revoked = await setupService.revokeDevice(req.params.deviceId, req.body?.reason);
+      res.json(revoked);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
   getDeviceIntegrations: async (_req: Request, res: Response) => {
     try {
       const items = await setupService.getDeviceIntegrations();

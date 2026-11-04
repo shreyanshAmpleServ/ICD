@@ -10,15 +10,18 @@ import {
 import { AuditNote, SeedBanner, SetupPage, YesNo, hrs, useEditable } from '../shared/AdminKit';
 import { rulesApi } from './api';
 import { AddHoldTypeModal } from './components/AddHoldTypeModal';
+import { AddHoldModal } from './components/AddHoldModal';
 import { PolicyDrawer } from './components/PolicyDrawer';
+import { AddPolicyModal } from './components/AddPolicyModal';
 import { ExceptionDrawer } from './components/ExceptionDrawer';
+import { AddExceptionModal } from './components/AddExceptionModal';
 
 export { rulesApi } from './api';
 
 type Tab = 'holds' | 'release' | 'approvals' | 'exceptions';
 type HT = (typeof holdTypesSeed)[number];
 type Rule = (typeof seedRules)[number];
-type Pol = (typeof seedPolicies)[number];
+type Pol = (typeof seedPolicies)[number] & { description?: string };
 type Exc = (typeof seedExc)[number];
 const roleName = (c?: string | null) => ROLES.find((r) => r.code === c)?.name ?? c ?? '—';
 const AUTH: Record<string, string> = { CUSTOMS: 'Customs (TRA)', PORT: 'Port authority', REGULATOR: 'Regulator', COURT: 'Court', LINE: 'Shipping line', ICD: 'Depot', SECURITY: 'Depot security' };
@@ -34,6 +37,10 @@ export function RulesView() {
   const [pol, setPol] = useState<Pol | null>(null);
   const [exc, setExc] = useState<Exc | null>(null);
   const [stage, setStage] = useState<'gate' | 'approval' | 'override'>('gate');
+
+  const [isAddHoldOpen, setIsAddHoldOpen] = useState(false);
+  const [isAddPolicyOpen, setIsAddPolicyOpen] = useState(false);
+  const [isAddExcOpen, setIsAddExcOpen] = useState(false);
 
   const rule = (regime: string, cond: string) => rules.find((r) => r.regimeCode === regime && r.conditionCode === cond);
   const flip = (regime: string, cond: string) => {
@@ -71,7 +78,7 @@ export function RulesView() {
           flush
           title="Hold types"
           sub="What each hold blocks, and what it takes to lift it"
-          actions={<Button size="sm" icon={<Plus />} perm="admin.config.manage" onClick={() => toast('Hold type added')}>Add hold type</Button>}
+          actions={<Button size="sm" icon={<Plus />} perm="admin.config.manage" onClick={() => setIsAddHoldOpen(true)}>Add hold type</Button>}
         >
           <DataTable
             rows={holds}
@@ -144,13 +151,18 @@ export function RulesView() {
       {tab === 'approvals' && (
         <>
           <SeedBanner>Two levels from USD 1,000 for waivers and credit notes, and from USD 500 for refunds. Confirm these thresholds with the finance manager.</SeedBanner>
-          <Panel flush title="Approval policies" sub="How many approvers a request needs, by amount, and when an unanswered request expires">
+          <Panel
+            flush
+            title="Approval policies"
+            sub="How many approvers a request needs, by amount, and when an unanswered request expires"
+            actions={<Button size="sm" icon={<Plus />} perm="admin.config.manage" onClick={() => setIsAddPolicyOpen(true)}>Add policy</Button>}
+          >
             <DataTable
               rows={[...pols].sort((a, b) => a.permissionCode.localeCompare(b.permissionCode) || Number(a.amountFrom) - Number(b.amountFrom))}
               rowKey={(p) => p.approvalPolicyId!}
               onRow={setPol}
               cols={[
-                { key: 'p', header: 'Permission', render: (p) => <><strong className="small">{permissions.find((x) => x.code === p.permissionCode)?.description}</strong><div className="adm-code xs">{p.permissionCode}</div></> },
+                { key: 'p', header: 'Permission', render: (p) => <><strong className="small">{(p as any).description || permissions.find((x) => x.code === p.permissionCode)?.description || p.permissionCode}</strong><div className="adm-code xs">{p.permissionCode}</div></> },
                 { key: 'a', header: 'Amount from', num: true, render: (p) => Number(p.amountFrom) > 0 ? <Money amount={p.amountFrom} currency={p.amountCurrency} /> : <span className="faint">Any amount</span> },
                 { key: 'l', header: 'Levels', num: true, render: (p) => p.levelsRequired === 2 ? <Pill tone="wait">2 levels</Pill> : '1 level' },
                 { key: 'e', header: 'Expires after', num: true, render: (p) => `${p.expiresAfterHours} h` },
@@ -165,7 +177,12 @@ export function RulesView() {
       )}
 
       {tab === 'exceptions' && (
-        <Panel flush title="Exception types" sub="Who owns each kind of case, how fast it must be handled, and who it escalates to">
+        <Panel
+          flush
+          title="Exception types"
+          sub="Who owns each kind of case, how fast it must be handled, and who it escalates to"
+          actions={<Button size="sm" icon={<Plus />} perm="admin.config.manage" onClick={() => setIsAddExcOpen(true)}>Add exception type</Button>}
+        >
           <DataTable
             rows={excs}
             rowKey={(e) => e.exceptionCode}
@@ -189,9 +206,24 @@ export function RulesView() {
         setHt={setHt}
         onSave={() => {
           if (!ht) return;
-          rulesApi.createHoldType(ht).catch(() => {});
+          rulesApi.updateHoldType((ht as any).holdTypeId || ht.holdCode, ht).catch(() => {});
           setHolds((all) => all.map((h) => (h.holdCode === ht.holdCode ? ht : h)));
           toast('Hold type saved');
+        }}
+      />
+
+      <AddHoldModal
+        open={isAddHoldOpen}
+        onClose={() => setIsAddHoldOpen(false)}
+        onSave={async (newHold) => {
+          try {
+            const created = await rulesApi.createHoldType(newHold);
+            setHolds((all) => [created, ...all]);
+            toast('Hold type created successfully');
+          } catch {
+            setHolds((all) => [newHold, ...all]);
+            toast('Hold type created');
+          }
         }}
       />
 
@@ -207,15 +239,46 @@ export function RulesView() {
         }}
       />
 
+      <AddPolicyModal
+        open={isAddPolicyOpen}
+        onClose={() => setIsAddPolicyOpen(false)}
+        onSave={async (newPolicy) => {
+          try {
+            const created = await rulesApi.createApprovalPolicy(newPolicy);
+            setPols((all) => [created, ...all]);
+            toast('Approval policy created successfully');
+          } catch {
+            setPols((all) => [newPolicy, ...all]);
+            toast('Approval policy created');
+          }
+        }}
+      />
+
       <ExceptionDrawer
         exc={exc}
         onClose={() => setExc(null)}
         setExc={setExc}
         onSave={() => {
           if (!exc) return;
-          rulesApi.updateExceptionType((exc as any).exceptionTypeId ?? 1, exc).catch(() => {});
+          rulesApi.updateExceptionType((exc as any).exceptionTypeId ?? exc.exceptionCode, exc).catch(() => {});
           setExcs((all) => all.map((e) => (e.exceptionCode === exc.exceptionCode ? exc : e)));
           toast('Exception type saved');
+        }}
+      />
+
+      <AddExceptionModal
+        open={isAddExcOpen}
+        onClose={() => setIsAddExcOpen(false)}
+        holds={holds}
+        onSave={async (newExc) => {
+          try {
+            const created = await rulesApi.createExceptionType(newExc);
+            setExcs((all) => [created, ...all]);
+            toast('Exception type created successfully');
+          } catch {
+            setExcs((all) => [newExc, ...all]);
+            toast('Exception type created');
+          }
         }}
       />
     </SetupPage>

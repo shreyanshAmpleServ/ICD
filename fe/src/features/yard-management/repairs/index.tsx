@@ -28,7 +28,7 @@ type F = 'all' | 'DRAFT' | 'SENT' | 'APPROVED' | 'COMPLETED' | 'REJECTED';
 export function RepairsView() {
   const nav = useNavigate();
   const { site } = useSession();
-  const { data = [], refetch } = useQ(['repair-estimates'], () => repairsApi.getRepairEstimates());
+  const { data = [], isLoading: repairsLoading, refetch } = useQ(['repair-estimates'], () => repairsApi.getRepairEstimates());
   const [f, setF] = useState<F>('all');
   const [line, setLine] = useState('all');
   const [newOpen, setNewOpen] = useState(false);
@@ -64,87 +64,88 @@ export function RepairsView() {
         ms="M5"
         sub="Empty depot · estimates to shipping lines, decided line by line"
         actions={
-            <Button variant="primary" icon={<Plus />} perm="repair.estimate" onClick={() => setNewOpen(true)}>
-              New estimate
-            </Button>
+          <Button variant="primary" icon={<Plus />} perm="repair.estimate" onClick={() => setNewOpen(true)}>
+            New estimate
+          </Button>
         }
       />
-            <div className="stack-lg">
-              <div className="kpi-strip">
-                <Kpi label="Drafts" value={cnt('DRAFT')} delta="Not sent yet" />
-                <Kpi label="Waiting for the line" value={cnt('SENT')} delta="Oldest 4 days" />
-                <Kpi label="Approved, to repair" value={cnt('APPROVED')} />
-                <Kpi label="Approved value" value={<Money amount={approvedValue} currency="USD" />} />
-                <Kpi label="Repaired" value={cnt('COMPLETED')} delta="This month" />
-              </div>
-              <Panel flush>
-                <div className="toolbar">
-                  <Chips<F>
-                    value={f}
-                    onChange={setF}
-                    options={[
-                      { id: 'all', label: 'All', count: data.length },
-                      { id: 'DRAFT', label: 'Draft', count: cnt('DRAFT') },
-                      { id: 'SENT', label: 'Sent', count: cnt('SENT') },
-                      { id: 'APPROVED', label: 'Approved', count: cnt('APPROVED') },
-                      { id: 'COMPLETED', label: 'Done', count: cnt('COMPLETED') },
-                      { id: 'REJECTED', label: 'Rejected', count: cnt('REJECTED') },
-                    ]}
-                  />
-                  <span className="spacer" />
-                  <Chips
-                    value={line}
-                    onChange={setLine}
-                    options={[{ id: 'all', label: 'All lines' }, ...lines.map((l) => ({ id: l, label: l }))]}
-                  />
-                </div>
-                <DataTable
-                  rows={rows}
-                  rowKey={(e) => e.repairEstimateId!}
-                  onRow={(e) => nav(`/repairs/${e.repairEstimateId}`)}
-                  empty={<Empty title="No estimates match">Clear the filters, or raise an estimate from a damaged empty.</Empty>}
-                  cols={[
-                    {
-                      key: 'no',
-                      header: 'Estimate',
-                      render: (e) => (
-                        <span className="small strong">
-                          {e.estimateNo}
-                          <div className="xs faint">{fmtD(e.createdAt)}</div>
-                        </span>
-                      ),
-                    },
-                    {
-                      key: 'u',
-                      header: 'Unit',
-                      render: (e) => (
-                        <>
-                          <UnitNo no={e.unitNo} />
-                          <div className="xs faint">
-                            {e.unitType} · {e.location}
-                          </div>
-                        </>
-                      ),
-                    },
-                    { key: 'l', header: 'Line', render: (e) => <span className="tag">{e.lineCode}</span> },
-                    { key: 'n', header: 'Lines', num: true, render: (e) => e.lines.length },
-                    { key: 'lab', header: 'Labour', num: true, render: (e) => <Money amount={e.totalLabour} /> },
-                    { key: 'mat', header: 'Material', num: true, render: (e) => <Money amount={e.totalMaterial} /> },
-                    { key: 't', header: 'Total (USD)', num: true, render: (e) => <Money amount={e.totalAmount} strong /> },
-                    {
-                      key: 'st',
-                      header: 'Status',
-                      render: (e) => <Pill tone={EST_STATUS[e.status!][1]}>{EST_STATUS[e.status!][0]}</Pill>,
-                    },
-                    { key: 'ref', header: 'Line ref.', render: (e) => <span className="small">{e.approverRef ?? '—'}</span> },
-                  ]}
-                />
-              </Panel>
-            </div>
-            <NewEstimateDrawer open={newOpen} onClose={() => setNewOpen(false)} onSuccess={() => refetch()} />
-          </Page>
+      <div className="stack-lg">
+        <div className="kpi-strip">
+          <Kpi label="Drafts" value={cnt('DRAFT')} delta="Not sent yet" />
+          <Kpi label="Waiting for the line" value={cnt('SENT')} delta="Oldest 4 days" />
+          <Kpi label="Approved, to repair" value={cnt('APPROVED')} />
+          <Kpi label="Approved value" value={<Money amount={approvedValue} currency="USD" />} />
+          <Kpi label="Repaired" value={cnt('COMPLETED')} delta="This month" />
+        </div>
+        <Panel flush>
+          <div className="toolbar">
+            <Chips<F>
+              value={f}
+              onChange={setF}
+              options={[
+                { id: 'all', label: 'All', count: data.length },
+                { id: 'DRAFT', label: 'Draft', count: cnt('DRAFT') },
+                { id: 'SENT', label: 'Sent', count: cnt('SENT') },
+                { id: 'APPROVED', label: 'Approved', count: cnt('APPROVED') },
+                { id: 'COMPLETED', label: 'Done', count: cnt('COMPLETED') },
+                { id: 'REJECTED', label: 'Rejected', count: cnt('REJECTED') },
+              ]}
+            />
+            <span className="spacer" />
+            <Chips
+              value={line}
+              onChange={setLine}
+              options={[{ id: 'all', label: 'All lines' }, ...lines.map((l) => ({ id: l, label: l }))]}
+            />
+          </div>
+          <DataTable
+            loading={repairsLoading}
+            rows={rows}
+            rowKey={(e) => e.repairEstimateId!}
+            onRow={(e) => nav(`/repairs/${e.repairEstimateId}`)}
+            empty={<Empty title="No estimates match">Clear the filters, or raise an estimate from a damaged empty.</Empty>}
+            cols={[
+              {
+                key: 'no',
+                header: 'Estimate',
+                render: (e) => (
+                  <span className="small strong">
+                    {e.estimateNo}
+                    <div className="xs faint">{fmtD(e.createdAt)}</div>
+                  </span>
+                ),
+              },
+              {
+                key: 'u',
+                header: 'Unit',
+                render: (e) => (
+                  <>
+                    <UnitNo no={e.unitNo} />
+                    <div className="xs faint">
+                      {e.unitType} · {e.location}
+                    </div>
+                  </>
+                ),
+              },
+              { key: 'l', header: 'Line', render: (e) => <span className="tag">{e.lineCode}</span> },
+              { key: 'n', header: 'Lines', num: true, render: (e) => e.lines.length },
+              { key: 'lab', header: 'Labour', num: true, render: (e) => <Money amount={e.totalLabour} /> },
+              { key: 'mat', header: 'Material', num: true, render: (e) => <Money amount={e.totalMaterial} /> },
+              { key: 't', header: 'Total (USD)', num: true, render: (e) => <Money amount={e.totalAmount} strong /> },
+              {
+                key: 'st',
+                header: 'Status',
+                render: (e) => <Pill tone={EST_STATUS[e.status!][1]}>{EST_STATUS[e.status!][0]}</Pill>,
+              },
+              { key: 'ref', header: 'Line ref.', render: (e) => <span className="small">{e.approverRef ?? '—'}</span> },
+            ]}
+          />
+        </Panel>
+      </div>
+      <NewEstimateDrawer open={newOpen} onClose={() => setNewOpen(false)} onSuccess={() => refetch()} />
+    </Page>
   );
 }
 
-      export const Repairs = RepairsView;
-      export default RepairsView;
+export const Repairs = RepairsView;
+export default RepairsView;

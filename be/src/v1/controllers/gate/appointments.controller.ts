@@ -27,7 +27,7 @@ export const gateAppointmentsController = {
                 appointmentNo: a.appointment_no,
                 apptNo: a.appointment_no,
                 date: start.toISOString().slice(0, 10),
-                hour: start.getHours(),
+                hour: start.getUTCHours(),
                 slotStart: start.toISOString(),
                 slotEnd: end.toISOString(),
                 status: a.status,
@@ -38,6 +38,7 @@ export const gateAppointmentsController = {
                 driverName: a.m_driver?.driver_name || 'Driver',
                 driverPhone: a.m_driver?.phone,
                 partyId: a.transporter_party_id,
+                transporterPartyId: a.transporter_party_id,
                 partyName: a.m_party_appointment?.party_name || 'Global Transporter',
                 visitType: a.appointments_visit_types?.visit_type_name || a.appointments_visit_types?.visit_type_code || 'IMPORT_PICKUP',
                 visitTypeCode: a.appointments_visit_types?.visit_type_code || 'IMPORT_PICKUP',
@@ -86,7 +87,7 @@ export const gateAppointmentsController = {
             appointmentNo: a.appointment_no,
             apptNo: a.appointment_no,
             date: start.toISOString().slice(0, 10),
-            hour: start.getHours(),
+            hour: start.getUTCHours(),
             slotStart: start.toISOString(),
             slotEnd: end.toISOString(),
             status: a.status,
@@ -130,7 +131,8 @@ export const gateAppointmentsController = {
           const newTruck = await prisma.m_truck.create({
             data: {
               plate_no: plateNo,
-              truck_type: 'SEMI_TRAILER',
+              plate_display: plateNo,
+              vehicle_kind: 'TRUCK',
               createdby: 'portal',
             },
           });
@@ -148,7 +150,7 @@ export const gateAppointmentsController = {
           const newDriver = await prisma.m_driver.create({
             data: {
               driver_name: req.body.driverName,
-              license_no: `LIC-${Date.now().toString().slice(-6)}`,
+              licence_no: `LIC-${Date.now().toString().slice(-6)}`,
               phone: req.body.driverPhone,
               createdby: 'portal',
             },
@@ -206,7 +208,7 @@ export const gateAppointmentsController = {
         appointmentNo: created.appointment_no,
         apptNo: created.appointment_no,
         date: created.slot_start.toISOString().slice(0, 10),
-        hour: created.slot_start.getHours(),
+        hour: created.slot_start.getUTCHours(),
         slotStart: created.slot_start.toISOString(),
         slotEnd: created.slot_end.toISOString(),
         status: created.status,
@@ -214,6 +216,7 @@ export const gateAppointmentsController = {
         plateNo: created.m_truck?.plate_no || plateNo,
         driverName: created.m_driver?.driver_name,
         partyName: created.m_party_appointment?.party_name,
+        transporterPartyId: created.transporter_party_id,
         visitType: created.appointments_visit_types?.visit_type_name,
         visitTypeCode: created.appointments_visit_types?.visit_type_code,
       });
@@ -257,14 +260,26 @@ export const gateAppointmentsController = {
         orderBy: { appointment_slot_rule_id: 'asc' },
       });
 
+      const formatTime = (d?: Date | null, fallback = '07:00') => {
+        if (!d) return fallback;
+        const h = String(d.getUTCHours()).padStart(2, '0');
+        const m = String(d.getUTCMinutes()).padStart(2, '0');
+        return `${h}:${m}`;
+      };
+
       const items = (dbRules || []).map((r: any) => ({
         appointmentSlotRuleId: r.appointment_slot_rule_id,
         ruleId: r.appointment_slot_rule_id,
+        weekday: r.weekday,
         flow: r.m_visit_type?.visit_type_code || 'IMPORT_PICKUP',
-        visitTypeCode: r.m_visit_type?.visit_type_code,
-        visitTypeName: r.m_visit_type?.visit_type_name,
+        visitTypeCode: r.m_visit_type?.visit_type_code || 'IMPORT_PICKUP',
+        visitTypeName: r.m_visit_type?.visit_type_name || 'Import pick-up',
+        slotStart: formatTime(r.slot_start, '07:00'),
+        slotEnd: formatTime(r.slot_end, '17:00'),
         slotDurationMin: 60,
-        maxSlotsPerHour: r.capacity_trucks || 20,
+        capacityTrucks: r.capacity_trucks || 6,
+        maxSlotsPerHour: r.capacity_trucks || 6,
+        lateGraceMin: r.late_grace_min || 30,
         isActive: r.is_active ?? true,
       }));
 

@@ -58,7 +58,7 @@ export const setupSettingsController = {
 
   getHolidays: async (req: Request, res: Response) => {
     try {
-      const items = await setupService.getHolidays(req.params.calendarId);
+      const items = await setupService.getHolidays(Number(req.params.calendarId));
       res.json({ items, total: items.length, nextCursor: null });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -67,7 +67,7 @@ export const setupSettingsController = {
 
   createHoliday: async (req: Request, res: Response) => {
     try {
-      const created = await setupService.createHoliday(req.params.calendarId, req.body);
+      const created = await setupService.createHoliday(req.body);
       res.status(201).json(created);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
