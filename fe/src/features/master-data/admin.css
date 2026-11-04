@@ -647,3 +647,28 @@ button.adm-g-btn:hover {
 .adm-page .toolbar .input-icon .input {
   width: 100%;
 }
+
+.adm-page .toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.adm-page .toolbar .input-icon {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.adm-page .toolbar .input-icon .input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.adm-page .toolbar .select {
+  width: 100%;
+  box-sizing: border-box;
+}

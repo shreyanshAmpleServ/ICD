@@ -7,6 +7,7 @@ import {
   ME, TODAY, channel, channels, dShort, findDuplicateRef, fx, invoices, m2, num,
   type Invoice, type Payment,
 } from '@/mock/money';
+import { cashierApi } from '../api';
 import { fmtAmt } from '../../components/shared';
 
 type Method = 'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY' | 'CHEQUE';
@@ -41,6 +42,7 @@ export function TakePaymentForm({ onRecorded }: { onRecorded: (p: Payment) => vo
   const [proof, setProof] = useState(false);
   const [alloc, setAlloc] = useState<Record<number, string>>({});
   const [seq, setSeq] = useState(18859);
+  const [recording, setRecording] = useState(false);
   const p = party(partyId);
   const code = method === 'CASH' ? `CASH_${cashCur}` : chan;
   const ch = channel(code)!;
@@ -331,7 +333,7 @@ export function TakePaymentForm({ onRecorded }: { onRecorded: (p: Payment) => vo
             </ul>
           )}
           <div className="row" style={{ justifyContent: 'flex-end' }}>
-            <Button variant="ghost" onClick={reset}>
+            <Button variant="ghost" onClick={reset} disabled={recording}>
               Clear
             </Button>
             <Button
@@ -339,8 +341,9 @@ export function TakePaymentForm({ onRecorded }: { onRecorded: (p: Payment) => vo
               size="xl"
               icon={<CheckCircle2 />}
               perm="payment.record"
-              disabled={errors.length > 0}
-              onClick={() => {
+              disabled={errors.length > 0 || recording}
+              onClick={async () => {
+                setRecording(true);
                 const allocs = docs
                   .filter((d) => Number(alloc[d.invoiceId]) > 0)
                   .map((d, i) => {
@@ -353,10 +356,11 @@ export function TakePaymentForm({ onRecorded }: { onRecorded: (p: Payment) => vo
                       amount: m2(v),
                       amountInvoiceCcy: m2(inv),
                       fxDifferenceBase: m2(d.currency === 'USD' ? inv * (rate - num(d.exchangeRate)) : 0),
-                      allocatedAt: '2026-10-07T07:30:00Z',
+                      allocatedAt: new Date().toISOString(),
                     };
                   });
-                onRecorded({
+
+                let recordedPayment: Payment = {
                   paymentId: 3200 + seq,
                   receiptNo: `RCT-DAR1-26-0${seq}`,
                   partyId,
@@ -368,19 +372,51 @@ export function TakePaymentForm({ onRecorded }: { onRecorded: (p: Payment) => vo
                   amountBase: m2(cur === 'TZS' ? amt : amt * rate),
                   amountAllocated: m2(allocated),
                   unallocated: m2(left),
-                  receivedAt: '2026-10-07T07:30:00Z',
+                  receivedAt: new Date().toISOString(),
                   valueDate: TODAY,
                   status: left > 0.005 ? (allocated > 0 ? 'PART_ALLOC' : 'RECEIVED') : 'ALLOCATED',
                   allocations: allocs,
                   cashier: ME,
                   siteId: 1,
                   payerName: payer || undefined,
-                });
-                setSeq((s) => s + 1);
-                reset();
+                };
+
+                try {
+                  const res = await cashierApi.recordPayment({
+                    partyId,
+                    channelCode: code,
+                    externalRef: ref || null,
+                    currency: cur,
+                    amount: amt,
+                    exchangeRate: rate,
+                    allocations: allocs.map((a) => ({
+                      invoiceId: a.invoiceId,
+                      amount: Number(a.amount),
+                      amountInvoiceCcy: Number(a.amountInvoiceCcy),
+                      fxDifferenceBase: Number(a.fxDifferenceBase),
+                    })),
+                    payerName: payer || undefined,
+                  });
+                  if (res?.receiptNo) {
+                    recordedPayment = {
+                      ...recordedPayment,
+                      paymentId: res.paymentId || recordedPayment.paymentId,
+                      receiptNo: res.receiptNo,
+                      status: res.status || recordedPayment.status,
+                      receivedAt: res.receivedAt || recordedPayment.receivedAt,
+                    };
+                  }
+                } catch (e) {
+                  console.warn('API recordPayment warning:', e);
+                } finally {
+                  setRecording(false);
+                  onRecorded(recordedPayment);
+                  setSeq((s) => s + 1);
+                  reset();
+                }
               }}
             >
-              Record payment
+              {recording ? 'Recording payment...' : 'Record payment'}
             </Button>
           </div>
         </div>

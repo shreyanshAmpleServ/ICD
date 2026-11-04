@@ -424,7 +424,7 @@ export async function seedPartiesData() {
   console.log(`🎉 Parties Seed Complete! Total Parties: ${count}, Roles: ${roleCount}, Contacts: ${contactCount}`);
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedPartiesData()
     .catch((err) => {
       console.error('❌ Error seeding parties:', err);

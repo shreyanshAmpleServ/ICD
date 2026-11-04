@@ -3,16 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import {
   CommonTable, Meter, MoneyCell, Page, PageHeader, PartyCell, Pill,
 } from '@/ds/components';
+import { useQ } from '@/api/query';
 import { customers, num, statement } from '@/mock/money';
 import { fmtAmt } from '../../components/shared';
+import { statementsApi } from '../api';
 
 export function StatementsListView() {
   const nav = useNavigate();
   const [search, setSearch] = useState('');
 
-  const list = useMemo(() => {
+  const fallbackList = useMemo(() => {
     return customers.map((c) => ({ c, s: statement(c.partyId!) })).sort((a, b) => b.s.outstanding - a.s.outstanding);
   }, []);
+
+  const { data } = useQ(['statements'], () => statementsApi.getStatements());
+  const list = data && data.length > 0 ? data : fallbackList;
 
   const filteredList = useMemo(() => {
     if (!search) return list;

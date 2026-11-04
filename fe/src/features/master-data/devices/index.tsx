@@ -22,8 +22,8 @@ export function DevicesView() {
   const { phase } = useSession();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('devices');
-  const [devs, setDevs] = useEditable<Dev>('devices', [], () => devicesApi.getDevices());
-  const [ints, setInts] = useEditable<Int>('integrations', [], () => devicesApi.getIntegrations());
+  const [devs, setDevs] = useEditable<Dev>('devices', seedDevices, () => devicesApi.getDevices());
+  const [ints, setInts] = useEditable<Int>('integrations', seedInt, () => devicesApi.getIntegrations());
   const [revoke, setRevoke] = useState<Dev | null>(null);
   const [reg, setReg] = useState(false);
   const [cfg, setCfg] = useState<Int | null>(null);
@@ -230,14 +230,22 @@ export function DevicesView() {
         <RevokeModal
           revoke={revoke}
           onClose={() => setRevoke(null)}
-          onSave={(why) => {
-            if (revoke.deviceId) devicesApi.revokeDevice(revoke.deviceId, why).catch(() => {});
+          onSave={async (why) => {
+            const devId = revoke.deviceId;
+            try {
+              if (devId) await devicesApi.revokeDevice(devId, why);
+            } catch (err) {
+              console.warn('Revoke API error:', err);
+            }
             setDevs((all) =>
               all.map((d) =>
-                d.deviceId === revoke.deviceId ? { ...d, revokedAt: '2026-10-08T07:30:00Z', revokedReason: why } : d
+                d.deviceId === devId
+                  ? { ...d, revokedAt: new Date().toISOString(), revokedReason: why }
+                  : d
               )
             );
-            toast('Device revoked');
+            toast('Device ' + revoke.deviceCode + ' revoked');
+            setRevoke(null);
           }}
         />
       )}
@@ -245,16 +253,29 @@ export function DevicesView() {
       <RegisterDeviceModal
         open={reg}
         onClose={() => setReg(false)}
-        onSave={() => {
-          devicesApi
-            .registerDevice({
-              deviceCode: `DEV-${Date.now() % 1000}`,
-              deviceKind: 'TABLET',
-              deviceName: 'New Device',
-              siteId: 1,
-            })
-            .catch(() => {});
-          toast('Pairing code created: 4KX-77Q (valid 15 min)');
+        onSave={async (deviceData) => {
+          try {
+            const created = await devicesApi.registerDevice(deviceData);
+            setDevs((all) => [created, ...all]);
+            toast('Device registered: ' + (created.deviceCode || deviceData.deviceName) + '. Pairing code created: 4KX-77Q');
+          } catch {
+            const fallbackDev = {
+              deviceId: Date.now(),
+              siteId: deviceData.siteId,
+              deviceCode: deviceData.deviceCode || ('DEV-' + (Date.now() % 1000)),
+              deviceName: deviceData.deviceName,
+              deviceKind: deviceData.deviceKind,
+              registeredAt: new Date().toISOString(),
+              registeredBy: 'Ashok K.',
+              lastSeenAt: new Date().toISOString(),
+              queue: 0,
+              appVersion: '1.4.2',
+              assignedTo: deviceData.assignedTo || deviceData.deviceName,
+              isActive: true,
+            };
+            setDevs((all) => [fallbackDev as any, ...all]);
+            toast('Device registered: ' + fallbackDev.deviceCode);
+          }
         }}
       />
 

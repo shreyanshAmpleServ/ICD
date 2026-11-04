@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { LockKeyhole, Printer } from 'lucide-react';
 import {
   Button, CommonTable, Empty, Money, MoneyCell, Page, PageHeader, Panel, PartyCell, Pill, ReferenceCell, StatusCell, Tabs,
@@ -30,7 +30,7 @@ export function CashierView() {
   const { data: dbShifts } = useQ(['cashier-shifts'], () => cashierApi.getShifts());
   const { data: dbPayments } = useQ(['payments'], () => cashierApi.getPayments());
 
-  const allShifts = (dbShifts && dbShifts.length > 0 ? dbShifts : []) as Shift[];
+    const allShifts = (dbShifts && dbShifts.length > 0 ? dbShifts : []) as Shift[];
   const allPayments = (dbPayments && dbPayments.length > 0 ? dbPayments : []) as Payment[];
 
   const [mine, setMine] = useState<Shift[]>(allShifts.filter((s) => s.cashier === ME && s.status === 'OPEN'));
@@ -40,6 +40,23 @@ export function CashierView() {
       .filter((p) => eatDate(p.receivedAt!) === TODAY)
       .sort((a, b) => (b.receivedAt || '').localeCompare(a.receivedAt || ''))
   );
+
+  useEffect(() => {
+    if (dbShifts && dbShifts.length > 0) {
+      setMine(dbShifts.filter((s: Shift) => s.cashier === ME && s.status === 'OPEN'));
+      setOthers(dbShifts.filter((s: Shift) => s.cashier !== ME));
+    }
+  }, [dbShifts]);
+
+  useEffect(() => {
+    if (dbPayments && dbPayments.length > 0) {
+      setList(
+        dbPayments
+          .filter((p: Payment) => eatDate(p.receivedAt!) === TODAY)
+          .sort((a: Payment, b: Payment) => (b.receivedAt || '').localeCompare(a.receivedAt || ''))
+      );
+    }
+  }, [dbPayments]);
   const [search, setSearch] = useState('');
   const [closing, setClosing] = useState(false);
   const [receipt, setReceipt] = useState<Payment | null>(null);
@@ -247,6 +264,7 @@ export function CashierView() {
                         perm="payment.cashup.approve"
                         level="APPR"
                         onClick={() => {
+                          cashierApi.approveShift(s.cashierShiftId, { approvedBy: ME }).catch(() => {});
                           setOthers((o) => o.map((x) => (x === s ? { ...x, status: 'APPROVED', approvedBy: ME } : x)));
                           toast('Cash-up approved');
                         }}

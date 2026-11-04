@@ -23,8 +23,8 @@ export const controlApprovalsController = {
           const dbApprovals = await prisma.approval_request.findMany({
             where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
             include: {
-              m_permission: true,
-              m_site: true,
+              m_permission_approval_request: true,
+              m_site_approval_request: true,
             },
             orderBy: { approval_request_id: 'desc' },
           });
@@ -35,7 +35,7 @@ export const controlApprovalsController = {
               approvalId: Number(a.approval_request_id),
               requestNo: a.request_no,
               permissionCode: a.permission_code,
-              policyName: a.m_permission?.permission_name || a.permission_code,
+              policyName: a.m_permission_approval_request?.permission_name || a.permission_code,
               entityName: a.entity_name,
               entityId: Number(a.entity_id),
               summary: a.summary,
@@ -51,7 +51,7 @@ export const controlApprovalsController = {
               decidedAt: a.decided_at?.toISOString() || null,
               canDecide: true,
               mine: false,
-              siteCode: a.m_site?.site_code || 'DAR1',
+              siteCode: a.m_site_approval_request?.site_code || 'DAR1',
             }));
 
             // Return both items array and wrapper for client flexibility

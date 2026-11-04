@@ -188,12 +188,21 @@
   color: var(--ink-2);
 }
 
+.adm-matrix thead th:not(.rh) {
+  min-width: 105px;
+  max-width: 130px;
+  padding: 10px 6px;
+  vertical-align: middle;
+}
+
 .adm-matrix .vert {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  text-align: left;
-  max-height: 230px;
-  font-size: var(--fs-xs);
+  display: block;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
+  max-width: 120px;
 }
 
 .adm-matrix tr.dim td,
@@ -203,7 +212,11 @@
 
 .adm-matrix th.colsel,
 .adm-matrix td.colsel {
-  box-shadow: inset 0 0 0 9999px var(--hivis-soft);
+  box-shadow: inset 0 0 0 9999px rgba(37, 99, 235, 0.08);
+}
+
+.adm-matrix thead th.colsel {
+  border-bottom: 2px solid var(--brand, #2563eb);
 }
 
 .adm-scroll {
@@ -211,53 +224,68 @@
   max-height: 70vh;
 }
 
-/* grant chips: neutral shapes so they never read as signals */
+/* grant chips: vibrant distinctive semantic colors */
 .adm-g {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: var(--r-sm);
+  min-width: 44px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 5px;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: .03em;
+  letter-spacing: .04em;
   font-family: var(--font-cond);
-  border: 1px solid transparent;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.12s ease;
 }
 
 .adm-g-DO {
-  background: var(--ink);
-  color: var(--paper);
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
 }
 
 .adm-g-APPR {
-  background: var(--paper);
-  color: var(--ink);
-  border: 2px solid var(--ink);
+  background: #f3e8ff;
+  color: #7e22ce;
+  border: 1.5px solid #c084fc;
 }
 
 .adm-g-REQ {
-  background: var(--paper);
-  color: var(--ink-2);
-  border: 1px dashed var(--ink-2);
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px dashed #f59e0b;
 }
 
 .adm-g-VIEW {
-  background: var(--steel-2);
-  color: var(--ink-2);
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
 }
 
 .adm-g-none {
-  color: var(--ink-3);
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  box-shadow: none;
 }
 
 button.adm-g-btn {
   background: none;
   border: 0;
-  padding: 2px;
+  padding: 4px;
   cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+button.adm-g-btn:hover {
+  background: var(--paper-2, #f1f5f9);
+  transform: scale(1.06);
+}
   border-radius: var(--r-sm);
 }
 
@@ -646,4 +674,29 @@ button.adm-g-btn:hover {
 
 .adm-page .toolbar .input-icon .input {
   width: 100%;
+}
+
+.adm-page .toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.adm-page .toolbar .input-icon {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.adm-page .toolbar .input-icon .input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.adm-page .toolbar .select {
+  width: 100%;
+  box-sizing: border-box;
 }

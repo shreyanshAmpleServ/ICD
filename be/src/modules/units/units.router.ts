@@ -195,9 +195,9 @@ router.get(
     const items = await cargoService.getUnits(req.query);
     const paginationParams = parsePaginationParams(req.query);
     const paginated = paginateArray(
-      items,
+      items as any[],
       paginationParams,
-      (s) => s.unitStayId,
+      (s: any) => s.unitStayId,
     );
     res.json(paginated);
   }),
@@ -273,7 +273,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const holds = await cargoService.getHolds({ unitStayId: req.params.unitStayId });
     const params = parsePaginationParams(req.query);
-    const paginated = paginateArray(holds, params);
+    const paginated = paginateArray(holds as any[], params);
     res.json(paginated);
   }),
 );

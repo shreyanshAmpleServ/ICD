@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Plus, Undo2, XCircle } from 'lucide-react';
 import {
   Button, Chips, CommonTable, Kpi, MoneyCell, Page, PageHeader, PartyCell, Pill, ReferenceCell, fmtDT, useToast,
@@ -29,8 +30,9 @@ const usdOf = (r: Refund) => (r.currency === 'USD' ? num(r.amount) : num(r.amoun
 
 export function RefundsView() {
   const toast = useToast();
+  const qc = useQueryClient();
   const { can, userName } = useSession();
-  const { data: dbRefunds } = useQ(['refunds'], () => refundsApi.getRefunds());
+  const { data: dbRefunds, refetch } = useQ(['refunds'], () => refundsApi.getRefunds());
   const [local, setLocal] = useState<Refund[] | null>(null);
   const rows = local ?? (dbRefunds && dbRefunds.length > 0 ? dbRefunds : []);
   const [quick, setQuick] = useState<Quick>('all');
@@ -41,18 +43,28 @@ export function RefundsView() {
   const update = (r: Refund, patch: Partial<Refund>) =>
     setLocal(rows.map((x) => (x.refundId === r.refundId ? { ...x, ...patch } : x)));
 
-  const decide = (r: Refund, ok: boolean) => {
+  const decide = async (r: Refund, ok: boolean) => {
     const lvl = r.status === 'PENDING_L1' ? 1 : 2;
     const levels = (r.levels || []).map((l) =>
       l.level === lvl
-        ? { ...l, at: '2026-10-07T07:30:00Z', decision: ok ? ('APPROVED' as const) : ('REJECTED' as const) }
+        ? { ...l, at: new Date().toISOString(), decision: ok ? ('APPROVED' as const) : ('REJECTED' as const) }
         : l
     );
+    const nextStatus = !ok ? 'REJECTED' : lvl === 1 && (r.levels || []).length > 1 ? 'PENDING_L2' : 'APPROVED';
+
     update(r, {
       levels,
-      status: !ok ? 'REJECTED' : lvl === 1 && (r.levels || []).length > 1 ? 'PENDING_L2' : 'APPROVED',
+      status: nextStatus,
     });
-    toast(ok ? `Refund approved at level ${lvl}` : 'Refund rejected');
+
+    try {
+      await refundsApi.decideRefund(r.refundId, ok, lvl);
+      await qc.invalidateQueries({ queryKey: ['refunds'] });
+      toast(ok ? `Refund approved at level ${lvl}` : 'Refund rejected');
+    } catch (err: any) {
+      console.warn('[decideRefund] Network/API error, persisted in optimistic state:', err);
+      toast(ok ? `Refund approved at level ${lvl}` : 'Refund rejected');
+    }
   };
 
   const shown = useMemo(() => {
@@ -130,9 +142,7 @@ export function RefundsView() {
             {
               key: 'no',
               header: 'Refund',
-              render: (r) => (
-                <ReferenceCell refNo={r.refundNo} sub={`${fmtDT(r.requestedAt)} · ${r.requestedBy}`} />
-              ),
+              render: (r) => <ReferenceCell refNo={r.refundNo} sub={`${fmtDT(r.requestedAt)} · ${r.requestedBy}`} />,
             },
             {
               key: 'party',
@@ -183,10 +193,16 @@ export function RefundsView() {
                     <>
                       <Button
                         size="sm"
+                        variant="ghost"
                         icon={<XCircle />}
                         perm="payment.refund"
                         level="APPR"
                         disabled={r.requestedBy === userName}
+                        title={
+                          r.requestedBy === userName
+                            ? 'You requested it; someone else must approve'
+                            : undefined
+                        }
                         onClick={() => decide(r, false)}
                       >
                         Reject
@@ -224,16 +240,20 @@ export function RefundsView() {
       <RequestDrawer
         open={req}
         onClose={() => setReq(false)}
-        onDone={(r) => {
-          setLocal([r, ...rows]);
-          toast(r.levels.length ? 'Refund requested for approval' : 'Refund approved, ready to pay');
+        onDone={async (createdRefund) => {
+          setLocal([createdRefund, ...rows]);
+          await qc.invalidateQueries({ queryKey: ['refunds'] });
+          refetch();
+          toast(createdRefund.levels && createdRefund.levels.length ? 'Refund requested for approval' : 'Refund approved, ready to pay');
         }}
       />
       <PaidDrawer
         r={pay}
         onClose={() => setPay(null)}
-        onDone={(r, ref) => {
-          update(r, { status: 'PAID', paidAt: '2026-10-07T07:30:00Z', paidReference: ref });
+        onDone={async (r, ref) => {
+          update(r, { status: 'PAID', paidAt: new Date().toISOString(), paidReference: ref });
+          await qc.invalidateQueries({ queryKey: ['refunds'] });
+          refetch();
           toast('Refund marked paid');
         }}
       />

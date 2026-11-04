@@ -5,8 +5,9 @@ import { delay } from '@/api/query';
 export const invoicesApi = {
   getInvoices: async (siteId?: number) => {
     try {
-      const res = await api.get<any[]>('/invoices');
-      if (res && res.length > 0) return res;
+      const url = siteId ? `/invoices?siteId=${siteId}` : '/invoices';
+      const res = await api.get<any[]>(url);
+      if (res && Array.isArray(res) && res.length > 0) return res;
       return siteId ? invoices.filter((i) => i.siteId === siteId) : invoices;
     } catch {
       return delay(siteId ? invoices.filter((i) => i.siteId === siteId) : invoices);

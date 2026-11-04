@@ -5,7 +5,7 @@ import {
 } from '@/ds/components';
 import { useSession } from '@/app/session';
 import { useQ } from '@/api/query';
-import { HOLIDAYS, TODAY, addDays, dLong, dShort, isSunday, rateOn, rates, type Rate } from '@/mock/money';
+import { HOLIDAYS, TODAY, addDays, dLong, dShort, isSunday, type Rate } from '@/mock/money';
 import { RateChart } from '../components/shared';
 import { exchangeRatesApi } from './api';
 import { RateDrawer } from './components/RateDrawer';
@@ -18,20 +18,30 @@ const f2 = (v: string | number) =>
 export function ExchangeRatesView() {
   const toast = useToast();
   const { can } = useSession();
-  const { data: dbRates } = useQ(['rates'], () => exchangeRatesApi.getRates());
+  const { data: dbRates, refetch: refetchRates } = useQ(['rates'], () => exchangeRatesApi.getRates());
   const [local, setLocal] = useState<Rate[] | null>(null);
-  const all = local ?? (dbRates && dbRates.length > 0 ? dbRates : rates);
+  const all = local ?? dbRates ?? [];
   const [kind, setKind] = useState<'ALL' | 'DAILY' | 'MONTHLY'>('ALL');
   const [search, setSearch] = useState('');
   const [entry, setEntry] = useState<Rate | 'new' | null>(null);
   const [look, setLook] = useState(addDays(TODAY, -3));
+  const { data: dbEff } = useQ(['effectiveRate', look], () => exchangeRatesApi.getEffectiveRate(look));
 
   const daily = all.filter((r) => r.rateKind === 'DAILY').sort((a, b) => (a.rateDate ?? '').localeCompare(b.rateDate ?? ''));
-  const today = rateOn(TODAY);
+  const today = useMemo(() => {
+    const dList = all.filter((r) => r.rateKind === 'DAILY' && (r.rateDate ?? '') <= TODAY).sort((a, b) => (b.rateDate ?? '').localeCompare(a.rateDate ?? ''));
+    const d = dList[0];
+    if (d && d.rateDate === TODAY) return { rate: d, note: 'Daily rate for this date' };
+    if (d && (d.rateDate ?? '').slice(0, 7) === TODAY.slice(0, 7)) {
+      return { rate: d, note: `No rate on ${dShort(TODAY)}${isSunday(TODAY) ? ' (Sunday)' : HOLIDAYS[TODAY] ? ` (${HOLIDAYS[TODAY]})` : ''}; last daily rate carries forward` };
+    }
+    const m = all.filter((r) => r.rateKind === 'MONTHLY' && (r.rateDate ?? '') <= TODAY).sort((a, b) => (b.rateDate ?? '').localeCompare(a.rateDate ?? ''))[0];
+    return { rate: m ?? all[0] ?? ({ exchangeRateId: 0, companyId: 1, fromCurrency: 'USD', toCurrency: 'TZS', rateDate: TODAY, rate: '2669.96', rateKind: 'DAILY', sourceNote: 'BoT mean rate 09:00', usedBy: 0, enteredAt: '', enteredBy: 'Grace Mrema' } as any), note: 'No daily rate; monthly rate used' };
+  }, [all]);
   const prev30 = daily.filter((r) => (r.rateDate ?? '') <= addDays(TODAY, -30)).pop();
   const chg = prev30 ? ((Number(today.rate.rate) - Number(prev30.rate)) / Number(prev30.rate)) * 100 : 0;
   const month = all.find((r) => r.rateKind === 'MONTHLY' && r.rateDate === TODAY.slice(0, 8) + '01');
-  const eff = rateOn(look);
+  const eff = dbEff?.rate ? dbEff : { rate: today.rate, note: 'Rate in force' };
 
   const rows = useMemo(() => {
     return all
@@ -212,7 +222,13 @@ export function ExchangeRatesView() {
         entry={entry}
         onClose={() => setEntry(null)}
         all={all}
-        onSave={(r, isNew) => {
+        onSave={async (r, isNew) => {
+          try {
+            await exchangeRatesApi.saveRate(r);
+            refetchRates();
+          } catch (e) {
+            console.warn('API save fallback:', e);
+          }
           setLocal(isNew ? [r, ...all] : all.map((x) => (x.exchangeRateId === r.exchangeRateId ? r : x)));
           toast(isNew ? 'Exchange rate saved' : 'Exchange rate corrected');
         }}

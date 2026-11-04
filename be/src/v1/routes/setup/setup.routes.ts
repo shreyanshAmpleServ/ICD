@@ -110,16 +110,28 @@ setupRoutes.get('/equipment', requireSite(false), requirePermission('masters.vie
 setupRoutes.post('/equipment', requireSite(false), requirePermission('masters.view', 'DO'), setupMastersController.createEquipment);
 setupRoutes.patch('/equipment/:equipmentId', requireSite(false), requirePermission('masters.view', 'DO'), setupMastersController.updateEquipment);
 
-// 6. Users & Roles
+// 6. Users & Roles (Global Administration)
 setupRoutes.get('/users', requireSite(true), requirePermission('masters.view'), setupUsersController.getUsers);
 setupRoutes.post('/users', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.createUser);
 setupRoutes.patch('/users/:userId', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateUser);
+setupRoutes.post('/users/:userId/roles', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.grantRole);
+setupRoutes.delete('/users/:userId/roles/:roleGrantIdOrCode', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.revokeRole);
+setupRoutes.post('/users/:userId/activate', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.activateUser);
+setupRoutes.post('/users/:userId/deactivate', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.deactivateUser);
 
-setupRoutes.get('/roles', requireSite(true), requirePermission('masters.view'), setupUsersController.getRoles);
-setupRoutes.post('/roles', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.createRole);
-setupRoutes.patch('/roles/:roleId', requireSite(true), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateRole);
+setupRoutes.get('/roles', requireSite(false), requirePermission('masters.view'), setupUsersController.getRoles);
+setupRoutes.post('/roles', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.createRole);
+setupRoutes.patch('/roles/:roleId', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateRole);
+setupRoutes.put('/roles/:roleId/permissions', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateRolePermissions);
+setupRoutes.patch('/roles/:roleId/permissions', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.updateRolePermissions);
 
-setupRoutes.get('/permissions', requireSite(true), requirePermission('masters.view'), setupUsersController.getPermissions);
+setupRoutes.get('/permissions', requireSite(false), requirePermission('masters.view'), setupUsersController.getPermissions);
+setupRoutes.post('/permissions', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.createPermission);
+
+setupRoutes.get('/delegations', requireSite(false), requirePermission('masters.view'), setupUsersController.getDelegations);
+setupRoutes.post('/delegations', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.createDelegation);
+setupRoutes.post(['/delegations/:delegationId:revoke', '/delegations/:delegationId/revoke'], requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.revokeDelegation);
+setupRoutes.delete('/delegations/:delegationId', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.revokeDelegation);
 
 // 7. Rules, Holds & Approvals Policies
 setupRoutes.get('/hold-types', requireSite(true), requirePermission('masters.view'), setupRulesController.getHoldTypes);
@@ -151,6 +163,18 @@ setupRoutes.patch('/damage-codes/:codeId', requireSite(true), requirePermission(
 setupRoutes.get('/accounting-periods', requireSite(true), requirePermission('masters.view'), setupFinanceController.getAccountingPeriods);
 setupRoutes.post('/accounting-periods', requireSite(true), requirePermission('finance.period.close', 'DO'), setupFinanceController.createAccountingPeriod);
 setupRoutes.patch('/accounting-periods/:periodId', requireSite(true), requirePermission('finance.period.close', 'DO'), setupFinanceController.updateAccountingPeriod);
+setupRoutes.post(
+  ['/accounting-periods/:periodKey:close', '/accounting-periods/:periodKey/close'],
+  requireSite(true),
+  requirePermission('finance.period.close', 'DO'),
+  setupFinanceController.closePeriod
+);
+setupRoutes.post(
+  ['/accounting-periods/:periodKey:reopen', '/accounting-periods/:periodKey/reopen'],
+  requireSite(true),
+  requirePermission('finance.period.close', 'DO'),
+  setupFinanceController.reopenPeriod
+);
 
 setupRoutes.get('/charge-codes', requireSite(true), requirePermission('masters.view'), setupFinanceController.getChargeCodes);
 setupRoutes.post('/charge-codes', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupFinanceController.createChargeCode);
@@ -194,6 +218,18 @@ setupRoutes.patch('/document-types/:documentTypeId', requireSite(true), requireP
 setupRoutes.get('/devices', requireSite(false), requirePermission('masters.view'), setupDevicesController.getDevices);
 setupRoutes.post('/devices', requireSite(false), requirePermission('admin.device.manage', 'DO'), setupDevicesController.createDevice);
 setupRoutes.patch('/devices/:deviceId', requireSite(false), requirePermission('admin.device.manage', 'DO'), setupDevicesController.updateDevice);
+setupRoutes.post(
+  ['/devices/:deviceId:revoke', '/devices/:deviceId/revoke'],
+  requireSite(false),
+  requirePermission('admin.device.manage', 'DO'),
+  setupDevicesController.revokeDevice
+);
+setupRoutes.delete(
+  '/devices/:deviceId',
+  requireSite(false),
+  requirePermission('admin.device.manage', 'DO'),
+  setupDevicesController.revokeDevice
+);
 
 setupRoutes.get('/device-integrations', requireSite(false), requirePermission('masters.view'), setupDevicesController.getDeviceIntegrations);
 setupRoutes.post('/device-integrations', requireSite(false), requirePermission('admin.device.manage', 'DO'), setupDevicesController.createDeviceIntegration);

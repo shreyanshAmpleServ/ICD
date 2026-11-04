@@ -127,7 +127,7 @@ export function YardMapView() {
 
   const units = useMemo(() => {
     return (allStaysList as Stay[]).filter(
-      (s) => s.physicalStatus === 'IN_YARD' && s.currentLocation
+      (s) => (s.physicalStatus === 'IN_YARD' || s.physicalStatus === 'AT_ACTIVITY') && s.currentLocation
     );
   }, [allStaysList]);
 
@@ -137,22 +137,26 @@ export function YardMapView() {
       const fullCode = u.currentLocation?.fullCode || '';
       let code = (fullCode.split('-')[0] || 'A').toUpperCase();
       if (code === 'REEFER') code = 'R';
+      if (code === 'X') code = 'EXAM';
       m.set(code, [...(m.get(code) ?? []), u]);
     }
     return m;
   }, [units]);
 
-  const stackAt = (b: Block, row: number, bay: number) =>
-    (byBlock.get(b.code) ?? []).filter((u) => {
+  const stackAt = (b: Block, row: number, bay: number) => {
+    const blockCode = b.code.toUpperCase();
+    const list = byBlock.get(blockCode) ?? [];
+    return list.filter((u) => {
       const p = (u.currentLocation?.fullCode || '').split('-');
       if (p.length >= 3) {
         return Number(p[1]) === row && Number(p[2]) === bay;
       }
       if (p.length === 2) {
-        return row === 1 && Number(p[1]) === bay;
+        return (row === 1 && Number(p[1]) === bay) || (bay === 1 && Number(p[1]) === row);
       }
       return false;
     });
+  };
 
   // Auto-select block and slot from URL parameters (e.g. ?block=B or ?block=B&slot=B-01-02)
   useEffect(() => {

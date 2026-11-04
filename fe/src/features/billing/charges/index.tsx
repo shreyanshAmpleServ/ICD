@@ -407,7 +407,8 @@ export function ChargesView() {
         onClose={() => setManual(false)}
         siteId={site.siteId}
         onDone={(r) => {
-          setLocal([...rows, r]);
+          setLocal([r, ...rows]);
+          if (bill !== 'ALL' && bill !== String(r.billToPartyId)) setBill('ALL');
           setOpen((s) => new Set(s).add(r.consignmentId ?? 0));
           toast('Manual charge requested for approval');
         }}
@@ -417,6 +418,7 @@ export function ChargesView() {
         onClose={() => setCreate(null)}
         rows={selRows}
         partyId={selBill[0]}
+        siteId={site.siteId}
         onDone={(no, docKind) => {
           setLocal(rows.filter((r) => !sel.has(r.chargeId)));
           setSel(new Set());

@@ -5,7 +5,7 @@ import {
   fmtD, fmtDT, useToast,
 } from '@/ds/components';
 import { useQ } from '@/api/query';
-import { glPostings, periods, type GlPost, type Period } from '@/mock/money';
+import type { GlPost, Period } from '@/mock/money';
 import { GlPill } from '../components/shared';
 import { ledgerApi } from './api';
 import { JournalDrawer } from './components/JournalDrawer';
@@ -18,12 +18,13 @@ type St = 'all' | GlPost['status'];
 
 export function LedgerView() {
   const toast = useToast();
-  const { data: dbGl } = useQ(['gl'], () => ledgerApi.getGlPostings());
-  const { data: dbPeriods } = useQ(['periods'], () => ledgerApi.getAccountingPeriods());
+  const { data: dbGl, refetch: refetchGl } = useQ(['gl'], () => ledgerApi.getGlPostings());
+  const { data: dbPeriods, refetch: refetchPeriods } = useQ(['periods'], () => ledgerApi.getAccountingPeriods());
 
   const [local, setLocal] = useState<GlPost[] | null>(null);
-  const rows = local ?? (dbGl && dbGl.length > 0 ? dbGl : glPostings);
-  const [per, setPer] = useState<Period[]>(dbPeriods && dbPeriods.length > 0 ? dbPeriods : periods);
+  const [localPer, setLocalPer] = useState<Period[] | null>(null);
+  const rows = local ?? dbGl ?? [];
+  const per = localPer ?? dbPeriods ?? [];
   const [tab, setTab] = useState<TabId>('postings');
   const [st, setSt] = useState<St>('all');
   const [q, setQ] = useState('');
@@ -38,7 +39,13 @@ export function LedgerView() {
       (!q || r.sourceNo.includes(q.toUpperCase()) || (r.externalRef ?? '').includes(q.toUpperCase()))
   );
 
-  const retry = (g: GlPost) => {
+  const retry = async (g: GlPost) => {
+    try {
+      await ledgerApi.retryPosting(g.glPostingId);
+      refetchGl();
+    } catch (e: any) {
+      console.warn('Retry API call:', e);
+    }
     setLocal(
       rows.map((x) =>
         x.glPostingId === g.glPostingId
@@ -271,8 +278,14 @@ export function LedgerView() {
       <PeriodCloseModal
         closing={closing}
         onCloseClosing={() => setClosing(null)}
-        onConfirmClose={(p) => {
-          setPer(
+        onConfirmClose={async (p) => {
+          try {
+            await ledgerApi.closePeriod(p.accountingPeriodId);
+            refetchPeriods();
+          } catch (e: any) {
+            console.warn('Close period API:', e);
+          }
+          setLocalPer(
             per.map((item) =>
               item === p
                 ? { ...item, status: 'CLOSED', closedAt: '2026-10-07T07:30:00Z', closedBy: 'Neema Mushi' }
@@ -285,8 +298,14 @@ export function LedgerView() {
         blockingCount={closing ? inPeriod(closing).filter((r) => r.status !== 'POSTED').length : 0}
         reopen={reopen}
         onCloseReopen={() => setReopen(null)}
-        onConfirmReopen={(p) => {
-          setPer(per.map((item) => (item === p ? { ...item, status: 'OPEN' } : item)));
+        onConfirmReopen={async (p) => {
+          try {
+            await ledgerApi.reopenPeriod(p.accountingPeriodId, 'Operational adjustment');
+            refetchPeriods();
+          } catch (e: any) {
+            console.warn('Reopen period API:', e);
+          }
+          setLocalPer(per.map((item) => (item === p ? { ...item, status: 'OPEN' } : item)));
           toast('Period reopened');
         }}
       />

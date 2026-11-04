@@ -40,7 +40,21 @@ export function TariffsView() {
         ms="M3"
         sub="Customer, then line, then regime, then site: the most specific active tariff rates each event"
         actions={
-          <Button variant="primary" icon={<Plus />} perm="billing.tariff.change" onClick={() => nav('/tariffs/32')}>
+          <Button
+            variant="primary"
+            icon={<Plus />}
+            perm="billing.tariff.change"
+            onClick={() => {
+              const draft = data.find((x) => x.status === 'DRAFT');
+              if (draft) {
+                nav(`/tariffs/${draft.tariffId}`);
+              } else if (data[0]) {
+                nav(`/tariffs/${data[0].tariffId}`);
+              } else {
+                nav('/tariffs/4');
+              }
+            }}
+          >
             New tariff
           </Button>
         }

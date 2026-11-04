@@ -21,6 +21,8 @@ import {
   equipment as seedEquipment,
   users as seedUsers,
   permissions as seedPerms,
+  delegations as seedDelegations,
+  holdTypesSeed as seedHoldTypes,
   releaseRules as seedReleaseRules,
   approvalPolicies as seedApprovalPolicies,
   exceptionTypes as seedExceptionTypes,
@@ -479,81 +481,81 @@ class SetupService {
         if (data.map?.w !== undefined || data.mapW !== undefined) updateData.map_w = data.map?.w ?? data.mapW;
         if (data.map?.h !== undefined || data.mapH !== undefined) updateData.map_h = data.map?.h ?? data.mapH;
 
-          const existing = await db.m_yard_location.findUnique({
+        const existing = await db.m_yard_location.findUnique({
+          where: { yard_location_id: locId },
+        });
+
+        if (existing) {
+          const updated = await db.m_yard_location.update({
             where: { yard_location_id: locId },
+            data: updateData,
           });
 
-            if(existing) {
-              const updated = await db.m_yard_location.update({
+          // Persist tags if provided
+          if (Array.isArray(data.tags)) {
+            try {
+              await db.m_yard_location_tag.deleteMany({
                 where: { yard_location_id: locId },
-                data: updateData,
               });
-
-              // Persist tags if provided
-              if (Array.isArray(data.tags)) {
-                try {
-                  await db.m_yard_location_tag.deleteMany({
-                    where: { yard_location_id: locId },
+              for (const tagCode of data.tags) {
+                let tag = await db.m_location_tag.findFirst({
+                  where: { tag_code: tagCode },
+                });
+                if (!tag) {
+                  tag = await db.m_location_tag.create({
+                    data: {
+                      tag_code: tagCode,
+                      tag_name: tagCode,
+                      createdby: 'SYSTEM',
+                    },
                   });
-                      for(const tagCode of data.tags) {
-                      let tag = await db.m_location_tag.findFirst({
-                        where: { tag_code: tagCode },
-                      });
-                      if (!tag) {
-                        tag = await db.m_location_tag.create({
-                          data: {
-                            tag_code: tagCode,
-                            tag_name: tagCode,
-                            createdby: 'SYSTEM',
-                          },
-                        });
-                      }
-                      await db.m_yard_location_tag.create({
-                        data: {
-                          yard_location_id: locId,
-                          location_tag_id: tag.location_tag_id,
-                          createdby: 'SYSTEM',
-                        },
-                      });
-                    }
-                  } catch (tagErr: any) {
-                    console.warn('[SetupService.updateYardLocation] Tags error:', tagErr.message);
-                  }
                 }
-
-                const resObj = {
-                  yardLocationId: updated.yard_location_id,
-                  locationId: updated.yard_location_id,
-                  siteId: updated.site_id,
-                  parentId: updated.parent_id,
-                  levelNo: updated.level_no,
-                  locationCode: updated.location_code,
-                  fullCode: updated.full_code,
-                  name: updated.location_code,
-                  kind: updated.location_kind,
-                  locationKind: updated.location_kind,
-                  isSlot: updated.is_slot,
-                  allows20: updated.allows_20,
-                  allows40: updated.allows_40,
-                  allows45: updated.allows_45,
-                  maxTier: updated.max_tier,
-                  maxWeightKg: updated.max_weight_kg,
-                  isBlocked: updated.is_blocked,
-                  blockedReason: updated.blocked_reason,
-                  tags: data.tags || [],
-                };
-                const inMem = seedYardNodes.find((n) => n.yardLocationId === locId);
-                if (inMem) Object.assign(inMem, resObj);
-                return resObj;
+                await db.m_yard_location_tag.create({
+                  data: {
+                    yard_location_id: locId,
+                    location_tag_id: tag.location_tag_id,
+                    createdby: 'SYSTEM',
+                  },
+                });
               }
-            } catch(err: any) {
-              console.warn('[SetupService.updateYardLocation] DB error:', err.message);
+            } catch (tagErr: any) {
+              console.warn('[SetupService.updateYardLocation] Tags error:', tagErr.message);
             }
           }
-    const inMem = seedYardNodes.find((n) => n.yardLocationId === locId || String(n.locationCode) === String(id));
-          if (inMem) Object.assign(inMem, data);
-          return { yardLocationId: locId, ...data };
+
+          const resObj = {
+            yardLocationId: updated.yard_location_id,
+            locationId: updated.yard_location_id,
+            siteId: updated.site_id,
+            parentId: updated.parent_id,
+            levelNo: updated.level_no,
+            locationCode: updated.location_code,
+            fullCode: updated.full_code,
+            name: updated.location_code,
+            kind: updated.location_kind,
+            locationKind: updated.location_kind,
+            isSlot: updated.is_slot,
+            allows20: updated.allows_20,
+            allows40: updated.allows_40,
+            allows45: updated.allows_45,
+            maxTier: updated.max_tier,
+            maxWeightKg: updated.max_weight_kg,
+            isBlocked: updated.is_blocked,
+            blockedReason: updated.blocked_reason,
+            tags: data.tags || [],
+          };
+          const inMem = seedYardNodes.find((n) => n.yardLocationId === locId);
+          if (inMem) Object.assign(inMem, resObj);
+          return resObj;
         }
+      } catch (err: any) {
+        console.warn('[SetupService.updateYardLocation] DB error:', err.message);
+      }
+    }
+    const inMem = seedYardNodes.find((n) => n.yardLocationId === locId || String(n.locationCode) === String(id));
+    if (inMem) Object.assign(inMem, data);
+    return { yardLocationId: locId, ...data };
+  }
 
   public async deleteYardLocation(id: string | number): Promise<any> {
     const db = this.db;
@@ -727,7 +729,7 @@ class SetupService {
       inMemBlock.bays = bays;
       inMemBlock.maxTier = tiers;
       inMemBlock.draft = false;
-      inMemBlock.childCount = rows;
+      (inMemBlock as any).childCount = rows;
       if (data.allows20 !== undefined) inMemBlock.allows20 = data.allows20;
       if (data.allows40 !== undefined) inMemBlock.allows40 = data.allows40;
       if (data.allows45 !== undefined) inMemBlock.allows45 = data.allows45;
@@ -2334,11 +2336,29 @@ class SetupService {
   // =========================================================================
   // 6. Users & Roles
   // =========================================================================
-  public async getUsers(): Promise<any[]> {
+  public customRoles: Map<string, any> = new Map();
+  public customPerms: any[] = [];
+  public customDelegations: any[] = [];
+  public customHoldTypes: any[] = [];
+  public customApprovalPolicies: any[] = [];
+  public customExceptionTypes: any[] = [];
+  public customInspectionTemplates: any[] = [];
+  public customDamageCodes: any[] = [];
+  public customDevices: any[] = [];
+  public customNumberSequences: any[] = [];
+  public customDocumentTypes: any[] = [];
+  public customAccountingPeriods: any[] = [];
+  public customChargeCodes: any[] = [];
+  public customTaxCodes: any[] = [];
+  public customPaymentChannels: any[] = [];
+  public customGlSettings: any[] = [];
+
+  public async getUsers(filter?: { q?: string; role?: string; siteId?: number | string; active?: string | boolean }): Promise<any[]> {
+    let list: any[] = [];
     const db = this.db;
     if (db) {
       try {
-        const rows = await db.app_user.findMany({
+        const fetchPromise = db.app_user.findMany({
           include: {
             user_site_role: {
               include: { m_role: true, m_site: true },
@@ -2346,14 +2366,20 @@ class SetupService {
           },
           orderBy: { user_id: 'asc' },
         });
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('DB_TIMEOUT')), 1200)
+        );
+        const rows = (await Promise.race([fetchPromise, timeoutPromise])) as any[];
         if (rows.length > 0) {
-          return rows.map((u) => {
+          list = rows.map((u) => {
             const roleGrants = u.user_site_role.map((ur) => ({
+              userRoleId: ur.user_site_role_id || undefined,
               roleCode: ur.m_role?.role_code || 'GATE_OFFICER',
               roleName: ur.m_role?.role_name || 'Gate officer',
               siteId: ur.site_id,
               validFrom: ur.valid_from?.toISOString(),
               validTo: ur.valid_to?.toISOString(),
+              grantedBy: 'Admin',
             }));
             const siteCodes = [...new Set(u.user_site_role.map((ur) => ur.m_site?.site_code || 'All sites'))];
             return {
@@ -2378,7 +2404,57 @@ class SetupService {
         console.warn('[SetupService.getUsers] DB error:', err.message);
       }
     }
-    return seedUsers;
+    if (!list || list.length === 0) {
+      list = seedUsers;
+    }
+
+    if (!filter) return list;
+
+    return list.filter((u) => {
+      // 1. Text Search (q)
+      if (filter.q && filter.q.trim()) {
+        const qLower = filter.q.trim().toLowerCase();
+        const nameMatch = (u.userName || u.fullName || '').toLowerCase().includes(qLower);
+        const emailMatch = (u.email || '').toLowerCase().includes(qLower);
+        const phoneMatch = (u.phone || '').toLowerCase().includes(qLower);
+        const subMatch = (u.userSub || '').toLowerCase().includes(qLower);
+        const titleMatch = (u.title || '').toLowerCase().includes(qLower);
+        const roleMatch = (u.roleGrants || []).some((g: any) =>
+          (g.roleCode || '').toLowerCase().includes(qLower) ||
+          (g.roleName || '').toLowerCase().includes(qLower)
+        );
+        if (!nameMatch && !emailMatch && !phoneMatch && !subMatch && !titleMatch && !roleMatch) {
+          return false;
+        }
+      }
+
+      // 2. Status Filter (active / inactive / all)
+      if (filter.active && filter.active !== 'all') {
+        const isActive = filter.active === 'active' || filter.active === true || filter.active === 'true';
+        if (Boolean(u.isActive) !== isActive) {
+          return false;
+        }
+      }
+
+      // 3. Role Filter
+      if (filter.role && filter.role !== 'all') {
+        const hasRole = (u.roleGrants || []).some((g: any) =>
+          g.roleCode === filter.role || g.roleName === filter.role
+        );
+        if (!hasRole) return false;
+      }
+
+      // 4. Site Filter
+      if (filter.siteId !== undefined && filter.siteId !== 'all' && String(filter.siteId).toLowerCase() !== 'all' && filter.siteId !== '') {
+        const targetSiteId = Number(filter.siteId);
+        const hasSite = (u.roleGrants || []).some((g: any) =>
+          g.siteId === targetSiteId || g.siteId === null || g.siteId === undefined
+        ) || (u.siteCodes || []).includes('All sites');
+        if (!hasSite) return false;
+      }
+
+      return true;
+    });
   }
 
   public async createUser(data: any): Promise<any> {
@@ -2429,6 +2505,182 @@ class SetupService {
     return match || data;
   }
 
+  public async grantUserRole(userId: number, grant: any): Promise<any> {
+    const user = seedUsers.find((u) => u.userId === Number(userId));
+    if (user) {
+      if (!(user as any).roleGrants) (user as any).roleGrants = [];
+      const newGrant = {
+        roleCode: grant.roleCode || 'GATE_OFFICER',
+        roleName: grant.roleName || (ROLES[grant.roleCode]?.name ?? grant.roleCode),
+        siteId: grant.siteId ? Number(grant.siteId) : null,
+        validFrom: grant.validFrom || new Date().toISOString(),
+        validTo: grant.validTo || undefined,
+        grantedBy: 'Admin',
+      };
+      (user as any).roleGrants.push(newGrant);
+      if (grant.siteCode && !user.siteCodes?.includes(grant.siteCode)) {
+        user.siteCodes = [...(user.siteCodes || []), grant.siteCode];
+      }
+      return newGrant;
+    }
+    return grant;
+  }
+
+  public async revokeUserRole(userId: number, roleGrantIdOrCode: string | number): Promise<any> {
+    const user = seedUsers.find((u) => u.userId === Number(userId));
+    if (user && user.roleGrants) {
+      (user as any).roleGrants = ((user as any).roleGrants || []).filter(
+        (g: any) => g.roleCode !== roleGrantIdOrCode && g.userRoleId !== roleGrantIdOrCode
+      );
+    }
+    return { success: true };
+  }
+
+  public async activateUser(userId: number): Promise<any> {
+    const user = seedUsers.find((u) => u.userId === Number(userId));
+    if (user) {
+      user.isActive = true;
+    }
+    const db = this.db;
+    if (db) {
+      try {
+        await db.app_user.update({ where: { user_id: Number(userId) }, data: { is_active: true } });
+      } catch (err) { }
+    }
+    return user || { userId, isActive: true };
+  }
+
+  public async deactivateUser(userId: number, reason?: string): Promise<any> {
+    const user = seedUsers.find((u) => u.userId === Number(userId));
+    if (user) {
+      user.isActive = false;
+      (user as any).deactivateReason = reason;
+    }
+    const db = this.db;
+    if (db) {
+      try {
+        await db.app_user.update({ where: { user_id: Number(userId) }, data: { is_active: false } });
+      } catch (err) { }
+    }
+    return user || { userId, isActive: false, deactivateReason: reason };
+  }
+
+  public async getDelegations(query?: any): Promise<any[]> {
+    const db = this.db;
+    if (db) {
+      try {
+        const rows = await db.approval_delegation.findMany({
+          include: {
+            app_user_approval_delegation_from_user_idToapp_user: true,
+            app_user_approval_delegation_to_user_idToapp_user: true,
+          },
+          orderBy: { approval_delegation_id: 'desc' },
+        });
+        if (rows.length > 0) {
+          const dbList = rows.map((d) => ({
+            approvalDelegationId: d.approval_delegation_id,
+            delegationId: d.approval_delegation_id,
+            fromUserId: d.from_user_id,
+            toUserId: d.to_user_id,
+            fromName: d.app_user_approval_delegation_from_user_idToapp_user?.user_name || ('User ' + d.from_user_id),
+            toName: d.app_user_approval_delegation_to_user_idToapp_user?.user_name || ('User ' + d.to_user_id),
+            permissionCode: d.permission_code,
+            siteId: d.site_id,
+            validFrom: d.valid_from.toISOString(),
+            validTo: d.valid_to.toISOString(),
+            reason: d.reason,
+            revokedAt: d.revoked_at ? d.revoked_at.toISOString() : undefined,
+            logInst: d.log_inst,
+          }));
+          return [...this.customDelegations, ...dbList];
+        }
+      } catch (err: any) {
+        console.warn('[SetupService.getDelegations] DB error:', err.message);
+      }
+    }
+    const baseList = seedDelegations.map((d: any) => ({ ...d }));
+    return [...this.customDelegations, ...baseList];
+  }
+
+  public async createDelegation(data: any): Promise<any> {
+    const db = this.db;
+    const fromId = Number(data.fromUserId);
+    const toId = Number(data.toUserId);
+    const siteId = data.siteId ? Number(data.siteId) : null;
+    const validFrom = data.validFrom ? new Date(data.validFrom) : new Date();
+    const validTo = data.validTo ? new Date(data.validTo) : new Date(Date.now() + 7 * 86400000);
+    const reason = data.reason || 'Temporary leave delegation';
+    const permissionCode = data.permissionCode || null;
+
+    let fromName = data.fromName;
+    let toName = data.toName;
+
+    const uFrom = seedUsers.find((u: any) => u.userId === fromId);
+    if (uFrom) fromName = uFrom.userName;
+    const uTo = seedUsers.find((u: any) => u.userId === toId);
+    if (uTo) toName = uTo.userName;
+
+    const newDelegation: any = {
+      approvalDelegationId: Date.now(),
+      delegationId: Date.now(),
+      fromUserId: fromId,
+      toUserId: toId,
+      fromName: fromName || ('User ' + fromId),
+      toName: toName || ('User ' + toId),
+      permissionCode,
+      siteId,
+      validFrom: validFrom.toISOString(),
+      validTo: validTo.toISOString(),
+      reason,
+      logInst: 1,
+    };
+
+    if (db) {
+      try {
+        const created = await db.approval_delegation.create({
+          data: {
+            from_user_id: fromId,
+            to_user_id: toId,
+            permission_code: permissionCode,
+            site_id: siteId,
+            valid_from: validFrom,
+            valid_to: validTo,
+            reason,
+            createdby: 'SYSTEM',
+          },
+        });
+        newDelegation.approvalDelegationId = created.approval_delegation_id;
+        newDelegation.delegationId = created.approval_delegation_id;
+      } catch (err: any) {
+        console.warn('[SetupService.createDelegation] DB error:', err.message);
+      }
+    }
+
+    this.customDelegations.unshift(newDelegation);
+    return newDelegation;
+  }
+
+  public async revokeDelegation(id: number | string): Promise<any> {
+    const numId = Number(id);
+    const revokedAt = new Date().toISOString();
+    const db = this.db;
+    if (db && Number.isFinite(numId)) {
+      try {
+        await db.approval_delegation.update({
+          where: { approval_delegation_id: numId },
+          data: { revoked_at: new Date() },
+        });
+      } catch (err: any) {
+        console.warn('[SetupService.revokeDelegation] DB error:', err.message);
+      }
+    }
+    const found = this.customDelegations.find((d: any) => d.approvalDelegationId === numId || String(d.delegationId) === String(id));
+    if (found) {
+      found.revokedAt = revokedAt;
+    }
+    return { success: true, delegationId: numId, revokedAt };
+  }
+
   public async getRoles(): Promise<any[]> {
     const db = this.db;
     if (db) {
@@ -2438,42 +2690,146 @@ class SetupService {
           orderBy: { role_code: 'asc' },
         });
         if (rows.length > 0) {
-          return rows.map((r) => ({
-            roleId: r.role_id,
-            roleCode: r.role_code,
-            roleName: r.role_name,
-            code: r.role_code,
-            name: r.role_name,
-            description: r.description,
-            isSystem: r.is_system,
-            isActive: r.is_active,
-            grants: r.m_role_permission.map((rp) => rp.permission_code),
-            logInst: r.log_inst,
-          }));
+          const dbRoles = rows.map((r) => {
+            let grantsObj: Record<string, string> = {};
+            if (this.customRoles.has(r.role_code)) {
+              grantsObj = { ...this.customRoles.get(r.role_code).grants };
+            } else {
+              r.m_role_permission.forEach((rp) => {
+                grantsObj[rp.permission_code] = rp.grant_type || 'DO';
+              });
+            }
+            return {
+              roleId: r.role_id,
+              roleCode: r.role_code,
+              roleName: r.role_name,
+              code: r.role_code,
+              name: r.role_name,
+              description: r.description,
+              isSystem: r.is_system,
+              isActive: r.is_active,
+              grants: grantsObj,
+              logInst: r.log_inst,
+            };
+          });
+
+          for (const [code, cr] of this.customRoles.entries()) {
+            if (!dbRoles.some((r) => r.code === code)) {
+              dbRoles.push(cr);
+            }
+          }
+          return dbRoles;
         }
       } catch (err) {
         console.error('getRoles db error:', err);
       }
     }
-    return Object.values(ROLES).map((r, i) => ({
-      roleId: i + 1,
-      roleCode: r.code,
-      roleName: r.name,
-      code: r.code,
-      name: r.name,
-      external: !!r.external,
-      grants: r.grants,
+
+    const fallbackRoles = Object.values(ROLES).map((r, i) => {
+      const grants = this.customRoles.has(r.code)
+        ? { ...this.customRoles.get(r.code).grants }
+        : { ...r.grants };
+      return {
+        roleId: i + 1,
+        roleCode: r.code,
+        roleName: r.name,
+        code: r.code,
+        name: r.name,
+        description: `Built-in role for ${r.name}`,
+        external: !!r.external,
+        grants,
+        logInst: 1,
+      };
+    });
+
+    for (const [code, cr] of this.customRoles.entries()) {
+      if (!fallbackRoles.some((r) => r.code === code)) {
+        fallbackRoles.push(cr);
+      }
+    }
+    return fallbackRoles;
+  }
+
+  public async createRole(data: any): Promise<any> {
+    const roleCode = (data.roleCode || data.code || `ROLE_${Date.now()}`).toUpperCase().trim();
+    const roleName = data.roleName || data.name || roleCode;
+    const newRole = {
+      roleId: Date.now(),
+      roleCode,
+      roleName,
+      code: roleCode,
+      name: roleName,
+      description: data.description || '',
+      grants: data.grants || {},
+      external: !!data.external,
+      isSystem: false,
+      isActive: true,
       logInst: 1,
-    }));
+    };
+    this.customRoles.set(roleCode, newRole);
+    ROLES[roleCode] = {
+      code: roleCode,
+      name: roleName,
+      external: !!data.external,
+      grants: data.grants || {},
+    };
+    return newRole;
+  }
+
+  public async updateRole(id: any, data: any): Promise<any> {
+    const code = String(id).toUpperCase();
+    let r = this.customRoles.get(code);
+    if (!r) {
+      const base = Object.values(ROLES).find((x) => x.code === code);
+      r = {
+        roleId: Date.now(),
+        roleCode: code,
+        roleName: base?.name || code,
+        code,
+        name: base?.name || code,
+        description: data.description || '',
+        grants: { ...(base?.grants || {}) },
+      };
+      this.customRoles.set(code, r);
+    }
+    Object.assign(r, data);
+    return r;
+  }
+
+  public async updateRolePermissions(roleIdOrCode: string | number, grants: Record<string, string>): Promise<any> {
+    const code = String(roleIdOrCode).toUpperCase();
+    let existing = this.customRoles.get(code);
+    if (!existing) {
+      const baseRole = Object.values(ROLES).find((r) => r.code === code);
+      existing = {
+        roleId: Date.now(),
+        roleCode: code,
+        roleName: baseRole?.name || code,
+        code,
+        name: baseRole?.name || code,
+        grants: { ...(baseRole?.grants || {}) },
+        external: !!baseRole?.external,
+      };
+      this.customRoles.set(code, existing);
+    }
+    existing.grants = { ...grants };
+
+    if (ROLES[code]) {
+      (ROLES[code] as any).grants = { ...grants };
+    }
+
+    return existing;
   }
 
   public async getPermissions(): Promise<any[]> {
+    let perms: any[] = [];
     const db = this.db;
     if (db) {
       try {
         const rows = await db.m_permission.findMany({ orderBy: { permission_code: 'asc' } });
         if (rows.length > 0) {
-          return rows.map((p) => ({
+          perms = rows.map((p) => ({
+            code: p.permission_code,
             permissionCode: p.permission_code,
             module: p.module_code,
             moduleCode: p.module_code,
@@ -2483,18 +2839,88 @@ class SetupService {
             isApproval: p.is_approval,
             supportsLimit: p.supports_limit,
             logInst: p.log_inst,
+            ms: 'M0',
           }));
         }
       } catch (err) {
         console.error('getPermissions db error:', err);
       }
     }
-    return seedPerms;
+    if (!perms || perms.length === 0) {
+      perms = seedPerms.map((p: any) => ({
+        code: p.code || p.permissionCode,
+        permissionCode: p.code || p.permissionCode,
+        module: p.module,
+        moduleCode: p.module,
+        action: (p.code || p.permissionCode || '').split('.').pop() || 'manage',
+        description: p.description,
+        isApproval: p.isApproval,
+        supportsLimit: p.supportsLimit,
+        ms: p.ms || 'M0',
+      }));
+    }
+
+    for (const cp of this.customPerms) {
+      if (!perms.some((p) => (p.code || p.permissionCode) === (cp.code || cp.permissionCode))) {
+        perms.push(cp);
+      }
+    }
+    return perms;
+  }
+
+  public async createPermission(data: any): Promise<any> {
+    const code = (data.code || data.permissionCode || '').toLowerCase().trim();
+    const newPerm = {
+      code,
+      permissionCode: code,
+      module: data.module || 'admin',
+      moduleCode: data.module || 'admin',
+      action: code.split('.').pop() || 'manage',
+      description: data.description || code,
+      isApproval: !!data.isApproval,
+      supportsLimit: !!data.supportsLimit,
+      ms: data.ms || 'M0',
+    };
+    this.customPerms.push(newPerm);
+    return newPerm;
   }
 
   // =========================================================================
   // 7. Holds, Release & Approvals
   // =========================================================================
+  public async getHoldTypes(): Promise<any[]> {
+    const db = this.db;
+    if (db) {
+      try {
+        const rows = await db.m_hold_type.findMany({
+          orderBy: { hold_type_id: 'asc' },
+        });
+        if (rows.length > 0) {
+          const dbList = rows.map((h) => ({
+            holdTypeId: h.hold_type_id,
+            holdCode: h.hold_code,
+            holdName: h.hold_name,
+            authority: h.authority,
+            blocksGateOut: h.blocks_gate_out,
+            blocksRelease: h.blocks_release,
+            blocksMove: h.blocks_move,
+            blocksStuffing: h.blocks_stuffing,
+            liftNeedsApproval: h.lift_needs_approval,
+            liftNeedsEvidence: h.lift_needs_evidence,
+            moveToTagCode: h.move_to_tag_code,
+            packTz: h.country_pack_id != null,
+            isActive: h.is_active,
+            logInst: h.log_inst,
+          }));
+          return [...this.customHoldTypes, ...dbList];
+        }
+      } catch (err) {
+        console.warn('[SetupService.getHoldTypes] DB error:', err);
+      }
+    }
+    return [...this.customHoldTypes, ...seedHoldTypes];
+  }
+
   public async getReleaseRules(): Promise<any[]> {
     const db = this.db;
     if (db) {
@@ -2529,12 +2955,14 @@ class SetupService {
     if (db) {
       try {
         const rows = await db.m_approval_policy.findMany({
+          include: { m_permission: true },
           orderBy: { approval_policy_id: 'asc' },
         });
         if (rows.length > 0) {
-          return rows.map((r) => ({
+          const dbList = rows.map((r) => ({
             approvalPolicyId: r.approval_policy_id,
             permissionCode: r.permission_code,
+            description: r.m_permission?.description || (seedPerms.find((p) => p.code === r.permission_code)?.description) || r.permission_code,
             siteId: r.site_id,
             amountFrom: Number(r.amount_from),
             amountCurrency: r.amount_currency || 'USD',
@@ -2543,12 +2971,17 @@ class SetupService {
             isActive: r.is_active,
             logInst: r.log_inst,
           }));
+          return [...this.customApprovalPolicies, ...dbList];
         }
       } catch (err) {
         console.warn('[SetupService.getApprovalPolicies] DB error:', err);
       }
     }
-    return seedApprovalPolicies;
+    const seedWithDesc = seedApprovalPolicies.map((p) => ({
+      ...p,
+      description: seedPerms.find((x) => x.code === p.permissionCode)?.description || p.permissionCode,
+    }));
+    return [...this.customApprovalPolicies, ...seedWithDesc];
   }
 
   public async getExceptionTypes(): Promise<any[]> {
@@ -2556,25 +2989,37 @@ class SetupService {
     if (db) {
       try {
         const rows = await db.m_exception_type.findMany({
+          include: {
+            m_role_m_exception_type_default_role_idTom_role: true,
+            m_role_m_exception_type_escalation_role_idTom_role: true,
+            m_hold_type: true,
+          },
           orderBy: { exception_code: 'asc' },
         });
         if (rows.length > 0) {
-          return rows.map((e) => ({
+          const dbList = rows.map((e) => ({
             exceptionTypeId: e.exception_type_id,
             exceptionCode: e.exception_code,
             exceptionName: e.exception_name,
             severity: e.severity,
             slaMinutes: e.sla_minutes,
             supervisorClose: e.supervisor_close,
+            defaultRoleId: e.default_role_id,
+            defaultRoleCode: e.m_role_m_exception_type_default_role_idTom_role?.role_code || (seedExceptionTypes.find((x) => x.exceptionCode === e.exception_code)?.defaultRoleCode) || 'customer.service',
+            escalationRoleId: e.escalation_role_id,
+            escalationRoleCode: e.m_role_m_exception_type_escalation_role_idTom_role?.role_code || (seedExceptionTypes.find((x) => x.exceptionCode === e.exception_code)?.escalationRoleCode) || 'icd.admin',
+            placesHoldTypeId: e.places_hold_type_id,
+            placesHoldTypeCode: e.m_hold_type?.hold_code || (seedExceptionTypes.find((x) => x.exceptionCode === e.exception_code)?.placesHoldTypeCode),
             isActive: e.is_active,
             logInst: e.log_inst,
           }));
+          return [...this.customExceptionTypes, ...dbList];
         }
       } catch (err) {
         console.error('getExceptionTypes db error:', err);
       }
     }
-    return seedExceptionTypes;
+    return [...this.customExceptionTypes, ...seedExceptionTypes];
   }
 
   // =========================================================================
@@ -2589,33 +3034,39 @@ class SetupService {
           orderBy: { inspection_template_id: 'asc' },
         });
         if (rows.length > 0) {
-          return rows.map((t) => ({
+          const dbList = rows.map((t) => ({
             templateId: t.inspection_template_id,
             inspectionTemplateId: t.inspection_template_id,
             templateCode: t.template_code,
             templateName: t.template_name,
             unitTypeKind: t.unit_category,
             unitCategory: t.unit_category,
+            category: t.unit_category || 'CONTAINER',
+            inspectionKind: t.inspection_kind || 'GATE_IN',
+            versionNo: t.version_no || 1,
             isActive: t.is_active,
-            minPhotos: t.min_photos,
+            minPhotos: t.min_photos || 4,
             items: t.m_inspection_item.map((i) => ({
               itemId: i.inspection_item_id,
+              inspectionItemId: i.inspection_item_id,
               itemCode: i.item_code,
               itemName: i.item_name,
               itemLabel: i.item_name,
-              area: i.area,
-              inputType: i.input_type,
-              isMandatory: i.is_mandatory,
-              sortOrder: i.sort_order,
+              area: i.area || 'EXTERIOR',
+              inputType: i.input_type || 'YES_NO',
+              isMandatory: !!i.is_mandatory,
+              sortOrder: i.sort_order ?? 0,
             })),
+            fixedFields: t.unit_category === 'CONTAINER' ? ['Seal number', 'ISO size', 'Tare weight'] : ['Chassis/VIN', 'Odometer', 'Fuel level'],
             logInst: t.log_inst,
           }));
+          return [...this.customInspectionTemplates, ...dbList];
         }
       } catch (err) {
         console.error('getInspectionTemplates db error:', err);
       }
     }
-    return seedInspectionTemplates;
+    return [...this.customInspectionTemplates, ...seedInspectionTemplates];
   }
 
   public async getDamageCodes(): Promise<any[]> {
@@ -2624,7 +3075,7 @@ class SetupService {
       try {
         const rows = await db.m_damage_code.findMany({ orderBy: { damage_code_id: 'asc' } });
         if (rows.length > 0) {
-          return rows.map((d) => ({
+          const dbList = rows.map((d) => ({
             damageCodeId: d.damage_code_id,
             damageCode: d.damage_code,
             damageName: d.damage_name,
@@ -2636,12 +3087,13 @@ class SetupService {
             isActive: true,
             logInst: d.log_inst,
           }));
+          return [...this.customDamageCodes, ...dbList];
         }
       } catch (err) {
         console.error('getDamageCodes db error:', err);
       }
     }
-    return seedDamageCodes;
+    return [...this.customDamageCodes, ...seedDamageCodes];
   }
 
   // =========================================================================
@@ -2649,13 +3101,14 @@ class SetupService {
   // =========================================================================
   public async getAccountingPeriods(): Promise<any[]> {
     const db = this.db;
+    let baseList = seedPeriods;
     if (db) {
       try {
         const rows = await db.accounting_period.findMany({
           orderBy: { period_key: 'desc' },
         });
         if (rows.length > 0) {
-          return rows.map((p) => ({
+          baseList = rows.map((p) => ({
             accountingPeriodId: p.accounting_period_id,
             companyId: p.company_id,
             periodKey: p.period_key,
@@ -2671,94 +3124,138 @@ class SetupService {
         console.error('getAccountingPeriods db error:', err);
       }
     }
-    return seedPeriods;
+    const merged = [...this.customAccountingPeriods];
+    for (const b of baseList) {
+      if (!merged.some((m) => m.periodKey === b.periodKey)) {
+        merged.push(b);
+      }
+    }
+    return merged;
   }
 
   public async getChargeCodes(): Promise<any[]> {
     const db = this.db;
+    let baseList: any[] = seedChargeCodes;
     if (db) {
       try {
         const rows = await db.m_charge_code.findMany({ orderBy: { charge_code_id: 'asc' } });
-        return rows.map((r, i) => {
-          const seed = (seedChargeCodes.find((s) => s.chargeCode === r.charge_code) || seedChargeCodes[i] || seedChargeCodes[0]) as any;
-          return {
-            chargeCodeId: r.charge_code_id,
-            chargeCode: r.charge_code,
-            chargeName: r.charge_name,
-            uom: seed.uom || 'DAY',
-            category: seed.category || 'STORAGE',
-            taxCode: seed.taxCode || 'VAT_18',
-            isActive: r.is_active ?? true,
-          };
-        });
+        if (rows.length > 0) {
+          baseList = rows.map((r, i) => {
+            const seed = (seedChargeCodes.find((s) => s.chargeCode === r.charge_code) || seedChargeCodes[i] || seedChargeCodes[0]) as any;
+            return {
+              chargeCodeId: r.charge_code_id,
+              chargeCode: r.charge_code,
+              chargeName: r.charge_name || seed.chargeName,
+              chargeGroup: seed.chargeGroup || 'OTHER',
+              defaultTaxCode: seed.defaultTaxCode || 'TZ_VAT_STD',
+              isDisbursement: seed.isDisbursement || false,
+              printOrder: seed.printOrder || (i + 1) * 10,
+              revenueGlAccount: seed.revenueGlAccount || null,
+              isActive: r.is_active ?? true,
+            };
+          });
+        }
       } catch (err) {
         console.warn('[SetupService.getChargeCodes] DB error:', err);
       }
     }
-    return seedChargeCodes;
+    const merged = [...this.customChargeCodes];
+    for (const b of baseList) {
+      if (!merged.some((m) => m.chargeCode === b.chargeCode)) {
+        merged.push(b);
+      }
+    }
+    return merged;
   }
 
   public async getTaxCodes(): Promise<any[]> {
     const db = this.db;
+    let baseList: any[] = seedTaxCodes;
     if (db) {
       try {
         const rows = await db.m_tax_code.findMany({ orderBy: { tax_code_id: 'asc' } });
-        return rows.map((r, i) => {
-          const seed = (seedTaxCodes.find((s) => s.taxCode === r.tax_code) || seedTaxCodes[i] || seedTaxCodes[0]) as any;
-          return {
-            taxCodeId: r.tax_code_id,
-            taxCode: r.tax_code,
-            taxName: r.tax_name,
-            ratePercent: Number(r.rate_pct),
-            isActive: r.is_active ?? true,
-            verify: seed.verify,
-          };
-        });
+        if (rows.length > 0) {
+          baseList = rows.map((r, i) => {
+            const seed = (seedTaxCodes.find((s) => s.taxCode === r.tax_code) || seedTaxCodes[i] || seedTaxCodes[0]) as any;
+            return {
+              taxCodeId: r.tax_code_id,
+              taxCode: r.tax_code,
+              taxName: r.tax_name || seed.taxName,
+              countryCode: seed.countryCode || 'TZ',
+              ratePct: r.rate_pct ? String(r.rate_pct) : (seed.ratePct || '18.000'),
+              taxTreatment: seed.taxTreatment || 'STANDARD',
+              fiscalTaxClass: seed.fiscalTaxClass || null,
+              outputGlAccount: seed.outputGlAccount || null,
+              effectiveFrom: seed.effectiveFrom || '2015-07-01',
+              isActive: r.is_active ?? true,
+              verify: seed.verify,
+            };
+          });
+        }
       } catch (err) {
         console.warn('[SetupService.getTaxCodes] DB error:', err);
       }
     }
-    return seedTaxCodes;
+    const merged = [...this.customTaxCodes];
+    for (const b of baseList) {
+      if (!merged.some((m) => m.taxCode === b.taxCode)) {
+        merged.push(b);
+      }
+    }
+    return merged;
   }
 
   public async getPaymentChannels(): Promise<any[]> {
     const db = this.db;
+    let baseList: any[] = seedPaymentChannels;
     if (db) {
       try {
         const rows = await db.m_payment_channel.findMany({
           orderBy: { channel_code: 'asc' },
         });
         if (rows.length > 0) {
-          return rows.map((pc) => ({
-            paymentChannelId: pc.payment_channel_id,
-            companyId: pc.company_id,
-            channelCode: pc.channel_code,
-            channelName: pc.channel_name,
-            method: pc.method,
-            provider: pc.provider,
-            currency: pc.currency,
-            glAccount: pc.gl_account,
-            referencePattern: pc.reference_pattern,
-            isActive: pc.is_active,
-            logInst: pc.log_inst,
-          }));
+          baseList = rows.map((pc, i) => {
+            const seed = (seedPaymentChannels.find((s) => s.channelCode === pc.channel_code) || seedPaymentChannels[i] || seedPaymentChannels[0]) as any;
+            return {
+              paymentChannelId: pc.payment_channel_id,
+              companyId: pc.company_id,
+              channelCode: pc.channel_code,
+              channelName: pc.channel_name,
+              method: pc.method || seed?.method || 'CASH',
+              provider: pc.provider || seed?.provider || null,
+              currency: pc.currency || seed?.currency || 'USD',
+              glAccount: pc.gl_account || seed?.glAccount || '1010-01',
+              referencePattern: pc.reference_pattern || seed?.referencePattern || null,
+              example: seed?.example || '—',
+              refHint: seed?.refHint || 'Reference format',
+              isActive: pc.is_active ?? true,
+              logInst: pc.log_inst,
+            };
+          });
         }
       } catch (err) {
         console.error('getPaymentChannels db error:', err);
       }
     }
-    return seedPaymentChannels;
+    const merged = [...this.customPaymentChannels];
+    for (const b of baseList) {
+      if (!merged.some((m) => m.channelCode === b.channelCode)) {
+        merged.push(b);
+      }
+    }
+    return merged;
   }
 
   public async getGlSettings(): Promise<any[]> {
     const db = this.db;
+    let baseList: any[] = seedGlSettings;
     if (db) {
       try {
         const rows = await db.m_gl_setting.findMany({
           orderBy: { setting_key: 'asc' },
         });
         if (rows.length > 0) {
-          return rows.map((g) => ({
+          baseList = rows.map((g) => ({
             companyId: g.company_id,
             settingKey: g.setting_key,
             glAccount: g.gl_account,
@@ -2770,7 +3267,13 @@ class SetupService {
         console.error('getGlSettings db error:', err);
       }
     }
-    return seedGlSettings;
+    const merged = [...this.customGlSettings];
+    for (const b of baseList) {
+      if (!merged.some((m) => m.settingKey === b.settingKey)) {
+        merged.push(b);
+      }
+    }
+    return merged;
   }
 
   // =========================================================================
@@ -2880,7 +3383,7 @@ class SetupService {
           orderBy: { number_sequence_id: 'asc' },
         });
         if (rows.length > 0) {
-          return rows.map((r, i) => {
+          const dbList = rows.map((r, i) => {
             const seed = (seedNumberSequences[i] || seedNumberSequences[0]) as any;
             return {
               numberSequenceId: r.number_sequence_id,
@@ -2897,12 +3400,13 @@ class SetupService {
               logInst: r.log_inst,
             };
           });
+          return [...this.customNumberSequences, ...dbList];
         }
       } catch (err) {
         console.error('getNumberSequences db error:', err);
       }
     }
-    return seedNumberSequences;
+    return [...this.customNumberSequences, ...seedNumberSequences];
   }
 
   public async getDocumentTypes(): Promise<any[]> {
@@ -2910,7 +3414,7 @@ class SetupService {
     if (db) {
       try {
         const rows = await db.m_document_type.findMany({ orderBy: { document_type_id: 'asc' } });
-        return rows.map((r, i) => {
+        const dbList = rows.map((r, i) => {
           const seed = (seedDocumentTypes.find((s) => s.docTypeCode === r.doc_type_code) || seedDocumentTypes[i] || seedDocumentTypes[0]) as any;
           return {
             documentTypeId: r.document_type_id,
@@ -2925,11 +3429,12 @@ class SetupService {
             requiredFor: seed.requiredFor || [],
           };
         });
+        return [...this.customDocumentTypes, ...dbList];
       } catch (err) {
         console.warn('[SetupService.getDocumentTypes] DB error:', err);
       }
     }
-    return seedDocumentTypes;
+    return [...this.customDocumentTypes, ...seedDocumentTypes];
   }
 
   // =========================================================================
@@ -2943,7 +3448,7 @@ class SetupService {
           orderBy: { device_id: 'asc' }
         });
         if (rows.length > 0) {
-          return rows.map((r) => ({
+          const dbList = rows.map((r) => ({
             deviceId: r.device_id,
             siteId: r.site_id,
             deviceCode: r.device_code,
@@ -2959,12 +3464,13 @@ class SetupService {
             appVersion: '1.4.2',
             assignedTo: r.device_name,
           }));
+          return [...this.customDevices, ...dbList];
         }
       } catch (err: any) {
         console.warn('[SetupService.getDevices] DB error:', err.message);
       }
     }
-    return seedDevices;
+    return [...this.customDevices, ...seedDevices];
   }
 
   public async getDeviceIntegrations(): Promise<any[]> {
@@ -3274,27 +3780,395 @@ class SetupService {
     return { templateId: id, ...data };
   }
   public async createHoldType(data: any): Promise<any> {
-    return { holdTypeId: Date.now(), ...data };
+    const holdCode = (data.holdCode || ('HOLD_' + Date.now())).toUpperCase().trim();
+    const newHold = {
+      holdTypeId: Date.now(),
+      holdCode,
+      holdName: data.holdName || holdCode,
+      authority: data.authority || 'ICD',
+      blocksGateOut: data.blocksGateOut !== false,
+      blocksRelease: data.blocksRelease !== false,
+      blocksMove: Boolean(data.blocksMove),
+      blocksStuffing: Boolean(data.blocksStuffing),
+      liftNeedsApproval: data.liftNeedsApproval !== false,
+      liftNeedsEvidence: Boolean(data.liftNeedsEvidence),
+      moveToTagCode: data.moveToTagCode || null,
+      packTz: Boolean(data.packTz),
+      isActive: data.isActive !== false,
+    };
+
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_hold_type.create({
+          data: {
+            hold_code: newHold.holdCode,
+            hold_name: newHold.holdName,
+            authority: newHold.authority,
+            blocks_gate_out: newHold.blocksGateOut,
+            blocks_release: newHold.blocksRelease,
+            blocks_move: newHold.blocksMove,
+            blocks_stuffing: newHold.blocksStuffing,
+            lift_needs_approval: newHold.liftNeedsApproval,
+            lift_needs_evidence: newHold.liftNeedsEvidence,
+            move_to_tag_code: newHold.moveToTagCode,
+            country_pack_id: newHold.packTz ? 1 : null,
+            is_active: newHold.isActive,
+            createdby: 'Admin',
+          },
+        });
+        newHold.holdTypeId = created.hold_type_id;
+      } catch (err) {
+        console.warn('[SetupService.createHoldType] DB error:', err);
+      }
+    }
+    this.customHoldTypes.unshift(newHold);
+    return newHold;
   }
+
   public async updateHoldType(id: any, data: any): Promise<any> {
+    const numId = Number(id);
+    const db = this.db;
+    if (db) {
+      try {
+        const whereClause = !isNaN(numId) && numId > 0
+          ? { hold_type_id: numId }
+          : { hold_code: String(id) };
+
+        await db.m_hold_type.update({
+          where: whereClause,
+          data: {
+            hold_name: data.holdName,
+            authority: data.authority,
+            blocks_gate_out: data.blocksGateOut !== undefined ? Boolean(data.blocksGateOut) : undefined,
+            blocks_release: data.blocksRelease !== undefined ? Boolean(data.blocksRelease) : undefined,
+            blocks_move: data.blocksMove !== undefined ? Boolean(data.blocksMove) : undefined,
+            blocks_stuffing: data.blocksStuffing !== undefined ? Boolean(data.blocksStuffing) : undefined,
+            lift_needs_approval: data.liftNeedsApproval !== undefined ? Boolean(data.liftNeedsApproval) : undefined,
+            lift_needs_evidence: data.liftNeedsEvidence !== undefined ? Boolean(data.liftNeedsEvidence) : undefined,
+            move_to_tag_code: data.moveToTagCode !== undefined ? (data.moveToTagCode || null) : undefined,
+            is_active: data.isActive !== undefined ? Boolean(data.isActive) : undefined,
+            updatedate: new Date(),
+            updatedby: 'Admin',
+          },
+        });
+      } catch (err) {
+        console.warn('[SetupService.updateHoldType] DB error:', err);
+      }
+    }
+
+    const inMem = this.customHoldTypes.find(
+      (h) => h.holdTypeId === numId || String(h.holdCode) === String(id)
+    );
+    if (inMem) {
+      Object.assign(inMem, data);
+      return inMem;
+    }
+    const seed = seedHoldTypes.find(
+      (h) => (h as any).holdTypeId === numId || String(h.holdCode) === String(id)
+    );
+    if (seed) Object.assign(seed, data);
     return { holdTypeId: id, ...data };
   }
+
   public async createReleaseRule(data: any): Promise<any> {
-    return { ruleId: Date.now(), ...data };
+    const numRegimeId = Number(data.cargoRegimeId) || 1;
+    const newRule = {
+      releaseRuleId: Date.now(),
+      cargoRegimeId: numRegimeId,
+      regimeCode: data.regimeCode || 'LOCAL',
+      conditionCode: data.conditionCode || 'COMMERCIAL',
+      unitCategory: data.unitCategory || 'ALL',
+      atApproval: Boolean(data.atApproval),
+      atGateOut: data.atGateOut !== false,
+      canOverride: Boolean(data.canOverride),
+      isActive: data.isActive !== false,
+    };
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_release_rule.create({
+          data: {
+            cargo_regime_id: newRule.cargoRegimeId,
+            condition_code: newRule.conditionCode,
+            unit_category: newRule.unitCategory === 'ALL' ? null : newRule.unitCategory,
+            at_approval: newRule.atApproval,
+            at_gate_out: newRule.atGateOut,
+            can_override: newRule.canOverride,
+            is_active: newRule.isActive,
+            createdby: 'Admin',
+          },
+        });
+        newRule.releaseRuleId = created.release_rule_id;
+      } catch (err) {
+        console.warn('[SetupService.createReleaseRule] DB error:', err);
+      }
+    }
+    return newRule;
   }
+
   public async updateReleaseRule(id: any, data: any): Promise<any> {
-    return { ruleId: id, ...data };
+    const numId = Number(id);
+    const db = this.db;
+    if (db) {
+      try {
+        await db.m_release_rule.update({
+          where: { release_rule_id: numId },
+          data: {
+            at_approval: data.atApproval !== undefined ? Boolean(data.atApproval) : undefined,
+            at_gate_out: data.atGateOut !== undefined ? Boolean(data.atGateOut) : undefined,
+            can_override: data.canOverride !== undefined ? Boolean(data.canOverride) : undefined,
+            is_active: data.isActive !== undefined ? Boolean(data.isActive) : undefined,
+            updatedate: new Date(),
+            updatedby: 'Admin',
+          },
+        });
+      } catch (err) {
+        console.warn('[SetupService.updateReleaseRule] DB error:', err);
+      }
+    }
+    const seed = seedReleaseRules.find((r) => r.releaseRuleId === numId);
+    if (seed) Object.assign(seed, data);
+    return { releaseRuleId: id, ...data };
   }
+
   public async createApprovalPolicy(data: any): Promise<any> {
-    return { policyId: Date.now(), ...data };
+    const permCode = data.permissionCode || ('billing.policy_' + Date.now());
+    const newPolicy = {
+      approvalPolicyId: Date.now(),
+      permissionCode: permCode,
+      description: data.description || permCode,
+      siteId: data.siteId ? Number(data.siteId) : null,
+      amountFrom: data.amountFrom != null ? Number(data.amountFrom) : 0,
+      amountCurrency: Number(data.amountFrom) > 0 ? (data.amountCurrency || 'USD') : null,
+      levelsRequired: data.levelsRequired != null ? Number(data.levelsRequired) : 1,
+      expiresAfterHours: data.expiresAfterHours != null ? Number(data.expiresAfterHours) : 72,
+      isActive: data.isActive !== false,
+    };
+
+    const db = this.db;
+    if (db) {
+      try {
+        const existingPerm = await db.m_permission.findUnique({
+          where: { permission_code: permCode },
+        });
+        if (!existingPerm) {
+          await db.m_permission.create({
+            data: {
+              permission_code: permCode,
+              module_code: data.moduleCode || 'billing',
+              description: newPolicy.description,
+              is_approval: true,
+              supports_limit: true,
+              createdby: 'Admin',
+            },
+          }).catch(() => {});
+        } else if (data.description) {
+          await db.m_permission.update({
+            where: { permission_code: permCode },
+            data: {
+              description: data.description,
+              updatedate: new Date(),
+              updatedby: 'Admin',
+            },
+          }).catch(() => {});
+        }
+
+        const created = await db.m_approval_policy.create({
+          data: {
+            permission_code: permCode,
+            site_id: newPolicy.siteId,
+            amount_from: newPolicy.amountFrom,
+            amount_currency: newPolicy.amountCurrency,
+            levels_required: newPolicy.levelsRequired,
+            expires_after_hours: newPolicy.expiresAfterHours,
+            is_active: newPolicy.isActive,
+            createdby: 'Admin',
+          },
+        });
+        newPolicy.approvalPolicyId = created.approval_policy_id;
+      } catch (err) {
+        console.warn('[SetupService.createApprovalPolicy] DB error:', err);
+      }
+    }
+    this.customApprovalPolicies.unshift(newPolicy);
+    return newPolicy;
   }
+
   public async updateApprovalPolicy(id: any, data: any): Promise<any> {
-    return { policyId: id, ...data };
+    const numId = Number(id);
+    const db = this.db;
+    if (db) {
+      try {
+        const existing = await db.m_approval_policy.findUnique({
+          where: { approval_policy_id: numId },
+        });
+        if (existing) {
+          await db.m_approval_policy.update({
+            where: { approval_policy_id: numId },
+            data: {
+              amount_from: data.amountFrom != null ? Number(data.amountFrom) : undefined,
+              amount_currency: data.amountCurrency !== undefined ? data.amountCurrency : (Number(data.amountFrom) > 0 ? 'USD' : null),
+              levels_required: data.levelsRequired != null ? Number(data.levelsRequired) : undefined,
+              expires_after_hours: data.expiresAfterHours != null ? Number(data.expiresAfterHours) : undefined,
+              is_active: data.isActive !== undefined ? Boolean(data.isActive) : undefined,
+              updatedate: new Date(),
+              updatedby: 'Admin',
+            },
+          });
+          if (data.description && existing.permission_code) {
+            await db.m_permission.update({
+              where: { permission_code: existing.permission_code },
+              data: {
+                description: data.description,
+                updatedate: new Date(),
+                updatedby: 'Admin',
+              },
+            }).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('[SetupService.updateApprovalPolicy] DB error:', err);
+      }
+    }
+
+    const inMem = this.customApprovalPolicies.find((p) => p.approvalPolicyId === numId);
+    if (inMem) {
+      Object.assign(inMem, data);
+      return inMem;
+    }
+    const seed = seedApprovalPolicies.find((p) => p.approvalPolicyId === numId);
+    if (seed) {
+      Object.assign(seed, data);
+      if (data.description) {
+        (seed as any).description = data.description;
+        const perm = seedPerms.find((p) => p.code === seed.permissionCode);
+        if (perm) perm.description = data.description;
+      }
+      return seed;
+    }
+    return { approvalPolicyId: id, ...data };
   }
+
   public async createExceptionType(data: any): Promise<any> {
-    return { exceptionTypeId: Date.now(), ...data };
+    const excCode = (data.exceptionCode || ('EXC_' + Date.now())).toUpperCase().trim();
+    const newExc = {
+      exceptionTypeId: Date.now(),
+      exceptionCode: excCode,
+      exceptionName: data.exceptionName || excCode,
+      severity: data.severity || 'MEDIUM',
+      slaMinutes: Number(data.slaMinutes) || 120,
+      defaultRoleCode: data.defaultRoleCode || 'customer.service',
+      escalationRoleCode: data.escalationRoleCode || 'icd.admin',
+      placesHoldTypeCode: data.placesHoldTypeCode || null,
+      supervisorClose: Boolean(data.supervisorClose),
+      isActive: data.isActive !== false,
+    };
+
+    const db = this.db;
+    if (db) {
+      try {
+        let defaultRoleId: number | null = null;
+        let escalationRoleId: number | null = null;
+        let holdTypeId: number | null = null;
+
+        if (data.defaultRoleCode) {
+          const role = await db.m_role.findFirst({ where: { role_code: data.defaultRoleCode } });
+          if (role) defaultRoleId = role.role_id;
+        }
+        if (data.escalationRoleCode) {
+          const role = await db.m_role.findFirst({ where: { role_code: data.escalationRoleCode } });
+          if (role) escalationRoleId = role.role_id;
+        }
+        if (data.placesHoldTypeCode) {
+          const hold = await db.m_hold_type.findFirst({ where: { hold_code: data.placesHoldTypeCode } });
+          if (hold) holdTypeId = hold.hold_type_id;
+        }
+
+        const created = await db.m_exception_type.create({
+          data: {
+            exception_code: newExc.exceptionCode,
+            exception_name: newExc.exceptionName,
+            severity: newExc.severity,
+            sla_minutes: newExc.slaMinutes,
+            supervisor_close: newExc.supervisorClose,
+            default_role_id: defaultRoleId,
+            escalation_role_id: escalationRoleId,
+            places_hold_type_id: holdTypeId,
+            is_active: newExc.isActive,
+            createdby: 'Admin',
+          },
+        });
+        newExc.exceptionTypeId = created.exception_type_id;
+      } catch (err) {
+        console.warn('[SetupService.createExceptionType] DB error:', err);
+      }
+    }
+    this.customExceptionTypes.unshift(newExc);
+    return newExc;
   }
+
   public async updateExceptionType(id: any, data: any): Promise<any> {
+    const numId = Number(id);
+    const db = this.db;
+    if (db) {
+      try {
+        let defaultRoleId: number | undefined;
+        let escalationRoleId: number | undefined;
+        let holdTypeId: number | undefined;
+
+        if (data.defaultRoleCode) {
+          const role = await db.m_role.findFirst({ where: { role_code: data.defaultRoleCode } });
+          if (role) defaultRoleId = role.role_id;
+        }
+        if (data.escalationRoleCode) {
+          const role = await db.m_role.findFirst({ where: { role_code: data.escalationRoleCode } });
+          if (role) escalationRoleId = role.role_id;
+        }
+        if (data.placesHoldTypeCode !== undefined) {
+          if (data.placesHoldTypeCode) {
+            const hold = await db.m_hold_type.findFirst({ where: { hold_code: data.placesHoldTypeCode } });
+            if (hold) holdTypeId = hold.hold_type_id;
+          } else {
+            holdTypeId = null as any;
+          }
+        }
+
+        const whereClause = !isNaN(numId) && numId > 0
+          ? { exception_type_id: numId }
+          : { exception_code: String(id) };
+
+        await db.m_exception_type.update({
+          where: whereClause,
+          data: {
+            exception_name: data.exceptionName,
+            severity: data.severity,
+            sla_minutes: data.slaMinutes != null ? Number(data.slaMinutes) : undefined,
+            supervisor_close: data.supervisorClose !== undefined ? Boolean(data.supervisorClose) : undefined,
+            default_role_id: defaultRoleId,
+            escalation_role_id: escalationRoleId,
+            places_hold_type_id: holdTypeId,
+            is_active: data.isActive !== undefined ? Boolean(data.isActive) : undefined,
+            updatedate: new Date(),
+            updatedby: 'Admin',
+          },
+        });
+      } catch (err) {
+        console.warn('[SetupService.updateExceptionType] DB error:', err);
+      }
+    }
+
+    const inMem = this.customExceptionTypes.find(
+      (e) => e.exceptionTypeId === numId || String(e.exceptionCode) === String(id)
+    );
+    if (inMem) {
+      Object.assign(inMem, data);
+      return inMem;
+    }
+    const seed = seedExceptionTypes.find(
+      (e) => (e as any).exceptionTypeId === numId || String(e.exceptionCode) === String(id)
+    );
+    if (seed) Object.assign(seed, data);
     return { exceptionTypeId: id, ...data };
   }
   public async updateFieldRule(id: any, data: any): Promise<any> {
@@ -3324,17 +4198,138 @@ class SetupService {
   public async updateOutbox(id: any, data: any): Promise<any> {
     return { outboxId: id, ...data };
   }
-  public async createRole(data: any): Promise<any> {
-    return { roleId: Date.now(), ...data };
-  }
-  public async updateRole(id: any, data: any): Promise<any> {
-    return { roleId: id, ...data };
-  }
   public async createDevice(data: any): Promise<any> {
-    return { deviceId: Date.now(), ...data };
+    const siteId = Number(data.siteId) || 1;
+    const kind = data.deviceKind || 'TABLET';
+    const prefix = kind === 'TABLET' ? 'TAB' : kind === 'PHONE' ? 'HH' : kind === 'KIOSK' ? 'KIOSK' : 'GA';
+    const siteCode = siteId === 2 ? 'DAR2' : 'DAR1';
+    const deviceCode = data.deviceCode || (prefix + '-' + siteCode + '-' + (Math.floor(Math.random() * 80) + 10).toString().padStart(2, '0'));
+    const deviceName = data.deviceName || (kind + ' ' + deviceCode);
+    const assignedTo = data.assignedTo || deviceName;
+
+    const newDevice = {
+      deviceId: Date.now(),
+      siteId,
+      deviceCode,
+      deviceName,
+      deviceKind: kind,
+      registeredAt: new Date().toISOString(),
+      registeredBy: data.registeredBy || 'Ashok K.',
+      lastSeenAt: new Date().toISOString(),
+      queue: 0,
+      appVersion: '1.4.2',
+      assignedTo,
+      isActive: true,
+      revokedAt: undefined,
+      revokedReason: undefined,
+    };
+
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_device.create({
+          data: {
+            site_id: newDevice.siteId,
+            device_code: newDevice.deviceCode,
+            device_name: newDevice.deviceName,
+            device_kind: newDevice.deviceKind,
+            registered_by: newDevice.registeredBy,
+            registered_at: new Date(),
+            last_seen_at: new Date(),
+            createdby: 'Admin',
+          },
+        });
+        newDevice.deviceId = created.device_id;
+      } catch (err: any) {
+        console.warn('[SetupService.createDevice] DB error:', err.message);
+      }
+    }
+
+    this.customDevices.unshift(newDevice);
+    return newDevice;
   }
+
   public async updateDevice(id: any, data: any): Promise<any> {
+    const numId = Number(id);
+    const db = this.db;
+    if (db) {
+      try {
+        const whereClause = !isNaN(numId) && numId > 0
+          ? { device_id: numId }
+          : { device_code: String(id) };
+
+        await db.m_device.update({
+          where: whereClause,
+          data: {
+            device_name: data.deviceName,
+            device_kind: data.deviceKind,
+            site_id: data.siteId ? Number(data.siteId) : undefined,
+            updatedate: new Date(),
+            updatedby: 'Admin',
+          },
+        });
+      } catch (err: any) {
+        console.warn('[SetupService.updateDevice] DB error:', err.message);
+      }
+    }
+
+    const inMem = this.customDevices.find((d) => d.deviceId === numId || String(d.deviceCode) === String(id));
+    if (inMem) {
+      Object.assign(inMem, data);
+      return inMem;
+    }
+    const seed = seedDevices.find((d) => d.deviceId === numId || String(d.deviceCode) === String(id));
+    if (seed) {
+      Object.assign(seed, data);
+      return seed;
+    }
     return { deviceId: id, ...data };
+  }
+
+  public async revokeDevice(id: any, reason?: string): Promise<any> {
+    const numId = Number(id);
+    const revokeDate = new Date();
+    const revokedReason = reason || 'Revoked by administrator';
+
+    const db = this.db;
+    if (db) {
+      try {
+        const whereClause = !isNaN(numId) && numId > 0
+          ? { device_id: numId }
+          : { device_code: String(id) };
+
+        await db.m_device.update({
+          where: whereClause,
+          data: {
+            revoked_at: revokeDate,
+            revoked_by: 'Admin',
+            revoked_reason: revokedReason,
+            updatedate: new Date(),
+            updatedby: 'Admin',
+          },
+        });
+      } catch (err: any) {
+        console.warn('[SetupService.revokeDevice] DB error:', err.message);
+      }
+    }
+
+    const inMem = this.customDevices.find((d) => d.deviceId === numId || String(d.deviceCode) === String(id));
+    if (inMem) {
+      inMem.revokedAt = revokeDate.toISOString();
+      inMem.revokedReason = revokedReason;
+      inMem.isActive = false;
+      return inMem;
+    }
+
+    const seed = seedDevices.find((d) => d.deviceId === numId || String(d.deviceCode) === String(id));
+    if (seed) {
+      seed.revokedAt = revokeDate.toISOString();
+      seed.revokedReason = revokedReason;
+      (seed as any).isActive = false;
+      return seed;
+    }
+
+    return { deviceId: id, revokedAt: revokeDate.toISOString(), revokedReason, isActive: false };
   }
   public async createDeviceIntegration(data: any): Promise<any> {
     return { integrationId: Date.now(), ...data };
@@ -3343,58 +4338,743 @@ class SetupService {
     return { integrationId: id, ...data };
   }
   public async createNumberSequence(data: any): Promise<any> {
-    return { sequenceId: Date.now(), ...data };
+    const prefix = (data.prefix || 'DOC').toUpperCase().trim();
+    const documentKind = (data.documentKind || 'CUSTOM').toUpperCase().trim();
+    const pattern = data.pattern || '{PREFIX}-{YYYY}-{######}';
+    const siteId = data.siteId ? Number(data.siteId) : null;
+    const siteCode = siteId === 2 ? 'DAR2' : siteId === 1 ? 'DAR1' : data.siteCode || 'All sites';
+    const nextValue = Number(data.nextValue) || 1;
+    const resetPolicy = data.resetPolicy || 'YEARLY';
+    const currentPeriod = data.currentPeriod || '2026';
+    const sample = `${prefix}-${siteCode !== 'All sites' ? siteCode + '-' : ''}26-${String(nextValue).padStart(5, '0')}`;
+
+    const newSeq = {
+      numberSequenceId: Date.now(),
+      companyId: 1,
+      siteId,
+      siteCode,
+      documentKind,
+      prefix,
+      pattern,
+      nextValue,
+      resetPolicy,
+      currentPeriod,
+      sample,
+      logInst: 1,
+    };
+
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_number_sequence.create({
+          data: {
+            company_id: 1,
+            site_id: siteId,
+            document_kind: newSeq.documentKind,
+            prefix: newSeq.prefix,
+            pattern: newSeq.pattern,
+            next_value: BigInt(newSeq.nextValue),
+            reset_policy: newSeq.resetPolicy,
+            current_period: newSeq.currentPeriod,
+            createdby: 'Admin',
+          },
+        });
+        newSeq.numberSequenceId = created.number_sequence_id;
+      } catch (err: any) {
+        console.warn('[SetupService.createNumberSequence] DB error:', err.message);
+      }
+    }
+
+    this.customNumberSequences.unshift(newSeq);
+    return newSeq;
   }
+
   public async updateNumberSequence(id: any, data: any): Promise<any> {
-    return { sequenceId: id, ...data };
+    const numId = Number(id);
+    const db = this.db;
+    if (db) {
+      try {
+        await db.m_number_sequence.update({
+          where: { number_sequence_id: numId },
+          data: {
+            prefix: data.prefix,
+            pattern: data.pattern,
+            next_value: data.nextValue != null ? BigInt(data.nextValue) : undefined,
+            reset_policy: data.resetPolicy,
+            current_period: data.currentPeriod,
+            site_id: data.siteId !== undefined ? (data.siteId ? Number(data.siteId) : null) : undefined,
+            updatedate: new Date(),
+            updatedby: 'Admin',
+          },
+        });
+      } catch (err: any) {
+        console.warn('[SetupService.updateNumberSequence] DB error:', err.message);
+      }
+    }
+
+    const inMem = this.customNumberSequences.find((s) => s.numberSequenceId === numId);
+    if (inMem) {
+      Object.assign(inMem, data);
+      return inMem;
+    }
+    const seed = seedNumberSequences.find((s) => s.numberSequenceId === numId);
+    if (seed) {
+      Object.assign(seed, data);
+      return seed;
+    }
+    return { numberSequenceId: id, ...data };
   }
+
   public async createDocumentType(data: any): Promise<any> {
-    return { documentTypeId: Date.now(), ...data };
+    const docTypeCode = (data.docTypeCode || `DOC_${Date.now().toString().slice(-4)}`).toUpperCase().trim();
+    const docTypeName = data.docTypeName || docTypeCode;
+    const appliesTo = data.appliesTo || 'CONSIGNMENT';
+    const retentionYears = Number(data.retentionYears) || 7;
+    const maxSizeMb = Number(data.maxSizeMb) || 20;
+    const allowedExt = data.allowedExt || 'pdf,jpg,jpeg,png';
+    const requiresApproval = Boolean(data.requiresApproval);
+    const requiredFor = Array.isArray(data.requiredFor)
+      ? data.requiredFor
+      : (typeof data.requiredFor === 'string' && data.requiredFor ? data.requiredFor.split(',').map((s: string) => s.trim()) : []);
+
+    const newDoc = {
+      documentTypeId: Date.now(),
+      docTypeCode,
+      docTypeName,
+      appliesTo,
+      retentionYears,
+      maxSizeMb,
+      allowedExt,
+      requiresApproval,
+      requiredFor,
+      isActive: true,
+    };
+
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_document_type.create({
+          data: {
+            doc_type_code: newDoc.docTypeCode,
+            doc_type_name: newDoc.docTypeName,
+            applies_to: newDoc.appliesTo,
+            retention_years: newDoc.retentionYears,
+            max_size_mb: newDoc.maxSizeMb,
+            allowed_ext: newDoc.allowedExt,
+            requires_approval: newDoc.requiresApproval,
+            is_active: true,
+            createdby: 'Admin',
+          },
+        });
+        newDoc.documentTypeId = created.document_type_id;
+      } catch (err: any) {
+        console.warn('[SetupService.createDocumentType] DB error:', err.message);
+      }
+    }
+
+    this.customDocumentTypes.unshift(newDoc);
+    return newDoc;
   }
+
   public async updateDocumentType(id: any, data: any): Promise<any> {
+    const numId = Number(id);
+    const db = this.db;
+    if (db) {
+      try {
+        const whereClause = !isNaN(numId) && numId > 0
+          ? { document_type_id: numId }
+          : { doc_type_code: String(id) };
+
+        await db.m_document_type.update({
+          where: whereClause,
+          data: {
+            doc_type_name: data.docTypeName,
+            applies_to: data.appliesTo,
+            retention_years: data.retentionYears != null ? Number(data.retentionYears) : undefined,
+            max_size_mb: data.maxSizeMb != null ? Number(data.maxSizeMb) : undefined,
+            allowed_ext: data.allowedExt,
+            requires_approval: data.requiresApproval !== undefined ? Boolean(data.requiresApproval) : undefined,
+            is_active: data.isActive !== undefined ? Boolean(data.isActive) : undefined,
+            updatedate: new Date(),
+            updatedby: 'Admin',
+          },
+        });
+      } catch (err: any) {
+        console.warn('[SetupService.updateDocumentType] DB error:', err.message);
+      }
+    }
+
+    const inMem = this.customDocumentTypes.find((d) => d.documentTypeId === numId || String(d.docTypeCode) === String(id));
+    if (inMem) {
+      Object.assign(inMem, data);
+      return inMem;
+    }
+    const seed = seedDocumentTypes.find((d) => (d as any).documentTypeId === numId || String(d.docTypeCode) === String(id));
+    if (seed) {
+      Object.assign(seed, data);
+      return seed;
+    }
     return { documentTypeId: id, ...data };
   }
   public async createAccountingPeriod(data: any): Promise<any> {
-    return { periodId: Date.now(), ...data };
+    const periodKey = data.periodKey || ('2026-' + String(new Date().getMonth() + 1).padStart(2, '0'));
+    const periodStart = data.periodStart || (periodKey + '-01');
+    const periodEnd = data.periodEnd || (periodKey + '-28');
+    const newPeriod = {
+      accountingPeriodId: Date.now(),
+      companyId: data.companyId || 1,
+      periodKey,
+      periodStart,
+      periodEnd,
+      status: (data.status || 'OPEN') as 'OPEN' | 'CLOSED',
+      closedAt: undefined,
+      closedBy: undefined,
+      logInst: 1,
+    };
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.accounting_period.create({
+          data: {
+            company_id: newPeriod.companyId,
+            period_key: periodKey,
+            period_start: new Date(periodStart),
+            period_end: new Date(periodEnd),
+            status: newPeriod.status,
+            log_inst: 1,
+          },
+        });
+        newPeriod.accountingPeriodId = created.accounting_period_id;
+      } catch (err) {
+        console.warn('[SetupService.createAccountingPeriod] DB write failed:', err);
+      }
+    }
+    this.customAccountingPeriods.unshift(newPeriod);
+    return newPeriod;
   }
+
   public async updateAccountingPeriod(id: any, data: any): Promise<any> {
-    return { periodId: id, ...data };
+    let inMem = this.customAccountingPeriods.find(
+      (p) => String(p.accountingPeriodId) === String(id) || p.periodKey === String(id)
+    );
+    if (inMem) {
+      Object.assign(inMem, data);
+    } else {
+      const seed = seedPeriods.find((p) => String(p.accountingPeriodId) === String(id) || p.periodKey === String(id));
+      if (seed) {
+        inMem = { ...seed, ...data };
+        this.customAccountingPeriods.push(inMem);
+      }
+    }
+    const db = this.db;
+    if (db) {
+      try {
+        const numId = Number(id);
+        if (!isNaN(numId)) {
+          await db.accounting_period.update({
+            where: { accounting_period_id: numId },
+            data: {
+              status: data.status,
+              closed_at: data.closedAt ? new Date(data.closedAt) : undefined,
+              closed_by_sub: data.closedBy,
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('[SetupService.updateAccountingPeriod] DB write failed:', err);
+      }
+    }
+    return inMem || { periodKey: id, ...data };
   }
+
+  public async closeAccountingPeriod(periodKey: string, reason?: string): Promise<any> {
+    const now = new Date().toISOString();
+    const user = 'Ashok Kumar';
+    let inMem = this.customAccountingPeriods.find((p) => p.periodKey === periodKey);
+    if (inMem) {
+      inMem.status = 'CLOSED';
+      inMem.closedAt = now;
+      inMem.closedBy = user;
+    } else {
+      const seed = seedPeriods.find((p) => p.periodKey === periodKey);
+      if (seed) {
+        inMem = { ...seed, status: 'CLOSED', closedAt: now, closedBy: user };
+        this.customAccountingPeriods.push(inMem);
+      }
+    }
+    const db = this.db;
+    if (db) {
+      try {
+        await db.accounting_period.updateMany({
+          where: { period_key: periodKey },
+          data: { status: 'CLOSED', closed_at: new Date(), closed_by_sub: user },
+        });
+      } catch (err) {
+        console.warn('[SetupService.closeAccountingPeriod] DB update failed:', err);
+      }
+    }
+    return { periodKey, status: 'CLOSED', closedAt: now, closedBy: user, reason };
+  }
+
+  public async reopenAccountingPeriod(periodKey: string, reason?: string): Promise<any> {
+    let inMem = this.customAccountingPeriods.find((p) => p.periodKey === periodKey);
+    if (inMem) {
+      inMem.status = 'OPEN';
+      inMem.closedAt = undefined;
+      inMem.closedBy = undefined;
+    } else {
+      const seed = seedPeriods.find((p) => p.periodKey === periodKey);
+      if (seed) {
+        inMem = { ...seed, status: 'OPEN', closedAt: undefined, closedBy: undefined };
+        this.customAccountingPeriods.push(inMem);
+      }
+    }
+    const db = this.db;
+    if (db) {
+      try {
+        await db.accounting_period.updateMany({
+          where: { period_key: periodKey },
+          data: { status: 'OPEN', closed_at: null, closed_by_sub: null },
+        });
+      } catch (err) {
+        console.warn('[SetupService.reopenAccountingPeriod] DB update failed:', err);
+      }
+    }
+    return { periodKey, status: 'OPEN', reason };
+  }
+
   public async createChargeCode(data: any): Promise<any> {
-    return { chargeCodeId: Date.now(), ...data };
+    const code = (data.chargeCode || CHG_).toUpperCase().trim();
+    const name = data.chargeName || code;
+    const group = (data.chargeGroup || 'OTHER').toUpperCase();
+    const defaultTax = data.defaultTaxCode || 'TZ_VAT_STD';
+    const isDisb = Boolean(data.isDisbursement);
+    const printOrder = Number(data.printOrder || 99);
+    const revenueGl = data.revenueGlAccount || (isDisb ? null : '4900-99');
+
+    const newCharge = {
+      chargeCodeId: Date.now(),
+      chargeCode: code,
+      chargeName: name,
+      chargeGroup: group,
+      defaultTaxCode: defaultTax,
+      isDisbursement: isDisb,
+      printOrder,
+      revenueGlAccount: revenueGl,
+      isActive: true,
+      logInst: 1,
+    };
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_charge_code.create({
+          data: {
+            charge_code: code,
+            charge_name: name,
+            is_active: true,
+            createdby: 'SYSTEM',
+          },
+        });
+        newCharge.chargeCodeId = created.charge_code_id;
+      } catch (err) {
+        console.warn('[SetupService.createChargeCode] DB write failed:', err);
+      }
+    }
+    this.customChargeCodes.unshift(newCharge);
+    return newCharge;
   }
+
   public async updateChargeCode(id: any, data: any): Promise<any> {
-    return { chargeCodeId: id, ...data };
+    let inMem = this.customChargeCodes.find(
+      (c) => String(c.chargeCodeId) === String(id) || c.chargeCode === String(id)
+    );
+    if (inMem) {
+      Object.assign(inMem, data);
+    } else {
+      const seed = seedChargeCodes.find((c) => String(c.chargeCodeId) === String(id) || c.chargeCode === String(id));
+      if (seed) {
+        inMem = { ...seed, ...data };
+        this.customChargeCodes.push(inMem);
+      }
+    }
+    const db = this.db;
+    if (db) {
+      try {
+        const numId = Number(id);
+        if (!isNaN(numId)) {
+          await db.m_charge_code.update({
+            where: { charge_code_id: numId },
+            data: {
+              charge_name: data.chargeName,
+              is_active: data.isActive,
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('[SetupService.updateChargeCode] DB write failed:', err);
+      }
+    }
+    return inMem || { chargeCodeId: id, ...data };
   }
+
   public async createTaxCode(data: any): Promise<any> {
-    return { taxCodeId: Date.now(), ...data };
+    const code = (data.taxCode || TAX_).toUpperCase().trim();
+    const name = data.taxName || code;
+    const country = (data.countryCode || 'TZ').toUpperCase();
+    const rate = String(data.ratePct ?? data.ratePercent ?? '18.000');
+    const treatment = data.taxTreatment || 'STANDARD';
+    const outputGl = data.outputGlAccount || (treatment === 'STANDARD' ? '2310-00' : null);
+
+    const newTax = {
+      taxCodeId: Date.now(),
+      taxCode: code,
+      taxName: name,
+      countryCode: country,
+      ratePct: rate,
+      taxTreatment: treatment,
+      fiscalTaxClass: data.fiscalTaxClass || null,
+      outputGlAccount: outputGl,
+      effectiveFrom: data.effectiveFrom || new Date().toISOString().split('T')[0],
+      isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+      verify: data.verify,
+      logInst: 1,
+    };
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_tax_code.create({
+          data: {
+            tax_code: code,
+            tax_name: name,
+            rate_pct: Number(rate),
+            is_active: newTax.isActive,
+            createdby: 'SYSTEM',
+          },
+        });
+        newTax.taxCodeId = created.tax_code_id;
+      } catch (err) {
+        console.warn('[SetupService.createTaxCode] DB write failed:', err);
+      }
+    }
+    this.customTaxCodes.unshift(newTax);
+    return newTax;
   }
+
   public async updateTaxCode(id: any, data: any): Promise<any> {
-    return { taxCodeId: id, ...data };
+    let inMem = this.customTaxCodes.find(
+      (t) => String(t.taxCodeId) === String(id) || t.taxCode === String(id)
+    );
+    if (inMem) {
+      Object.assign(inMem, data);
+    } else {
+      const seed = seedTaxCodes.find((t) => String(t.taxCodeId) === String(id) || t.taxCode === String(id));
+      if (seed) {
+        inMem = { ...seed, ...data };
+        this.customTaxCodes.push(inMem);
+      }
+    }
+    const db = this.db;
+    if (db) {
+      try {
+        const numId = Number(id);
+        if (!isNaN(numId)) {
+          await db.m_tax_code.update({
+            where: { tax_code_id: numId },
+            data: {
+              tax_name: data.taxName,
+              rate_pct: data.ratePct ? Number(data.ratePct) : undefined,
+              is_active: data.isActive,
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('[SetupService.updateTaxCode] DB write failed:', err);
+      }
+    }
+    return inMem || { taxCodeId: id, ...data };
   }
+
   public async createPaymentChannel(data: any): Promise<any> {
-    return { channelId: Date.now(), ...data };
+    const code = (data.channelCode || CH_).toUpperCase().trim();
+    const name = data.channelName || code;
+    const method = data.method || 'BANK_TRANSFER';
+    const currency = data.currency || 'USD';
+    const glAccount = data.glAccount || '1020-01';
+
+    const newChannel = {
+      paymentChannelId: Date.now(),
+      companyId: data.companyId || 1,
+      channelCode: code,
+      channelName: name,
+      method,
+      provider: data.provider || null,
+      currency,
+      glAccount,
+      referencePattern: data.referencePattern || null,
+      example: data.example || '—',
+      refHint: data.refHint || 'No reference required',
+      isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+      logInst: 1,
+    };
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_payment_channel.create({
+          data: {
+            company_id: newChannel.companyId,
+            channel_code: code,
+            channel_name: name,
+            method,
+            provider: newChannel.provider,
+            currency,
+            gl_account: glAccount,
+            reference_pattern: newChannel.referencePattern,
+            is_active: newChannel.isActive,
+            createdby: 'SYSTEM',
+          },
+        });
+        newChannel.paymentChannelId = created.payment_channel_id;
+      } catch (err) {
+        console.warn('[SetupService.createPaymentChannel] DB write failed:', err);
+      }
+    }
+    this.customPaymentChannels.unshift(newChannel);
+    return newChannel;
   }
+
   public async updatePaymentChannel(id: any, data: any): Promise<any> {
-    return { channelId: id, ...data };
+    let inMem = this.customPaymentChannels.find(
+      (c) => String(c.paymentChannelId) === String(id) || c.channelCode === String(id)
+    );
+    if (inMem) {
+      Object.assign(inMem, data);
+    } else {
+      const seed = seedPaymentChannels.find((c) => String(c.paymentChannelId) === String(id) || c.channelCode === String(id));
+      if (seed) {
+        inMem = { ...seed, ...data };
+        this.customPaymentChannels.push(inMem);
+      }
+    }
+    const db = this.db;
+    if (db) {
+      try {
+        const numId = Number(id);
+        if (!isNaN(numId)) {
+          await db.m_payment_channel.update({
+            where: { payment_channel_id: numId },
+            data: {
+              channel_name: data.channelName,
+              provider: data.provider,
+              currency: data.currency,
+              gl_account: data.glAccount,
+              reference_pattern: data.referencePattern,
+              is_active: data.isActive,
+            },
+          });
+        }
+      } catch (err) {
+        console.warn('[SetupService.updatePaymentChannel] DB write failed:', err);
+      }
+    }
+    return inMem || { channelId: id, ...data };
   }
+
   public async createGlSetting(data: any): Promise<any> {
-    return { glSettingId: Date.now(), ...data };
+    const key = (data.settingKey || KEY_).toUpperCase().trim();
+    const newGl = {
+      settingKey: key,
+      glAccount: data.glAccount || '1000-00',
+      description: data.description || key,
+      logInst: 1,
+    };
+    const db = this.db;
+    if (db) {
+      try {
+        await db.m_gl_setting.create({
+          data: {
+            company_id: 1,
+            setting_key: key,
+            gl_account: newGl.glAccount,
+            description: newGl.description,
+            createdby: 'SYSTEM',
+          },
+        });
+      } catch (err) {
+        console.warn('[SetupService.createGlSetting] DB write failed:', err);
+      }
+    }
+    this.customGlSettings.unshift(newGl);
+    return newGl;
   }
+
   public async updateGlSetting(id: any, data: any): Promise<any> {
-    return { glSettingId: id, ...data };
+    let inMem = this.customGlSettings.find(
+      (g) => g.settingKey === String(id)
+    );
+    if (inMem) {
+      Object.assign(inMem, data);
+    } else {
+      const seed = seedGlSettings.find((g) => g.settingKey === String(id));
+      if (seed) {
+        inMem = { ...seed, ...data };
+        this.customGlSettings.push(inMem);
+      }
+    }
+    const db = this.db;
+    if (db) {
+      try {
+        await db.m_gl_setting.updateMany({
+          where: { setting_key: String(id) },
+          data: {
+            gl_account: data.glAccount,
+            description: data.description,
+          },
+        });
+      } catch (err) {
+        console.warn('[SetupService.updateGlSetting] DB write failed:', err);
+      }
+    }
+    return inMem || { settingKey: id, ...data };
   }
   public async createInspectionTemplate(data: any): Promise<any> {
-    return { templateId: Date.now(), ...data };
+    const code = (data.templateCode || data.code || ('INSP_' + Date.now())).toUpperCase().trim();
+    const name = data.templateName || data.name || code;
+    const category = (data.category || data.unitCategory || 'CONTAINER').toUpperCase();
+    const inspectionKind = (data.inspectionKind || 'GATE_IN').toUpperCase();
+    const minPhotos = Number(data.minPhotos || 4);
+    const versionNo = Number(data.versionNo || 1);
+
+    const items = Array.isArray(data.items) && data.items.length > 0 ? data.items.map((it: any, idx: number) => ({
+      itemId: it.itemId || it.inspectionItemId || (Date.now() + idx),
+      inspectionItemId: it.itemId || it.inspectionItemId || (Date.now() + idx),
+      itemCode: (it.itemCode || ('ITEM_' + (idx + 1))).toUpperCase(),
+      itemName: it.itemName || it.itemCode,
+      itemLabel: it.itemName || it.itemCode,
+      area: (it.area || 'EXTERIOR').toUpperCase(),
+      inputType: (it.inputType || 'YES_NO').toUpperCase(),
+      isMandatory: it.isMandatory !== undefined ? Boolean(it.isMandatory) : true,
+      sortOrder: it.sortOrder !== undefined ? Number(it.sortOrder) : (idx + 1) * 10,
+    })) : [
+      { itemId: 1, inspectionItemId: 1, itemCode: 'DOORS', itemName: 'Doors and locking bars', area: 'DOORS', inputType: 'OK_DAMAGE', isMandatory: true, sortOrder: 10 },
+      { itemId: 2, inspectionItemId: 2, itemCode: 'WALLS', itemName: 'Left and right side walls', area: 'WALLS', inputType: 'OK_DAMAGE', isMandatory: true, sortOrder: 20 },
+      { itemId: 3, inspectionItemId: 3, itemCode: 'ROOF', itemName: 'Roof condition', area: 'ROOF', inputType: 'OK_DAMAGE', isMandatory: false, sortOrder: 30 },
+      { itemId: 4, inspectionItemId: 4, itemCode: 'SEAL', itemName: 'Seal present and intact', area: 'SEAL', inputType: 'YES_NO', isMandatory: true, sortOrder: 40 },
+    ];
+
+    const newTemplate: any = {
+      templateId: Date.now(),
+      inspectionTemplateId: Date.now(),
+      templateCode: code,
+      templateName: name,
+      category,
+      unitCategory: category,
+      unitTypeKind: category,
+      inspectionKind,
+      versionNo,
+      minPhotos,
+      items,
+      fixedFields: category === 'CONTAINER' ? ['Seal number', 'ISO size', 'Tare weight'] : ['Chassis/VIN', 'Odometer', 'Fuel level'],
+      isActive: true,
+      logInst: 1,
+    };
+
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_inspection_template.create({
+          data: {
+            template_code: code,
+            template_name: name,
+            unit_category: category,
+            inspection_kind: inspectionKind,
+            version_no: versionNo,
+            min_photos: minPhotos,
+            is_active: true,
+            createdby: 'SYSTEM',
+          },
+        });
+        newTemplate.templateId = created.inspection_template_id;
+        newTemplate.inspectionTemplateId = created.inspection_template_id;
+
+        for (const it of items) {
+          try {
+            await db.m_inspection_item.create({
+              data: {
+                inspection_template_id: created.inspection_template_id,
+                item_code: it.itemCode,
+                item_name: it.itemName,
+                area: it.area,
+                input_type: it.inputType,
+                is_mandatory: it.isMandatory,
+                sort_order: it.sortOrder,
+                createdby: 'SYSTEM',
+              },
+            });
+          } catch (itemErr: any) {
+            console.warn('[SetupService.createInspectionTemplate] Item error:', itemErr.message);
+          }
+        }
+      } catch (err: any) {
+        console.warn('[SetupService.createInspectionTemplate] DB error:', err.message);
+      }
+    }
+
+    this.customInspectionTemplates.unshift(newTemplate);
+    return newTemplate;
   }
+
   public async updateInspectionTemplate(id: any, data: any): Promise<any> {
-    return { templateId: id, ...data };
+    const numId = Number(id);
+    const inMem = this.customInspectionTemplates.find((t) => t.inspectionTemplateId === numId || String(t.templateCode) === String(id));
+    if (inMem) Object.assign(inMem, data);
+    return inMem || { inspectionTemplateId: numId, ...data };
   }
+
   public async createDamageCode(data: any): Promise<any> {
-    return { damageCodeId: Date.now(), ...data };
+    const code = (data.damageCode || data.code || ('DMG_' + Date.now())).toUpperCase().trim();
+    const name = data.damageName || data.name || code;
+    const appliesTo = (data.appliesTo || 'ANY').toUpperCase();
+    const description = data.description || name;
+
+    const newDamageCode: any = {
+      damageCodeId: Date.now(),
+      damageCode: code,
+      code,
+      damageName: name,
+      name,
+      appliesTo,
+      severity: data.severity || 'MOD',
+      description,
+      isActive: true,
+      logInst: 1,
+    };
+
+    const db = this.db;
+    if (db) {
+      try {
+        const created = await db.m_damage_code.create({
+          data: {
+            damage_code: code,
+            damage_name: name,
+            applies_to: appliesTo,
+            createdby: 'SYSTEM',
+          },
+        });
+        newDamageCode.damageCodeId = created.damage_code_id;
+      } catch (err: any) {
+        console.warn('[SetupService.createDamageCode] DB error:', err.message);
+      }
+    }
+
+    this.customDamageCodes.unshift(newDamageCode);
+    return newDamageCode;
   }
+
   public async updateDamageCode(id: any, data: any): Promise<any> {
-    return { damageCodeId: id, ...data };
+    const numId = Number(id);
+    const inMem = this.customDamageCodes.find((d) => d.damageCodeId === numId || String(d.damageCode) === String(id));
+    if (inMem) Object.assign(inMem, data);
+    return inMem || { damageCodeId: numId, ...data };
   }
 }
 

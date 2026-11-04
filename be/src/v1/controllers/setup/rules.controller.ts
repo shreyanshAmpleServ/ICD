@@ -4,13 +4,7 @@ import { setupService } from '../../../modules/setup/setup.service';
 export const setupRulesController = {
   getHoldTypes: async (_req: Request, res: Response) => {
     try {
-      const items = [
-        { holdCode: 'CUSTOMS', holdName: 'Customs Examination Hold', authorityName: 'TRA Customs', defaultReason: 'Routine physical inspection required' },
-        { holdCode: 'FINANCE', holdName: 'Outstanding Payment Hold', authorityName: 'DCC Finance', defaultReason: 'Uncleared storage invoices' },
-        { holdCode: 'HEALTH', holdName: 'Port Health Quarantine', authorityName: 'Ministry of Health', defaultReason: 'Phytosanitary inspection needed' },
-        { holdCode: 'LINE', holdName: 'Shipping Line Hold', authorityName: 'Carrier Line', defaultReason: 'Original Bill of Lading pending surrender' },
-        { holdCode: 'POLICE', holdName: 'Police Verification Hold', authorityName: 'Port Police', defaultReason: 'Cargo seal discrepancy investigation' },
-      ];
+      const items = await setupService.getHoldTypes();
       res.json({ items, total: items.length, nextCursor: null });
     } catch (err: any) {
       res.status(500).json({ error: err.message });

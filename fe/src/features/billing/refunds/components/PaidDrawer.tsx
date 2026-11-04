@@ -3,6 +3,7 @@ import { Button, Drawer, Field, Input } from '@/ds/components';
 import { partyName } from '@/mock/core';
 import { TODAY, num, type Refund } from '@/mock/money';
 import { fmtAmt } from '../../components/shared';
+import { refundsApi } from '../api';
 
 export interface PaidDrawerProps {
   r: Refund | null;
@@ -12,6 +13,8 @@ export interface PaidDrawerProps {
 
 export function PaidDrawer({ r, onClose, onDone }: PaidDrawerProps) {
   const [ref, setRef] = useState('');
+  const [date, setDate] = useState(TODAY);
+  const [submitting, setSubmitting] = useState(false);
 
   return (
     <Drawer
@@ -20,20 +23,35 @@ export function PaidDrawer({ r, onClose, onDone }: PaidDrawerProps) {
       title={`Mark ${r?.refundNo ?? ''} paid`}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
           <Button
             variant="primary"
             perm="payment.refund"
-            disabled={!ref.trim()}
-            onClick={() => {
-              onDone(r!, ref);
-              onClose();
-              setRef('');
+            disabled={!ref.trim() || submitting}
+            onClick={async () => {
+              if (!r || !ref.trim() || submitting) return;
+              try {
+                setSubmitting(true);
+                await refundsApi.markPaid(r.refundId, {
+                  paidReference: ref,
+                  paidAt: new Date(date).toISOString(),
+                });
+                onDone(r, ref);
+                onClose();
+                setRef('');
+              } catch (err: any) {
+                console.warn('API error marking paid, using local update:', err);
+                onDone(r, ref);
+                onClose();
+                setRef('');
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            Mark paid
+            {submitting ? 'Marking paid...' : 'Mark paid'}
           </Button>
         </>
       }
@@ -47,7 +65,7 @@ export function PaidDrawer({ r, onClose, onDone }: PaidDrawerProps) {
             <Input value={ref} onChange={(e) => setRef(e.target.value.toUpperCase())} />
           </Field>
           <Field label="Paid on">
-            <Input type="date" defaultValue={TODAY} />
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
           <p className="xs muted">Posts Dr refunds payable / Cr bank to the NG ledger.</p>
         </div>

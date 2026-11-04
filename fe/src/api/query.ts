@@ -32,10 +32,14 @@ function resolveEndpoint(key: QueryKey): string | null {
       return param ? `/tariffs/${param}` : null;
     case 'rates':
       return '/exchange-rates';
+    case 'effectiveRate':
+      return param ? `/exchange-rates/effective?date=${param}` : '/exchange-rates/effective';
     case 'disbursements':
       return '/disbursements';
     case 'gl':
       return '/gl-postings';
+    case 'periods':
+      return '/accounting-periods';
     case 'refunds':
       return '/refunds';
     case 'charges':

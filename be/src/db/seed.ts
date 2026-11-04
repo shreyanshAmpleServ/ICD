@@ -4,6 +4,10 @@ import dotenv from 'dotenv';
 import { seedPortalData } from '../scripts/seed-portal';
 import { seedAllServiceRequests } from '../scripts/seed-service-requests';
 import { seedOpsData } from '../scripts/seed-ops-data';
+import { seedCharges } from '../scripts/seed-charges';
+import { seedInvoices } from '../scripts/seed-invoices';
+import { seedCashier } from '../scripts/seed-cashier';
+import { seedRefunds } from '../scripts/seed-refunds';
 
 dotenv.config();
 
@@ -768,10 +772,16 @@ export async function seedDatabase() {
   // 18. Operational Master Data Seed (Slot Rules, Contractors, Repair Codes, Devices)
   await seedOpsData();
 
+  // 19. Commercial & Billing Seeds
+  await seedCharges();
+  await seedInvoices();
+  await seedCashier();
+  await seedRefunds();
+
   console.log('🎉 Full database seeding finished successfully! All tables seeded in MSSQL ICD_New.');
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedDatabase()
     .catch((e) => {
       console.error('Seed error:', e);

@@ -100,7 +100,7 @@ export async function seedAllServiceRequests() {
   console.log(`✅ Total service_requests in DB: ${count}`);
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
   seedAllServiceRequests()
     .catch((e) => {
       console.error(e);

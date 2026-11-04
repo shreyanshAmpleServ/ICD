@@ -197,9 +197,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Session>(() => {
     const role = dynamicRoles.find((r) => r.code === roleCode);
+    const isAdmin = !role || roleCode === ALL_ROLE || roleCode === 'ALL_PERMISSIONS' || roleCode === 'ICD_ADMIN' || role?.code === 'ICD_ADMIN';
     const grant = (code: string): Grant | null => {
-      if (!role || roleCode === ALL_ROLE) return 'APPR'; // "All permissions"
-      return role.grants[code] ?? null;
+      if (isAdmin) return 'APPR'; // "All permissions"
+      return role?.grants?.[code] ?? null;
     };
     const currentSite = dynamicSites.find((s) => s.siteId === siteId) ?? dynamicSites[0] ?? SITES[0];
 
@@ -229,11 +230,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setUserPhone,
       grant,
       can: (code, level = 'VIEW') => {
-        if (!code) return true;
+        if (!code || isAdmin) return true;
         const g = grant(code);
         return !!g && RANK[g] >= RANK[level];
       },
-      isExternal: !!role?.external,
+      isExternal: !isAdmin && !!role?.external,
       refetchSession: fetchSessionData,
     };
 }, [roleCode, siteId, phase, theme, lang, offline, dynamicSites, dynamicRoles, userName, userEmail, userPhone, userSub, userTitle, userRoleName, userMfa]);

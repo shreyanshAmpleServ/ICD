@@ -4,6 +4,7 @@ import {
   KeyRound,
   Plus,
   RefreshCw,
+  Search,
   RotateCcw,
   ShieldCheck,
   UserCheck,
@@ -34,7 +35,7 @@ import {
 } from '@/ds/components';
 import { ROLES } from '@/app/roles';
 import { SITES } from '@/app/session';
-import { SRC, type User, permissions } from '@/mock/admin';
+import { SRC, type User, users as seedUsers, permissions } from '@/mock/admin';
 import { AuditNote, EditDrawer, ListPanel, SetupPage, Split } from '../shared/AdminKit';
 import { usersApi, type CreateUserData } from './api';
 import { AddUserModal } from './components/AddUserModal';
@@ -87,7 +88,9 @@ export function UsersView() {
   );
 
     const roles = rolesData && rolesData.length ? rolesData : ROLES;
-    const users = usersData ?? [];
+    const hasActiveFilters =
+      searchQuery.trim() !== '' || roleFilter !== 'all' || siteFilter !== 'all' || statusFilter !== 'all';
+    const users: User[] = (usersData && usersData.length > 0) ? (usersData as User[]) : (!hasActiveFilters ? seedUsers : ((usersData as User[]) ?? []));
     const delegations: any[] = delegationsData ?? [];
 
     const roleName = (c: string) => roles.find((r) => r.code === c)?.name ?? c;
@@ -122,8 +125,8 @@ export function UsersView() {
       setTab('matrix');
     };
 
-    const hasActiveFilters =
-      searchQuery.trim() !== '' || roleFilter !== 'all' || siteFilter !== 'all' || statusFilter !== 'all';
+    // (hasActiveFilters declared above)
+
 
     const resetFilters = () => {
       setSearchQuery('');
@@ -206,15 +209,17 @@ export function UsersView() {
                 selected={sel}
                 onSelect={(id) => setSel(Number(id))}
                 filter={
-                  <div className="stack" style={{ gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
-                    <SearchInput
-                      icon={usersLoading ? <RefreshCw className="spin" size={14} /> : undefined}
-                      placeholder="Search name, email, role (API)..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      aria-label="Filter users from API"
-                    />
-                    <div className="row" style={{ justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                    <div style={{ width: '100%', boxSizing: 'border-box' }}>
+                      <SearchInput
+                        icon={usersLoading ? <RefreshCw className="spin" size={14} /> : <Search size={14} />}
+                        placeholder="Search name, email, role..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        aria-label="Filter users from API"
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', width: '100%' }}>
                       <Chips
                         value={statusFilter}
                         onChange={(v) => setStatusFilter(v as any)}
@@ -225,29 +230,25 @@ export function UsersView() {
                         ]}
                       />
                     </div>
-                    <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-                      <div style={{ flex: 1, minWidth: 120 }}>
-                        <Select
-                          aria-label="Filter by role"
-                          value={roleFilter}
-                          onChange={(e) => setRoleFilter(e.target.value)}
-                          options={[
-                            ['all', 'All Roles'],
-                            ...roles.filter((r) => !r.external).map((r) => [r.code, r.name] as [string, string]),
-                          ]}
-                        />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 120 }}>
-                        <Select
-                          aria-label="Filter by site"
-                          value={siteFilter}
-                          onChange={(e) => setSiteFilter(e.target.value)}
-                          options={[
-                            ['all', 'All Sites'],
-                            ...SITES.map((s) => [String(s.siteId), s.siteCode] as [string, string]),
-                          ]}
-                        />
-                      </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', width: '100%', boxSizing: 'border-box' }}>
+                      <Select
+                        aria-label="Filter by role"
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                        options={[
+                          ['all', 'All Roles'],
+                          ...roles.filter((r) => !r.external).map((r) => [r.code, r.name] as [string, string]),
+                        ]}
+                      />
+                      <Select
+                        aria-label="Filter by site"
+                        value={siteFilter}
+                        onChange={(e) => setSiteFilter(e.target.value)}
+                        options={[
+                          ['all', 'All Sites'],
+                          ...SITES.map((s) => [String(s.siteId), s.siteCode] as [string, string]),
+                        ]}
+                      />
                     </div>
                   </div>
                 }

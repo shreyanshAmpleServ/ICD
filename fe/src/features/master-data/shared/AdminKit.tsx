@@ -69,8 +69,8 @@ export function ListPanel({ title, items, selected, onSelect, actions, searchabl
   return (
     <Panel flush title={title} actions={actions}>
       {(searchable || filter) && (
-        <div className="toolbar">
-          {searchable && <div style={{ flex: '1 1 100%' }}><SearchInput icon={<Search />} placeholder={searchable} value={q} onChange={(e) => setQ(e.target.value)} aria-label={searchable} /></div>}
+        <div className="toolbar" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '8px', padding: '10px 12px', width: '100%', boxSizing: 'border-box' }}>
+          {searchable && <div style={{ width: '100%' }}><SearchInput icon={<Search />} placeholder={searchable} value={q} onChange={(e) => setQ(e.target.value)} aria-label={searchable} /></div>}
           {filter}
         </div>
       )}
@@ -143,7 +143,7 @@ export function SourcePill({ source, sync }: { source?: string | null; sync?: st
 }
 
 export function GrantChip({ g }: { g: Grant | null | undefined }) {
-  if (!g) return <span className="adm-g adm-g-none" aria-label="No grant">·</span>;
+  if (!g) return <span className="adm-g adm-g-none" aria-label="No grant">—</span>;
   const title = { DO: 'Can do it', REQ: 'Can request (needs approval)', APPR: 'Can approve', VIEW: 'Can view' }[g];
   return <span className={`adm-g adm-g-${g}`} title={title}>{g}</span>;
 }
@@ -158,22 +158,23 @@ export function useEditable<T>(
     if (fetcher) {
       try {
         const res = await fetcher();
-        if (Array.isArray(res)) return res as T[];
-        if (res && Array.isArray((res as any).items)) {
+        if (Array.isArray(res) && res.length > 0) return res as T[];
+        if (res && Array.isArray((res as any).items) && (res as any).items.length > 0) {
           return (res as any).items as T[];
         }
-        if (res && typeof res === 'object') return res as T[];
-        return [];
+        if (res && typeof res === 'object' && Object.keys(res).length > 0) return res as T[];
+        return _src;
       } catch (err) {
         console.warn(`[useEditable:${key}] Error fetching live data:`, err);
-        return [];
+        return _src;
       }
     }
-    return [];
+    return _src;
   });
   const [over, setOver] = useState<T[] | null>(null);
-  const rows: T[] = over ?? (Array.isArray(data) ? data : ((data as any)?.items ?? []));
-  const update = (fn: (r: T[]) => T[]) => setOver(fn(over ?? (Array.isArray(data) ? data : ((data as any)?.items ?? []))));
+  const resolved = (Array.isArray(data) && data.length > 0) ? data : ((data as any)?.items?.length > 0 ? (data as any).items : _src);
+  const rows: T[] = over ?? resolved;
+  const update = (fn: (r: T[]) => T[]) => setOver(fn(over ?? resolved));
   return [rows, update, !data, refetch] as const;
 }
 
