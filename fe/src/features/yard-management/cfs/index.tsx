@@ -250,7 +250,7 @@ export function CfsView() {
           </Panel>
         )}
       </div>
-      <LotDrawer lot={lot} onClose={() => setLot(null)} />
+      <LotDrawer lot={lot} onClose={() => setLot(null)} onSuccess={refetchLots} />
       <PlanJobDrawer open={planOpen} onClose={() => setPlanOpen(false)} onSuccess={() => { refetchJobs(); refetchLots(); }} />
     </Page>
   );

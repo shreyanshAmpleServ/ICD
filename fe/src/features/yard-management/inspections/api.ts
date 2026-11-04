@@ -4,7 +4,8 @@ import { type Insp } from '@/mock/ops';
 export const inspectionsApi = {
   getInspections: async (siteId?: number): Promise<Insp[]> => {
     try {
-      const res = await api.get<Insp[]>('/inspections');
+      const url = siteId ? `/inspections?siteId=${siteId}` : '/inspections';
+      const res = await api.get<Insp[]>(url);
       const list = Array.isArray(res) ? res : [];
       return siteId ? list.filter((i) => i.siteId === siteId) : list;
     } catch {

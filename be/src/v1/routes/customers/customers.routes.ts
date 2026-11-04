@@ -17,9 +17,4 @@ customersRoutes.get('/portal/requests', requireSite(false), requirePermission('p
 customersRoutes.get('/service-requests', requireSite(false), requirePermission('portal.request.handle'), customerServiceRequestsController.getServiceRequests);
 customersRoutes.post('/service-requests', requireSite(false), requirePermission('portal.request.handle', 'DO'), customerServiceRequestsController.createServiceRequest);
 
-// Parties
-customersRoutes.get('/parties', requireSite(false), requirePermission('masters.view'), customerPartiesController.getParties);
-customersRoutes.post('/parties', requireSite(false), requirePermission('masters.view', 'DO'), customerPartiesController.createParty);
-customersRoutes.get('/parties/:partyId', requireSite(false), requirePermission('masters.view'), customerPartiesController.getPartyById);
-customersRoutes.patch('/parties/:partyId', requireSite(false), requirePermission('masters.view', 'DO'), customerPartiesController.updateParty);
 

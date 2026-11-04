@@ -50,9 +50,9 @@ export function RepairsView() {
     .reduce(
       (a, e) =>
         a +
-        e.lines
+        (e.lines || [])
           .filter((l) => l.lineStatus === 'APPROVED')
-          .reduce((b, l) => b + Number(l.labourCost) + Number(l.materialCost), 0),
+          .reduce((b, l) => b + Number(l.labourCost || 0) + Number(l.materialCost || 0), 0),
       0
     );
   const lines = [...new Set(data.map((e) => e.lineCode))].sort();
@@ -120,7 +120,7 @@ export function RepairsView() {
                 header: 'Unit',
                 render: (e) => (
                   <>
-                    <UnitNo no={e.unitNo} />
+                    <UnitNo no={e.unitNo} to={e.unitStayId ? `/units/${e.unitStayId}` : undefined} />
                     <div className="xs faint">
                       {e.unitType} · {e.location}
                     </div>
@@ -128,14 +128,18 @@ export function RepairsView() {
                 ),
               },
               { key: 'l', header: 'Line', render: (e) => <span className="tag">{e.lineCode}</span> },
-              { key: 'n', header: 'Lines', num: true, render: (e) => e.lines.length },
+              { key: 'n', header: 'Lines', num: true, render: (e) => (e.lines || []).length },
               { key: 'lab', header: 'Labour', num: true, render: (e) => <Money amount={e.totalLabour} /> },
               { key: 'mat', header: 'Material', num: true, render: (e) => <Money amount={e.totalMaterial} /> },
               { key: 't', header: 'Total (USD)', num: true, render: (e) => <Money amount={e.totalAmount} strong /> },
               {
                 key: 'st',
                 header: 'Status',
-                render: (e) => <Pill tone={EST_STATUS[e.status!][1]}>{EST_STATUS[e.status!][0]}</Pill>,
+                render: (e) => (
+                  <Pill tone={EST_STATUS[e.status ?? 'DRAFT']?.[1] ?? 'idle'}>
+                    {EST_STATUS[e.status ?? 'DRAFT']?.[0] ?? (e.status || 'Draft')}
+                  </Pill>
+                ),
               },
               { key: 'ref', header: 'Line ref.', render: (e) => <span className="small">{e.approverRef ?? '—'}</span> },
             ]}

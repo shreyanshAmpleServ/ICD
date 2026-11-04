@@ -3,6 +3,13 @@ import { type Estimate } from '@/mock/ops';
 
 export type { Estimate };
 
+export interface RepairCode {
+  repairCode: string;
+  repairName: string;
+  defaultLabourHours: string;
+  isActive: boolean;
+}
+
 export const repairsApi = {
   getRepairEstimates: async (): Promise<Estimate[]> => {
     try {
@@ -18,6 +25,15 @@ export const repairsApi = {
       return await api.get<Estimate>(`/repairs/${repairEstimateId}`);
     } catch {
       return undefined;
+    }
+  },
+
+  getRepairCodes: async (): Promise<RepairCode[]> => {
+    try {
+      const res = await api.get<RepairCode[]>('/repair-codes');
+      return Array.isArray(res) ? res : [];
+    } catch {
+      return [];
     }
   },
 

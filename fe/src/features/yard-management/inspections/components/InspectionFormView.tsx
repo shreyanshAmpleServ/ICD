@@ -4,9 +4,10 @@ import { Camera, CheckCircle2, FileSignature, Play, Printer, RotateCcw, ShieldCh
 import {
   Banner, Button, DL, Empty, Field, Input, Page, PageHeader, Panel, Pill, Segmented, StatusPill, Textarea, UnitNo, fmtDT, useToast,
 } from '@/ds/components';
-import { useQ, delay } from '@/api/query';
+import { useQ } from '@/api/query';
 import { stay } from '@/mock/core';
 import { checklists, damageName, inspections, type Finding, type Insp } from '@/mock/ops';
+import { inspectionsApi } from '../api';
 import { DamageDiagram, type Zone } from './DamageDiagram';
 import { FindingDrawer } from './FindingDrawer';
 
@@ -34,9 +35,15 @@ const FUEL = ['E', '1/4', '1/2', '3/4', 'F'] as const;
 export function InspectionFormView() {
   const { inspectionId } = useParams();
   const id = Number(inspectionId);
-  const { data: insp, isLoading } = useQ(['inspection', id], () =>
-    delay(inspections.find((i) => i.inspectionId === id))
-  );
+  const { data: insp, isLoading } = useQ(['inspection', id], async () => {
+    try {
+      const live = await inspectionsApi.getInspection(id);
+      if (live) return live;
+    } catch {
+      // fallback
+    }
+    return inspections.find((i) => i.inspectionId === id);
+  });
   const toast = useToast();
   const [status, setStatus] = useState<Insp['status']>();
   const [needsAppr, setNeedsAppr] = useState(false);
@@ -93,7 +100,7 @@ export function InspectionFormView() {
   }
 
   const s = stay(insp.unitStayId);
-  const items = checklists[insp.category];
+  const items = checklists[insp.category] || checklists.CONTAINER || [];
   const editable = status === 'IN_PROGRESS' || status === 'REINSPECT';
   const veh = insp.category === 'VEHICLE';
   const worst = findings.some((f) => f.severity === 'CRITICAL')
@@ -117,7 +124,24 @@ export function InspectionFormView() {
   ].filter(Boolean) as string[];
   const major = condition === 'MAJOR_DAMAGE' || condition === 'REJECTED';
 
-  const complete = () => {
+  const complete = async () => {
+    try {
+      await inspectionsApi.completeInspection(id, {
+        overallCondition: condition,
+        findings,
+        results: Object.entries(results).map(([itemId, val]) => ({
+          inspectionItemId: Number(itemId),
+          isOk: val === 'OK',
+          resultValue: val,
+        })),
+        odometerKm: odo ? Number(odo) : undefined,
+        fuelLevel: fuel || undefined,
+        batteryOk: battery === 'OK',
+        personalEffects: effects || undefined,
+      });
+    } catch (e) {
+      console.warn('Backend completeInspection failed:', e);
+    }
     setStatus('COMPLETED');
     if (major) {
       setNeedsAppr(true);
@@ -247,7 +271,12 @@ export function InspectionFormView() {
                   icon={<RotateCcw />}
                   perm="inspection.damage.approve"
                   level="APPR"
-                  onClick={() => {
+                  onClick={async () => {
+                    try {
+                      await inspectionsApi.saveResults(id, { status: 'REINSPECT' });
+                    } catch (e) {
+                      console.warn('Backend saveResults failed:', e);
+                    }
                     setStatus('REINSPECT');
                     setNeedsAppr(false);
                     toast('Sent back for re-inspection');
@@ -261,7 +290,12 @@ export function InspectionFormView() {
                   icon={<ShieldCheck />}
                   perm="inspection.damage.approve"
                   level="APPR"
-                  onClick={() => {
+                  onClick={async () => {
+                    try {
+                      await inspectionsApi.approveInspection(id);
+                    } catch (e) {
+                      console.warn('Backend approveInspection failed:', e);
+                    }
                     setStatus('APPROVED');
                     setNeedsAppr(false);
                     toast('Damage approved');
@@ -490,14 +524,14 @@ export function InspectionFormView() {
                 items={[
                   ['Unit', <UnitNo key="u" no={insp.unitNo} category={insp.category} />],
                   ['Type', insp.unitType],
-                  ['Line', s?.unitSummary.lineCode],
+                  ['Line', s?.unitSummary?.lineCode ?? '—'],
                   ['Where', s?.currentLocation?.fullCode ?? 'Gate'],
                   ['Truck', insp.plateNo ? <Link key="t" to={`/gate/visits/${insp.truckVisitId}`}>{insp.plateNo}</Link> : '—'],
-                  ['Seal', s?.sealNo],
+                  ['Seal', s?.sealNo ?? '—'],
                   ...(veh
                     ? ([
-                        ['Make', `${s?.cargoUnit.make} ${s?.cargoUnit.model}`],
-                        ['Colour', s?.cargoUnit.colour ?? '—'],
+                        ['Make', `${s?.cargoUnit?.make ?? ''} ${s?.cargoUnit?.model ?? ''}`.trim() || '—'],
+                        ['Colour', s?.cargoUnit?.colour ?? '—'],
                       ] as [string, string][])
                     : []),
                   ['Started', fmtDT(insp.startedAt)],

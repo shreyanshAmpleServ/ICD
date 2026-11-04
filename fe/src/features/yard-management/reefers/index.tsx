@@ -20,7 +20,7 @@ const ALARM: Record<string, string> = {
   NO_READING: 'No reading 8 h',
 };
 
-const last = (r: Reefer) => r.readings[r.readings.length - 1];
+const last = (r: Reefer) => (Array.isArray(r.readings) && r.readings.length > 0 ? r.readings[r.readings.length - 1] : undefined);
 
 export function ReefersView() {
   const { site } = useSession();
@@ -66,7 +66,7 @@ export function ReefersView() {
             {alarms
               .map(
                 (r) =>
-                  `${r.unitNo} at ${r.plugNo}: ${ALARM[r.alarm!]}${r.alarm === 'HIGH_TEMP' ? ` (${last(r).supplyTempC} °C, set ${r.setTempC} °C)` : ''
+                  `${r.unitNo} at ${r.plugNo}: ${ALARM[r.alarm!]}${r.alarm === 'HIGH_TEMP' && last(r) ? ` (${last(r)!.supplyTempC} °C, set ${r.setTempC} °C)` : ''
                   }`
               )
               .join(' · ')}
@@ -105,7 +105,7 @@ export function ReefersView() {
                   header: 'Unit',
                   render: (r) => (
                     <>
-                      <UnitNo no={r.unitNo} />
+                      <UnitNo no={r.unitNo} to={`/units/${r.unitStayId}`} />
                       <div className="xs faint">{r.unitType}</div>
                     </>
                   ),

@@ -16,7 +16,7 @@ import {
 export const cargoRoutes = Router();
 
 // Reference Data (Parties, Unit Types, Regimes, Holds, IMO)
-cargoRoutes.get(['/cargo/parties', '/parties'], requireSite(true), cargoReferenceController.getParties);
+cargoRoutes.get('/cargo/parties', requireSite(true), cargoReferenceController.getParties);
 cargoRoutes.get(['/cargo/unit-types', '/unit-types'], requireSite(true), cargoReferenceController.getUnitTypes);
 cargoRoutes.get(['/cargo/regimes', '/cargo-regimes'], requireSite(true), cargoReferenceController.getRegimes);
 cargoRoutes.get(['/cargo/hold-types', '/hold-types'], requireSite(true), cargoReferenceController.getHoldTypes);

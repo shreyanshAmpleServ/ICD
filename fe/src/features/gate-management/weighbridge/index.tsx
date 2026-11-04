@@ -8,6 +8,7 @@ import type { Tone } from '@/ds/status';
 import { useQ } from '@/api/query';
 import { useSession } from '@/app/session';
 import { VISIT_TYPES } from '@/features/gate-management/types';
+import { visits as mockVisits } from '@/mock/gate';
 import { TOLERANCE_PCT, WB_LIVE_KG, type Ticket } from './types';
 import { weighbridgeApi } from './api';
 import { gateQueueApi } from '@/features/gate-management/queue/api';
@@ -29,15 +30,21 @@ const STATUS: Record<Ticket['status'], [string, Tone]> = {
 
 export function WeighbridgeView() {
   const toast = useToast();
-  const { offline } = useSession();
-  const { data = [], isLoading: ticketsLoading, refetch } = useQ(['weighings'], () => weighbridgeApi.getTickets());
+  const { site, offline } = useSession();
+  const { data = [], isLoading: ticketsLoading, refetch } = useQ(
+    ['weighings', site?.siteId],
+    () => weighbridgeApi.getTickets(site?.siteId)
+  );
   const { data: queueVisitsRaw = [] } = useQ<any[]>(['gate-queue-visits'], () => gateQueueApi.visits());
   const queueVisits: any[] = Array.isArray(queueVisitsRaw) ? queueVisitsRaw : [];
   const [open, setOpen] = useState<Ticket | null>(null);
 
-  const onSite: any[] = queueVisits.filter((item: any) => !['EXITED', 'CANCELLED', 'REJECTED', 'ANNOUNCED'].includes(item.status!));
+  const availableVisits: any[] = queueVisits.length > 0 ? queueVisits : mockVisits;
+  const onSite: any[] = availableVisits.filter(
+    (item: any) => !['EXITED', 'CANCELLED', 'REJECTED', 'ANNOUNCED'].includes(item.status!)
+  );
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
-  const activeVisitId = selectedVisitId ?? (onSite[0]?.truckVisitId ?? 1);
+  const activeVisitId = selectedVisitId ?? (onSite[0]?.truckVisitId ?? 4410);
   const v: any = onSite.find((x: any) => x.truckVisitId === activeVisitId) ?? onSite[0] ?? null;
 
   const [kind, setKind] = useState<Kind>('OUT');
@@ -357,7 +364,7 @@ export function WeighbridgeView() {
         </Panel>
       </div>
 
-      <TicketDrawer open={open} onClose={() => setOpen(null)} />
+      <TicketDrawer open={open} onClose={() => setOpen(null)} onUpdated={refetch} />
     </Page>
   );
 }

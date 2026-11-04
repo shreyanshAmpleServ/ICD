@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowDown, ArrowUp, Camera, Plus, Trash2 } from 'lucide-react';
 import { Banner, Button, Check, Field, Input, Panel, Select } from '@/ds/components';
 import { SaveBar } from '../../shared/AdminKit';
@@ -10,16 +10,32 @@ const INPUT: Record<string, string> = { OK_DAMAGE: 'OK / damage', YES_NO: 'Yes /
 const AREAS = ['EXTERIOR', 'INTERIOR', 'ROOF', 'FLOOR', 'DOORS', 'WALLS', 'CORNERS', 'UNDERCARRIAGE', 'ENGINE', 'CABIN', 'ACCESSORIES', 'DOCUMENTS', 'SEAL', 'OTHER'] as const;
 
 interface ChecklistEditorProps {
-  tpl: Tpl;
+  tpl?: Tpl | null;
   onSave: (t: Tpl) => void;
 }
 
 export function ChecklistEditor({ tpl, onSave }: ChecklistEditorProps) {
-  const [t, setT] = useState(tpl);
+  const [t, setT] = useState<Tpl | null | undefined>(tpl);
   const [newName, setNewName] = useState('');
-  const dirty = JSON.stringify(t) !== JSON.stringify(tpl);
-  const items = [...(t.items ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  const setItems = (xs: Item[]) => setT({ ...t, items: xs.map((x, i) => ({ ...x, sortOrder: (i + 1) * 10 })) });
+
+  useEffect(() => {
+    setT(tpl);
+  }, [tpl]);
+
+  if (!t && !tpl) {
+    return (
+      <Panel title="Inspection checklist">
+        <div style={{ padding: 32, textAlign: 'center', color: '#64748b' }}>
+          Select or add an inspection checklist template to view or edit.
+        </div>
+      </Panel>
+    );
+  }
+
+  const current = (t ?? tpl)!;
+  const dirty = Boolean(tpl && JSON.stringify(current) !== JSON.stringify(tpl));
+  const items = [...(current.items ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const setItems = (xs: Item[]) => setT({ ...current, items: xs.map((x, i) => ({ ...x, sortOrder: (i + 1) * 10 })) });
   const move = (i: number, d: -1 | 1) => {
     const s = [...items];
     [s[i], s[i + d]] = [s[i + d], s[i]];
@@ -27,27 +43,27 @@ export function ChecklistEditor({ tpl, onSave }: ChecklistEditorProps) {
   };
   const upd = (i: number, p: Partial<Item>) => setItems(items.map((x, j) => (j === i ? { ...x, ...p } : x)));
 
-  const category = String(t.category || (t as any).unitCategory || 'CONTAINER').toLowerCase();
-  const inspectionKind = String(t.inspectionKind || 'GATE_IN').replace('_', '-').toLowerCase();
-  const versionNo = t.versionNo ?? (tpl as any)?.versionNo ?? 1;
+  const category = String(current.category || (current as any)?.unitCategory || 'CONTAINER').toLowerCase();
+  const inspectionKind = String(current.inspectionKind || 'GATE_IN').replace('_', '-').toLowerCase();
+  const versionNo = current.versionNo ?? (tpl as any)?.versionNo ?? 1;
 
   return (
     <>
       <Panel
-        title={t.templateName || 'Inspection checklist'}
-        sub={<span><span className="adm-code">{t.templateCode}</span> · {category} · {inspectionKind} · version {versionNo}</span>}
+        title={current.templateName || 'Inspection checklist'}
+        sub={<span><span className="adm-code">{current.templateCode}</span> · {category} · {inspectionKind} · version {versionNo}</span>}
       >
         <div className="row-wrap" style={{ gap: 24 }}>
           <Field label="Minimum photos" hint="The inspector cannot finish with fewer">
             <span className="row">
               <Camera size={16} />
-              <Input type="number" min={0} max={20} value={t.minPhotos ?? 4} onChange={(e) => setT({ ...t, minPhotos: Number(e.target.value) })} style={{ width: 90 }} />
+              <Input type="number" min={0} max={20} value={current.minPhotos ?? 4} onChange={(e) => setT({ ...current, minPhotos: Number(e.target.value) })} style={{ width: 90 }} />
             </span>
           </Field>
-          {t.fixedFields && (
+          {current.fixedFields && (
             <div className="field">
               <label>Also recorded on every {category} inspection</label>
-              <div className="row-wrap">{t.fixedFields.map((f) => <span key={f} className="tag">{f}</span>)}</div>
+              <div className="row-wrap">{current.fixedFields.map((f) => <span key={f} className="tag">{f}</span>)}</div>
             </div>
           )}
         </div>
@@ -91,7 +107,7 @@ export function ChecklistEditor({ tpl, onSave }: ChecklistEditorProps) {
       )}
       <SaveBar>
         <Button variant="ghost" disabled={!dirty} onClick={() => setT(tpl)}>Undo changes</Button>
-        <Button variant="primary" perm="admin.config.manage" disabled={!dirty || items.length === 0} onClick={() => onSave({ ...t, items, versionNo: versionNo + 1 })}>
+        <Button variant="primary" perm="admin.config.manage" disabled={!dirty || items.length === 0} onClick={() => onSave({ ...current, items, versionNo: versionNo + 1 })}>
           Save as version {versionNo + 1}
         </Button>
       </SaveBar>

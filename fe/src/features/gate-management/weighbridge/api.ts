@@ -9,8 +9,9 @@ function unwrapList<T>(res: any): T[] {
 }
 
 export const weighbridgeApi = {
-  getTickets: async () => {
-    const res = await api.get<any>('/weighings');
+  getTickets: async (siteId?: number): Promise<Ticket[]> => {
+    const url = siteId ? `/weighings?siteId=${siteId}` : '/weighings';
+    const res = await api.get<any>(url);
     return unwrapList<Ticket>(res);
   },
 
@@ -18,8 +19,8 @@ export const weighbridgeApi = {
     return api.post<Ticket>('/weighings', ticket);
   },
 
-  requestOverride: async (ticketId: number, data: { reason: string }) => {
-    return api.post<any>(`/weighings/${ticketId}/override-request`, data);
+  requestOverride: async (ticketId: number, data?: { reason?: string }) => {
+    return api.post<any>(`/weighings/${ticketId}/override-request`, data || {});
   },
 
   printTicket: async (ticketId: number) => {

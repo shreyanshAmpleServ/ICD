@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Drawer, Field, Input, Select, Textarea, useToast } from '@/ds/components';
-import { repairsApi } from '../api';
+import { useQ } from '@/api/query';
+import { repairsApi, type RepairCode } from '../api';
 
 interface NewEstimateDrawerProps {
   open: boolean;
@@ -8,16 +9,23 @@ interface NewEstimateDrawerProps {
   onSuccess: () => void;
 }
 
-const REPAIR_CODES: [string, string][] = [
-  ['STR-DT', 'Straighten dent (panel / post)'],
-  ['WLD-CRK', 'Weld crack on corner post'],
-  ['RPL-GST', 'Replace door gasket'],
-  ['PNT-TCH', 'Touch-up paint / undercoating'],
-  ['FLR-SEC', 'Secure loose floor screw'],
-  ['HND-RPL', 'Replace door locking handle'],
+const DEFAULT_REPAIR_CODES: [string, string][] = [
+  ['STR-DT', 'STR-DT · Straighten dent'],
+  ['PAT-WLD', 'PAT-WLD · Patch weld, steel insert'],
+  ['FLR-PLY', 'FLR-PLY · Replace floor plywood (per board)'],
+  ['DR-GSK', 'DR-GSK · Replace door gasket'],
+  ['LB-STR', 'LB-STR · Straighten locking bar'],
+  ['CR-WLD', 'CR-WLD · Corner post weld and straighten'],
+  ['RF-PAT', 'RF-PAT · Roof patch'],
+  ['CLN-WSH', 'CLN-WSH · Sweep and wash inside'],
+  ['PNT-TCH', 'PNT-TCH · Paint touch-up'],
+  ['LBL-REM', 'LBL-REM · Remove old labels and placards'],
 ];
 
 const SHIPPING_LINES: [string, string][] = [
+  ['4', 'BML · Blue Meridian Line'],
+  ['5', 'IOS · Indian Ocean Shipping'],
+  ['6', 'SCL · Swahili Coast Lines'],
   ['1', 'MSK · A.P. Moller - Maersk'],
   ['2', 'MSC · Mediterranean Shipping Company'],
   ['3', 'CMA · CMA CGM Group'],
@@ -32,39 +40,55 @@ const RESPONSIBILITIES: [string, string][] = [
 export function NewEstimateDrawer({ open, onClose, onSuccess }: NewEstimateDrawerProps) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [unitNo, setUnitNo] = useState('MSKU0192834');
-  const [unitStayId, setUnitStayId] = useState('1');
-  const [partyId, setPartyId] = useState('1');
+  const [unitNo, setUnitNo] = useState('BMLU5914756');
+  const [unitStayId, setUnitStayId] = useState('5012');
+  const [partyId, setPartyId] = useState('4');
   const [repairCode, setRepairCode] = useState('STR-DT');
-  const [locationDetail, setLocationDetail] = useState('Right side panel front');
+  const [locationDetail, setLocationDetail] = useState('Left door, front panel');
   const [quantity, setQuantity] = useState('1');
-  const [labourHours, setLabourHours] = useState('2.0');
-  const [materialCost, setMaterialCost] = useState('45.00');
+  const [labourHours, setLabourHours] = useState('1.5');
+  const [materialCost, setMaterialCost] = useState('0.00');
   const [responsibility, setResponsibility] = useState('OWNER');
   const [notes, setNotes] = useState('Identified during gate-in inspection');
+
+  const { data: dbCodes = [] } = useQ(['repair-codes'], () => repairsApi.getRepairCodes());
+
+  const repairCodeOptions: [string, string][] =
+    dbCodes.length > 0
+      ? dbCodes.map((c: RepairCode) => [c.repairCode, `${c.repairCode} · ${c.repairName}`])
+      : DEFAULT_REPAIR_CODES;
+
+  const handleRepairCodeChange = (newCode: string) => {
+    setRepairCode(newCode);
+    const found = dbCodes.find((c: RepairCode) => c.repairCode === newCode);
+    if (found?.defaultLabourHours) {
+      setLabourHours(found.defaultLabourHours);
+    }
+  };
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
       const labourRate = 18.0;
       const hours = parseFloat(labourHours) || 1.5;
+      const qty = parseFloat(quantity) || 1;
       const mat = parseFloat(materialCost) || 0;
-      const labCost = hours * labourRate;
+      const labCost = (hours * qty * labourRate).toFixed(2);
 
       await repairsApi.createEstimate({
-        unitStayId: Number(unitStayId),
-        unitNo,
-        partyId: Number(partyId),
+        unitStayId: Number(unitStayId) || 5012,
+        unitNo: unitNo.trim() || 'BMLU5914756',
+        partyId: Number(partyId) || 4,
         labourRate: String(labourRate),
         lines: [
           {
             lineNo: 1,
             repairCode,
-            locationDetail,
-            quantity: quantity || '1',
-            labourHours: String(hours),
+            locationDetail: locationDetail.trim(),
+            quantity: String(qty),
+            labourHours: String(hours * qty),
             labourCost: String(labCost),
-            materialCost: String(mat),
+            materialCost: mat.toFixed(2),
             responsibility,
             lineStatus: 'PROPOSED',
           },
@@ -103,7 +127,7 @@ export function NewEstimateDrawer({ open, onClose, onSuccess }: NewEstimateDrawe
           <Input
             value={unitNo}
             onChange={(e) => setUnitNo(e.target.value.toUpperCase())}
-            placeholder="e.g. MSKU0192834"
+            placeholder="e.g. BMLU5914756"
           />
         </Field>
 
@@ -131,8 +155,8 @@ export function NewEstimateDrawer({ open, onClose, onSuccess }: NewEstimateDrawe
           <Field label="Repair Code / Operation" required>
             <Select
               value={repairCode}
-              onChange={(e) => setRepairCode(e.target.value)}
-              options={REPAIR_CODES}
+              onChange={(e) => handleRepairCodeChange(e.target.value)}
+              options={repairCodeOptions}
             />
           </Field>
 
@@ -140,7 +164,7 @@ export function NewEstimateDrawer({ open, onClose, onSuccess }: NewEstimateDrawe
             <Input
               value={locationDetail}
               onChange={(e) => setLocationDetail(e.target.value)}
-              placeholder="e.g. Left front post bottom"
+              placeholder="e.g. Left door, front panel"
             />
           </Field>
 
@@ -148,6 +172,7 @@ export function NewEstimateDrawer({ open, onClose, onSuccess }: NewEstimateDrawe
             <Field label="Quantity">
               <Input
                 type="number"
+                min="1"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
               />
@@ -156,7 +181,7 @@ export function NewEstimateDrawer({ open, onClose, onSuccess }: NewEstimateDrawe
             <Field label="Labour Hours">
               <Input
                 type="number"
-                step="0.5"
+                step="0.1"
                 value={labourHours}
                 onChange={(e) => setLabourHours(e.target.value)}
               />
@@ -192,4 +217,3 @@ export function NewEstimateDrawer({ open, onClose, onSuccess }: NewEstimateDrawe
     </Drawer>
   );
 }
-

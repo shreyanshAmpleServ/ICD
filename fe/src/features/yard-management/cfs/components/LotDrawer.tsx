@@ -2,20 +2,43 @@ import { useState } from 'react';
 import { PackageCheck } from 'lucide-react';
 import { Button, Drawer, Field, Input, Kpi, Timeline, useToast } from '@/ds/components';
 import type { Lot } from '@/mock/ops';
+import { cfsApi } from '../api';
 
 export interface LotDrawerProps {
   lot: Lot | null;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function LotDrawer({ lot, onClose }: LotDrawerProps) {
+export function LotDrawer({ lot, onClose, onSuccess }: LotDrawerProps) {
   const toast = useToast();
   const [qty, setQty] = useState('');
   const [ro, setRo] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   if (!lot) return null;
   const bal = Number(lot.qtyBalance);
   const q = Number(qty);
   const err = qty && (q <= 0 || q > bal) ? `Between 1 and ${bal}` : undefined;
+
+  const handleRecord = async () => {
+    if (!q || err || !ro) return;
+    setSubmitting(true);
+    try {
+      await cfsApi.recordLotDelivery(lot.lotStayId, {
+        qty: q,
+        releaseOrderNo: ro.toUpperCase(),
+      });
+      toast(`${q} ${lot.packageType?.toLowerCase()}s delivered; ${bal - q} left in the shed`);
+      setQty('');
+      setRo('');
+      onSuccess?.();
+      onClose();
+    } catch (e: any) {
+      toast(`Failed to record delivery: ${e.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Drawer
@@ -27,21 +50,17 @@ export function LotDrawer({ lot, onClose }: LotDrawerProps) {
       title={`Lot ${lot.unitNo}`}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>
             Close
           </Button>
           <Button
             variant="primary"
             icon={<PackageCheck />}
             perm="cfs.job.manage"
-            disabled={!q || !!err || !/^RO-/.test(ro.toUpperCase())}
-            onClick={() => {
-              toast(`${q} ${lot.packageType?.toLowerCase()}s delivered; ${bal - q} left in the shed`);
-              setQty('');
-              onClose();
-            }}
+            disabled={!q || !!err || !/^RO-/.test(ro.toUpperCase()) || submitting}
+            onClick={handleRecord}
           >
-            Record delivery
+            {submitting ? 'Recording...' : 'Record delivery'}
           </Button>
         </>
       }
