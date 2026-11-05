@@ -6,7 +6,7 @@ fe/node_modules
 be/node_modules
 UI/
 API/
-dist/
+# dist/
 dist-single/
 build/
 out/

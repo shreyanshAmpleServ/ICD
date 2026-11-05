@@ -1,0 +1,21 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.partiesRouter = void 0;
+const express_1 = require("express");
+const siteScope_1 = require("../../middlewares/siteScope");
+const permission_1 = require("../../middlewares/permission");
+const utils_1 = require("../../utils");
+const parties_controller_1 = require("../controllers/parties.controller");
+const router = (0, express_1.Router)();
+// Global master entity (requireSite(true) allows global access without site parameter)
+router.get('/parties', (0, siteScope_1.requireSite)(true), (0, permission_1.requirePermission)('masters.view'), (0, utils_1.asyncHandler)(parties_controller_1.partiesController.getParties));
+router.post('/parties', (0, siteScope_1.requireSite)(true), (0, permission_1.requirePermission)('masters.local.edit', 'DO'), (0, utils_1.asyncHandler)(parties_controller_1.partiesController.createParty));
+router.post('/parties:provisional', (0, siteScope_1.requireSite)(true), (0, permission_1.requirePermission)('masters.local.edit', 'DO'), (0, utils_1.asyncHandler)(parties_controller_1.partiesController.createProvisional));
+router.get('/parties/:partyId', (0, siteScope_1.requireSite)(true), (0, permission_1.requirePermission)('masters.view'), (0, utils_1.asyncHandler)(parties_controller_1.partiesController.getPartyDetail));
+router.patch('/parties/:partyId', (0, siteScope_1.requireSite)(true), (0, permission_1.requirePermission)('masters.local.edit', 'DO'), (0, utils_1.asyncHandler)(parties_controller_1.partiesController.updateParty));
+router.post(['/parties/:partyId/match', '/parties/:partyId([0-9a-zA-Z_.-]+):match'], (0, siteScope_1.requireSite)(true), (0, permission_1.requirePermission)('masters.local.edit', 'DO'), (0, utils_1.asyncHandler)(parties_controller_1.partiesController.matchParty));
+router.get('/parties/:partyId/contacts', (0, siteScope_1.requireSite)(true), (0, permission_1.requirePermission)('masters.view'), (0, utils_1.asyncHandler)(parties_controller_1.partiesController.getContacts));
+router.put('/parties/:partyId/contacts', (0, siteScope_1.requireSite)(true), (0, permission_1.requirePermission)('masters.local.edit', 'DO'), (0, utils_1.asyncHandler)(parties_controller_1.partiesController.updateContacts));
+router.patch('/parties/:partyId/contacts/:contactId', (0, siteScope_1.requireSite)(true), (0, permission_1.requirePermission)('masters.local.edit', 'DO'), (0, utils_1.asyncHandler)(parties_controller_1.partiesController.patchContact));
+exports.partiesRouter = router;
+exports.default = router;

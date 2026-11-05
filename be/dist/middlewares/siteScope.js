@@ -1,0 +1,34 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.requireSite = requireSite;
+const fallbackStore_1 = require("../data/fallbackStore");
+function requireSite(isGlobal = false) {
+    return (req, res, next) => {
+        if (isGlobal) {
+            return next();
+        }
+        const querySite = typeof req.query.siteId === 'string' ? req.query.siteId.trim() : undefined;
+        const isFilterAll = querySite && (querySite.toLowerCase() === 'all' || querySite === '0');
+        const rawSite = req.headers["x-site-id"] ||
+            req.headers["x-site"] ||
+            (!isFilterAll ? querySite : undefined) ||
+            "DAR1";
+        const headerSiteId = rawSite.trim().toUpperCase();
+        const validSite = fallbackStore_1.fallbackStore.sites.find((s) => s.siteId.toUpperCase() === headerSiteId ||
+            s.siteCode.toUpperCase() === headerSiteId ||
+            (headerSiteId === "1" && s.siteCode === "DAR1") ||
+            (headerSiteId === "2" && s.siteCode === "DAR2") ||
+            (headerSiteId === "3" && s.siteCode === "KBH1"));
+        if (!validSite) {
+            res.status(404).json({
+                type: "https://api.icd.dcc/errors/invalid-site",
+                title: "Site Not Found",
+                status: 404,
+                detail: `Site '${headerSiteId}' is not recognized or is inactive.`,
+            });
+            return;
+        }
+        req.siteId = validSite.siteId;
+        next();
+    };
+}
