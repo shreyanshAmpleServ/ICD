@@ -8,19 +8,19 @@ import { controlRoutes } from './control';
 import { customersRoutes } from './customers';
 import { authRoutes } from './auth';
 
-import { unitsRouter } from './units.routes';
-import { portalRouter } from './portal.routes';
-import { appointmentsRouter } from './appointments.routes';
-import { cfsRouter } from './cfs.routes';
-import { reefersRouter } from './reefers.routes';
-import { repairsRouter } from './repairs.routes';
-import { devicesRouter } from './devices.routes';
-import { partiesRouter } from './parties.routes';
-import { chargesRouter } from './charges.routes';
-import { invoicesRouter } from './invoices.routes';
-import { cashierRouter } from './cashier.routes';
-import { searchRouter } from './search.routes';
-import { notificationsRouter } from './notifications.routes';
+import { unitsRouter } from './units';
+import { portalRouter } from './portal';
+import { appointmentsRouter } from './appointments';
+import { cfsRouter } from './cfs';
+import { reefersRouter } from './reefers';
+import { repairsRouter } from './repairs';
+import { devicesRouter } from './devices';
+import { partiesRouter } from './parties';
+import { chargesRouter } from './charges';
+import { invoicesRouter } from './invoices';
+import { cashierRouter } from './cashier';
+import { searchRouter } from './search';
+import { notificationsRouter } from './notifications';
 
 // Legacy module routers
 import { sessionRouter } from '../../modules/session/session.router';

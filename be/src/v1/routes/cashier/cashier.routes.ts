@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { cashierController } from '../controllers/cashier.controller';
-import { requireSite } from '../../middlewares/siteScope';
+import { cashierController } from '../../controllers/cashier.controller';
+import { requireSite } from '../../../middlewares/siteScope';
 
 export const cashierRouter = Router();
 

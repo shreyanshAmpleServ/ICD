@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { requireSite } from "../../middlewares/siteScope";
-import { requirePermission } from "../../middlewares/permission";
-import { asyncHandler } from "../../utils";
-import { appointmentsController } from "../controllers/appointments.controller";
+import { requireSite } from "../../../middlewares/siteScope";
+import { requirePermission } from "../../../middlewares/permission";
+import { asyncHandler } from "../../../utils";
+import { appointmentsController } from "../../controllers/appointments.controller";
 
 const router = Router();
 

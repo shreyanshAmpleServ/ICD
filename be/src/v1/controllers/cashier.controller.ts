@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../configs/prisma';
+import { Request, Response } from "express";
+import { getPrisma, isDbLive } from "../../configs/prisma";
 import {
   payments as mockPayments,
   shifts as mockShifts,
@@ -9,7 +9,7 @@ import {
   m2,
   type Payment,
   type Shift,
-} from '../../data/money';
+} from "../../data/money";
 
 // In-memory fallback stores
 let livePayments: any[] = [...mockPayments];
@@ -45,7 +45,7 @@ export const cashierController = {
                   include: { invoice_payment_allocation: true },
                 },
               },
-              orderBy: { payment_id: 'desc' },
+              orderBy: { payment_id: "desc" },
             });
 
             if (dbPayments && dbPayments.length > 0) {
@@ -54,7 +54,11 @@ export const cashierController = {
                 receiptNo: p.receipt_no,
                 partyId: p.party_id,
                 payerName: p.m_party_payment?.party_name,
-                channelCode: p.m_payment_channel_payment?.channel_code || (p.payment_channel_id ? `CHAN_${p.payment_channel_id}` : 'BANK_TRANSFER'),
+                channelCode:
+                  p.m_payment_channel_payment?.channel_code ||
+                  (p.payment_channel_id
+                    ? `CHAN_${p.payment_channel_id}`
+                    : "BANK_TRANSFER"),
                 externalRef: p.external_ref,
                 amount: String(p.amount),
                 currency: p.currency,
@@ -63,19 +67,27 @@ export const cashierController = {
                 amountAllocated: String(p.amount_allocated || 0),
                 unallocated: String(p.unallocated || 0),
                 status: p.status,
-                receivedAt: p.received_at ? p.received_at.toISOString() : new Date().toISOString(),
-                valueDate: p.value_date ? p.value_date.toISOString().split('T')[0] : undefined,
-                cashier: p.createdby || 'Ashok Kumar',
+                receivedAt: p.received_at
+                  ? p.received_at.toISOString()
+                  : new Date().toISOString(),
+                valueDate: p.value_date
+                  ? p.value_date.toISOString().split("T")[0]
+                  : undefined,
+                cashier: p.createdby || "Ashok Kumar",
                 siteId: p.site_id,
-                allocations: (p.payment_payment_allocation || []).map((a: any) => ({
-                  paymentAllocationId: Number(a.payment_allocation_id),
-                  invoiceId: Number(a.invoice_id),
-                  invoiceNo: a.invoice_payment_allocation?.invoice_no,
-                  amount: String(a.amount),
-                  amountInvoiceCcy: String(a.amount_invoice_ccy || a.amount),
-                  fxDifferenceBase: String(a.fx_difference_base || 0),
-                  allocatedAt: a.allocated_at ? a.allocated_at.toISOString() : a.createdate?.toISOString(),
-                })),
+                allocations: (p.payment_payment_allocation || []).map(
+                  (a: any) => ({
+                    paymentAllocationId: Number(a.payment_allocation_id),
+                    invoiceId: Number(a.invoice_id),
+                    invoiceNo: a.invoice_payment_allocation?.invoice_no,
+                    amount: String(a.amount),
+                    amountInvoiceCcy: String(a.amount_invoice_ccy || a.amount),
+                    fxDifferenceBase: String(a.fx_difference_base || 0),
+                    allocatedAt: a.allocated_at
+                      ? a.allocated_at.toISOString()
+                      : a.createdate?.toISOString(),
+                  }),
+                ),
               }));
 
               let filtered = mapped;
@@ -85,25 +97,36 @@ export const cashierController = {
                   (p: any) =>
                     p.receiptNo?.toUpperCase().includes(q) ||
                     p.payerName?.toUpperCase().includes(q) ||
-                    p.externalRef?.toUpperCase().includes(q)
+                    p.externalRef?.toUpperCase().includes(q),
                 );
               }
               if (date) {
-                filtered = filtered.filter((p: any) => p.receivedAt?.startsWith(String(date)));
+                filtered = filtered.filter((p: any) =>
+                  p.receivedAt?.startsWith(String(date)),
+                );
               }
 
-              return res.json({ items: filtered, total: filtered.length, nextCursor: null });
+              return res.json({
+                items: filtered,
+                total: filtered.length,
+                nextCursor: null,
+              });
             }
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB getPayments failed, using fallback:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB getPayments failed, using fallback:",
+              dbErr.message,
+            );
           }
         }
       }
 
       // Dynamic Fallback Store
       let items = [...livePayments];
-      if (siteId) items = items.filter((p) => String(p.siteId) === String(siteId));
-      if (partyId) items = items.filter((p) => String(p.partyId) === String(partyId));
+      if (siteId)
+        items = items.filter((p) => String(p.siteId) === String(siteId));
+      if (partyId)
+        items = items.filter((p) => String(p.partyId) === String(partyId));
       if (status) items = items.filter((p) => p.status === status);
       if (cashier) items = items.filter((p) => p.cashier === cashier);
       if (search) {
@@ -112,7 +135,7 @@ export const cashierController = {
           (p) =>
             p.receiptNo?.toUpperCase().includes(q) ||
             p.payerName?.toUpperCase().includes(q) ||
-            p.externalRef?.toUpperCase().includes(q)
+            p.externalRef?.toUpperCase().includes(q),
         );
       }
       if (date) {
@@ -121,8 +144,12 @@ export const cashierController = {
 
       return res.json({ items, total: items.length, nextCursor: null });
     } catch (err: any) {
-      console.error('[Cashier Controller] getPayments error:', err.message);
-      return res.json({ items: livePayments, total: livePayments.length, nextCursor: null });
+      console.error("[Cashier Controller] getPayments error:", err.message);
+      return res.json({
+        items: livePayments,
+        total: livePayments.length,
+        nextCursor: null,
+      });
     }
   },
 
@@ -137,7 +164,12 @@ export const cashierController = {
             const isNum = !isNaN(Number(paymentId));
             const p = await (prisma as any).payment.findFirst({
               where: isNum
-                ? { OR: [{ payment_id: BigInt(paymentId) }, { receipt_no: paymentId }] }
+                ? {
+                    OR: [
+                      { payment_id: BigInt(paymentId) },
+                      { receipt_no: paymentId },
+                    ],
+                  }
                 : { receipt_no: paymentId },
               include: {
                 m_party_payment: true,
@@ -155,7 +187,8 @@ export const cashierController = {
                 receiptNo: p.receipt_no,
                 partyId: p.party_id,
                 payerName: p.m_party_payment?.party_name,
-                channelCode: p.m_payment_channel_payment?.channel_code || 'BANK_TRANSFER',
+                channelCode:
+                  p.m_payment_channel_payment?.channel_code || "BANK_TRANSFER",
                 externalRef: p.external_ref,
                 amount: String(p.amount),
                 currency: p.currency,
@@ -164,31 +197,40 @@ export const cashierController = {
                 amountAllocated: String(p.amount_allocated || 0),
                 unallocated: String(p.unallocated || 0),
                 status: p.status,
-                receivedAt: p.received_at ? p.received_at.toISOString() : new Date().toISOString(),
-                valueDate: p.value_date ? p.value_date.toISOString().split('T')[0] : undefined,
-                cashier: p.createdby || 'Ashok Kumar',
+                receivedAt: p.received_at
+                  ? p.received_at.toISOString()
+                  : new Date().toISOString(),
+                valueDate: p.value_date
+                  ? p.value_date.toISOString().split("T")[0]
+                  : undefined,
+                cashier: p.createdby || "Ashok Kumar",
                 siteId: p.site_id,
-                allocations: (p.payment_payment_allocation || []).map((a: any) => ({
-                  paymentAllocationId: Number(a.payment_allocation_id),
-                  invoiceId: Number(a.invoice_id),
-                  invoiceNo: a.invoice_payment_allocation?.invoice_no,
-                  amount: String(a.amount),
-                  amountInvoiceCcy: String(a.amount_invoice_ccy || a.amount),
-                  fxDifferenceBase: String(a.fx_difference_base || 0),
-                  allocatedAt: a.allocated_at?.toISOString(),
-                })),
+                allocations: (p.payment_payment_allocation || []).map(
+                  (a: any) => ({
+                    paymentAllocationId: Number(a.payment_allocation_id),
+                    invoiceId: Number(a.invoice_id),
+                    invoiceNo: a.invoice_payment_allocation?.invoice_no,
+                    amount: String(a.amount),
+                    amountInvoiceCcy: String(a.amount_invoice_ccy || a.amount),
+                    fxDifferenceBase: String(a.fx_difference_base || 0),
+                    allocatedAt: a.allocated_at?.toISOString(),
+                  }),
+                ),
               });
             }
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB getPaymentById failed, checking fallback:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB getPaymentById failed, checking fallback:",
+              dbErr.message,
+            );
           }
         }
       }
 
       const found = livePayments.find(
-        (p) => String(p.paymentId) === paymentId || p.receiptNo === paymentId
+        (p) => String(p.paymentId) === paymentId || p.receiptNo === paymentId,
       );
-      if (!found) return res.status(404).json({ error: 'Payment not found' });
+      if (!found) return res.status(404).json({ error: "Payment not found" });
       return res.json(found);
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
@@ -198,13 +240,18 @@ export const cashierController = {
   recordPayment: async (req: Request, res: Response) => {
     try {
       const b = req.body || {};
-      const receiptNo = b.receiptNo || `RCT-DAR1-26-${String(++receiptSeq).padStart(6, '0')}`;
+      const receiptNo =
+        b.receiptNo || `RCT-DAR1-26-${String(++receiptSeq).padStart(6, "0")}`;
       const amount = Number(b.amount || 0);
-      const currency = b.currency || 'USD';
+      const currency = b.currency || "USD";
       const allocations = b.allocations || [];
-      const allocated = allocations.reduce((sum: number, a: any) => sum + Number(a.amount || 0), 0);
+      const allocated = allocations.reduce(
+        (sum: number, a: any) => sum + Number(a.amount || 0),
+        0,
+      );
       const unallocated = Math.max(0, amount - allocated);
-      const cashierName = (req as any).user?.username || b.cashier || 'Ashok Kumar';
+      const cashierName =
+        (req as any).user?.username || b.cashier || "Ashok Kumar";
 
       if (isDbLive()) {
         const prisma = getPrisma();
@@ -229,13 +276,22 @@ export const cashierController = {
                 external_ref: b.externalRef || b.ref || null,
                 currency,
                 amount,
-                exchange_rate: Number(b.exchangeRate || (currency === 'TZS' ? 2650 : 1)),
-                amount_base: currency === 'TZS' ? amount : amount * 2650,
+                exchange_rate: Number(
+                  b.exchangeRate || (currency === "TZS" ? 2650 : 1),
+                ),
+                amount_base: currency === "TZS" ? amount : amount * 2650,
                 amount_allocated: allocated,
                 unallocated,
                 received_at: new Date(),
-                status: allocated >= amount - 0.01 ? 'ALLOCATED' : allocated > 0 ? 'PART_ALLOC' : 'RECEIVED',
-                cashier_shift_id: b.cashierShiftId ? BigInt(b.cashierShiftId) : null,
+                status:
+                  allocated >= amount - 0.01
+                    ? "ALLOCATED"
+                    : allocated > 0
+                      ? "PART_ALLOC"
+                      : "RECEIVED",
+                cashier_shift_id: b.cashierShiftId
+                  ? BigInt(b.cashierShiftId)
+                  : null,
                 createdby: cashierName,
               },
             });
@@ -249,7 +305,9 @@ export const cashierController = {
                     payment_id: created.payment_id,
                     invoice_id: invId,
                     amount: Number(alloc.amount),
-                    amount_invoice_ccy: Number(alloc.amountInvoiceCcy || alloc.amount),
+                    amount_invoice_ccy: Number(
+                      alloc.amountInvoiceCcy || alloc.amount,
+                    ),
                     fx_difference_base: Number(alloc.fxDifferenceBase || 0),
                     allocated_at: new Date(),
                     createdby: cashierName,
@@ -261,14 +319,16 @@ export const cashierController = {
                   where: { invoice_id: invId },
                 });
                 if (targetInv) {
-                  const newPaid = Number(targetInv.amount_paid || 0) + Number(alloc.amountInvoiceCcy || alloc.amount);
+                  const newPaid =
+                    Number(targetInv.amount_paid || 0) +
+                    Number(alloc.amountInvoiceCcy || alloc.amount);
                   const newBal = Math.max(0, Number(targetInv.total) - newPaid);
                   await (prisma as any).invoice.update({
                     where: { invoice_id: invId },
                     data: {
                       amount_paid: newPaid,
                       balance: newBal,
-                      status: newBal <= 0.01 ? 'PAID' : 'POSTED',
+                      status: newBal <= 0.01 ? "PAID" : "POSTED",
                     },
                   });
                 }
@@ -286,7 +346,10 @@ export const cashierController = {
               receivedAt: created.received_at.toISOString(),
             });
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB recordPayment failed, saving to fallback:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB recordPayment failed, saving to fallback:",
+              dbErr.message,
+            );
           }
         }
       }
@@ -296,16 +359,21 @@ export const cashierController = {
         paymentId: livePayments.length + 3201,
         receiptNo,
         partyId: Number(b.partyId || 2),
-        channelCode: b.channelCode || 'CRDB_USD',
+        channelCode: b.channelCode || "CRDB_USD",
         externalRef: b.ref || b.externalRef || null,
         currency,
         amount: m2(amount),
         exchangeRate: m2(b.exchangeRate || 2650),
-        amountBase: m2(currency === 'TZS' ? amount : amount * 2650),
+        amountBase: m2(currency === "TZS" ? amount : amount * 2650),
         amountAllocated: m2(allocated),
         unallocated: m2(unallocated),
         receivedAt: new Date().toISOString(),
-        status: allocated >= amount - 0.01 ? 'ALLOCATED' : allocated > 0 ? 'PART_ALLOC' : 'RECEIVED',
+        status:
+          allocated >= amount - 0.01
+            ? "ALLOCATED"
+            : allocated > 0
+              ? "PART_ALLOC"
+              : "RECEIVED",
         cashier: cashierName,
         siteId: Number(b.siteId || 1),
         payerName: b.payer || b.payerName,
@@ -339,7 +407,11 @@ export const cashierController = {
             const p = await (prisma as any).payment.findFirst({
               where: {
                 OR: [
-                  { payment_id: !isNaN(Number(paymentId)) ? BigInt(paymentId) : -1n },
+                  {
+                    payment_id: !isNaN(Number(paymentId))
+                      ? BigInt(paymentId)
+                      : -1n,
+                  },
                   { receipt_no: paymentId },
                 ],
               },
@@ -357,7 +429,7 @@ export const cashierController = {
                     amount_invoice_ccy: Number(a.amountInvoiceCcy || a.amount),
                     fx_difference_base: Number(a.fxDifferenceBase || 0),
                     allocated_at: new Date(),
-                    createdby: 'Ashok Kumar',
+                    createdby: "Ashok Kumar",
                   },
                 });
                 addedAlloc += Number(a.amount);
@@ -371,20 +443,25 @@ export const cashierController = {
                 data: {
                   amount_allocated: newAllocated,
                   unallocated: newUnalloc,
-                  status: newUnalloc <= 0.01 ? 'ALLOCATED' : 'PART_ALLOC',
+                  status: newUnalloc <= 0.01 ? "ALLOCATED" : "PART_ALLOC",
                 },
               });
 
               return res.json({ success: true, payment: updated });
             }
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB allocatePayment failed:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB allocatePayment failed:",
+              dbErr.message,
+            );
           }
         }
       }
 
-      const pay = livePayments.find((p) => String(p.paymentId) === paymentId || p.receiptNo === paymentId);
-      if (!pay) return res.status(404).json({ error: 'Payment not found' });
+      const pay = livePayments.find(
+        (p) => String(p.paymentId) === paymentId || p.receiptNo === paymentId,
+      );
+      if (!pay) return res.status(404).json({ error: "Payment not found" });
 
       for (const a of allocations) {
         pay.allocations.push({
@@ -398,10 +475,13 @@ export const cashierController = {
         });
       }
 
-      const totalAlloc = pay.allocations.reduce((sum: number, a: any) => sum + Number(a.amount), 0);
+      const totalAlloc = pay.allocations.reduce(
+        (sum: number, a: any) => sum + Number(a.amount),
+        0,
+      );
       pay.amountAllocated = m2(totalAlloc);
       pay.unallocated = m2(Math.max(0, Number(pay.amount) - totalAlloc));
-      pay.status = Number(pay.unallocated) <= 0.01 ? 'ALLOCATED' : 'PART_ALLOC';
+      pay.status = Number(pay.unallocated) <= 0.01 ? "ALLOCATED" : "PART_ALLOC";
 
       return res.json({ success: true, payment: pay });
     } catch (err: any) {
@@ -412,7 +492,7 @@ export const cashierController = {
   reversePayment: async (req: Request, res: Response) => {
     try {
       const { paymentId } = req.params;
-      const { reason = 'Customer requested refund / reversal' } = req.body;
+      const { reason = "Customer requested refund / reversal" } = req.body;
 
       if (isDbLive()) {
         const prisma = getPrisma();
@@ -421,7 +501,11 @@ export const cashierController = {
             const p = await (prisma as any).payment.findFirst({
               where: {
                 OR: [
-                  { payment_id: !isNaN(Number(paymentId)) ? BigInt(paymentId) : -1n },
+                  {
+                    payment_id: !isNaN(Number(paymentId))
+                      ? BigInt(paymentId)
+                      : -1n,
+                  },
                   { receipt_no: paymentId },
                 ],
               },
@@ -431,7 +515,7 @@ export const cashierController = {
               const updated = await (prisma as any).payment.update({
                 where: { payment_id: p.payment_id },
                 data: {
-                  status: 'REVERSED',
+                  status: "REVERSED",
                   reason,
                   updatedate: new Date(),
                 },
@@ -439,14 +523,19 @@ export const cashierController = {
               return res.json({ success: true, payment: updated });
             }
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB reversePayment failed:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB reversePayment failed:",
+              dbErr.message,
+            );
           }
         }
       }
 
-      const pay = livePayments.find((p) => String(p.paymentId) === paymentId || p.receiptNo === paymentId);
-      if (!pay) return res.status(404).json({ error: 'Payment not found' });
-      pay.status = 'REVERSED';
+      const pay = livePayments.find(
+        (p) => String(p.paymentId) === paymentId || p.receiptNo === paymentId,
+      );
+      if (!pay) return res.status(404).json({ error: "Payment not found" });
+      pay.status = "REVERSED";
       return res.json({ success: true, payment: pay });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
@@ -458,7 +547,7 @@ export const cashierController = {
     return res.json({
       paymentId,
       receiptUrl: `/api/documents/receipt-${paymentId}.pdf`,
-      contentBase64: 'JVBERi0xLjQKJcTl8uXrp/ogCjEgMCBvYmoK...',
+      contentBase64: "JVBERi0xLjQKJcTl8uXrp/ogCjEgMCBvYmoK...",
     });
   },
 
@@ -484,15 +573,21 @@ export const cashierController = {
                 cashier_shift_payment: true,
                 approval_request_cashier_shift: true,
               },
-              orderBy: { cashier_shift_id: 'desc' },
+              orderBy: { cashier_shift_id: "desc" },
             });
 
             if (dbShifts && dbShifts.length > 0) {
               const mapped: Shift[] = dbShifts.map((s: any) => {
                 const paymentsList = s.cashier_shift_payment || [];
                 const nonCashTotal = paymentsList
-                  .filter((p: any) => p.payment_channel_id !== 1 && p.payment_channel_id !== 2)
-                  .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+                  .filter(
+                    (p: any) =>
+                      p.payment_channel_id !== 1 && p.payment_channel_id !== 2,
+                  )
+                  .reduce(
+                    (sum: number, p: any) => sum + Number(p.amount || 0),
+                    0,
+                  );
 
                 return {
                   cashierShiftId: Number(s.cashier_shift_id),
@@ -502,20 +597,32 @@ export const cashierController = {
                   status: s.status,
                   openingFloat: String(s.opening_float),
                   expectedCash: String(s.expected_cash || s.opening_float),
-                  actualCash: s.counted_cash !== null ? String(s.counted_cash) : undefined,
-                  diff: s.difference !== null ? Number(s.difference) : undefined,
+                  actualCash:
+                    s.counted_cash !== null
+                      ? String(s.counted_cash)
+                      : undefined,
+                  diff:
+                    s.difference !== null ? Number(s.difference) : undefined,
                   receiptsCount: paymentsList.length,
                   nonCash: String(nonCashTotal),
-                  openedAt: s.opened_at ? s.opened_at.toISOString() : new Date().toISOString(),
+                  openedAt: s.opened_at
+                    ? s.opened_at.toISOString()
+                    : new Date().toISOString(),
                   closedAt: s.closed_at ? s.closed_at.toISOString() : undefined,
-                  approvedBy: s.approval_request_cashier_shift?.status === 'APPROVED' ? 'Finance Manager' : undefined,
+                  approvedBy:
+                    s.approval_request_cashier_shift?.status === "APPROVED"
+                      ? "Finance Manager"
+                      : undefined,
                 };
               });
 
               return res.json({ items: mapped, total: mapped.length });
             }
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB getShifts failed, using fallback:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB getShifts failed, using fallback:",
+              dbErr.message,
+            );
           }
         }
       }
@@ -528,10 +635,9 @@ export const cashierController = {
       return res.json({ items: liveShifts, total: liveShifts.length });
     }
   },
-
   getCurrentShift: async (req: Request, res: Response) => {
     try {
-      const cashierName = (req as any).user?.username || 'Neema Mushi';
+      const cashierName = (req as any).user?.username || "Neema Mushi";
 
       if (isDbLive()) {
         const prisma = getPrisma();
@@ -540,7 +646,7 @@ export const cashierController = {
             const active = await (prisma as any).cashier_shift.findFirst({
               where: {
                 cashier_sub: cashierName,
-                status: 'OPEN',
+                status: "OPEN",
               },
               include: { cashier_shift_payment: true },
             });
@@ -558,12 +664,19 @@ export const cashierController = {
               });
             }
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB getCurrentShift fallback:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB getCurrentShift fallback:",
+              dbErr.message,
+            );
           }
         }
       }
 
-      const found = liveShifts.find((s) => s.status === 'OPEN' && (s.cashier === cashierName || s.cashier === 'Neema Mushi'));
+      const found = liveShifts.find(
+        (s) =>
+          s.status === "OPEN" &&
+          (s.cashier === cashierName || s.cashier === "Neema Mushi"),
+      );
       return res.json(found || null);
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
@@ -573,7 +686,8 @@ export const cashierController = {
   openShift: async (req: Request, res: Response) => {
     try {
       const b = req.body || {};
-      const cashierName = (req as any).user?.username || b.cashier || 'Neema Mushi';
+      const cashierName =
+        (req as any).user?.username || b.cashier || "Neema Mushi";
       const usdFloat = Number(b.usdFloat || b.openingFloatUSD || 200);
       const tzsFloat = Number(b.tzsFloat || b.openingFloatTZS || 300000);
       const siteId = Number(b.siteId || 1);
@@ -586,11 +700,11 @@ export const cashierController = {
               data: {
                 site_id: siteId,
                 cashier_sub: cashierName,
-                currency: 'USD',
+                currency: "USD",
                 opened_at: new Date(),
                 opening_float: usdFloat,
                 expected_cash: usdFloat,
-                status: 'OPEN',
+                status: "OPEN",
                 createdby: cashierName,
               },
             });
@@ -599,11 +713,11 @@ export const cashierController = {
               data: {
                 site_id: siteId,
                 cashier_sub: cashierName,
-                currency: 'TZS',
+                currency: "TZS",
                 opened_at: new Date(),
                 opening_float: tzsFloat,
                 expected_cash: tzsFloat,
-                status: 'OPEN',
+                status: "OPEN",
                 createdby: cashierName,
               },
             });
@@ -611,12 +725,25 @@ export const cashierController = {
             return res.status(201).json({
               success: true,
               shifts: [
-                { cashierShiftId: Number(createdUsd.cashier_shift_id), currency: 'USD', status: 'OPEN', openingFloat: String(usdFloat) },
-                { cashierShiftId: Number(createdTzs.cashier_shift_id), currency: 'TZS', status: 'OPEN', openingFloat: String(tzsFloat) },
+                {
+                  cashierShiftId: Number(createdUsd.cashier_shift_id),
+                  currency: "USD",
+                  status: "OPEN",
+                  openingFloat: String(usdFloat),
+                },
+                {
+                  cashierShiftId: Number(createdTzs.cashier_shift_id),
+                  currency: "TZS",
+                  status: "OPEN",
+                  openingFloat: String(tzsFloat),
+                },
               ],
             });
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB openShift failed:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB openShift failed:",
+              dbErr.message,
+            );
           }
         }
       }
@@ -624,29 +751,31 @@ export const cashierController = {
       const usdShift: Shift = {
         cashierShiftId: liveShifts.length + 950,
         cashier: cashierName,
-        currency: 'USD',
-        status: 'OPEN',
+        currency: "USD",
+        status: "OPEN",
         openingFloat: m2(usdFloat),
         expectedCash: m2(usdFloat),
         receiptsCount: 0,
-        nonCash: '0',
+        nonCash: "0",
         openedAt: new Date().toISOString(),
       };
 
       const tzsShift: Shift = {
         cashierShiftId: liveShifts.length + 951,
         cashier: cashierName,
-        currency: 'TZS',
-        status: 'OPEN',
+        currency: "TZS",
+        status: "OPEN",
         openingFloat: m2(tzsFloat),
         expectedCash: m2(tzsFloat),
         receiptsCount: 0,
-        nonCash: '0',
+        nonCash: "0",
         openedAt: new Date().toISOString(),
       };
 
       liveShifts.unshift(usdShift, tzsShift);
-      return res.status(201).json({ success: true, shifts: [usdShift, tzsShift] });
+      return res
+        .status(201)
+        .json({ success: true, shifts: [usdShift, tzsShift] });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
@@ -674,22 +803,29 @@ export const cashierController = {
                   counted_cash: counted,
                   difference: diff,
                   closed_at: new Date(),
-                  status: Math.abs(diff) > 0.01 ? 'CLOSED' : 'CLOSED',
-                  updatedby: 'system',
+                  status: Math.abs(diff) > 0.01 ? "CLOSED" : "CLOSED",
+                  updatedby: "system",
                 },
               });
 
-              return res.json({ success: true, shift: updated, difference: diff });
+              return res.json({
+                success: true,
+                shift: updated,
+                difference: diff,
+              });
             }
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB closeShift failed:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB closeShift failed:",
+              dbErr.message,
+            );
           }
         }
       }
 
       const s = liveShifts.find((sh) => String(sh.cashierShiftId) === shiftId);
       if (s) {
-        s.status = 'CLOSED';
+        s.status = "CLOSED";
         s.actualCash = m2(counted);
         s.diff = counted - Number(s.expectedCash);
         s.closedAt = new Date().toISOString();
@@ -705,7 +841,7 @@ export const cashierController = {
   approveShift: async (req: Request, res: Response) => {
     try {
       const { shiftId } = req.params;
-      const approvedBy = (req as any).user?.username || 'Finance Manager';
+      const approvedBy = (req as any).user?.username || "Finance Manager";
 
       if (isDbLive()) {
         const prisma = getPrisma();
@@ -714,20 +850,23 @@ export const cashierController = {
             const updated = await (prisma as any).cashier_shift.update({
               where: { cashier_shift_id: BigInt(shiftId) },
               data: {
-                status: 'APPROVED',
+                status: "APPROVED",
                 updatedby: approvedBy,
               },
             });
             return res.json({ success: true, shift: updated });
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB approveShift failed:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB approveShift failed:",
+              dbErr.message,
+            );
           }
         }
       }
 
       const s = liveShifts.find((sh) => String(sh.cashierShiftId) === shiftId);
       if (s) {
-        s.status = 'APPROVED';
+        s.status = "APPROVED";
         s.approvedBy = approvedBy;
       }
 
@@ -748,8 +887,9 @@ export const cashierController = {
           try {
             const channels = await (prisma as any).m_payment_channel.findMany({
               where: { is_active: true },
-              orderBy: { payment_channel_id: 'asc' },
+              orderBy: { payment_channel_id: "asc" },
             });
+
             if (channels && channels.length > 0) {
               const mapped = channels.map((c: any) => ({
                 paymentChannelId: c.payment_channel_id,
@@ -765,7 +905,10 @@ export const cashierController = {
               return res.json({ items: mapped, total: mapped.length });
             }
           } catch (dbErr: any) {
-            console.warn('[Cashier Controller] DB getChannels failed:', dbErr.message);
+            console.warn(
+              "[Cashier Controller] DB getChannels failed:",
+              dbErr.message,
+            );
           }
         }
       }
@@ -775,4 +918,3 @@ export const cashierController = {
     }
   },
 };
-

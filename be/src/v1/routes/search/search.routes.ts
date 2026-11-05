@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { requireSite } from '../../middlewares/siteScope';
-import { searchController } from '../controllers/search/search.controller';
+import { requireSite } from '../../../middlewares/siteScope';
+import { searchController } from '../../controllers/search/search.controller';
 
 export const searchRouter = Router();
 

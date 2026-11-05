@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { requireSite } from '../../middlewares/siteScope';
-import { notificationsController } from '../controllers/notifications.controller';
+import { requireSite } from '../../../middlewares/siteScope';
+import { notificationsController } from '../../controllers/notifications.controller';
 
 export const notificationsRouter = Router();
 

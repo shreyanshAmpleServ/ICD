@@ -3,14 +3,14 @@ import {
   requireSite,
   requirePermission,
   validateBody,
-} from "../../middlewares";
-import { asyncHandler } from "../../utils";
-import { unitsController } from "../controllers/units.controller";
+} from "../../../middlewares";
+import { asyncHandler } from "../../../utils";
+import { unitsController } from "../../controllers/units.controller";
 import {
   validateIdentitySchema,
   createUnitTypeSchema,
   createUnitSchema,
-} from "../validations/units.validation";
+} from "../../validations/units.validation";
 
 const router = Router();
 

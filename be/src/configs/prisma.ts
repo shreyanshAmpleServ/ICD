@@ -1,27 +1,32 @@
-import { PrismaClient } from '@prisma/client';
-import { ENV } from './env';
+import { PrismaClient } from "@prisma/client";
+import { ENV } from "./env";
 
 let prisma: PrismaClient | null = null;
 let isMssqlConnected = false;
 
-export async function initPrisma(): Promise<{ prisma: PrismaClient | null; isConnected: boolean }> {
-  if (!ENV.DATABASE_URL || ENV.DATABASE_URL.includes('YourStrong@Passw0rd')) {
-    console.log('[MSSQL / Prisma] DATABASE_URL is not configured with live credentials. Operating with dynamic seed repository.');
+export async function initPrisma(): Promise<{
+  prisma: PrismaClient | null;
+  isConnected: boolean;
+}> {
+  if (!ENV.DATABASE_URL || ENV.DATABASE_URL.includes("YourStrong@Passw0rd")) {
+    console.log(
+      "[MSSQL / Prisma] DATABASE_URL is not configured with live credentials. Operating with dynamic seed repository.",
+    );
     return { prisma: null, isConnected: false };
   }
 
   try {
     prisma = new PrismaClient({
       datasources: {
-        db: { url: ENV.DATABASE_URL }
+        db: { url: ENV.DATABASE_URL },
       },
-      log: ENV.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error']
+      log:
+        ENV.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
     });
 
     await prisma.$connect();
     isMssqlConnected = true;
 
-    // Provide model aliases for plural/legacy naming compatibility
     const p = prisma as any;
     p.unit_stays = p.unit_stay;
     p.appointments = p.appointment;
@@ -60,11 +65,19 @@ export async function initPrisma(): Promise<{ prisma: PrismaClient | null; isCon
     p.equipment = p.m_equipment;
     p.consignments = p.consignment;
 
-    console.log('[MSSQL / Prisma] Connected successfully to Microsoft SQL Server.');
+    console.log(
+      "[MSSQL / Prisma] Connected successfully to Microsoft SQL Server.",
+    );
     return { prisma, isConnected: true };
   } catch (err: any) {
-    console.warn('[MSSQL / Prisma] Unable to reach SQL Server (' + (err.message || 'Connection refused') + ').');
-    console.warn('[MSSQL / Prisma] Dynamic fallback in-memory store is active for development & UI testing.');
+    console.warn(
+      "[MSSQL / Prisma] Unable to reach SQL Server (" +
+        (err.message || "Connection refused") +
+        ").",
+    );
+    console.warn(
+      "[MSSQL / Prisma] Dynamic fallback in-memory store is active for development & UI testing.",
+    );
     isMssqlConnected = false;
     return { prisma: null, isConnected: false };
   }
@@ -77,4 +90,3 @@ export function getPrisma(): (PrismaClient & Record<string, any>) | null {
 export function isDbLive(): boolean {
   return isMssqlConnected;
 }
-

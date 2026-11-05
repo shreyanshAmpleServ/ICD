@@ -1,20 +1,20 @@
 import { Router } from "express";
-import { requireSite } from "../../middlewares/siteScope";
-import { requirePermission } from "../../middlewares/permission";
+import { requireSite } from "../../../middlewares/siteScope";
+import { requirePermission } from "../../../middlewares/permission";
 import {
   validateBody,
   validateQuery,
   validateParams,
-} from "../../middlewares/validate";
-import { asyncHandler } from "../../utils";
-import { portalController } from "../controllers/portal.controller";
+} from "../../../middlewares/validate";
+import { asyncHandler } from "../../../utils";
+import { portalController } from "../../controllers/portal.controller";
 import {
   portalQuerySchema,
   bookAppointmentSchema,
   portalRequestSchema,
   portalPaymentSchema,
-} from "../validations/portal.validation";
-import { numericIdParamSchema } from "../validations/common.validation";
+} from "../../validations/portal.validation";
+import { numericIdParamSchema } from "../../validations/common.validation";
 
 const router = Router();
 

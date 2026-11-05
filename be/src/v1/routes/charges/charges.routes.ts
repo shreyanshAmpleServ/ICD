@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { chargesController } from "../controllers/charges.controller";
-import { requireSite } from "../../middlewares/siteScope";
-// import { requirePermission } from '../../middlewares/permission';
+import { chargesController } from "../../controllers/charges.controller";
+import { requireSite } from "../../../middlewares/siteScope";
+// import { requirePermission } from '../../../middlewares/permission';
 
 export const chargesRouter = Router();
 
