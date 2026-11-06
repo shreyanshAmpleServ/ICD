@@ -5,24 +5,19 @@ import { requireSite } from "../../../middlewares/siteScope";
 
 export const chargesRouter = Router();
 
-// Charges list
 chargesRouter.get("/charges", requireSite(false), chargesController.getCharges);
 
-// Open charges
 chargesRouter.get(
   "/charges/open",
   requireSite(false),
   chargesController.getOpenCharges,
 );
-
-// Manual charge creation
 chargesRouter.post(
   "/charges/manual",
   requireSite(false),
   chargesController.addManualCharge,
 );
 
-// Waive charge
 chargesRouter.post(
   "/charges/waiver",
   requireSite(false),

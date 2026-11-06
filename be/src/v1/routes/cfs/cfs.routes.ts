@@ -93,23 +93,31 @@ router.put(
   asyncHandler(cfsController.updateJobLines),
 );
 
-// Action routes supporting both slash and colon syntax
 router.post(
-  ["/handling-jobs/:handlingJobId/start", "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):start"],
+  [
+    "/handling-jobs/:handlingJobId/start",
+    "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):start",
+  ],
   requireSite(false),
   requirePermission("cfs.job.manage", "DO"),
   asyncHandler(cfsController.startJob),
 );
 
 router.post(
-  ["/handling-jobs/:handlingJobId/complete", "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):complete"],
+  [
+    "/handling-jobs/:handlingJobId/complete",
+    "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):complete",
+  ],
   requireSite(false),
   requirePermission("cfs.job.manage", "DO"),
   asyncHandler(cfsController.completeJob),
 );
 
 router.post(
-  ["/handling-jobs/:handlingJobId/approve", "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):approve"],
+  [
+    "/handling-jobs/:handlingJobId/approve",
+    "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):approve",
+  ],
   requireSite(false),
   requirePermission("cfs.job.approve", "DO"),
   asyncHandler(cfsController.approveJob),

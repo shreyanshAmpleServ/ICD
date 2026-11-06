@@ -11,16 +11,12 @@ import {
   type Shift,
 } from "../../data/money";
 
-// In-memory fallback stores
 let livePayments: any[] = [...mockPayments];
 let liveShifts: any[] = [...mockShifts];
 let liveChannels: any[] = [...mockChannels];
 let receiptSeq = 18860;
 
 export const cashierController = {
-  // ==========================================
-  // 1. Payments
-  // ==========================================
   getPayments: async (req: Request, res: Response) => {
     try {
       const { siteId, partyId, cashier, status, search, date } = req.query;
@@ -257,7 +253,6 @@ export const cashierController = {
         const prisma = getPrisma();
         if (prisma && (prisma as any).payment) {
           try {
-            // Find or default channel
             let channelId = Number(b.channelId || b.paymentChannelId || 1);
             if (b.channelCode) {
               const ch = await (prisma as any).m_payment_channel.findFirst({
@@ -296,7 +291,6 @@ export const cashierController = {
               },
             });
 
-            // Process child allocations and update invoices
             if (allocations.length > 0) {
               for (const alloc of allocations) {
                 const invId = BigInt(alloc.invoiceId);
@@ -314,7 +308,6 @@ export const cashierController = {
                   },
                 });
 
-                // Update invoice balance
                 const targetInv = await (prisma as any).invoice.findUnique({
                   where: { invoice_id: invId },
                 });
@@ -354,7 +347,6 @@ export const cashierController = {
         }
       }
 
-      // Fallback in-memory creation
       const newPay: Payment = {
         paymentId: livePayments.length + 3201,
         receiptNo,
@@ -876,9 +868,6 @@ export const cashierController = {
     }
   },
 
-  // ==========================================
-  // 3. Channels
-  // ==========================================
   getChannels: async (_req: Request, res: Response) => {
     try {
       if (isDbLive()) {

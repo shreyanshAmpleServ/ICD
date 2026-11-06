@@ -7,8 +7,12 @@ export function requireSite(isGlobal = false) {
       return next();
     }
 
-    const querySite = typeof req.query.siteId === 'string' ? req.query.siteId.trim() : undefined;
-    const isFilterAll = querySite && (querySite.toLowerCase() === 'all' || querySite === '0');
+    const querySite =
+      typeof req.query.siteId === "string"
+        ? req.query.siteId.trim()
+        : undefined;
+    const isFilterAll =
+      querySite && (querySite.toLowerCase() === "all" || querySite === "0");
 
     const rawSite =
       (req.headers["x-site-id"] as string) ||

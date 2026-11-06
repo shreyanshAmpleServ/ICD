@@ -15627,10 +15627,6 @@ var sendError2 = (res, message, code = 400) => res.status(code).json({
   timestamp: (/* @__PURE__ */ new Date()).toISOString()
 });
 var ChargesController = class {
-  /**
-   * GET /charges
-   * Fetch rated / unbilled charges (from DB when live, with dynamic fallback)
-   */
   getCharges = async (req, res) => {
     try {
       const siteId = req.query.siteId ? parseInt(String(req.query.siteId), 10) : void 0;
@@ -15774,10 +15770,14 @@ var ChargesController = class {
         fallbackItems = fallbackItems.filter((x) => x.status === statusParam);
       }
       if (unitStayId) {
-        fallbackItems = fallbackItems.filter((x) => x.unitStayId === unitStayId);
+        fallbackItems = fallbackItems.filter(
+          (x) => x.unitStayId === unitStayId
+        );
       }
       if (billToPartyId) {
-        fallbackItems = fallbackItems.filter((x) => x.billToPartyId === billToPartyId);
+        fallbackItems = fallbackItems.filter(
+          (x) => x.billToPartyId === billToPartyId
+        );
       }
       if (q) {
         const query = q.toLowerCase();
@@ -15798,18 +15798,11 @@ var ChargesController = class {
       return sendError2(res, err.message, 500);
     }
   };
-  /**
-   * GET /charges/open
-   * Fetch only unbilled/open charges
-   */
   getOpenCharges = async (req, res) => {
     req.query.status = "OPEN";
     return this.getCharges(req, res);
   };
-  /**
-   * POST /charges/:chargeId/waive & POST /charges/:chargeId:waive
-   * Waive a specific charge
-   */
+  openCha;
   waiveCharge = async (req, res) => {
     try {
       const chargeIdParam = parseInt(req.params.chargeId, 10);
@@ -15835,11 +15828,6 @@ var ChargesController = class {
           });
         }
       }
-      const found = charges.find((c) => c.chargeId === chargeIdParam);
-      if (found) {
-        found.status = "OPEN";
-        found.waiverNote = reason || "Waiver applied";
-      }
       return res.json({
         success: true,
         chargeId: chargeIdParam,
@@ -15851,10 +15839,6 @@ var ChargesController = class {
       return sendError2(res, err.message, 500);
     }
   };
-  /**
-   * POST /charges/manual
-   * Add a manual charge
-   */
   addManualCharge = async (req, res) => {
     try {
       const {
@@ -15915,11 +15899,15 @@ var ChargesController = class {
             if (partyExists) {
               validPartyId = partyExists.party_id;
             } else {
-              const anyParty = await prisma5.m_party.findFirst({ select: { party_id: true } });
+              const anyParty = await prisma5.m_party.findFirst({
+                select: { party_id: true }
+              });
               if (anyParty) validPartyId = anyParty.party_id;
             }
           } else {
-            const anyParty = await prisma5.m_party.findFirst({ select: { party_id: true } });
+            const anyParty = await prisma5.m_party.findFirst({
+              select: { party_id: true }
+            });
             if (anyParty) validPartyId = anyParty.party_id;
           }
         } catch {
@@ -15932,7 +15920,9 @@ var ChargesController = class {
             select: { site_id: true }
           });
           if (!siteExists) {
-            const anySite = await prisma5.m_site.findFirst({ select: { site_id: true } });
+            const anySite = await prisma5.m_site.findFirst({
+              select: { site_id: true }
+            });
             validSiteId = anySite ? anySite.site_id : 1;
           }
         } catch {
@@ -16790,9 +16780,6 @@ var liveShifts = [...shifts];
 var liveChannels = [...channels];
 var receiptSeq = 18860;
 var cashierController = {
-  // ==========================================
-  // 1. Payments
-  // ==========================================
   getPayments: async (req, res) => {
     try {
       const { siteId, partyId, cashier, status, search: search2, date } = req.query;
@@ -17522,9 +17509,6 @@ var cashierController = {
       return res.status(500).json({ error: err.message });
     }
   },
-  // ==========================================
-  // 3. Channels
-  // ==========================================
   getChannels: async (_req, res) => {
     try {
       if (isDbLive()) {
@@ -18404,13 +18388,18 @@ var DisbursementsController = class {
       if (prisma5) {
         const count = await prisma5.disbursement.count();
         if (count === 0) {
-          console.log("[DisbursementsController] DB has 0 disbursements. Seeding initial data...");
+          console.log(
+            "[DisbursementsController] DB has 0 disbursements. Seeding initial data..."
+          );
           await seedDisbursements();
         }
         seededInitial2 = true;
       }
     } catch (e) {
-      console.warn("[DisbursementsController] Error checking/seeding disbursements DB:", e.message);
+      console.warn(
+        "[DisbursementsController] Error checking/seeding disbursements DB:",
+        e.message
+      );
     }
   }
   /**
@@ -18479,7 +18468,10 @@ var DisbursementsController = class {
           return res.json({ items, total: items.length });
         }
       }
-      res.json({ items: memoryFallbackDisbursements, total: memoryFallbackDisbursements.length });
+      res.json({
+        items: memoryFallbackDisbursements,
+        total: memoryFallbackDisbursements.length
+      });
     } catch (err) {
       console.error("[DisbursementsController.getDisbursements] Error:", err);
       res.status(500).json({ error: err.message });
@@ -18514,7 +18506,11 @@ var DisbursementsController = class {
             }
           });
           if (!d) {
-            return sendError5(res, `Disbursement #${disbIdParam} not found`, 404);
+            return sendError5(
+              res,
+              `Disbursement #${disbIdParam} not found`,
+              404
+            );
           }
           const billTo = d.m_party_disbursement_bill_to;
           const payee = d.m_party_disbursement_payee;
@@ -18547,11 +18543,17 @@ var DisbursementsController = class {
           });
         }
       }
-      const found = memoryFallbackDisbursements.find((x) => String(x.disbursementId) === disbIdParam);
-      if (!found) return sendError5(res, `Disbursement #${disbIdParam} not found`, 404);
+      const found = memoryFallbackDisbursements.find(
+        (x) => String(x.disbursementId) === disbIdParam
+      );
+      if (!found)
+        return sendError5(res, `Disbursement #${disbIdParam} not found`, 404);
       res.json(found);
     } catch (err) {
-      console.error("[DisbursementsController.getDisbursementById] Error:", err);
+      console.error(
+        "[DisbursementsController.getDisbursementById] Error:",
+        err
+      );
       res.status(500).json({ error: err.message });
     }
   };
@@ -18575,21 +18577,29 @@ var DisbursementsController = class {
         if (prisma5) {
           let consignmentId = b.consignmentId ? BigInt(b.consignmentId) : null;
           if (!consignmentId) {
-            const firstCon = await prisma5.consignment.findFirst({ orderBy: { consignment_id: "asc" } });
+            const firstCon = await prisma5.consignment.findFirst({
+              orderBy: { consignment_id: "asc" }
+            });
             consignmentId = firstCon ? firstCon.consignment_id : BigInt(1);
           }
           let billToPartyId = Number(b.billToPartyId || 0);
           if (!billToPartyId) {
-            const conRow = await prisma5.consignment.findUnique({ where: { consignment_id: consignmentId } });
+            const conRow = await prisma5.consignment.findUnique({
+              where: { consignment_id: consignmentId }
+            });
             billToPartyId = conRow?.bill_to_party_id || 1;
           }
           let chargeCodeId = Number(b.chargeCodeId || 0);
           if (!chargeCodeId && b.chargeCode) {
-            const cRow = await prisma5.m_charge_code.findUnique({ where: { charge_code: b.chargeCode } });
+            const cRow = await prisma5.m_charge_code.findUnique({
+              where: { charge_code: b.chargeCode }
+            });
             if (cRow) chargeCodeId = cRow.charge_code_id;
           }
           if (!chargeCodeId) {
-            const cRow = await prisma5.m_charge_code.findFirst({ where: { is_disbursement: true } });
+            const cRow = await prisma5.m_charge_code.findFirst({
+              where: { is_disbursement: true }
+            });
             chargeCodeId = cRow ? cRow.charge_code_id : 1;
           }
           let payeePartyId = b.payeePartyId ? Number(b.payeePartyId) : null;
@@ -18689,10 +18699,16 @@ var DisbursementsController = class {
             where: { disbursement_id: disbId }
           });
           if (!d2) {
-            return sendError5(res, `Disbursement #${disbIdParam} not found`, 404);
+            return sendError5(
+              res,
+              `Disbursement #${disbIdParam} not found`,
+              404
+            );
           }
           const requestNo = `APR-DAR1-26-DISB-${String(Number(disbId)).padStart(4, "0")}`;
-          let app2 = await prisma5.approval_request.findUnique({ where: { request_no: requestNo } });
+          let app2 = await prisma5.approval_request.findUnique({
+            where: { request_no: requestNo }
+          });
           if (!app2) {
             app2 = await prisma5.approval_request.create({
               data: {
@@ -18730,13 +18746,18 @@ var DisbursementsController = class {
           });
         }
       }
-      const d = memoryFallbackDisbursements.find((x) => String(x.disbursementId) === disbIdParam);
+      const d = memoryFallbackDisbursements.find(
+        (x) => String(x.disbursementId) === disbIdParam
+      );
       if (d) {
         d.status = "WRITTEN_OFF";
       }
       res.json({ success: true, disbursement: d });
     } catch (err) {
-      console.error("[DisbursementsController.writeOffDisbursement] Error:", err);
+      console.error(
+        "[DisbursementsController.writeOffDisbursement] Error:",
+        err
+      );
       res.status(500).json({ error: err.message });
     }
   };
@@ -23227,9 +23248,15 @@ var CfsController = class {
               orderBy: { labour_contractor_id: "asc" }
             });
             const timeoutPromise = new Promise(
-              (_, reject) => setTimeout(() => reject(new Error("Connection pool timeout")), 1200)
+              (_, reject) => setTimeout(
+                () => reject(new Error("Connection pool timeout")),
+                1200
+              )
             );
-            const dbContractors = await Promise.race([queryPromise, timeoutPromise]);
+            const dbContractors = await Promise.race([
+              queryPromise,
+              timeoutPromise
+            ]);
             if (dbContractors && dbContractors.length > 0) {
               const items = dbContractors.map((c) => ({
                 labourContractorId: c.labour_contractor_id,
@@ -23243,20 +23270,29 @@ var CfsController = class {
               return res.json(items);
             }
           } catch (err) {
-            console.warn("[cfsController.getContractors] DB query error or timeout, falling back:", err.message);
+            console.warn(
+              "[cfsController.getContractors] DB query error or timeout, falling back:",
+              err.message
+            );
           }
         }
       }
       return res.json(inMemoryContractors);
     } catch (err) {
-      console.warn("[cfsController.getContractors] Unexpected error, returning fallback:", err.message);
+      console.warn(
+        "[cfsController.getContractors] Unexpected error, returning fallback:",
+        err.message
+      );
       return res.json(inMemoryContractors);
     }
   };
   createContractor = async (req, res) => {
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
-      const maxId = inMemoryContractors.reduce((m, x) => Math.max(m, Number(x.labourContractorId) || 0), 40);
+      const maxId = inMemoryContractors.reduce(
+        (m, x) => Math.max(m, Number(x.labourContractorId) || 0),
+        40
+      );
       const newId = maxId + 1;
       const newContractor = {
         labourContractorId: newId,
@@ -23281,7 +23317,12 @@ var CfsController = class {
               is_active: newContractor.isActive,
               createdby: "system"
             }
-          }).catch((err) => console.warn("[createContractor] DB background create error:", err.message));
+          }).catch(
+            (err) => console.warn(
+              "[createContractor] DB background create error:",
+              err.message
+            )
+          );
         }
       }
       return sendCreated(res, newContractor);
@@ -23292,7 +23333,9 @@ var CfsController = class {
   getContractorById = async (req, res) => {
     try {
       const id = parseInt(req.params.labourContractorId, 10);
-      const local = inMemoryContractors.find((c) => c.labourContractorId === id);
+      const local = inMemoryContractors.find(
+        (c) => c.labourContractorId === id
+      );
       if (local) return sendSuccess(res, local);
       return sendError(res, "Contractor not found", 404);
     } catch (err) {
@@ -23302,9 +23345,12 @@ var CfsController = class {
   updateContractor = async (req, res) => {
     try {
       const id = parseInt(req.params.labourContractorId, 10);
-      const local = inMemoryContractors.find((c) => c.labourContractorId === id);
+      const local = inMemoryContractors.find(
+        (c) => c.labourContractorId === id
+      );
       if (local) {
-        if (req.body.contractorName) local.contractorName = req.body.contractorName;
+        if (req.body.contractorName)
+          local.contractorName = req.body.contractorName;
         if (req.body.rateBasis) local.rateBasis = req.body.rateBasis;
         if (req.body.rate) local.rate = String(req.body.rate);
         if (req.body.currency) local.currency = req.body.currency;
@@ -23315,7 +23361,6 @@ var CfsController = class {
       return sendError(res, err.message, 500);
     }
   };
-  // Handling Jobs
   getJobs = async (req, res) => {
     try {
       let items = [];
@@ -23348,9 +23393,15 @@ var CfsController = class {
               orderBy: { handling_job_id: "desc" }
             });
             const timeoutPromise = new Promise(
-              (_, reject) => setTimeout(() => reject(new Error("Connection pool timeout")), 1200)
+              (_, reject) => setTimeout(
+                () => reject(new Error("Connection pool timeout")),
+                1200
+              )
             );
-            const dbJobs = await Promise.race([queryPromise, timeoutPromise]);
+            const dbJobs = await Promise.race([
+              queryPromise,
+              timeoutPromise
+            ]);
             if (dbJobs && dbJobs.length > 0) {
               const mapped = dbJobs.map((j) => {
                 const u = j.handling_job_unit_stays?.unit_stay_cargo_units;
@@ -23375,8 +23426,8 @@ var CfsController = class {
                   jobNo: j.job_no,
                   jobKind: j.job_kind,
                   containerStayId: Number(j.container_stay_id),
-                  containerNo: u?.unit_no || "TCLU 551902 4",
-                  containerType: u?.cargo_unit_unit_types?.type_code || "40HR",
+                  containerNo: u?.unit_no,
+                  containerType: u?.cargo_unit_unit_types?.type_code,
                   consignmentRef: "BL-2026-001",
                   customer: "Mzizi Traders Ltd",
                   status: j.status,
@@ -23395,10 +23446,16 @@ var CfsController = class {
                 };
               });
               const dbIds = new Set(mapped.map((m) => m.handlingJobId));
-              items = [...mapped, ...inMemoryJobs.filter((x) => !dbIds.has(x.handlingJobId))];
+              items = [
+                ...mapped,
+                ...inMemoryJobs.filter((x) => !dbIds.has(x.handlingJobId))
+              ];
             }
           } catch (err) {
-            console.warn("[cfsController.getJobs] DB query error or timeout, falling back:", err.message);
+            console.warn(
+              "[cfsController.getJobs] DB query error or timeout, falling back:",
+              err.message
+            );
           }
         }
       }
@@ -23407,7 +23464,10 @@ var CfsController = class {
       }
       return res.json(items);
     } catch (err) {
-      console.warn("[cfsController.getJobs] Unexpected error, returning fallback:", err.message);
+      console.warn(
+        "[cfsController.getJobs] Unexpected error, returning fallback:",
+        err.message
+      );
       return res.json(inMemoryJobs);
     }
   };
@@ -23416,7 +23476,10 @@ var CfsController = class {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const unitStayId = Number(req.body.containerStayId || req.body.unitStayId) || 5001;
       const jobKind = req.body.jobKind || "DESTUFF";
-      const maxId = inMemoryJobs.reduce((m, x) => Math.max(m, Number(x.handlingJobId) || 0), 2205);
+      const maxId = inMemoryJobs.reduce(
+        (m, x) => Math.max(m, Number(x.handlingJobId) || 0),
+        2205
+      );
       const newId = maxId + 1;
       const jobNo = `CFS-DAR1-26-${newId}`;
       const lines = (req.body.lines || []).map((l, i) => ({
@@ -23472,7 +23535,12 @@ var CfsController = class {
               remarks: newJob.remarks,
               createdby: "system"
             }
-          }).catch((err) => console.warn("[createJob] DB background create error:", err.message));
+          }).catch(
+            (err) => console.warn(
+              "[createJob] DB background create error:",
+              err.message
+            )
+          );
         }
       }
       return sendCreated(res, newJob);
@@ -23498,8 +23566,10 @@ var CfsController = class {
       const local = inMemoryJobs.find((j) => j.handlingJobId === id);
       if (local) {
         if (req.body.status) local.status = req.body.status;
-        if (req.body.labourContractorId) local.labourContractorId = Number(req.body.labourContractorId);
-        if (req.body.labourCount) local.labourCount = Number(req.body.labourCount);
+        if (req.body.labourContractorId)
+          local.labourContractorId = Number(req.body.labourContractorId);
+        if (req.body.labourCount)
+          local.labourCount = Number(req.body.labourCount);
         if (req.body.remarks) local.remarks = req.body.remarks;
       }
       return sendSuccess(res, local || { handlingJobId: id, ...req.body });
@@ -23592,7 +23662,10 @@ var CfsController = class {
     });
   };
   recordLotDelivery = async (req, res) => {
-    const lotStayId = parseInt(req.params.lotStayId || req.params.id, 10);
+    const lotStayId = parseInt(
+      req.params.lotStayId || req.params.id,
+      10
+    );
     const qty = Number(req.body.qty || 1);
     const releaseOrderNo = req.body.releaseOrderNo || "RO-2026-001";
     const local = inMemoryLotBalances.find((l) => l.lotStayId === lotStayId);
@@ -23695,19 +23768,28 @@ router5.put(
   asyncHandler(cfsController.updateJobLines)
 );
 router5.post(
-  ["/handling-jobs/:handlingJobId/start", "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):start"],
+  [
+    "/handling-jobs/:handlingJobId/start",
+    "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):start"
+  ],
   requireSite(false),
   requirePermission("cfs.job.manage", "DO"),
   asyncHandler(cfsController.startJob)
 );
 router5.post(
-  ["/handling-jobs/:handlingJobId/complete", "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):complete"],
+  [
+    "/handling-jobs/:handlingJobId/complete",
+    "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):complete"
+  ],
   requireSite(false),
   requirePermission("cfs.job.manage", "DO"),
   asyncHandler(cfsController.completeJob)
 );
 router5.post(
-  ["/handling-jobs/:handlingJobId/approve", "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):approve"],
+  [
+    "/handling-jobs/:handlingJobId/approve",
+    "/handling-jobs/:handlingJobId([0-9a-zA-Z_.-]+):approve"
+  ],
   requireSite(false),
   requirePermission("cfs.job.approve", "DO"),
   asyncHandler(cfsController.approveJob)
