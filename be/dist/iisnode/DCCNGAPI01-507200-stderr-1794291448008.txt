@@ -1,0 +1,6 @@
+[Bootstrap] Fatal error during startup: RangeError [ERR_SOCKET_BAD_PORT]: options.port should be >= 0 and < 65536. Received type number (NaN).
+    at Server.listen (node:net:2090:5)
+    at startServer (C:\inetpub\wwwroot\dcc_icd\be\dist\index.js:25935:10)
+    at bootstrap (C:\inetpub\wwwroot\dcc_icd\be\dist\index.js:25964:3) {
+  code: 'ERR_SOCKET_BAD_PORT'
+}
