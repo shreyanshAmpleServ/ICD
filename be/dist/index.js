@@ -43,8 +43,15 @@ function resolveOpenApiSpecPath() {
   }
   return import_path.default.resolve(process.cwd(), "../API/NG_ICD_API_contract/ng_icd_api.yaml");
 }
+function parsePort(val, defaultPort = 4e3) {
+  if (!val) return defaultPort;
+  if (val.startsWith("\\\\.\\pipe\\") || isNaN(Number(val))) {
+    return val;
+  }
+  return parseInt(val, 10);
+}
 var ENV = {
-  PORT: parseInt(process.env.PORT || "4000", 10),
+  PORT: parsePort(process.env.PORT, 4e3),
   NODE_ENV: process.env.NODE_ENV || "development",
   API_PREFIX: process.env.API_PREFIX || "/api",
   DATABASE_URL: process.env.DATABASE_URL || "",
@@ -25932,16 +25939,31 @@ function initJobs() {
 function startServer() {
   initJobs();
   const server = import_http.default.createServer(app);
-  server.listen(ENV.PORT, () => {
-    console.log(`====================================================`);
-    console.log(`  \u{1F680} DCC NG ICD Backend Service`);
-    console.log(`  \u{1F4E1} API Base URL:  http://localhost:${ENV.PORT}${ENV.API_PREFIX}`);
-    console.log(`  \u{1F4E6} V1 Endpoints:  http://localhost:${ENV.PORT}${ENV.API_PREFIX}/v1`);
-    console.log(`  \u{1F4DA} Swagger Docs:  http://localhost:${ENV.PORT}${ENV.API_PREFIX}/docs`);
-    console.log(`  \u{1FA7A} Health Check: http://localhost:${ENV.PORT}${ENV.API_PREFIX}/health`);
-    console.log(`  \u{1F4BE} Target DB:     Microsoft SQL Server (MSSQL) via Prisma`);
-    console.log(`====================================================`);
-  });
+  const isPipe = typeof ENV.PORT === "string" && (ENV.PORT.startsWith("\\\\.\\pipe\\") || isNaN(Number(ENV.PORT)));
+  if (isPipe) {
+    server.listen(ENV.PORT, () => {
+      console.log(`====================================================`);
+      console.log(`  \u{1F680} DCC NG ICD Backend Service (iisnode / Windows named pipe)`);
+      console.log(`  \u{1F4E1} Named Pipe:    ${ENV.PORT}`);
+      console.log(`  \u{1F4E6} V1 Endpoints:  ${ENV.API_PREFIX}/v1`);
+      console.log(`  \u{1F4DA} Swagger Docs:  ${ENV.API_PREFIX}/docs`);
+      console.log(`  \u{1FA7A} Health Check: ${ENV.API_PREFIX}/health`);
+      console.log(`  \u{1F4BE} Target DB:     Microsoft SQL Server (MSSQL) via Prisma`);
+      console.log(`====================================================`);
+    });
+  } else {
+    const port = typeof ENV.PORT === "number" ? ENV.PORT : parseInt(String(ENV.PORT), 10) || 4e3;
+    server.listen(port, () => {
+      console.log(`====================================================`);
+      console.log(`  \u{1F680} DCC NG ICD Backend Service`);
+      console.log(`  \u{1F4E1} API Base URL:  http://localhost:${port}${ENV.API_PREFIX}`);
+      console.log(`  \u{1F4E6} V1 Endpoints:  http://localhost:${port}${ENV.API_PREFIX}/v1`);
+      console.log(`  \u{1F4DA} Swagger Docs:  http://localhost:${port}${ENV.API_PREFIX}/docs`);
+      console.log(`  \u{1FA7A} Health Check: http://localhost:${port}${ENV.API_PREFIX}/health`);
+      console.log(`  \u{1F4BE} Target DB:     Microsoft SQL Server (MSSQL) via Prisma`);
+      console.log(`====================================================`);
+    });
+  }
   const handleShutdown = (signal) => {
     console.log(`
 [Server] Received ${signal}. Shutting down gracefully...`);

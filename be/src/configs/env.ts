@@ -19,8 +19,17 @@ function resolveOpenApiSpecPath(): string {
   return path.resolve(process.cwd(), '../API/NG_ICD_API_contract/ng_icd_api.yaml');
 }
 
+function parsePort(val?: string, defaultPort: number = 4000): number | string {
+  if (!val) return defaultPort;
+  // If Windows named pipe (iisnode) or non-numeric port string, return as string
+  if (val.startsWith('\\\\.\\pipe\\') || isNaN(Number(val))) {
+    return val;
+  }
+  return parseInt(val, 10);
+}
+
 export const ENV = {
-  PORT: parseInt(process.env.PORT || '4000', 10),
+  PORT: parsePort(process.env.PORT, 4000),
   NODE_ENV: process.env.NODE_ENV || 'development',
   API_PREFIX: process.env.API_PREFIX || '/api',
   DATABASE_URL: process.env.DATABASE_URL || '',
@@ -31,4 +40,3 @@ export const ENV = {
   DEFAULT_SITE_ID: process.env.DEFAULT_SITE_ID || 'DAR1',
   OPENAPI_SPEC_PATH: resolveOpenApiSpecPath()
 };
-
