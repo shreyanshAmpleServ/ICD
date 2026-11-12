@@ -6,8 +6,8 @@ export const yardRepairsController = {
     try {
       if (isDbLive()) {
         const prisma = getPrisma();
-        if (prisma) {
-          const orders = await prisma.repair_work_orders.findMany({
+        if (prisma && (prisma as any).repair_work_orders) {
+          const orders = await (prisma as any).repair_work_orders.findMany({
             include: { unit_stays: true },
             orderBy: { work_order_id: 'desc' },
           });

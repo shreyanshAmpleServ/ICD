@@ -36,5 +36,6 @@ controlRoutes.get('/forecasts', requireSite(false), requirePermission('yard.map.
 controlRoutes.get('/audit', requireSite(false), requirePermission('admin.audit.view'), controlAuditController.getAuditTrail);
 
 // Control Tower
+controlRoutes.get(['/dashboards/control-tower', '/control-tower'], requireSite(false), requirePermission('dashboard.control_tower'), controlTowerController.getControlTower);
 controlRoutes.get('/control-tower/status', requireSite(false), requirePermission('dashboard.control_tower'), controlTowerController.getStatus);
 

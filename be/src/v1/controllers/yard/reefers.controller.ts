@@ -6,8 +6,8 @@ export const yardReefersController = {
     try {
       if (isDbLive()) {
         const prisma = getPrisma();
-        if (prisma) {
-          const logs = await prisma.reefer_monitoring_logs.findMany({
+        if (prisma && (prisma as any).reefer_monitoring_logs) {
+          const logs = await (prisma as any).reefer_monitoring_logs.findMany({
             include: { unit_stays: true },
             orderBy: { log_id: 'desc' },
           });

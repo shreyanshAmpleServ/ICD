@@ -8,23 +8,23 @@ datasource db {
 }
 
 model accounting_period {
-  accounting_period_id      Int       @id(map: "PK_accounting_period") @default(autoincrement())
-  company_id                Int
-  period_key                String    @db.Char(7)
-  period_start              DateTime  @db.Date
-  period_end                DateTime  @db.Date
-  status                    String    @default("OPEN", map: "DF_accounting_period_status") @db.VarChar(8)
-  closed_at                 DateTime?
-  closed_by_sub             String?   @db.VarChar(64)
-  reopened_count            Int       @default(0, map: "DF_accounting_period_reopen") @db.TinyInt
-  createdate                DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_accounting_period_createdate")
-  updatedate                DateTime?
-  createdby                 String    @db.NVarChar(64)
-  updatedby                 String?   @db.NVarChar(64)
-  log_inst                  Int       @default(1, map: "DF_accounting_period_log_inst")
+  accounting_period_id        Int       @id(map: "PK_accounting_period") @default(autoincrement())
+  company_id                  Int
+  period_key                  String    @db.Char(7)
+  period_start                DateTime  @db.Date
+  period_end                  DateTime  @db.Date
+  status                      String    @default("OPEN", map: "DF_accounting_period_status") @db.VarChar(8)
+  closed_at                   DateTime?
+  closed_by_sub               String?   @db.VarChar(64)
+  reopened_count              Int       @default(0, map: "DF_accounting_period_reopen") @db.TinyInt
+  createdate                  DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_accounting_period_createdate")
+  updatedate                  DateTime?
+  createdby                   String    @db.NVarChar(64)
+  updatedby                   String?   @db.NVarChar(64)
+  log_inst                    Int       @default(1, map: "DF_accounting_period_log_inst")
   m_company_accounting_period m_company @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_accounting_period_company")
-  accounting_period_invoice invoice[]
-  accounting_period_payment payment[]
+  accounting_period_invoice   invoice[]
+  accounting_period_payment   payment[]
 
   @@unique([company_id, period_key], map: "UQ_accounting_period")
 }
@@ -465,25 +465,25 @@ model consignment {
 }
 
 model consignment_line {
-  consignment_line_id      BigInt              @id(map: "PK_consignment_line") @default(autoincrement())
-  consignment_id           BigInt
-  line_no                  Int                 @db.SmallInt
-  unit_type_id             Int?
-  unit_grade               String?             @db.Char(1)
-  qty_expected             Decimal             @db.Decimal(12, 3)
-  qty_received             Decimal             @default(0, map: "DF_consignment_line_rec") @db.Decimal(12, 3)
-  qty_delivered            Decimal             @default(0, map: "DF_consignment_line_del") @db.Decimal(12, 3)
-  uom                      String              @default("UNIT", map: "DF_consignment_line_uom") @db.VarChar(10)
-  weight_kg                Decimal?            @db.Decimal(12, 1)
-  description              String?             @db.NVarChar(200)
-  createdate               DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_consignment_line_createdate")
-  updatedate               DateTime?
-  createdby                String              @db.NVarChar(64)
-  updatedby                String?             @db.NVarChar(64)
-  log_inst                 Int                 @default(1, map: "DF_consignment_line_log_inst")
-  consignment             consignment         @relation(fields: [consignment_id], references: [consignment_id], onUpdate: NoAction, map: "FK_consignment_line_consignment")
-  m_unit_type              m_unit_type?        @relation(fields: [unit_type_id], references: [unit_type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_line_unit_type")
-  handling_job_line        handling_job_line[]
+  consignment_line_id BigInt              @id(map: "PK_consignment_line") @default(autoincrement())
+  consignment_id      BigInt
+  line_no             Int                 @db.SmallInt
+  unit_type_id        Int?
+  unit_grade          String?             @db.Char(1)
+  qty_expected        Decimal             @db.Decimal(12, 3)
+  qty_received        Decimal             @default(0, map: "DF_consignment_line_rec") @db.Decimal(12, 3)
+  qty_delivered       Decimal             @default(0, map: "DF_consignment_line_del") @db.Decimal(12, 3)
+  uom                 String              @default("UNIT", map: "DF_consignment_line_uom") @db.VarChar(10)
+  weight_kg           Decimal?            @db.Decimal(12, 1)
+  description         String?             @db.NVarChar(200)
+  createdate          DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_consignment_line_createdate")
+  updatedate          DateTime?
+  createdby           String              @db.NVarChar(64)
+  updatedby           String?             @db.NVarChar(64)
+  log_inst            Int                 @default(1, map: "DF_consignment_line_log_inst")
+  consignment         consignment         @relation(fields: [consignment_id], references: [consignment_id], onUpdate: NoAction, map: "FK_consignment_line_consignment")
+  m_unit_type         m_unit_type?        @relation(fields: [unit_type_id], references: [unit_type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_consignment_line_unit_type")
+  handling_job_line   handling_job_line[]
 
   @@unique([consignment_id, line_no], map: "UQ_consignment_line")
 }
@@ -696,10 +696,10 @@ model exception_case {
   hold_exception_case_hold_idTohold           hold?               @relation("exception_case_hold_idTohold", fields: [hold_id], references: [hold_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_hold")
   m_resolution_code                           m_resolution_code?  @relation(fields: [resolution_code], references: [resolution_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_resolution")
   m_role                                      m_role?             @relation(fields: [assigned_role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_role")
-  m_site                                      m_site              @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_ec_site")
+  m_site_exception_case                       m_site              @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_ec_site")
   unit_stay                                   unit_stay?          @relation(fields: [unit_stay_id], references: [unit_stay_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_stay")
   m_exception_type                            m_exception_type    @relation(fields: [exception_type_id], references: [exception_type_id], onUpdate: NoAction, map: "FK_ec_type")
-  truck_visit                                 truck_visit?        @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_visit")
+  truck_visit_exception_case                  truck_visit?        @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ec_visit")
   exception_comment                           exception_comment[]
   hold_hold_exception_case_idToexception_case hold[]              @relation("hold_exception_case_idToexception_case")
 
@@ -742,25 +742,25 @@ model fiscal_receipt {
 }
 
 model gl_posting {
-  gl_posting_id        BigInt        @id(map: "PK_gl_posting") @default(autoincrement())
-  company_id           Int
-  source_entity        String        @db.VarChar(14)
-  source_id            BigInt
-  destination          String        @db.VarChar(12)
-  posting_date         DateTime      @db.Date
-  status               String        @default("PENDING", map: "DF_gl_posting_status") @db.VarChar(8)
-  journal_json         String        @db.NVarChar(Max)
-  external_ref         String?       @db.VarChar(60)
-  outbox_event_id      BigInt?
-  attempts             Int           @default(0, map: "DF_gl_posting_attempts") @db.SmallInt
-  last_error           String?
-  posted_at            DateTime?
-  createdate           DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_gl_posting_createdate")
-  updatedate           DateTime?
-  createdby            String        @db.NVarChar(64)
-  updatedby            String?       @db.NVarChar(64)
-  log_inst             Int           @default(1, map: "DF_gl_posting_log_inst")
-  m_company_gl_posting m_company     @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_gl_posting_company")
+  gl_posting_id           BigInt        @id(map: "PK_gl_posting") @default(autoincrement())
+  company_id              Int
+  source_entity           String        @db.VarChar(14)
+  source_id               BigInt
+  destination             String        @db.VarChar(12)
+  posting_date            DateTime      @db.Date
+  status                  String        @default("PENDING", map: "DF_gl_posting_status") @db.VarChar(8)
+  journal_json            String        @db.NVarChar(Max)
+  external_ref            String?       @db.VarChar(60)
+  outbox_event_id         BigInt?
+  attempts                Int           @default(0, map: "DF_gl_posting_attempts") @db.SmallInt
+  last_error              String?
+  posted_at               DateTime?
+  createdate              DateTime      @default(dbgenerated("sysutcdatetime()"), map: "DF_gl_posting_createdate")
+  updatedate              DateTime?
+  createdby               String        @db.NVarChar(64)
+  updatedby               String?       @db.NVarChar(64)
+  log_inst                Int           @default(1, map: "DF_gl_posting_log_inst")
+  m_company_gl_posting    m_company     @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_gl_posting_company")
   outbox_event_gl_posting outbox_event? @relation(fields: [outbox_event_id], references: [outbox_event_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_gl_posting_outbox")
 
   @@unique([source_entity, source_id, destination], map: "UQ_gl_posting")
@@ -1214,16 +1214,16 @@ model m_approval_policy {
 }
 
 model m_calendar {
-  calendar_id        Int                  @id(map: "PK_m_calendar") @default(autoincrement())
-  calendar_code      String               @unique(map: "UQ_m_calendar_code") @db.VarChar(20)
-  calendar_name      String               @db.NVarChar(100)
-  country_code       String?              @db.Char(2)
-  createdate         DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_m_calendar_createdate")
-  updatedate         DateTime?
-  createdby          String               @db.NVarChar(64)
-  updatedby          String?              @db.NVarChar(64)
-  log_inst           Int                  @default(1, map: "DF_m_calendar_log_inst")
-  m_country                     m_country?                    @relation(fields: [country_code], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_calendar_country")
+  calendar_id                   Int                  @id(map: "PK_m_calendar") @default(autoincrement())
+  calendar_code                 String               @unique(map: "UQ_m_calendar_code") @db.VarChar(20)
+  calendar_name                 String               @db.NVarChar(100)
+  country_code                  String?              @db.Char(2)
+  createdate                    DateTime             @default(dbgenerated("sysutcdatetime()"), map: "DF_m_calendar_createdate")
+  updatedate                    DateTime?
+  createdby                     String               @db.NVarChar(64)
+  updatedby                     String?              @db.NVarChar(64)
+  log_inst                      Int                  @default(1, map: "DF_m_calendar_log_inst")
+  m_country                     m_country?           @relation(fields: [country_code], references: [country_code], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_calendar_country")
   m_calendar_m_calendar_holiday m_calendar_holiday[]
   m_site                        m_site[]
 }
@@ -1244,23 +1244,23 @@ model m_calendar_holiday {
 }
 
 model m_cargo_regime {
-  cargo_regime_id      Int                    @id(map: "PK_m_cargo_regime") @default(autoincrement())
-  regime_code          String                 @unique(map: "UQ_m_cargo_regime_code") @db.VarChar(20)
-  regime_name          String                 @db.NVarChar(80)
-  requires_customs     Boolean                @default(true, map: "DF_m_cargo_regime_customs")
-  country_pack_id      Int?
-  is_active            Boolean                @default(true, map: "DF_m_cargo_regime_is_active")
-  createdate           DateTime               @default(dbgenerated("sysutcdatetime()"), map: "DF_m_cargo_regime_createdate")
-  updatedate           DateTime?
-  createdby            String                 @db.NVarChar(64)
-  updatedby            String?                @db.NVarChar(64)
-  log_inst             Int                    @default(1, map: "DF_m_cargo_regime_log_inst")
-  consignment          consignment[]
-  m_country_pack       m_country_pack?        @relation(fields: [country_pack_id], references: [country_pack_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_cargo_regime_pack")
-  m_regime_customs_ref m_regime_customs_ref[]
-  m_release_rule       m_release_rule[]
+  cargo_regime_id       Int                    @id(map: "PK_m_cargo_regime") @default(autoincrement())
+  regime_code           String                 @unique(map: "UQ_m_cargo_regime_code") @db.VarChar(20)
+  regime_name           String                 @db.NVarChar(80)
+  requires_customs      Boolean                @default(true, map: "DF_m_cargo_regime_customs")
+  country_pack_id       Int?
+  is_active             Boolean                @default(true, map: "DF_m_cargo_regime_is_active")
+  createdate            DateTime               @default(dbgenerated("sysutcdatetime()"), map: "DF_m_cargo_regime_createdate")
+  updatedate            DateTime?
+  createdby             String                 @db.NVarChar(64)
+  updatedby             String?                @db.NVarChar(64)
+  log_inst              Int                    @default(1, map: "DF_m_cargo_regime_log_inst")
+  consignment           consignment[]
+  m_country_pack        m_country_pack?        @relation(fields: [country_pack_id], references: [country_pack_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_cargo_regime_pack")
+  m_regime_customs_ref  m_regime_customs_ref[]
+  m_release_rule        m_release_rule[]
   m_cargo_regime_tariff tariff[]
-  unit_stay            unit_stay[]
+  unit_stay             unit_stay[]
 }
 
 model m_charge_code {
@@ -1403,35 +1403,35 @@ model m_country_pack {
 }
 
 model m_currency {
-  currency_code                                             String              @id(map: "PK_m_currency") @db.Char(3)
-  currency_name                                             String              @db.NVarChar(60)
-  minor_units                                               Int                 @default(2, map: "DF_m_currency_minor_units") @db.TinyInt
-  is_active                                                 Boolean             @default(true, map: "DF_m_currency_is_active")
-  createdate                                                DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_m_currency_createdate")
-  updatedate                                                DateTime?
-  createdby                                                 String              @db.NVarChar(64)
-  updatedby                                                 String?             @db.NVarChar(64)
-  log_inst                                                  Int                 @default(1, map: "DF_m_currency_log_inst")
-  m_currency_approval_request                               approval_request[]
-  m_currency_cashier_shift                                  cashier_shift[]
-  m_currency_charge                                         charge[]
-  customs_ref                                               customs_ref[]
-  m_currency_disbursement                                   disbursement[]
-  m_currency_invoice_base_currency                          invoice[]           @relation("m_currency_invoice_base_currency")
-  m_currency_invoice_currency                               invoice[]           @relation("m_currency_invoice_currency")
-  labour_contractor                                         labour_contractor[]
-  m_approval_policy                                         m_approval_policy[]
-  m_company                                                 m_company[]
-  m_currency_m_exchange_rate_from                           m_exchange_rate[]   @relation("m_currency_m_exchange_rate_from")
-  m_currency_m_exchange_rate_to                             m_exchange_rate[]   @relation("m_currency_m_exchange_rate_to")
-  m_currency_m_party_credit                                 m_party[]           @relation("m_currency_m_party_credit")
-  m_currency_m_party_default                                m_party[]           @relation("m_currency_m_party_default")
-  m_currency_m_payment_channel                              m_payment_channel[]
-  m_role_permission                                         m_role_permission[]
-  m_currency_payment                                        payment[]
-  m_currency_refund                                         refund[]
-  repair_estimate                                           repair_estimate[]
-  m_currency_tariff                                         tariff[]
+  currency_code                    String              @id(map: "PK_m_currency") @db.Char(3)
+  currency_name                    String              @db.NVarChar(60)
+  minor_units                      Int                 @default(2, map: "DF_m_currency_minor_units") @db.TinyInt
+  is_active                        Boolean             @default(true, map: "DF_m_currency_is_active")
+  createdate                       DateTime            @default(dbgenerated("sysutcdatetime()"), map: "DF_m_currency_createdate")
+  updatedate                       DateTime?
+  createdby                        String              @db.NVarChar(64)
+  updatedby                        String?             @db.NVarChar(64)
+  log_inst                         Int                 @default(1, map: "DF_m_currency_log_inst")
+  m_currency_approval_request      approval_request[]
+  m_currency_cashier_shift         cashier_shift[]
+  m_currency_charge                charge[]
+  customs_ref                      customs_ref[]
+  m_currency_disbursement          disbursement[]
+  m_currency_invoice_base_currency invoice[]           @relation("m_currency_invoice_base_currency")
+  m_currency_invoice_currency      invoice[]           @relation("m_currency_invoice_currency")
+  labour_contractor                labour_contractor[]
+  m_approval_policy                m_approval_policy[]
+  m_company                        m_company[]
+  m_currency_m_exchange_rate_from  m_exchange_rate[]   @relation("m_currency_m_exchange_rate_from")
+  m_currency_m_exchange_rate_to    m_exchange_rate[]   @relation("m_currency_m_exchange_rate_to")
+  m_currency_m_party_credit        m_party[]           @relation("m_currency_m_party_credit")
+  m_currency_m_party_default       m_party[]           @relation("m_currency_m_party_default")
+  m_currency_m_payment_channel     m_payment_channel[]
+  m_role_permission                m_role_permission[]
+  m_currency_payment               payment[]
+  m_currency_refund                refund[]
+  repair_estimate                  repair_estimate[]
+  m_currency_tariff                tariff[]
 }
 
 model m_customs_ref_type {
@@ -1576,23 +1576,23 @@ model m_driver {
 }
 
 model m_equipment {
-  equipment_id   Int            @id(map: "PK_m_equipment") @default(autoincrement())
-  site_id        Int
-  equipment_code String         @db.VarChar(20)
-  equipment_name String         @db.NVarChar(80)
-  equipment_type String         @db.VarChar(20)
-  capacity_kg    Int?
-  ng_ref_id      String?        @db.VarChar(64)
-  is_active      Boolean        @default(true, map: "DF_m_equipment_is_active")
-  createdate     DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_m_equipment_createdate")
-  updatedate     DateTime?
-  createdby      String         @db.NVarChar(64)
-  updatedby      String?        @db.NVarChar(64)
-  log_inst       Int            @default(1, map: "DF_m_equipment_log_inst")
-  handling_job   handling_job[]
-  m_site         m_site         @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_m_equipment_site")
-  move_order     move_order[]
-  yard_move      yard_move[]
+  equipment_id       Int            @id(map: "PK_m_equipment") @default(autoincrement())
+  site_id            Int
+  equipment_code     String         @db.VarChar(20)
+  equipment_name     String         @db.NVarChar(80)
+  equipment_type     String         @db.VarChar(20)
+  capacity_kg        Int?
+  ng_ref_id          String?        @db.VarChar(64)
+  is_active          Boolean        @default(true, map: "DF_m_equipment_is_active")
+  createdate         DateTime       @default(dbgenerated("sysutcdatetime()"), map: "DF_m_equipment_createdate")
+  updatedate         DateTime?
+  createdby          String         @db.NVarChar(64)
+  updatedby          String?        @db.NVarChar(64)
+  log_inst           Int            @default(1, map: "DF_m_equipment_log_inst")
+  handling_job       handling_job[]
+  m_site_m_equipment m_site         @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_m_equipment_site")
+  move_order         move_order[]
+  yard_move          yard_move[]
 
   @@unique([site_id, equipment_code], map: "UQ_m_equipment_code")
 }
@@ -1620,18 +1620,18 @@ model m_exception_type {
 }
 
 model m_exchange_rate {
-  exchange_rate_id                                     Int        @id(map: "PK_m_exchange_rate") @default(autoincrement())
-  company_id                                           Int
-  from_currency                                        String     @db.Char(3)
-  to_currency                                          String     @db.Char(3)
-  rate_date                                            DateTime   @db.Date
-  rate                                                 Decimal    @db.Decimal(19, 8)
-  rate_kind                                            String     @default("DAILY", map: "DF_m_exchange_rate_kind") @db.VarChar(8)
-  source_note                                          String?    @db.NVarChar(100)
-  createdate                                           DateTime   @default(dbgenerated("sysutcdatetime()"), map: "DF_m_exchange_rate_createdate")
-  updatedate                                           DateTime?
-  createdby                                            String     @db.NVarChar(64)
-  updatedby                                            String?    @db.NVarChar(64)
+  exchange_rate_id                Int        @id(map: "PK_m_exchange_rate") @default(autoincrement())
+  company_id                      Int
+  from_currency                   String     @db.Char(3)
+  to_currency                     String     @db.Char(3)
+  rate_date                       DateTime   @db.Date
+  rate                            Decimal    @db.Decimal(19, 8)
+  rate_kind                       String     @default("DAILY", map: "DF_m_exchange_rate_kind") @db.VarChar(8)
+  source_note                     String?    @db.NVarChar(100)
+  createdate                      DateTime   @default(dbgenerated("sysutcdatetime()"), map: "DF_m_exchange_rate_createdate")
+  updatedate                      DateTime?
+  createdby                       String     @db.NVarChar(64)
+  updatedby                       String?    @db.NVarChar(64)
   log_inst                        Int        @default(1, map: "DF_m_exchange_rate_log_inst")
   m_company_m_exchange_rate       m_company  @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_m_er_company")
   m_currency_m_exchange_rate_from m_currency @relation("m_currency_m_exchange_rate_from", fields: [from_currency], references: [currency_code], onUpdate: NoAction, map: "FK_m_er_from")
@@ -1694,15 +1694,15 @@ model m_gate_lane {
 }
 
 model m_gl_setting {
-  company_id  Int
-  setting_key String    @db.VarChar(30)
-  gl_account  String    @db.VarChar(30)
-  description String?   @db.NVarChar(120)
-  createdate  DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_m_gl_setting_createdate")
-  updatedate  DateTime?
-  createdby   String    @db.NVarChar(64)
-  updatedby   String?   @db.NVarChar(64)
-  log_inst    Int       @default(1, map: "DF_m_gl_setting_log_inst")
+  company_id             Int
+  setting_key            String    @db.VarChar(30)
+  gl_account             String    @db.VarChar(30)
+  description            String?   @db.NVarChar(120)
+  createdate             DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF_m_gl_setting_createdate")
+  updatedate             DateTime?
+  createdby              String    @db.NVarChar(64)
+  updatedby              String?   @db.NVarChar(64)
+  log_inst               Int       @default(1, map: "DF_m_gl_setting_log_inst")
   m_company_m_gl_setting m_company @relation(fields: [company_id], references: [company_id], onUpdate: NoAction, map: "FK_m_gl_setting_company")
 
   @@id([company_id, setting_key], map: "PK_m_gl_setting")
@@ -2228,7 +2228,7 @@ model m_site {
   consignment             consignment[]
   m_site_disbursement     disbursement[]
   document                document[]
-  exception_case          exception_case[]
+  m_site_exception_case   exception_case[]
   handling_job            handling_job[]
   m_site_invoice          invoice[]
   kpi_daily               kpi_daily[]
@@ -2238,7 +2238,7 @@ model m_site {
   m_checkpoint            m_checkpoint[]
   m_device                m_device[]
   m_device_integration    m_device_integration[]
-  m_equipment             m_equipment[]
+  m_site_m_equipment      m_equipment[]
   m_gate                  m_gate[]
   m_notification_rule     m_notification_rule[]
   m_number_sequence       m_number_sequence[]
@@ -2249,9 +2249,9 @@ model m_site {
   m_site_facility         m_site_facility[]
   m_visit_type            m_visit_type[]
   m_yard_level            m_yard_level[]
-  m_yard_location         m_yard_location[]
+  m_site_m_yard_location  m_yard_location[]
   manifest                manifest[]
-  move_order              move_order[]
+  m_site_move_order       move_order[]
   notification            notification[]
   occupancy_forecast      occupancy_forecast[]
   m_site_payment          payment[]
@@ -2261,7 +2261,7 @@ model m_site {
   saved_report            saved_report[]
   service_request         service_request[]
   m_site_tariff           tariff[]
-  truck_visit             truck_visit[]
+  m_site_truck_visit      truck_visit[]
   unit_stay               unit_stay[]
   user_site_role          user_site_role[]
   weighing                weighing[]
@@ -2490,7 +2490,7 @@ model m_yard_location {
   key_movement                                            key_movement[]
   m_yard_location                                         m_yard_location?      @relation("m_yard_locationTom_yard_location", fields: [parent_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_m_yard_location_parent")
   other_m_yard_location                                   m_yard_location[]     @relation("m_yard_locationTom_yard_location")
-  m_site                                                  m_site                @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_m_yard_location_site")
+  m_site_m_yard_location                                  m_site                @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_m_yard_location_site")
   m_yard_location_tag                                     m_yard_location_tag[]
   move_order_move_order_from_location_idTom_yard_location move_order[]          @relation("move_order_from_location_idTom_yard_location")
   move_order_move_order_to_location_idTom_yard_location   move_order[]          @relation("move_order_to_location_idTom_yard_location")
@@ -2499,7 +2499,7 @@ model m_yard_location {
   unit_stay                                               unit_stay[]
   yard_move_yard_move_from_location_idTom_yard_location   yard_move[]           @relation("yard_move_from_location_idTom_yard_location")
   yard_move_yard_move_to_location_idTom_yard_location     yard_move[]           @relation("yard_move_to_location_idTom_yard_location")
-  yard_occupancy                                          yard_occupancy[]
+  m_yard_location_yard_occupancy                          yard_occupancy[]
   yard_suggestion_log                                     yard_suggestion_log[]
 
   @@unique([site_id, full_code], map: "UQ_m_yard_location_code")
@@ -2626,10 +2626,10 @@ model move_order {
   exam                                                         exam[]
   m_equipment                                                  m_equipment?          @relation(fields: [assigned_equipment_id], references: [equipment_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_move_order_equipment")
   m_yard_location_move_order_from_location_idTom_yard_location m_yard_location?      @relation("move_order_from_location_idTom_yard_location", fields: [from_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_move_order_from")
-  m_site                                                       m_site                @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_move_order_site")
+  m_site_move_order                                            m_site                @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_move_order_site")
   unit_stay                                                    unit_stay             @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_move_order_stay")
   m_yard_location_move_order_to_location_idTom_yard_location   m_yard_location?      @relation("move_order_to_location_idTom_yard_location", fields: [to_location_id], references: [yard_location_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_move_order_to")
-  truck_visit                                                  truck_visit?          @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_move_order_visit")
+  truck_visit_move_order                                       truck_visit?          @relation(fields: [truck_visit_id], references: [truck_visit_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_move_order_visit")
   yard_move                                                    yard_move[]
   yard_suggestion_log                                          yard_suggestion_log[]
 
@@ -2702,20 +2702,20 @@ model outbox_delivery {
 }
 
 model outbox_event {
-  outbox_event_id BigInt            @id(map: "PK_outbox_event") @default(autoincrement())
-  event_id        String            @unique(map: "UQ_outbox_event_event_id") @default(dbgenerated("newsequentialid()"), map: "DF_outbox_event_id") @db.UniqueIdentifier
-  event_type      String            @db.VarChar(60)
-  event_version   Int               @default(1, map: "DF_outbox_event_ver") @db.TinyInt
-  site_id         Int?
-  aggregate_type  String            @db.VarChar(40)
-  aggregate_id    BigInt
-  occurred_at     DateTime
-  payload_json    String            @db.NVarChar(Max)
-  correlation_id  String?           @db.UniqueIdentifier
-  createdate      DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_outbox_event_created")
+  outbox_event_id         BigInt            @id(map: "PK_outbox_event") @default(autoincrement())
+  event_id                String            @unique(map: "UQ_outbox_event_event_id") @default(dbgenerated("newsequentialid()"), map: "DF_outbox_event_id") @db.UniqueIdentifier
+  event_type              String            @db.VarChar(60)
+  event_version           Int               @default(1, map: "DF_outbox_event_ver") @db.TinyInt
+  site_id                 Int?
+  aggregate_type          String            @db.VarChar(40)
+  aggregate_id            BigInt
+  occurred_at             DateTime
+  payload_json            String            @db.NVarChar(Max)
+  correlation_id          String?           @db.UniqueIdentifier
+  createdate              DateTime          @default(dbgenerated("sysutcdatetime()"), map: "DF_outbox_event_created")
   outbox_event_gl_posting gl_posting[]
-  notification    notification[]
-  outbox_delivery outbox_delivery[]
+  notification            notification[]
+  outbox_delivery         outbox_delivery[]
 
   @@index([aggregate_type, aggregate_id], map: "IX_outbox_event_aggregate")
 }
@@ -3324,17 +3324,17 @@ model truck_visit {
   appointment                             appointment[]
   truck_visit_billable_event              billable_event[]
   device_read                             device_read[]
-  exception_case                          exception_case[]
+  truck_visit_exception_case              exception_case[]
   inspection                              inspection[]
-  move_order                              move_order[]
+  truck_visit_move_order                  move_order[]
   release_check                           release_check[]
   m_driver                                m_driver?                @relation(fields: [driver_id], references: [driver_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visit_driver")
-  m_site                                  m_site                   @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_truck_visit_site")
+  m_site_truck_visit                      m_site                   @relation(fields: [site_id], references: [site_id], onUpdate: NoAction, map: "FK_truck_visit_site")
   m_truck_truck_visit_trailer_idTom_truck m_truck?                 @relation("truck_visit_trailer_idTom_truck", fields: [trailer_id], references: [truck_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visit_trailer")
   m_party_truck_visit                     m_party?                 @relation(fields: [transporter_party_id], references: [party_id], onDelete: Cascade, onUpdate: NoAction, map: "FK_truck_visit_transporter")
   m_truck_truck_visit_truck_idTom_truck   m_truck?                 @relation("truck_visit_truck_idTom_truck", fields: [truck_id], references: [truck_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_truck_visit_truck")
   m_visit_type                            m_visit_type             @relation(fields: [visit_type_id], references: [visit_type_id], onUpdate: NoAction, map: "FK_truck_visit_type")
-  visit_checkpoint_event                  visit_checkpoint_event[]
+  truck_visit_visit_checkpoint_event      visit_checkpoint_event[]
   visit_unit_txn                          visit_unit_txn[]
   weighing                                weighing[]
 
@@ -3458,7 +3458,7 @@ model unit_stay {
   unit_stay_visit_unit_txns       visit_unit_txn[]
   unit_stay_weighings             weighing[]
   unit_stay_yard_moves            yard_move[]
-  unit_stay_yard_occupancies      yard_occupancy[]
+  unit_stay_yard_occupancy        yard_occupancy[]
   unit_stay_yard_suggestion_logs  yard_suggestion_log[]
 
   @@index([site_id, physical_status], map: "IX_unit_stay_site_status")
@@ -3536,7 +3536,7 @@ model visit_checkpoint_event {
   m_device                                m_device?         @relation(fields: [device_id], references: [device_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_vce_device")
   m_gate_lane                             m_gate_lane?      @relation(fields: [gate_lane_id], references: [gate_lane_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_vce_lane")
   approval_request_visit_checkpoint_event approval_request? @relation(fields: [override_approval_ref], references: [approval_request_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_vce_override_approval")
-  truck_visit                             truck_visit       @relation(fields: [truck_visit_id], references: [truck_visit_id], onUpdate: NoAction, map: "FK_vce_visit")
+  truck_visit_visit_checkpoint_event      truck_visit       @relation(fields: [truck_visit_id], references: [truck_visit_id], onUpdate: NoAction, map: "FK_vce_visit")
 
   @@index([truck_visit_id, occurred_at], map: "IX_vce_visit")
 }
@@ -3640,19 +3640,19 @@ model yard_move {
 }
 
 model yard_occupancy {
-  yard_occupancy_id BigInt          @id(map: "PK_yard_occupancy") @default(autoincrement())
-  yard_location_id  Int
-  unit_stay_id      BigInt
-  is_primary        Boolean         @default(true, map: "DF_yard_occupancy_primary")
-  exclusive         Boolean         @default(true, map: "DF_yard_occupancy_excl")
-  occupied_since    DateTime
-  createdate        DateTime        @default(dbgenerated("sysutcdatetime()"), map: "DF_yard_occupancy_createdate")
-  updatedate        DateTime?
-  createdby         String          @db.NVarChar(64)
-  updatedby         String?         @db.NVarChar(64)
-  log_inst          Int             @default(1, map: "DF_yard_occupancy_log_inst")
-  m_yard_location   m_yard_location @relation(fields: [yard_location_id], references: [yard_location_id], onUpdate: NoAction, map: "FK_yard_occupancy_loc")
-  unit_stay         unit_stay       @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_yard_occupancy_stay")
+  yard_occupancy_id              BigInt          @id(map: "PK_yard_occupancy") @default(autoincrement())
+  yard_location_id               Int
+  unit_stay_id                   BigInt
+  is_primary                     Boolean         @default(true, map: "DF_yard_occupancy_primary")
+  exclusive                      Boolean         @default(true, map: "DF_yard_occupancy_excl")
+  occupied_since                 DateTime
+  createdate                     DateTime        @default(dbgenerated("sysutcdatetime()"), map: "DF_yard_occupancy_createdate")
+  updatedate                     DateTime?
+  createdby                      String          @db.NVarChar(64)
+  updatedby                      String?         @db.NVarChar(64)
+  log_inst                       Int             @default(1, map: "DF_yard_occupancy_log_inst")
+  m_yard_location_yard_occupancy m_yard_location @relation(fields: [yard_location_id], references: [yard_location_id], onUpdate: NoAction, map: "FK_yard_occupancy_loc")
+  unit_stay_yard_occupancy       unit_stay       @relation(fields: [unit_stay_id], references: [unit_stay_id], onUpdate: NoAction, map: "FK_yard_occupancy_stay")
 
   @@index([unit_stay_id], map: "IX_yard_occupancy_unit_all")
 }

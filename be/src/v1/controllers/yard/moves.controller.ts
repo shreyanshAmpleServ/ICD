@@ -66,7 +66,7 @@ export const yardMovesController = {
               m_equipment: true,
               m_yard_location_move_order_from_location_idTom_yard_location: true,
               m_yard_location_move_order_to_location_idTom_yard_location: true,
-              truck_visit: {
+              truck_visit_move_order: {
                 include: {
                   m_truck_truck_visit_truck_idTom_truck: true,
                 },
@@ -99,8 +99,8 @@ export const yardMovesController = {
               equipmentType: m.m_equipment?.equipment_type || undefined,
               assignedTo: m.assigned_operator_sub || m.m_equipment?.equipment_code || undefined,
               operatorName: m.assigned_operator_sub || undefined,
-              licensePlate: m.truck_visit?.m_truck_truck_visit_truck_idTom_truck?.plate_no || undefined,
-              truckPlate: m.truck_visit?.m_truck_truck_visit_truck_idTom_truck?.plate_no || undefined,
+              licensePlate: m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck?.plate_no || undefined,
+              truckPlate: m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck?.plate_no || undefined,
               driverName: undefined,
               requestedAt: m.requested_at ? m.requested_at.toISOString() : new Date().toISOString(),
               startedAt: undefined,
