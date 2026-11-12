@@ -1,0 +1,2 @@
+prisma:warn Trusting the server certificate without validation.
+[MSSQL / Prisma] Connected successfully to Microsoft SQL Server.
