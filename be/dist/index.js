@@ -20460,20 +20460,27 @@ var controlExceptionsController = {
     try {
       if (isDbLive()) {
         const prisma5 = getPrisma();
-        if (prisma5) {
-          const dbExceptions = await prisma5.exceptions.findMany({
-            include: { exception_types: true },
-            orderBy: { exception_id: "desc" }
+        if (prisma5 && prisma5.exception_case) {
+          const dbExceptions = await prisma5.exception_case.findMany({
+            include: { m_exception_type: true },
+            orderBy: { exception_case_id: "desc" }
           });
           if (dbExceptions && dbExceptions.length > 0) {
             const items = dbExceptions.map((e) => ({
-              exceptionId: e.exception_id,
-              exceptionTypeCode: e.exception_types?.type_code || "GATE_WEIGHT_DISCREPANCY",
-              exceptionTypeName: e.exception_types?.type_name || "Weight Discrepancy",
+              exceptionId: e.exception_case_id ? String(e.exception_case_id) : e.case_no,
+              caseNo: e.case_no,
+              exceptionTypeCode: e.m_exception_type?.exception_code || "GATE_WEIGHT_DISCREPANCY",
+              exceptionTypeName: e.m_exception_type?.exception_name || "Weight Discrepancy",
               severity: e.severity || "HIGH",
               status: e.status || "OPEN",
-              details: e.details,
-              raisedAt: e.raised_at
+              title: e.title,
+              details: e.description || e.title,
+              raisedAt: e.raised_at,
+              dueAt: e.due_at,
+              escalationLevel: e.escalation_level,
+              resolutionCode: e.resolution_code,
+              resolutionNotes: e.resolution_note,
+              resolvedAt: e.resolved_at
             }));
             return res.json({ items, total: items.length });
           }
@@ -20481,7 +20488,8 @@ var controlExceptionsController = {
       }
       res.json({ items: exceptions, total: exceptions.length });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      console.warn("[controlExceptionsController] Falling back to mock data due to:", err.message);
+      res.json({ items: exceptions, total: exceptions.length });
     }
   },
   resolveException: async (req, res) => {
@@ -20489,19 +20497,23 @@ var controlExceptionsController = {
       const { exceptionId } = req.params;
       const { resolution, resolutionNotes } = req.body;
       const prisma5 = getPrisma();
-      if (prisma5) {
-        const updated = await prisma5.exceptions.update({
-          where: { exception_id: Number(exceptionId) },
+      if (prisma5 && isDbLive() && prisma5.exception_case) {
+        const isNumeric = /^\d+$/.test(exceptionId);
+        const whereClause = isNumeric ? { exception_case_id: BigInt(exceptionId) } : { case_no: exceptionId };
+        const updated = await prisma5.exception_case.update({
+          where: whereClause,
           data: {
             status: "RESOLVED",
             resolution_code: resolution || "AUTHORIZED_EXCEPTION",
-            resolution_notes: resolutionNotes || "",
+            resolution_note: resolutionNotes || "",
             resolved_at: /* @__PURE__ */ new Date()
           }
         });
         return res.json(updated);
       }
-      const item2 = exceptions.find((e) => String(e.exceptionId) === exceptionId);
+      const item2 = exceptions.find(
+        (e) => String(e.exceptionCaseId || e.exceptionId) === exceptionId || e.caseNo === exceptionId
+      );
       if (item2) item2.status = "RESOLVED";
       res.json(item2 || { success: true });
     } catch (err) {

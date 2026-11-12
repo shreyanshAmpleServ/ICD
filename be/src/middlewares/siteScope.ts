@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, text } from "express";
 import { fallbackStore } from "../data/fallbackStore";
 
 export function requireSite(isGlobal = false) {
@@ -21,7 +21,6 @@ export function requireSite(isGlobal = false) {
       "DAR1";
 
     const headerSiteId = rawSite.trim().toUpperCase();
-
     const validSite = fallbackStore.sites.find(
       (s) =>
         s.siteId.toUpperCase() === headerSiteId ||
