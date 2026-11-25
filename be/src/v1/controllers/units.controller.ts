@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { getPrisma } from '../../configs/prisma';
-import { isDbLive } from '../../db/prisma';
 import { parsePaginationParams, paginateArray, NotFoundError, sendSuccess, sendCreated, sendError } from '../../utils';
 import { containerNumberSchema, vinNumberSchema } from '../validations/common.validation';
 import { cargoService } from '../../modules/cargo/cargo.service';
@@ -365,7 +364,7 @@ export class UnitsController {
       }
       const prisma = getPrisma();
       let moves: any[] = [];
-      if (isDbLive() && prisma) {
+      if (prisma) {
         try {
           const dbMoves = await prisma.yard_move.findMany({
             where: { unit_stay_id: Number(u.unitStayId) },

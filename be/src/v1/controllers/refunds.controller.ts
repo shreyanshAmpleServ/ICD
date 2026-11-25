@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../db/prisma';
+import { getPrisma} from '../../db/prisma';
 import { seedRefunds } from '../../scripts/seed-refunds';
 import { refunds as mockRefunds, type Refund } from '../../data/money';
 
@@ -44,7 +44,7 @@ export class RefundsController {
    */
   public getRefunds = async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           await this.ensureDatabaseSeeded();
@@ -144,7 +144,7 @@ export class RefundsController {
       const cashierName = (req as any).user?.username || (req.headers['x-user-sub'] as string) || 'Neema Mushi';
       const levelsRequired = amount >= 500 ? 2 : 1;
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           // 1. Verify or find valid payment
@@ -268,7 +268,7 @@ export class RefundsController {
       const { ok, level, note } = req.body || {};
       const decider = (req as any).user?.username || (req.headers['x-user-sub'] as string) || 'Grace Mrema';
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const currentRefund = await prisma.refund.findUnique({
@@ -399,7 +399,7 @@ export class RefundsController {
         return sendError(res, 'Bank payment voucher reference is required to mark paid');
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const updated = await prisma.refund.update({

@@ -15,4 +15,21 @@ export const approvalsApi = {
   actOnApproval: async (requestId: string | number, body: any) => {
     return api.post<any>(`/approvals/${requestId}/act`, body);
   },
+
+  getDelegations: async () => {
+    try {
+      const res = await api.get<any>('/delegations');
+      return res?.items ?? (Array.isArray(res) ? res : []);
+    } catch {
+      return [];
+    }
+  },
+
+  createDelegation: async (data: any) => {
+    return api.post<any>('/delegations', data);
+  },
+
+  revokeDelegation: async (delegationId: string | number) => {
+    return api.post<any>(`/delegations/${delegationId}:revoke`, {});
+  },
 };

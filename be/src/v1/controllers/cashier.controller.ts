@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getPrisma, isDbLive } from "../../configs/prisma";
+import { getPrisma} from "../../configs/prisma";
 import {
   payments as mockPayments,
   shifts as mockShifts,
@@ -8,8 +8,7 @@ import {
   TODAY,
   m2,
   type Payment,
-  type Shift,
-} from "../../data/money";
+  type Shift } from "../../data/money";
 
 let livePayments: any[] = [...mockPayments];
 let liveShifts: any[] = [...mockShifts];
@@ -21,7 +20,7 @@ export const cashierController = {
     try {
       const { siteId, partyId, cashier, status, search, date } = req.query;
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).payment) {
           try {
@@ -153,7 +152,7 @@ export const cashierController = {
     try {
       const { paymentId } = req.params;
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).payment) {
           try {
@@ -249,7 +248,7 @@ export const cashierController = {
       const cashierName =
         (req as any).user?.username || b.cashier || "Ashok Kumar";
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).payment) {
           try {
@@ -392,7 +391,7 @@ export const cashierController = {
       const { paymentId } = req.params;
       const { allocations = [] } = req.body;
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).payment) {
           try {
@@ -486,7 +485,7 @@ export const cashierController = {
       const { paymentId } = req.params;
       const { reason = "Customer requested refund / reversal" } = req.body;
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).payment) {
           try {
@@ -550,7 +549,7 @@ export const cashierController = {
     try {
       const { siteId, status, cashier } = req.query;
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).cashier_shift) {
           try {
@@ -631,7 +630,7 @@ export const cashierController = {
     try {
       const cashierName = (req as any).user?.username || "Neema Mushi";
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).cashier_shift) {
           try {
@@ -684,7 +683,7 @@ export const cashierController = {
       const tzsFloat = Number(b.tzsFloat || b.openingFloatTZS || 300000);
       const siteId = Number(b.siteId || 1);
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).cashier_shift) {
           try {
@@ -779,7 +778,7 @@ export const cashierController = {
       const { actualCash, countedCash, note } = req.body;
       const counted = Number(actualCash ?? countedCash ?? 0);
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).cashier_shift) {
           try {
@@ -835,7 +834,7 @@ export const cashierController = {
       const { shiftId } = req.params;
       const approvedBy = (req as any).user?.username || "Finance Manager";
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).cashier_shift) {
           try {
@@ -870,7 +869,7 @@ export const cashierController = {
 
   getChannels: async (_req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && (prisma as any).m_payment_channel) {
           try {

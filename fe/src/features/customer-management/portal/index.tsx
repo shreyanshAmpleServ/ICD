@@ -589,7 +589,7 @@ export function PortalView() {
                     <span>
                       <strong className="small">{r.subject}</strong>
                       <div className="xs faint">
-                        {r.requestNo} · {SR_KINDS[r.requestKind].label}
+                        {r.requestNo} · {SR_KINDS[r.requestKind as keyof typeof SR_KINDS]?.label || r.requestKind || 'Request'}
                       </div>
                     </span>
                   ),
@@ -604,13 +604,14 @@ export function PortalView() {
                   key: 'last',
                   header: 'Latest reply',
                   render: (r) => {
-                    const m = [...r.messages].reverse().find((x) => x.from === 'staff');
+                    const m = (r.messages || []).slice().reverse().find((x) => x.from === 'staff');
+                    const slaHours = SR_KINDS[r.requestKind as keyof typeof SR_KINDS]?.slaHours ?? 24;
                     return (
                       <span className="small">
                         {m ? (
                           m.text
                         ) : (
-                          <span className="faint">No reply yet · we answer within {SR_KINDS[r.requestKind].slaHours} h</span>
+                          <span className="faint">No reply yet · we answer within {slaHours} h</span>
                         )}
                       </span>
                     );
@@ -731,23 +732,11 @@ export function PortalView() {
         units={units}
         partyId={partyId}
         onClose={() => setReq({ open: false })}
-        onSent={async (r) => {
+        onSent={(r) => {
           setMyReqs((x) => [r, ...x]);
           setReq({ open: false });
           setTab('requests');
-          try {
-            await portalApi.submitRequest({
-              requestKind: r.requestKind,
-              partyId,
-              subject: r.subject,
-              details: r.details,
-              unitStayId: r.unitStayId,
-              payload: r.payload,
-            });
-            refetchReqs();
-          } catch (err) {
-            console.warn('[Portal] Submit request sync error:', err);
-          }
+          refetchReqs();
         }}
       />
     </Page>

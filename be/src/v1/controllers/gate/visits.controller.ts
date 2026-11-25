@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { visits } from '../../../data/gate';
-import { getPrisma, isDbLive } from '../../../db/prisma';
+import { getPrisma } from '../../../db/prisma';
 
 const VALID_VISIT_STATUSES = ['CANCELLED', 'EXPIRED', 'REJECTED', 'EXITED', 'CHECKED_OUT', 'HELD', 'WORKING', 'ADMITTED', 'AT_OUTER_GATE', 'ANNOUNCED'];
 
@@ -30,85 +29,78 @@ export const gateVisitsController = {
 
   getVisits: async (req: Request, res: Response) => {
     try {
-      let items: any[] = [];
-      if (isDbLive()) {
-        const prisma = getPrisma();
-        if (prisma) {
-          const dbVisits = await prisma.truck_visit.findMany({
+      const prisma = getPrisma();
+      if (!prisma) {
+        return res.status(500).json({ error: 'Database connection unavailable' });
+      }
+
+      const dbVisits = await prisma.truck_visit.findMany({
+        include: {
+          m_truck_truck_visit_truck_idTom_truck: true,
+          m_driver: true,
+          m_party_truck_visit: true,
+          m_visit_type: true,
+          visit_unit_txn: {
             include: {
-              m_truck_truck_visit_truck_idTom_truck: true,
-              m_driver: true,
-              m_party_truck_visit: true,
-              m_visit_type: true,
-              visit_unit_txn: {
+              unit_stay: {
                 include: {
-                  unit_stay: {
-                    include: {
-                      unit_stay_cargo_units: true,
-                    },
-                  },
+                  unit_stay_cargo_units: true,
                 },
               },
             },
-            orderBy: { arrived_at: 'desc' },
-          });
+          },
+        },
+        orderBy: { arrived_at: 'desc' },
+      });
 
-          if (dbVisits && dbVisits.length > 0) {
-            items = dbVisits.map((v: any, index: number) => {
-              const chkCode = getCheckpointCode(v.status, v.current_seq_no || ((index % 3) + 1));
-              return {
-                truckVisitId: Number(v.truck_visit_id),
-                visitNo: v.visit_no,
-                siteId: v.site_id,
-                truckId: v.truck_id,
-                driverId: v.driver_id,
-                partyId: v.transporter_party_id,
-                status: v.status,
-                nextCheckpointCode: chkCode,
-                currentSeqNo: v.current_seq_no || 1,
-                arrivedAt: v.arrived_at?.toISOString() || v.createdate?.toISOString() || new Date().toISOString(),
-                calledAt: v.admitted_at?.toISOString(),
-                admittedAt: v.admitted_at?.toISOString(),
-                exitedAt: v.exited_at?.toISOString(),
-                waitingMin: v.arrived_at
-                  ? Math.max(0, Math.round((Date.now() - new Date(v.arrived_at).getTime()) / 60000))
-                  : 12 + index * 5,
-                plateNo: v.m_truck_truck_visit_truck_idTom_truck?.plate_no || 'T 000 AAA',
-                driverName: v.m_driver?.driver_name || 'Driver',
-                driverPhone: v.m_driver?.phone,
-                driverLicence: v.m_driver?.license_no,
-                transporter: v.m_party_truck_visit?.party_name || 'Global Transporter',
-                carrierName: v.m_party_truck_visit?.party_name || 'Global Transporter',
-                visitTypeCode: v.m_visit_type?.visit_type_code || 'IMPORT_PICKUP',
-                visitTypeName: v.m_visit_type?.visit_type_name,
-                lane: 'L1',
-                units: (v.visit_unit_txn || []).map((u: any) => ({
-                  visitUnitTxnId: Number(u.visit_unit_txn_id),
-                  unitStayId: Number(u.unit_stay_id),
-                  action: u.direction,
-                  direction: u.direction,
-                  status: u.status,
-                  unitNo: u.unit_stay?.unit_stay_cargo_units?.unit_number || 'MSKU 000000 0',
-                  unitNumber: u.unit_stay?.unit_stay_cargo_units?.unit_number || 'MSKU 000000 0',
-                  isoCode: u.unit_stay?.unit_stay_cargo_units?.iso_code || '22G1',
-                  sealStatus: u.seal_status || 'MATCH',
-                })),
-              };
-            });
-          }
-        }
-      }
+      const items = (dbVisits || []).map((v: any, index: number) => {
+        const chkCode = getCheckpointCode(v.status, v.current_seq_no || ((index % 3) + 1));
+        return {
+          truckVisitId: Number(v.truck_visit_id),
+          visitNo: v.visit_no,
+          siteId: v.site_id,
+          truckId: v.truck_id,
+          driverId: v.driver_id,
+          partyId: v.transporter_party_id,
+          status: v.status,
+          nextCheckpointCode: chkCode,
+          currentSeqNo: v.current_seq_no || 1,
+          arrivedAt: v.arrived_at?.toISOString() || v.createdate?.toISOString() || new Date().toISOString(),
+          calledAt: v.admitted_at?.toISOString(),
+          admittedAt: v.admitted_at?.toISOString(),
+          exitedAt: v.exited_at?.toISOString(),
+          waitingMin: v.arrived_at
+            ? Math.max(0, Math.round((Date.now() - new Date(v.arrived_at).getTime()) / 60000))
+            : 12 + index * 5,
+          plateNo: v.m_truck_truck_visit_truck_idTom_truck?.plate_no || 'T 000 AAA',
+          driverName: v.m_driver?.driver_name || 'Driver',
+          driverPhone: v.m_driver?.phone,
+          driverLicence: v.m_driver?.license_no,
+          transporter: v.m_party_truck_visit?.party_name || 'Global Transporter',
+          carrierName: v.m_party_truck_visit?.party_name || 'Global Transporter',
+          visitTypeCode: v.m_visit_type?.visit_type_code || 'IMPORT_PICKUP',
+          visitTypeName: v.m_visit_type?.visit_type_name,
+          lane: 'L1',
+          units: (v.visit_unit_txn || []).map((u: any) => ({
+            visitUnitTxnId: Number(u.visit_unit_txn_id),
+            unitStayId: Number(u.unit_stay_id),
+            action: u.direction,
+            direction: u.direction,
+            status: u.status,
+            unitNo: u.unit_stay?.unit_stay_cargo_units?.unit_number || 'MSKU 000000 0',
+            unitNumber: u.unit_stay?.unit_stay_cargo_units?.unit_number || 'MSKU 000000 0',
+            isoCode: u.unit_stay?.unit_stay_cargo_units?.iso_code || '22G1',
+            sealStatus: u.seal_status || 'MATCH',
+          })),
+        };
+      });
 
-        if (!isDbLive() && items.length === 0) {
-          items = visits;
-        }
-
-        res.json({ items, total: items.length, nextCursor: null });
-      } catch (err: any) {
-        console.error('getVisits error:', err);
-        res.status(500).json({ error: err.message });
-      }
-    },
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err: any) {
+      console.error('getVisits error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  },
 
     getVisitById: async (req: Request, res: Response) => {
       try {
@@ -162,7 +154,7 @@ export const gateVisitsController = {
               plateNo: v.m_truck_truck_visit_truck_idTom_truck?.plate_no,
               driverName: v.m_driver?.driver_name,
               driverPhone: v.m_driver?.phone,
-              driverLicence: v.m_driver?.license_no,
+              driverLicence: v.m_driver?.licence_no,
               transporter: v.m_party_truck_visit?.party_name,
               carrierName: v.m_party_truck_visit?.party_name,
               visitTypeCode: v.m_visit_type?.visit_type_code,
@@ -181,11 +173,6 @@ export const gateVisitsController = {
               })),
             });
           }
-        }
-
-        if (!isDbLive()) {
-          const found = visits.find((v: any) => String(v.truckVisitId) === id || v.visitNo === id);
-          if (found) return res.json(found);
         }
         return res.status(404).json({ error: 'Truck visit not found' });
       } catch (err: any) {
@@ -214,7 +201,7 @@ export const gateVisitsController = {
                 const newTruck = await prisma.m_truck.create({
                   data: {
                     plate_no: req.body.plateNo,
-                    truck_type: 'SEMI_TRAILER',
+                    plate_display: req.body.plateNo,
                     createdby: 'gate_operator',
                   },
                 });
@@ -233,7 +220,7 @@ export const gateVisitsController = {
                 const newDriver = await prisma.m_driver.create({
                   data: {
                     driver_name: req.body.driverName,
-                    license_no: req.body.licenseNo || `LIC-${Date.now().toString().slice(-6)}`,
+                    licence_no: req.body.licenseNo || req.body.licenceNo || `LIC-${Date.now().toString().slice(-6)}`,
                     phone: req.body.driverPhone,
                     createdby: 'gate_operator',
                   },
@@ -284,12 +271,11 @@ export const gateVisitsController = {
             if (req.body.unitStayId || unitNo) {
               let stayId = req.body.unitStayId ? Number(req.body.unitStayId) : undefined;
               if (!stayId && unitNo) {
-                const cargo = await prisma.cargo_unit.findFirst({
-                  where: { unit_number: unitNo },
-                  include: { unit_stay: true },
+                const stay = await prisma.unit_stay.findFirst({
+                  where: { unit_stay_cargo_units: { unit_no: unitNo } },
                 });
-                if (cargo && cargo.unit_stay && cargo.unit_stay.length > 0) {
-                  stayId = Number(cargo.unit_stay[0].unit_stay_id);
+                if (stay) {
+                  stayId = Number(stay.unit_stay_id);
                 }
               }
 
@@ -316,10 +302,7 @@ export const gateVisitsController = {
               driverName: req.body.driverName,
             });
           }
-
-          const newVisit = { truckVisitId: visits.length + 1, ...req.body };
-          visits.push(newVisit as any);
-          res.status(201).json(newVisit);
+          return res.status(500).json({ error: 'Database connection unavailable' });
         } catch (err: any) {
           console.error('createVisit error:', err);
           res.status(500).json({ error: err.message });
@@ -354,9 +337,7 @@ export const gateVisitsController = {
                 updatedAt: updated.updatedate?.toISOString(),
               });
             }
-            const v = visits.find((x: any) => String(x.truckVisitId) === id);
-            if (v) (v as any).status = status;
-            res.json(v || { success: true });
+            return res.status(500).json({ error: 'Database connection unavailable' });
           } catch (err: any) {
             console.error('updateVisitStatus error:', err);
             res.status(500).json({ error: err.message });
@@ -432,7 +413,6 @@ export const gateVisitsController = {
                       where: { truck_visit_id: BigInt(numId) },
                       data: {
                         status: 'CANCELLED',
-                        cancel_reason: req.body.reason || 'User cancelled',
                         updatedate: new Date(),
                       },
                     });

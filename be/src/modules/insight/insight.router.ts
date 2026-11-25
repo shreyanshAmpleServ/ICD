@@ -8,15 +8,13 @@ import {
   reports,
   reportPreview,
   savedReports,
-  exportLog,
-} from "../../data/insight";
+  exportLog } from "../../data/insight";
 import {
   notificationTemplates,
   notificationRules,
-  printTemplates,
-} from "../../data/admin";
+  printTemplates } from "../../data/admin";
 import { notifications } from "../../data/cargo";
-import { getPrisma, isDbLive } from "../../db/prisma";
+import { getPrisma} from "../../db/prisma";
 
 const router = Router();
 
@@ -86,7 +84,7 @@ router.get(
   requirePermission("dashboard.control_tower"),
   async (req, res) => {
     const baseData = controlTower(Number(req.siteId) || 1);
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -242,7 +240,7 @@ router.delete(
 router.get("/notifications/inbox", requireSite(true), async (req, res) => {
   let items = notifications;
 
-  if (isDbLive()) {
+  if (true) {
     const prisma = getPrisma();
     if (prisma) {
       try {

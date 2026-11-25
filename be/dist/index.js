@@ -124,21 +124,15 @@ async function initPrisma() {
     );
     return { prisma, isConnected: true };
   } catch (err) {
-    console.warn(
+    console.error(
       "[MSSQL / Prisma] Unable to reach SQL Server (" + (err.message || "Connection refused") + ")."
     );
-    console.warn(
-      "[MSSQL / Prisma] Dynamic fallback in-memory store is active for development & UI testing."
-    );
     isMssqlConnected = false;
-    return { prisma: null, isConnected: false };
+    throw err;
   }
 }
 function getPrisma() {
   return prisma;
-}
-function isDbLive() {
-  return isMssqlConnected;
 }
 
 // src/server.ts
@@ -587,7 +581,11 @@ var ROLES = {
     code: "CUSTOMER_PORTAL",
     name: "Customer (portal)",
     external: true,
-    grants: { "consignment.view": "VIEW", "billing.invoice.view": "VIEW", "portal.request.submit": "DO" }
+    grants: {
+      "consignment.view": "VIEW",
+      "billing.invoice.view": "VIEW",
+      "portal.request.submit": "DO"
+    }
   }
 };
 
@@ -792,8 +790,8 @@ var heights = /* @__PURE__ */ new Map();
 function slot(code) {
   const b = blocks.find((x) => x.code === code);
   for (let tries = 0; tries < 200; tries++) {
-    const r = int(1, b.rows), c = int(1, b.bays);
-    const k = `${code}-${String(r).padStart(2, "0")}-${String(c).padStart(2, "0")}`;
+    const r3 = int(1, b.rows), c = int(1, b.bays);
+    const k = `${code}-${String(r3).padStart(2, "0")}-${String(c).padStart(2, "0")}`;
     const h = heights.get(k) ?? 0;
     if (h < b.tiers) {
       heights.set(k, h + 1);
@@ -824,8 +822,8 @@ var owners = ["BMLU", "IOSU", "SCLU", "TZNU"];
 for (let i = 0; i < 260; i++) {
   const cons = pick(consignments.slice(0, 4).concat(consignments[7], consignments[8]));
   const owner = cons.shippingLinePartyId === 4 ? "BMLU" : cons.shippingLinePartyId === 5 ? "IOSU" : pick(owners);
-  const r = rnd();
-  const phys = r < 0.08 ? "EXPECTED" : r < 0.85 ? "IN_YARD" : r < 0.93 ? "AT_ACTIVITY" : "DEPARTED";
+  const r3 = rnd();
+  const phys = r3 < 0.08 ? "EXPECTED" : r3 < 0.85 ? "IN_YARD" : r3 < 0.93 ? "AT_ACTIVITY" : "DEPARTED";
   const customs = phys === "EXPECTED" ? "NOT_LODGED" : pick(["LODGED", "CLEARED", "CLEARED", "UNDER_EXAM", "NOT_LODGED", "CLEARED"]);
   const billing = phys === "DEPARTED" ? "PAID" : pick(["ACCRUING", "ACCRUING", "PROFORMA", "PAID", "CREDIT"]);
   const release = phys === "DEPARTED" ? "USED" : customs === "CLEARED" && (billing === "PAID" || billing === "CREDIT") ? pick(["APPROVED", "REQUESTED", "NONE"]) : "NONE";
@@ -924,6 +922,7 @@ for (let i = 0; i < 4; i++) {
 }
 var allStays = stays;
 var stay = (id) => stays.find((s) => s.unitStayId === id);
+var staysAt = (siteId) => stays.filter((s) => s.siteId === siteId);
 var unitsOf = (consignmentId) => stays.filter((s) => s.consignmentId === consignmentId);
 for (const c of consignments) {
   const u = unitsOf(c.consignmentId);
@@ -976,7 +975,7 @@ registerSearch((q) => {
   const hits = parties.filter((p2) => p2.partyName.toUpperCase().includes(n) || p2.partyCode.includes(n)).slice(0, 5).map((p2) => ({
     id: p2.partyId,
     title: p2.partyName,
-    subtitle: p2.roles.map((r) => r.toLowerCase().replace(/_/g, " ")).join(", "),
+    subtitle: p2.roles.map((r3) => r3.toLowerCase().replace(/_/g, " ")).join(", "),
     link: { entityName: "party", entityId: p2.partyId },
     to: `/parties/${p2.partyId}`
   }));
@@ -1329,7 +1328,7 @@ var usr = (userId, userName, title, email, lastLogin, roleGrants, f = {}) => ({
   lastLoginAt: lastLogin === null ? void 0 : at(lastLogin),
   isActive: true,
   roleGrants,
-  siteCodes: [...new Set(roleGrants.map((r) => r.siteId ? sites.find((s) => s.siteId === r.siteId).siteCode : "All sites"))],
+  siteCodes: [...new Set(roleGrants.map((r3) => r3.siteId ? sites.find((s) => s.siteId === r3.siteId).siteCode : "All sites"))],
   ...f
 });
 var users = [
@@ -1388,9 +1387,9 @@ var releaseConditions = [
   { conditionCode: "KEYS", conditionName: "Keys handed over", evalOrder: 7, description: "Vehicles only: key custody shows handed over to the collector." },
   { conditionCode: "PHYSICAL", conditionName: "Loaded and within weight", evalOrder: 8, description: "Unit is loaded on this visit; exit weight within tolerance where the site weighs on exit." }
 ];
-var releaseRules = cargoRegimes.flatMap((r) => releaseConditions.filter((c) => !(r.regimeCode === "EMPTY" && c.conditionCode === "CUSTOMS")).map((c, i) => ({
-  releaseRuleId: r.cargoRegimeId * 10 + i,
-  regimeCode: r.regimeCode,
+var releaseRules = cargoRegimes.flatMap((r3) => releaseConditions.filter((c) => !(r3.regimeCode === "EMPTY" && c.conditionCode === "CUSTOMS")).map((c, i) => ({
+  releaseRuleId: r3.cargoRegimeId * 10 + i,
+  regimeCode: r3.regimeCode,
   unitCategory: c.conditionCode === "KEYS" ? "VEHICLE" : null,
   conditionCode: c.conditionCode,
   atApproval: !["IDENTITY", "RELEASE_VALID", "COLLECTOR", "KEYS", "PHYSICAL"].includes(c.conditionCode),
@@ -1822,7 +1821,7 @@ registerSearch((q) => {
 // src/modules/setup/setup.service.ts
 var SetupService = class {
   get db() {
-    return isDbLive() ? getPrisma() : null;
+    return getPrisma();
   }
   // =========================================================================
   // 1. Company & Sites
@@ -1921,29 +1920,29 @@ var SetupService = class {
           orderBy: { site_id: "asc" }
         });
         if (rows.length > 0) {
-          return rows.map((r) => {
-            const facilities = r.m_site_facility.map((f) => f.facility_type);
+          return rows.map((r3) => {
+            const facilities = r3.m_site_facility.map((f) => f.facility_type);
             return {
-              siteId: r.site_id,
-              siteCode: r.site_code,
-              siteName: r.site_name,
-              companyId: r.company_id,
-              countryCode: r.country_code || "TZ",
-              timeZone: r.time_zone || "Africa/Dar_es_Salaam",
-              calendarId: r.calendar_id || 1,
+              siteId: r3.site_id,
+              siteCode: r3.site_code,
+              siteName: r3.site_name,
+              companyId: r3.company_id,
+              countryCode: r3.country_code || "TZ",
+              timeZone: r3.time_zone || "Africa/Dar_es_Salaam",
+              calendarId: r3.calendar_id || 1,
               calendarCode: "TZ_PUBLIC",
-              addressLine1: r.address_line1 || "Plot 112, Nelson Mandela Road",
-              city: r.city || "Dar es Salaam",
-              latitude: r.latitude ? String(r.latitude) : "-6.832100",
-              longitude: r.longitude ? String(r.longitude) : "39.231700",
-              customsStationCode: r.customs_station_code || "DLICD1",
-              regulatorLicenceNo: r.regulator_licence_no || "TASAC/ICD/0231",
-              offlineGateLimitMin: r.offline_gate_limit_min || 60,
-              signatureMode: r.signature_mode || "EITHER",
+              addressLine1: r3.address_line1 || "Plot 112, Nelson Mandela Road",
+              city: r3.city || "Dar es Salaam",
+              latitude: r3.latitude ? String(r3.latitude) : "-6.832100",
+              longitude: r3.longitude ? String(r3.longitude) : "39.231700",
+              customsStationCode: r3.customs_station_code || "DLICD1",
+              regulatorLicenceNo: r3.regulator_licence_no || "TASAC/ICD/0231",
+              offlineGateLimitMin: r3.offline_gate_limit_min || 60,
+              signatureMode: r3.signature_mode || "EITHER",
               facilities: facilities.length > 0 ? facilities : ["ICD", "CFS"],
-              isActive: r.is_active ?? true,
-              gates: r.m_gate.length || 2,
-              slots: r.site_code === "DAR1" ? 660 : r.site_code === "DAR2" ? 39 : 96
+              isActive: r3.is_active ?? true,
+              gates: r3.m_gate.length || 2,
+              slots: r3.site_code === "DAR1" ? 660 : r3.site_code === "DAR2" ? 39 : 96
             };
           });
         }
@@ -2030,16 +2029,16 @@ var SetupService = class {
       try {
         const rows = await db.m_country_pack.findMany({ orderBy: { pack_code: "asc" } });
         if (rows.length > 0) {
-          return rows.map((r) => ({
-            packCode: r.pack_code,
-            packName: r.pack_name,
-            countryCode: r.country_code,
-            packVersion: r.pack_version,
-            currencyCode: r.country_code === "TZ" ? "TZS" : "USD",
+          return rows.map((r3) => ({
+            packCode: r3.pack_code,
+            packName: r3.pack_name,
+            countryCode: r3.country_code,
+            packVersion: r3.pack_version,
+            currencyCode: r3.country_code === "TZ" ? "TZS" : "USD",
             taxLabel: "VAT",
             taxRatePct: 18,
-            isActive: r.is_active,
-            logInst: r.log_inst
+            isActive: r3.is_active,
+            logInst: r3.log_inst
           }));
         }
       } catch (err) {
@@ -2066,54 +2065,54 @@ var SetupService = class {
           orderBy: { yard_location_id: "asc" }
         });
         if (rows.length > 0) {
-          return rows.map((r) => {
-            const kind = (r.location_kind || (r.level_no === 1 ? "AREA" : r.level_no === 2 ? "BLOCK" : "SLOT")).toUpperCase();
-            const cleanCode = (r.location_code || "").replace("BLOCK-", "");
-            const name = kind === "BLOCK" ? `Block ${cleanCode} \xB7 ${cleanCode === "R" ? "Reefer stack" : cleanCode === "EXAM" ? "Customs inspection" : cleanCode === "C" ? "Empties" : cleanCode === "B" ? "Heavy & transit" : "Import full"}` : kind === "AREA" ? `Area ${r.location_code} \xB7 Main container yard` : r.location_code;
-            const rowsCount = r.rows || (kind === "BLOCK" ? cleanCode === "R" ? 4 : cleanCode === "EXAM" ? 2 : 6 : void 0);
-            const baysCount = r.bays || (kind === "BLOCK" ? cleanCode === "R" ? 8 : cleanCode === "EXAM" ? 6 : 12 : void 0);
-            const maxTier = r.max_tier || (kind === "BLOCK" ? 4 : 1);
+          return rows.map((r3) => {
+            const kind = (r3.location_kind || (r3.level_no === 1 ? "AREA" : r3.level_no === 2 ? "BLOCK" : "SLOT")).toUpperCase();
+            const cleanCode = (r3.location_code || "").replace("BLOCK-", "");
+            const name = kind === "BLOCK" ? `Block ${cleanCode} \xB7 ${cleanCode === "R" ? "Reefer stack" : cleanCode === "EXAM" ? "Customs inspection" : cleanCode === "C" ? "Empties" : cleanCode === "B" ? "Heavy & transit" : "Import full"}` : kind === "AREA" ? `Area ${r3.location_code} \xB7 Main container yard` : r3.location_code;
+            const rowsCount = r3.rows || (kind === "BLOCK" ? cleanCode === "R" ? 4 : cleanCode === "EXAM" ? 2 : 6 : void 0);
+            const baysCount = r3.bays || (kind === "BLOCK" ? cleanCode === "R" ? 8 : cleanCode === "EXAM" ? 6 : 12 : void 0);
+            const maxTier = r3.max_tier || (kind === "BLOCK" ? 4 : 1);
             return {
-              yardLocationId: r.yard_location_id,
-              siteId: r.site_id,
-              parentId: r.parent_id,
-              levelNo: r.level_no,
-              locationCode: r.location_code,
-              fullCode: r.full_code,
+              yardLocationId: r3.yard_location_id,
+              siteId: r3.site_id,
+              parentId: r3.parent_id,
+              levelNo: r3.level_no,
+              locationCode: r3.location_code,
+              fullCode: r3.full_code,
               locationKind: kind,
               kind,
               name,
               rows: rowsCount,
               bays: baysCount,
-              isSlot: r.is_slot,
-              allows20: r.allows_20,
-              allows40: r.allows_40,
-              allows45: r.allows_45,
+              isSlot: r3.is_slot,
+              allows20: r3.allows_20,
+              allows40: r3.allows_40,
+              allows45: r3.allows_45,
               maxTier,
-              maxWeightKg: r.max_weight_kg,
-              baySize: r.bay_size,
-              reeferPlugNo: r.reefer_plug_no,
-              map: r.map_x != null && r.map_y != null ? {
-                x: Number(r.map_x),
-                y: Number(r.map_y),
-                w: Number(r.map_w || 160),
-                h: Number(r.map_h || 120)
+              maxWeightKg: r3.max_weight_kg,
+              baySize: r3.bay_size,
+              reeferPlugNo: r3.reefer_plug_no,
+              map: r3.map_x != null && r3.map_y != null ? {
+                x: Number(r3.map_x),
+                y: Number(r3.map_y),
+                w: Number(r3.map_w || 160),
+                h: Number(r3.map_h || 120)
               } : kind === "BLOCK" ? {
                 x: cleanCode === "A" ? 40 : cleanCode === "B" ? 440 : cleanCode === "C" ? 40 : cleanCode === "R" ? 380 : cleanCode === "EXAM" ? 380 : 720,
                 y: cleanCode === "A" ? 40 : cleanCode === "B" ? 40 : cleanCode === "C" ? 230 : cleanCode === "R" ? 225 : cleanCode === "EXAM" ? 318 : 230,
                 w: cleanCode === "A" || cleanCode === "B" ? 360 : cleanCode === "C" || cleanCode === "R" ? 300 : 180,
                 h: cleanCode === "A" || cleanCode === "B" ? 150 : cleanCode === "C" ? 125 : cleanCode === "R" ? 80 : cleanCode === "EXAM" ? 50 : 125
               } : void 0,
-              mapX: r.map_x ? Number(r.map_x) : null,
-              mapY: r.map_y ? Number(r.map_y) : null,
-              mapW: r.map_w ? Number(r.map_w) : null,
-              mapH: r.map_h ? Number(r.map_h) : null,
-              mapRotation: r.map_rotation,
-              sortOrder: r.sort_order,
-              isBlocked: r.is_blocked,
-              blockedReason: r.blocked_reason,
-              isActive: r.is_active,
-              tags: r.m_yard_location_tag.map((t) => t.m_location_tag?.tag_code || t.m_location_tag?.tag_name || "GEN")
+              mapX: r3.map_x ? Number(r3.map_x) : null,
+              mapY: r3.map_y ? Number(r3.map_y) : null,
+              mapW: r3.map_w ? Number(r3.map_w) : null,
+              mapH: r3.map_h ? Number(r3.map_h) : null,
+              mapRotation: r3.map_rotation,
+              sortOrder: r3.sort_order,
+              isBlocked: r3.is_blocked,
+              blockedReason: r3.blocked_reason,
+              isActive: r3.is_active,
+              tags: r3.m_yard_location_tag.map((t) => t.m_location_tag?.tag_code || t.m_location_tag?.tag_name || "GEN")
             };
           });
         }
@@ -2405,9 +2404,9 @@ var SetupService = class {
           });
           const existingSet = new Set(existingSlots.map((s) => s.location_code));
           const slotsToCreate = [];
-          for (let r = 1; r <= rows; r++) {
+          for (let r3 = 1; r3 <= rows; r3++) {
             for (let b = 1; b <= bays; b++) {
-              const rowStr = String(r).padStart(2, "0");
+              const rowStr = String(r3).padStart(2, "0");
               const bayStr = String(b).padStart(2, "0");
               const slotCode = `${prefix}-${rowStr}-${bayStr}`;
               if (!existingSet.has(slotCode)) {
@@ -2462,9 +2461,9 @@ var SetupService = class {
       if (data.allows40 !== void 0) inMemBlock.allows40 = data.allows40;
       if (data.allows45 !== void 0) inMemBlock.allows45 = data.allows45;
       if (data.maxWeightKg) inMemBlock.maxWeightKg = data.maxWeightKg;
-      for (let r = 1; r <= rows; r++) {
+      for (let r3 = 1; r3 <= rows; r3++) {
         for (let b = 1; b <= bays; b++) {
-          const slotCode = `${prefix}-${String(r).padStart(2, "0")}-${String(b).padStart(2, "0")}`;
+          const slotCode = `${prefix}-${String(r3).padStart(2, "0")}-${String(b).padStart(2, "0")}`;
           if (!yardNodes.some((n) => n.locationCode === slotCode)) {
             const nextSlotId = yardNodes.reduce((max, n) => Math.max(max, n.yardLocationId && n.yardLocationId <= 2e6 ? n.yardLocationId : 0), 1e3) + 1;
             yardNodes.push({
@@ -2791,17 +2790,17 @@ var SetupService = class {
           },
           orderBy: { visit_type_id: "asc" }
         });
-        return rows.map((r) => ({
-          visitTypeId: r.visit_type_id,
-          siteId: r.site_id,
-          visitCode: r.visit_type_code,
-          visitTypeCode: r.visit_type_code,
-          visitName: r.visit_type_name,
-          visitTypeName: r.visit_type_name,
-          requiresAppointment: r.requires_appointment ?? false,
-          requiresNomination: r.requires_nomination ?? true,
-          isActive: r.is_active ?? true,
-          checkpoints: r.m_visit_type_checkpoint.map((cp2) => ({
+        return rows.map((r3) => ({
+          visitTypeId: r3.visit_type_id,
+          siteId: r3.site_id,
+          visitCode: r3.visit_type_code,
+          visitTypeCode: r3.visit_type_code,
+          visitName: r3.visit_type_name,
+          visitTypeName: r3.visit_type_name,
+          requiresAppointment: r3.requires_appointment ?? false,
+          requiresNomination: r3.requires_nomination ?? true,
+          isActive: r3.is_active ?? true,
+          checkpoints: r3.m_visit_type_checkpoint.map((cp2) => ({
             seqNo: cp2.seq_no,
             checkpointCode: cp2.m_checkpoint?.checkpoint_code || "OUTER_IN",
             checkpointName: cp2.m_checkpoint?.checkpoint_name || "Checkpoint",
@@ -2819,7 +2818,7 @@ var SetupService = class {
     if (db) {
       try {
         const num2 = Number(id);
-        const r = await db.m_visit_type.findFirst({
+        const r3 = await db.m_visit_type.findFirst({
           where: isNaN(num2) ? { visit_type_code: String(id) } : { OR: [{ visit_type_id: num2 }, { visit_type_code: String(id) }] },
           include: {
             m_visit_type_checkpoint: {
@@ -2828,18 +2827,18 @@ var SetupService = class {
             }
           }
         });
-        if (r) {
+        if (r3) {
           return {
-            visitTypeId: r.visit_type_id,
-            siteId: r.site_id,
-            visitCode: r.visit_type_code,
-            visitTypeCode: r.visit_type_code,
-            visitName: r.visit_type_name,
-            visitTypeName: r.visit_type_name,
-            requiresAppointment: r.requires_appointment ?? false,
-            requiresNomination: r.requires_nomination ?? true,
-            isActive: r.is_active ?? true,
-            checkpoints: r.m_visit_type_checkpoint.map((cp2) => ({
+            visitTypeId: r3.visit_type_id,
+            siteId: r3.site_id,
+            visitCode: r3.visit_type_code,
+            visitTypeCode: r3.visit_type_code,
+            visitName: r3.visit_type_name,
+            visitTypeName: r3.visit_type_name,
+            requiresAppointment: r3.requires_appointment ?? false,
+            requiresNomination: r3.requires_nomination ?? true,
+            isActive: r3.is_active ?? true,
+            checkpoints: r3.m_visit_type_checkpoint.map((cp2) => ({
               seqNo: cp2.seq_no,
               checkpointCode: cp2.m_checkpoint?.checkpoint_code || "OUTER_IN",
               checkpointName: cp2.m_checkpoint?.checkpoint_name || "Checkpoint",
@@ -3036,14 +3035,14 @@ var SetupService = class {
     if (db) {
       try {
         const rows = await db.m_checkpoint.findMany({ orderBy: { checkpoint_id: "asc" } });
-        return rows.map((r) => ({
-          checkpointId: r.checkpoint_id,
-          siteId: r.site_id,
-          gateId: r.gate_id,
-          checkpointCode: r.checkpoint_code,
-          checkpointName: r.checkpoint_name,
-          checkpointKind: r.checkpoint_kind,
-          isActive: r.is_active ?? true
+        return rows.map((r3) => ({
+          checkpointId: r3.checkpoint_id,
+          siteId: r3.site_id,
+          gateId: r3.gate_id,
+          checkpointCode: r3.checkpoint_code,
+          checkpointName: r3.checkpoint_name,
+          checkpointKind: r3.checkpoint_kind,
+          isActive: r3.is_active ?? true
         }));
       } catch (err) {
         console.warn("[SetupService.getCheckpoints] DB error:", err.message);
@@ -3173,20 +3172,20 @@ var SetupService = class {
     if (db) {
       try {
         const rows = await db.m_unit_type.findMany({ orderBy: { unit_type_id: "asc" } });
-        return rows.map((r, i) => {
-          const seed2 = unitTypes.find((u) => u.typeCode === r.type_code) || unitTypes[i] || unitTypes[0];
+        return rows.map((r3, i) => {
+          const seed3 = unitTypes.find((u) => u.typeCode === r3.type_code) || unitTypes[i] || unitTypes[0];
           return {
-            unitTypeId: r.unit_type_id,
-            typeCode: r.type_code,
-            typeName: r.type_name,
-            category: r.unit_category,
-            unitCategory: r.unit_category,
-            lengthFt: r.length_ft,
-            teu: Number(r.teu || 1),
-            isReefer: r.is_reefer ?? false,
-            isActive: r.is_active ?? true,
-            identityRules: seed2.identityRules || ["ISO_6346"],
-            checks: seed2.checks || []
+            unitTypeId: r3.unit_type_id,
+            typeCode: r3.type_code,
+            typeName: r3.type_name,
+            category: r3.unit_category,
+            unitCategory: r3.unit_category,
+            lengthFt: r3.length_ft,
+            teu: Number(r3.teu || 1),
+            isReefer: r3.is_reefer ?? false,
+            isActive: r3.is_active ?? true,
+            identityRules: seed3.identityRules || ["ISO_6346"],
+            checks: seed3.checks || []
           };
         });
       } catch (err) {
@@ -3249,13 +3248,13 @@ var SetupService = class {
     if (db) {
       try {
         const rows = await db.m_cargo_regime.findMany();
-        return rows.map((r, i) => {
-          const seed2 = cargoRegimes.find((s) => s.regimeCode === r.regime_code) || cargoRegimes[i] || cargoRegimes[0];
+        return rows.map((r3, i) => {
+          const seed3 = cargoRegimes.find((s) => s.regimeCode === r3.regime_code) || cargoRegimes[i] || cargoRegimes[0];
           return {
-            cargoRegimeId: r.cargo_regime_id,
-            regimeCode: r.regime_code,
-            regimeName: r.regime_name,
-            refs: seed2.refs || []
+            cargoRegimeId: r3.cargo_regime_id,
+            regimeCode: r3.regime_code,
+            regimeName: r3.regime_name,
+            refs: seed3.refs || []
           };
         });
       } catch (err) {
@@ -3678,14 +3677,14 @@ var SetupService = class {
       try {
         const rows = await db.m_port.findMany({ orderBy: { port_id: "asc" } });
         if (rows.length > 0) {
-          const mapped = rows.map((r) => ({
-            portId: r.port_id,
-            unlocode: r.unlocode,
-            portCode: r.unlocode || "PORT",
-            portName: r.port_name,
-            countryCode: r.country_code || "TZ",
-            portKind: r.port_kind || "SEAPORT",
-            isActive: r.is_active ?? true
+          const mapped = rows.map((r3) => ({
+            portId: r3.port_id,
+            unlocode: r3.unlocode,
+            portCode: r3.unlocode || "PORT",
+            portName: r3.port_name,
+            countryCode: r3.country_code || "TZ",
+            portKind: r3.port_kind || "SEAPORT",
+            isActive: r3.is_active ?? true
           }));
           if (query?.q) {
             const q = String(query.q).toUpperCase();
@@ -3772,13 +3771,13 @@ var SetupService = class {
       try {
         const rows = await db.m_commodity.findMany({ orderBy: { commodity_id: "asc" } });
         if (rows.length > 0) {
-          const mapped = rows.map((r) => ({
-            commodityId: r.commodity_id,
-            commodityCode: r.commodity_code,
-            commodityName: r.commodity_name,
-            hsCode: r.hs_code || "",
-            isHazardous: r.is_hazardous ?? false,
-            isActive: r.is_active ?? true
+          const mapped = rows.map((r3) => ({
+            commodityId: r3.commodity_id,
+            commodityCode: r3.commodity_code,
+            commodityName: r3.commodity_name,
+            hsCode: r3.hs_code || "",
+            isHazardous: r3.is_hazardous ?? false,
+            isActive: r3.is_active ?? true
           }));
           if (query?.q) {
             const q = String(query.q).toUpperCase();
@@ -4182,62 +4181,88 @@ var SetupService = class {
           },
           orderBy: { approval_delegation_id: "desc" }
         });
-        if (rows.length > 0) {
-          const dbList = rows.map((d) => ({
-            approvalDelegationId: d.approval_delegation_id,
-            delegationId: d.approval_delegation_id,
-            fromUserId: d.from_user_id,
-            toUserId: d.to_user_id,
-            fromName: d.app_user_approval_delegation_from_user_idToapp_user?.user_name || "User " + d.from_user_id,
-            toName: d.app_user_approval_delegation_to_user_idToapp_user?.user_name || "User " + d.to_user_id,
-            permissionCode: d.permission_code,
-            siteId: d.site_id,
-            validFrom: d.valid_from.toISOString(),
-            validTo: d.valid_to.toISOString(),
-            reason: d.reason,
-            revokedAt: d.revoked_at ? d.revoked_at.toISOString() : void 0,
-            logInst: d.log_inst
-          }));
-          return [...this.customDelegations, ...dbList];
-        }
+        return rows.map((d) => ({
+          approvalDelegationId: d.approval_delegation_id,
+          delegationId: d.approval_delegation_id,
+          fromUserId: d.from_user_id,
+          toUserId: d.to_user_id,
+          fromName: d.app_user_approval_delegation_from_user_idToapp_user?.user_name || "User " + d.from_user_id,
+          toName: d.app_user_approval_delegation_to_user_idToapp_user?.user_name || "User " + d.to_user_id,
+          permissionCode: d.permission_code,
+          permName: d.permission_code || "All approvals",
+          siteId: d.site_id,
+          validFrom: d.valid_from.toISOString(),
+          validTo: d.valid_to.toISOString(),
+          reason: d.reason,
+          revokedAt: d.revoked_at ? d.revoked_at.toISOString() : void 0,
+          logInst: d.log_inst
+        }));
       } catch (err) {
         console.warn("[SetupService.getDelegations] DB error:", err.message);
       }
     }
-    const baseList = delegations.map((d) => ({ ...d }));
-    return [...this.customDelegations, ...baseList];
+    return [];
   }
   async createDelegation(data) {
     const db = this.db;
-    const fromId = Number(data.fromUserId);
-    const toId = Number(data.toUserId);
+    let fromId = Number(data.fromUserId);
+    let toId = Number(data.toUserId);
     const siteId = data.siteId ? Number(data.siteId) : null;
     const validFrom = data.validFrom ? new Date(data.validFrom) : /* @__PURE__ */ new Date();
     const validTo = data.validTo ? new Date(data.validTo) : new Date(Date.now() + 7 * 864e5);
     const reason = data.reason || "Temporary leave delegation";
-    const permissionCode = data.permissionCode || null;
-    let fromName = data.fromName;
-    let toName = data.toName;
-    const uFrom = users.find((u) => u.userId === fromId);
-    if (uFrom) fromName = uFrom.userName;
-    const uTo = users.find((u) => u.userId === toId);
-    if (uTo) toName = uTo.userName;
-    const newDelegation = {
-      approvalDelegationId: Date.now(),
-      delegationId: Date.now(),
-      fromUserId: fromId,
-      toUserId: toId,
-      fromName: fromName || "User " + fromId,
-      toName: toName || "User " + toId,
-      permissionCode,
-      siteId,
-      validFrom: validFrom.toISOString(),
-      validTo: validTo.toISOString(),
-      reason,
-      logInst: 1
-    };
+    let permissionCode = data.permissionCode || null;
+    if (permissionCode === "" || permissionCode === "all") permissionCode = null;
     if (db) {
       try {
+        if (permissionCode) {
+          const permRow = await db.m_permission.findUnique({
+            where: { permission_code: permissionCode }
+          });
+          if (!permRow) {
+            permissionCode = null;
+          }
+        }
+        if (!fromId || isNaN(fromId)) {
+          const firstUser = await db.app_user.findFirst({ orderBy: { user_id: "asc" } });
+          fromId = firstUser ? firstUser.user_id : 1;
+        } else {
+          const u = await db.app_user.findUnique({ where: { user_id: fromId } });
+          if (!u) {
+            const firstUser = await db.app_user.findFirst({ orderBy: { user_id: "asc" } });
+            fromId = firstUser ? firstUser.user_id : 1;
+          }
+        }
+        if (!toId || isNaN(toId)) {
+          const nameToSearch = data.toName || data.to;
+          if (nameToSearch) {
+            const matched = await db.app_user.findFirst({
+              where: {
+                OR: [
+                  { user_name: { contains: nameToSearch } },
+                  { email: { contains: nameToSearch } }
+                ]
+              }
+            });
+            if (matched) toId = matched.user_id;
+          }
+          if (!toId || isNaN(toId)) {
+            const secondUser = await db.app_user.findFirst({
+              where: { user_id: { not: fromId } },
+              orderBy: { user_id: "asc" }
+            });
+            toId = secondUser ? secondUser.user_id : 2;
+          }
+        } else {
+          const u = await db.app_user.findUnique({ where: { user_id: toId } });
+          if (!u) {
+            const secondUser = await db.app_user.findFirst({
+              where: { user_id: { not: fromId } },
+              orderBy: { user_id: "asc" }
+            });
+            toId = secondUser ? secondUser.user_id : 2;
+          }
+        }
         const created = await db.approval_delegation.create({
           data: {
             from_user_id: fromId,
@@ -4247,37 +4272,51 @@ var SetupService = class {
             valid_from: validFrom,
             valid_to: validTo,
             reason,
-            createdby: "SYSTEM"
+            createdby: data.createdby || "SYSTEM"
+          },
+          include: {
+            app_user_approval_delegation_from_user_idToapp_user: true,
+            app_user_approval_delegation_to_user_idToapp_user: true
           }
         });
-        newDelegation.approvalDelegationId = created.approval_delegation_id;
-        newDelegation.delegationId = created.approval_delegation_id;
+        return {
+          approvalDelegationId: created.approval_delegation_id,
+          delegationId: created.approval_delegation_id,
+          fromUserId: created.from_user_id,
+          toUserId: created.to_user_id,
+          fromName: created.app_user_approval_delegation_from_user_idToapp_user?.user_name || "User " + created.from_user_id,
+          toName: created.app_user_approval_delegation_to_user_idToapp_user?.user_name || "User " + created.to_user_id,
+          permissionCode: created.permission_code,
+          permName: created.permission_code || "All approvals",
+          siteId: created.site_id,
+          validFrom: created.valid_from.toISOString(),
+          validTo: created.valid_to.toISOString(),
+          reason: created.reason,
+          logInst: created.log_inst
+        };
       } catch (err) {
         console.warn("[SetupService.createDelegation] DB error:", err.message);
+        throw err;
       }
     }
-    this.customDelegations.unshift(newDelegation);
-    return newDelegation;
+    throw new Error("Database connection unavailable");
   }
   async revokeDelegation(id) {
     const numId = Number(id);
-    const revokedAt = (/* @__PURE__ */ new Date()).toISOString();
     const db = this.db;
     if (db && Number.isFinite(numId)) {
       try {
-        await db.approval_delegation.update({
+        const updated = await db.approval_delegation.update({
           where: { approval_delegation_id: numId },
           data: { revoked_at: /* @__PURE__ */ new Date() }
         });
+        return { success: true, delegationId: numId, revokedAt: updated.revoked_at?.toISOString() };
       } catch (err) {
         console.warn("[SetupService.revokeDelegation] DB error:", err.message);
+        throw err;
       }
     }
-    const found = this.customDelegations.find((d) => d.approvalDelegationId === numId || String(d.delegationId) === String(id));
-    if (found) {
-      found.revokedAt = revokedAt;
-    }
-    return { success: true, delegationId: numId, revokedAt };
+    return { success: true, delegationId: numId, revokedAt: (/* @__PURE__ */ new Date()).toISOString() };
   }
   async getRoles() {
     const db = this.db;
@@ -4288,30 +4327,30 @@ var SetupService = class {
           orderBy: { role_code: "asc" }
         });
         if (rows.length > 0) {
-          const dbRoles = rows.map((r) => {
+          const dbRoles = rows.map((r3) => {
             let grantsObj = {};
-            if (this.customRoles.has(r.role_code)) {
-              grantsObj = { ...this.customRoles.get(r.role_code).grants };
+            if (this.customRoles.has(r3.role_code)) {
+              grantsObj = { ...this.customRoles.get(r3.role_code).grants };
             } else {
-              r.m_role_permission.forEach((rp) => {
-                grantsObj[rp.permission_code] = rp.grant_type || "DO";
+              r3.m_role_permission.forEach((rp2) => {
+                grantsObj[rp2.permission_code] = rp2.grant_type || "DO";
               });
             }
             return {
-              roleId: r.role_id,
-              roleCode: r.role_code,
-              roleName: r.role_name,
-              code: r.role_code,
-              name: r.role_name,
-              description: r.description,
-              isSystem: r.is_system,
-              isActive: r.is_active,
+              roleId: r3.role_id,
+              roleCode: r3.role_code,
+              roleName: r3.role_name,
+              code: r3.role_code,
+              name: r3.role_name,
+              description: r3.description,
+              isSystem: r3.is_system,
+              isActive: r3.is_active,
               grants: grantsObj,
-              logInst: r.log_inst
+              logInst: r3.log_inst
             };
           });
           for (const [code, cr] of this.customRoles.entries()) {
-            if (!dbRoles.some((r) => r.code === code)) {
+            if (!dbRoles.some((r3) => r3.code === code)) {
               dbRoles.push(cr);
             }
           }
@@ -4321,22 +4360,22 @@ var SetupService = class {
         console.error("getRoles db error:", err);
       }
     }
-    const fallbackRoles = Object.values(ROLES).map((r, i) => {
-      const grants = this.customRoles.has(r.code) ? { ...this.customRoles.get(r.code).grants } : { ...r.grants };
+    const fallbackRoles = Object.values(ROLES).map((r3, i) => {
+      const grants = this.customRoles.has(r3.code) ? { ...this.customRoles.get(r3.code).grants } : { ...r3.grants };
       return {
         roleId: i + 1,
-        roleCode: r.code,
-        roleName: r.name,
-        code: r.code,
-        name: r.name,
-        description: `Built-in role for ${r.name}`,
-        external: !!r.external,
+        roleCode: r3.code,
+        roleName: r3.name,
+        code: r3.code,
+        name: r3.name,
+        description: `Built-in role for ${r3.name}`,
+        external: !!r3.external,
         grants,
         logInst: 1
       };
     });
     for (const [code, cr] of this.customRoles.entries()) {
-      if (!fallbackRoles.some((r) => r.code === code)) {
+      if (!fallbackRoles.some((r3) => r3.code === code)) {
         fallbackRoles.push(cr);
       }
     }
@@ -4369,10 +4408,10 @@ var SetupService = class {
   }
   async updateRole(id, data) {
     const code = String(id).toUpperCase();
-    let r = this.customRoles.get(code);
-    if (!r) {
+    let r3 = this.customRoles.get(code);
+    if (!r3) {
       const base = Object.values(ROLES).find((x) => x.code === code);
-      r = {
+      r3 = {
         roleId: Date.now(),
         roleCode: code,
         roleName: base?.name || code,
@@ -4381,16 +4420,16 @@ var SetupService = class {
         description: data.description || "",
         grants: { ...base?.grants || {} }
       };
-      this.customRoles.set(code, r);
+      this.customRoles.set(code, r3);
     }
-    Object.assign(r, data);
-    return r;
+    Object.assign(r3, data);
+    return r3;
   }
   async updateRolePermissions(roleIdOrCode, grants) {
     const code = String(roleIdOrCode).toUpperCase();
     let existing = this.customRoles.get(code);
     if (!existing) {
-      const baseRole = Object.values(ROLES).find((r) => r.code === code);
+      const baseRole = Object.values(ROLES).find((r3) => r3.code === code);
       existing = {
         roleId: Date.now(),
         roleCode: code,
@@ -4513,17 +4552,17 @@ var SetupService = class {
           orderBy: { release_rule_id: "asc" }
         });
         if (rows.length > 0) {
-          return rows.map((r) => ({
-            releaseRuleId: r.release_rule_id,
-            cargoRegimeId: r.cargo_regime_id,
-            regimeCode: r.m_cargo_regime?.regime_code || "LOCAL",
-            conditionCode: r.condition_code,
-            unitCategory: r.unit_category || "ALL",
-            atApproval: r.at_approval,
-            atGateOut: r.at_gate_out,
-            canOverride: r.can_override,
-            isActive: r.is_active,
-            logInst: r.log_inst
+          return rows.map((r3) => ({
+            releaseRuleId: r3.release_rule_id,
+            cargoRegimeId: r3.cargo_regime_id,
+            regimeCode: r3.m_cargo_regime?.regime_code || "LOCAL",
+            conditionCode: r3.condition_code,
+            unitCategory: r3.unit_category || "ALL",
+            atApproval: r3.at_approval,
+            atGateOut: r3.at_gate_out,
+            canOverride: r3.can_override,
+            isActive: r3.is_active,
+            logInst: r3.log_inst
           }));
         }
       } catch (err) {
@@ -4541,17 +4580,17 @@ var SetupService = class {
           orderBy: { approval_policy_id: "asc" }
         });
         if (rows.length > 0) {
-          const dbList = rows.map((r) => ({
-            approvalPolicyId: r.approval_policy_id,
-            permissionCode: r.permission_code,
-            description: r.m_permission?.description || permissions.find((p2) => p2.code === r.permission_code)?.description || r.permission_code,
-            siteId: r.site_id,
-            amountFrom: Number(r.amount_from),
-            amountCurrency: r.amount_currency || "USD",
-            levelsRequired: r.levels_required,
-            expiresAfterHours: r.expires_after_hours,
-            isActive: r.is_active,
-            logInst: r.log_inst
+          const dbList = rows.map((r3) => ({
+            approvalPolicyId: r3.approval_policy_id,
+            permissionCode: r3.permission_code,
+            description: r3.m_permission?.description || permissions.find((p2) => p2.code === r3.permission_code)?.description || r3.permission_code,
+            siteId: r3.site_id,
+            amountFrom: Number(r3.amount_from),
+            amountCurrency: r3.amount_currency || "USD",
+            levelsRequired: r3.levels_required,
+            expiresAfterHours: r3.expires_after_hours,
+            isActive: r3.is_active,
+            logInst: r3.log_inst
           }));
           return [...this.customApprovalPolicies, ...dbList];
         }
@@ -4717,18 +4756,18 @@ var SetupService = class {
       try {
         const rows = await db.m_charge_code.findMany({ orderBy: { charge_code_id: "asc" } });
         if (rows.length > 0) {
-          baseList = rows.map((r, i) => {
-            const seed2 = chargeCodes.find((s) => s.chargeCode === r.charge_code) || chargeCodes[i] || chargeCodes[0];
+          baseList = rows.map((r3, i) => {
+            const seed3 = chargeCodes.find((s) => s.chargeCode === r3.charge_code) || chargeCodes[i] || chargeCodes[0];
             return {
-              chargeCodeId: r.charge_code_id,
-              chargeCode: r.charge_code,
-              chargeName: r.charge_name || seed2.chargeName,
-              chargeGroup: seed2.chargeGroup || "OTHER",
-              defaultTaxCode: seed2.defaultTaxCode || "TZ_VAT_STD",
-              isDisbursement: seed2.isDisbursement || false,
-              printOrder: seed2.printOrder || (i + 1) * 10,
-              revenueGlAccount: seed2.revenueGlAccount || null,
-              isActive: r.is_active ?? true
+              chargeCodeId: r3.charge_code_id,
+              chargeCode: r3.charge_code,
+              chargeName: r3.charge_name || seed3.chargeName,
+              chargeGroup: seed3.chargeGroup || "OTHER",
+              defaultTaxCode: seed3.defaultTaxCode || "TZ_VAT_STD",
+              isDisbursement: seed3.isDisbursement || false,
+              printOrder: seed3.printOrder || (i + 1) * 10,
+              revenueGlAccount: seed3.revenueGlAccount || null,
+              isActive: r3.is_active ?? true
             };
           });
         }
@@ -4751,20 +4790,20 @@ var SetupService = class {
       try {
         const rows = await db.m_tax_code.findMany({ orderBy: { tax_code_id: "asc" } });
         if (rows.length > 0) {
-          baseList = rows.map((r, i) => {
-            const seed2 = taxCodes.find((s) => s.taxCode === r.tax_code) || taxCodes[i] || taxCodes[0];
+          baseList = rows.map((r3, i) => {
+            const seed3 = taxCodes.find((s) => s.taxCode === r3.tax_code) || taxCodes[i] || taxCodes[0];
             return {
-              taxCodeId: r.tax_code_id,
-              taxCode: r.tax_code,
-              taxName: r.tax_name || seed2.taxName,
-              countryCode: seed2.countryCode || "TZ",
-              ratePct: r.rate_pct ? String(r.rate_pct) : seed2.ratePct || "18.000",
-              taxTreatment: seed2.taxTreatment || "STANDARD",
-              fiscalTaxClass: seed2.fiscalTaxClass || null,
-              outputGlAccount: seed2.outputGlAccount || null,
-              effectiveFrom: seed2.effectiveFrom || "2015-07-01",
-              isActive: r.is_active ?? true,
-              verify: seed2.verify
+              taxCodeId: r3.tax_code_id,
+              taxCode: r3.tax_code,
+              taxName: r3.tax_name || seed3.taxName,
+              countryCode: seed3.countryCode || "TZ",
+              ratePct: r3.rate_pct ? String(r3.rate_pct) : seed3.ratePct || "18.000",
+              taxTreatment: seed3.taxTreatment || "STANDARD",
+              fiscalTaxClass: seed3.fiscalTaxClass || null,
+              outputGlAccount: seed3.outputGlAccount || null,
+              effectiveFrom: seed3.effectiveFrom || "2015-07-01",
+              isActive: r3.is_active ?? true,
+              verify: seed3.verify
             };
           });
         }
@@ -4790,19 +4829,19 @@ var SetupService = class {
         });
         if (rows.length > 0) {
           baseList = rows.map((pc, i) => {
-            const seed2 = paymentChannels.find((s) => s.channelCode === pc.channel_code) || paymentChannels[i] || paymentChannels[0];
+            const seed3 = paymentChannels.find((s) => s.channelCode === pc.channel_code) || paymentChannels[i] || paymentChannels[0];
             return {
               paymentChannelId: pc.payment_channel_id,
               companyId: pc.company_id,
               channelCode: pc.channel_code,
               channelName: pc.channel_name,
-              method: pc.method || seed2?.method || "CASH",
-              provider: pc.provider || seed2?.provider || null,
-              currency: pc.currency || seed2?.currency || "USD",
-              glAccount: pc.gl_account || seed2?.glAccount || "1010-01",
-              referencePattern: pc.reference_pattern || seed2?.referencePattern || null,
-              example: seed2?.example || "\u2014",
-              refHint: seed2?.refHint || "Reference format",
+              method: pc.method || seed3?.method || "CASH",
+              provider: pc.provider || seed3?.provider || null,
+              currency: pc.currency || seed3?.currency || "USD",
+              glAccount: pc.gl_account || seed3?.glAccount || "1010-01",
+              referencePattern: pc.reference_pattern || seed3?.referencePattern || null,
+              example: seed3?.example || "\u2014",
+              refHint: seed3?.refHint || "Reference format",
               isActive: pc.is_active ?? true,
               logInst: pc.log_inst
             };
@@ -4860,21 +4899,21 @@ var SetupService = class {
           orderBy: { notification_template_id: "asc" }
         });
         if (rows.length > 0) {
-          return rows.map((r, i) => {
-            const seed2 = notificationTemplates.find((s) => s.templateCode === r.template_code) || notificationTemplates[i] || notificationTemplates[0];
+          return rows.map((r3, i) => {
+            const seed3 = notificationTemplates.find((s) => s.templateCode === r3.template_code) || notificationTemplates[i] || notificationTemplates[0];
             return {
-              notificationTemplateId: r.notification_template_id,
-              templateId: r.notification_template_id,
-              templateCode: r.template_code,
-              eventType: r.event_type || seed2?.eventType || "UnitGatedIn",
-              channel: r.channel || seed2?.channel || "SMS",
-              languageCode: r.language_code || seed2?.languageCode || "en",
-              subject: r.subject || seed2?.subject || null,
-              subjectTemplate: r.subject || seed2?.subject || null,
-              body: r.body || seed2?.body || "",
-              bodyTemplate: r.body || seed2?.body || "",
-              isActive: r.is_active ?? true,
-              draft: seed2?.draft ?? false
+              notificationTemplateId: r3.notification_template_id,
+              templateId: r3.notification_template_id,
+              templateCode: r3.template_code,
+              eventType: r3.event_type || seed3?.eventType || "UnitGatedIn",
+              channel: r3.channel || seed3?.channel || "SMS",
+              languageCode: r3.language_code || seed3?.languageCode || "en",
+              subject: r3.subject || seed3?.subject || null,
+              subjectTemplate: r3.subject || seed3?.subject || null,
+              body: r3.body || seed3?.body || "",
+              bodyTemplate: r3.body || seed3?.body || "",
+              isActive: r3.is_active ?? true,
+              draft: seed3?.draft ?? false
             };
           });
         }
@@ -4892,17 +4931,17 @@ var SetupService = class {
           orderBy: { notification_rule_id: "asc" }
         });
         if (rows.length > 0) {
-          return rows.map((r) => ({
-            ruleId: r.notification_rule_id,
-            notificationRuleId: r.notification_rule_id,
-            siteId: r.site_id,
-            eventType: r.event_type,
-            templateCode: r.template_code,
-            channel: r.channel,
-            recipientKind: r.recipient_kind,
-            roleId: r.role_id,
-            isActive: r.is_active,
-            logInst: r.log_inst
+          return rows.map((r3) => ({
+            ruleId: r3.notification_rule_id,
+            notificationRuleId: r3.notification_rule_id,
+            siteId: r3.site_id,
+            eventType: r3.event_type,
+            templateCode: r3.template_code,
+            channel: r3.channel,
+            recipientKind: r3.recipient_kind,
+            roleId: r3.role_id,
+            isActive: r3.is_active,
+            logInst: r3.log_inst
           }));
         }
       } catch (err) {
@@ -4919,19 +4958,19 @@ var SetupService = class {
           orderBy: { print_template_id: "asc" }
         });
         if (rows.length > 0) {
-          return rows.map((r, i) => {
-            const seed2 = printTemplates[i] || printTemplates[0];
+          return rows.map((r3, i) => {
+            const seed3 = printTemplates[i] || printTemplates[0];
             return {
-              printTemplateId: r.print_template_id,
-              templateCode: r.doc_kind,
-              docKind: r.doc_kind,
-              templateName: r.template_name,
-              paperSize: r.paper_size || seed2.paperSize || "A4",
-              orientation: seed2.orientation || "PORTRAIT",
-              copies: r.default_copies || seed2.copies || 1,
-              reprintWatermark: r.reprint_watermark,
-              status: r.status,
-              isActive: r.status === "APPROVED" || r.status === "ACTIVE"
+              printTemplateId: r3.print_template_id,
+              templateCode: r3.doc_kind,
+              docKind: r3.doc_kind,
+              templateName: r3.template_name,
+              paperSize: r3.paper_size || seed3.paperSize || "A4",
+              orientation: seed3.orientation || "PORTRAIT",
+              copies: r3.default_copies || seed3.copies || 1,
+              reprintWatermark: r3.reprint_watermark,
+              status: r3.status,
+              isActive: r3.status === "APPROVED" || r3.status === "ACTIVE"
             };
           });
         }
@@ -4953,21 +4992,21 @@ var SetupService = class {
           orderBy: { number_sequence_id: "asc" }
         });
         if (rows.length > 0) {
-          const dbList = rows.map((r, i) => {
-            const seed2 = numberSequences[i] || numberSequences[0];
+          const dbList = rows.map((r3, i) => {
+            const seed3 = numberSequences[i] || numberSequences[0];
             return {
-              numberSequenceId: r.number_sequence_id,
-              companyId: r.company_id,
-              siteId: r.site_id,
-              siteCode: r.m_site?.site_code || seed2?.siteCode || "DAR1",
-              documentKind: r.document_kind,
-              prefix: r.prefix,
-              pattern: r.pattern,
-              nextValue: Number(r.next_value),
-              resetPolicy: r.reset_policy,
-              currentPeriod: r.current_period || "2026",
-              sample: seed2?.sample || `${r.prefix}-2026-000001`,
-              logInst: r.log_inst
+              numberSequenceId: r3.number_sequence_id,
+              companyId: r3.company_id,
+              siteId: r3.site_id,
+              siteCode: r3.m_site?.site_code || seed3?.siteCode || "DAR1",
+              documentKind: r3.document_kind,
+              prefix: r3.prefix,
+              pattern: r3.pattern,
+              nextValue: Number(r3.next_value),
+              resetPolicy: r3.reset_policy,
+              currentPeriod: r3.current_period || "2026",
+              sample: seed3?.sample || `${r3.prefix}-2026-000001`,
+              logInst: r3.log_inst
             };
           });
           return [...this.customNumberSequences, ...dbList];
@@ -4983,19 +5022,19 @@ var SetupService = class {
     if (db) {
       try {
         const rows = await db.m_document_type.findMany({ orderBy: { document_type_id: "asc" } });
-        const dbList = rows.map((r, i) => {
-          const seed2 = documentTypes.find((s) => s.docTypeCode === r.doc_type_code) || documentTypes[i] || documentTypes[0];
+        const dbList = rows.map((r3, i) => {
+          const seed3 = documentTypes.find((s) => s.docTypeCode === r3.doc_type_code) || documentTypes[i] || documentTypes[0];
           return {
-            documentTypeId: r.document_type_id,
-            docTypeCode: r.doc_type_code,
-            docTypeName: r.doc_type_name,
-            appliesTo: r.applies_to,
-            retentionYears: r.retention_years,
-            requiresApproval: r.requires_approval,
-            maxSizeMb: r.max_size_mb,
-            allowedExt: r.allowed_ext,
-            isActive: r.is_active ?? true,
-            requiredFor: seed2.requiredFor || []
+            documentTypeId: r3.document_type_id,
+            docTypeCode: r3.doc_type_code,
+            docTypeName: r3.doc_type_name,
+            appliesTo: r3.applies_to,
+            retentionYears: r3.retention_years,
+            requiresApproval: r3.requires_approval,
+            maxSizeMb: r3.max_size_mb,
+            allowedExt: r3.allowed_ext,
+            isActive: r3.is_active ?? true,
+            requiredFor: seed3.requiredFor || []
           };
         });
         return [...this.customDocumentTypes, ...dbList];
@@ -5016,21 +5055,21 @@ var SetupService = class {
           orderBy: { device_id: "asc" }
         });
         if (rows.length > 0) {
-          const dbList = rows.map((r) => ({
-            deviceId: r.device_id,
-            siteId: r.site_id,
-            deviceCode: r.device_code,
-            deviceName: r.device_name,
-            deviceKind: r.device_kind,
-            isActive: !r.revoked_at,
-            registeredAt: r.registered_at?.toISOString(),
-            registeredBy: r.registered_by,
-            revokedAt: r.revoked_at?.toISOString(),
-            revokedReason: r.revoked_reason,
-            lastSeenAt: r.last_seen_at?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
+          const dbList = rows.map((r3) => ({
+            deviceId: r3.device_id,
+            siteId: r3.site_id,
+            deviceCode: r3.device_code,
+            deviceName: r3.device_name,
+            deviceKind: r3.device_kind,
+            isActive: !r3.revoked_at,
+            registeredAt: r3.registered_at?.toISOString(),
+            registeredBy: r3.registered_by,
+            revokedAt: r3.revoked_at?.toISOString(),
+            revokedReason: r3.revoked_reason,
+            lastSeenAt: r3.last_seen_at?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
             queue: 0,
             appVersion: "1.4.2",
-            assignedTo: r.device_name
+            assignedTo: r3.device_name
           }));
           return [...this.customDevices, ...dbList];
         }
@@ -5230,11 +5269,11 @@ var SetupService = class {
     if (db) {
       try {
         const rows = await db.m_calendar.findMany({ orderBy: { calendar_id: "asc" } });
-        return rows.map((r) => ({
-          calendarId: r.calendar_id,
-          calendarCode: r.calendar_code,
-          calendarName: r.calendar_name,
-          countryCode: r.country_code
+        return rows.map((r3) => ({
+          calendarId: r3.calendar_id,
+          calendarCode: r3.calendar_code,
+          calendarName: r3.calendar_name,
+          countryCode: r3.country_code
         }));
       } catch (err) {
         console.warn("[SetupService.getCalendars] DB error:", err);
@@ -5315,7 +5354,7 @@ var SetupService = class {
         console.warn("[SetupService.deleteFieldRule] DB error:", err);
       }
     }
-    const idx = fieldRules.findIndex((r) => r.fieldRuleId === fieldRuleId);
+    const idx = fieldRules.findIndex((r3) => r3.fieldRuleId === fieldRuleId);
     if (idx >= 0) fieldRules.splice(idx, 1);
     return { ok: true };
   }
@@ -5324,6 +5363,59 @@ var SetupService = class {
   }
   async updateModel(id, data) {
     return { modelId: id, ...data };
+  }
+  async activateModel(id, reason, userSub = "system") {
+    const db = this.db;
+    const modelVersionId = Number(id);
+    if (db && !isNaN(modelVersionId)) {
+      try {
+        const target = await db.ml_model_version.findUnique({
+          where: { ml_model_version_id: modelVersionId }
+        });
+        if (target) {
+          await db.ml_model_version.updateMany({
+            where: {
+              model_code: target.model_code,
+              ml_model_version_id: { not: modelVersionId }
+            },
+            data: {
+              is_active: false,
+              updatedate: /* @__PURE__ */ new Date(),
+              updatedby: userSub
+            }
+          });
+          const updated = await db.ml_model_version.update({
+            where: { ml_model_version_id: modelVersionId },
+            data: {
+              is_active: true,
+              updatedate: /* @__PURE__ */ new Date(),
+              updatedby: userSub
+            }
+          });
+          const metrics = updated.metrics_json ? JSON.parse(updated.metrics_json) : {};
+          return {
+            mlModelVersionId: updated.ml_model_version_id,
+            modelCode: updated.model_code,
+            versionLabel: updated.version_label,
+            trainedAt: updated.trained_at.toISOString(),
+            from: updated.training_window_from ? updated.training_window_from.toISOString().split("T")[0] : "2025-10-01",
+            to: updated.training_window_to ? updated.training_window_to.toISOString().split("T")[0] : "2026-09-20",
+            isActive: true,
+            metrics,
+            summary: updated.model_code === "YARD_ALLOC" ? `${Math.round((metrics.top3Acceptance || 0.8) * 100)}% of moves went to one of the top 3 slots it offered` : updated.model_code === "DWELL" ? `Exit date off by ${metrics.maeDays || 2.4} days on average` : "Occupancy forecast model",
+            logInst: updated.log_inst
+          };
+        }
+      } catch (err) {
+        console.error("activateModel db error:", err);
+      }
+    }
+    return {
+      mlModelVersionId: modelVersionId || id,
+      isActive: true,
+      activatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      reason
+    };
   }
   async createCompany(data) {
     return { companyId: Date.now(), ...data };
@@ -5431,10 +5523,10 @@ var SetupService = class {
       Object.assign(inMem, data);
       return inMem;
     }
-    const seed2 = holdTypesSeed.find(
+    const seed3 = holdTypesSeed.find(
       (h) => h.holdTypeId === numId || String(h.holdCode) === String(id)
     );
-    if (seed2) Object.assign(seed2, data);
+    if (seed3) Object.assign(seed3, data);
     return { holdTypeId: id, ...data };
   }
   async createReleaseRule(data) {
@@ -5492,8 +5584,8 @@ var SetupService = class {
         console.warn("[SetupService.updateReleaseRule] DB error:", err);
       }
     }
-    const seed2 = releaseRules.find((r) => r.releaseRuleId === numId);
-    if (seed2) Object.assign(seed2, data);
+    const seed3 = releaseRules.find((r3) => r3.releaseRuleId === numId);
+    if (seed3) Object.assign(seed3, data);
     return { releaseRuleId: id, ...data };
   }
   async createApprovalPolicy(data) {
@@ -5600,15 +5692,15 @@ var SetupService = class {
       Object.assign(inMem, data);
       return inMem;
     }
-    const seed2 = approvalPolicies.find((p2) => p2.approvalPolicyId === numId);
-    if (seed2) {
-      Object.assign(seed2, data);
+    const seed3 = approvalPolicies.find((p2) => p2.approvalPolicyId === numId);
+    if (seed3) {
+      Object.assign(seed3, data);
       if (data.description) {
-        seed2.description = data.description;
-        const perm = permissions.find((p2) => p2.code === seed2.permissionCode);
+        seed3.description = data.description;
+        const perm = permissions.find((p2) => p2.code === seed3.permissionCode);
         if (perm) perm.description = data.description;
       }
-      return seed2;
+      return seed3;
     }
     return { approvalPolicyId: id, ...data };
   }
@@ -5717,10 +5809,10 @@ var SetupService = class {
       Object.assign(inMem, data);
       return inMem;
     }
-    const seed2 = exceptionTypes.find(
+    const seed3 = exceptionTypes.find(
       (e) => e.exceptionTypeId === numId || String(e.exceptionCode) === String(id)
     );
-    if (seed2) Object.assign(seed2, data);
+    if (seed3) Object.assign(seed3, data);
     return { exceptionTypeId: id, ...data };
   }
   async updateFieldRule(id, data) {
@@ -5822,10 +5914,10 @@ var SetupService = class {
       Object.assign(inMem, data);
       return inMem;
     }
-    const seed2 = devices.find((d) => d.deviceId === numId || String(d.deviceCode) === String(id));
-    if (seed2) {
-      Object.assign(seed2, data);
-      return seed2;
+    const seed3 = devices.find((d) => d.deviceId === numId || String(d.deviceCode) === String(id));
+    if (seed3) {
+      Object.assign(seed3, data);
+      return seed3;
     }
     return { deviceId: id, ...data };
   }
@@ -5858,12 +5950,12 @@ var SetupService = class {
       inMem.isActive = false;
       return inMem;
     }
-    const seed2 = devices.find((d) => d.deviceId === numId || String(d.deviceCode) === String(id));
-    if (seed2) {
-      seed2.revokedAt = revokeDate.toISOString();
-      seed2.revokedReason = revokedReason;
-      seed2.isActive = false;
-      return seed2;
+    const seed3 = devices.find((d) => d.deviceId === numId || String(d.deviceCode) === String(id));
+    if (seed3) {
+      seed3.revokedAt = revokeDate.toISOString();
+      seed3.revokedReason = revokedReason;
+      seed3.isActive = false;
+      return seed3;
     }
     return { deviceId: id, revokedAt: revokeDate.toISOString(), revokedReason, isActive: false };
   }
@@ -5948,10 +6040,10 @@ var SetupService = class {
       Object.assign(inMem, data);
       return inMem;
     }
-    const seed2 = numberSequences.find((s) => s.numberSequenceId === numId);
-    if (seed2) {
-      Object.assign(seed2, data);
-      return seed2;
+    const seed3 = numberSequences.find((s) => s.numberSequenceId === numId);
+    if (seed3) {
+      Object.assign(seed3, data);
+      return seed3;
     }
     return { numberSequenceId: id, ...data };
   }
@@ -6029,10 +6121,10 @@ var SetupService = class {
       Object.assign(inMem, data);
       return inMem;
     }
-    const seed2 = documentTypes.find((d) => d.documentTypeId === numId || String(d.docTypeCode) === String(id));
-    if (seed2) {
-      Object.assign(seed2, data);
-      return seed2;
+    const seed3 = documentTypes.find((d) => d.documentTypeId === numId || String(d.docTypeCode) === String(id));
+    if (seed3) {
+      Object.assign(seed3, data);
+      return seed3;
     }
     return { documentTypeId: id, ...data };
   }
@@ -6056,11 +6148,12 @@ var SetupService = class {
       try {
         const created = await db.accounting_period.create({
           data: {
-            company_id: newPeriod.companyId,
+            company_id: Number(newPeriod.companyId || 1),
             period_key: periodKey,
             period_start: new Date(periodStart),
             period_end: new Date(periodEnd),
             status: newPeriod.status,
+            createdby: "SYSTEM",
             log_inst: 1
           }
         });
@@ -6079,9 +6172,9 @@ var SetupService = class {
     if (inMem) {
       Object.assign(inMem, data);
     } else {
-      const seed2 = periods.find((p2) => String(p2.accountingPeriodId) === String(id) || p2.periodKey === String(id));
-      if (seed2) {
-        inMem = { ...seed2, ...data };
+      const seed3 = periods.find((p2) => String(p2.accountingPeriodId) === String(id) || p2.periodKey === String(id));
+      if (seed3) {
+        inMem = { ...seed3, ...data };
         this.customAccountingPeriods.push(inMem);
       }
     }
@@ -6114,9 +6207,9 @@ var SetupService = class {
       inMem.closedAt = now;
       inMem.closedBy = user;
     } else {
-      const seed2 = periods.find((p2) => p2.periodKey === periodKey);
-      if (seed2) {
-        inMem = { ...seed2, status: "CLOSED", closedAt: now, closedBy: user };
+      const seed3 = periods.find((p2) => p2.periodKey === periodKey);
+      if (seed3) {
+        inMem = { ...seed3, status: "CLOSED", closedAt: now, closedBy: user };
         this.customAccountingPeriods.push(inMem);
       }
     }
@@ -6140,9 +6233,9 @@ var SetupService = class {
       inMem.closedAt = void 0;
       inMem.closedBy = void 0;
     } else {
-      const seed2 = periods.find((p2) => p2.periodKey === periodKey);
-      if (seed2) {
-        inMem = { ...seed2, status: "OPEN", closedAt: void 0, closedBy: void 0 };
+      const seed3 = periods.find((p2) => p2.periodKey === periodKey);
+      if (seed3) {
+        inMem = { ...seed3, status: "OPEN", closedAt: void 0, closedBy: void 0 };
         this.customAccountingPeriods.push(inMem);
       }
     }
@@ -6160,7 +6253,7 @@ var SetupService = class {
     return { periodKey, status: "OPEN", reason };
   }
   async createChargeCode(data) {
-    const code = (data.chargeCode || CHG_).toUpperCase().trim();
+    const code = (data.chargeCode || `CHG_${Date.now().toString().slice(-4)}`).toUpperCase().trim();
     const name = data.chargeName || code;
     const group = (data.chargeGroup || "OTHER").toUpperCase();
     const defaultTax = data.defaultTaxCode || "TZ_VAT_STD";
@@ -6186,6 +6279,11 @@ var SetupService = class {
           data: {
             charge_code: code,
             charge_name: name,
+            charge_group: group,
+            default_tax_code: defaultTax,
+            revenue_gl_account: revenueGl,
+            is_disbursement: isDisb,
+            print_order: printOrder,
             is_active: true,
             createdby: "SYSTEM"
           }
@@ -6205,9 +6303,9 @@ var SetupService = class {
     if (inMem) {
       Object.assign(inMem, data);
     } else {
-      const seed2 = chargeCodes.find((c) => String(c.chargeCodeId) === String(id) || c.chargeCode === String(id));
-      if (seed2) {
-        inMem = { ...seed2, ...data };
+      const seed3 = chargeCodes.find((c) => String(c.chargeCodeId) === String(id) || c.chargeCode === String(id));
+      if (seed3) {
+        inMem = { ...seed3, ...data };
         this.customChargeCodes.push(inMem);
       }
     }
@@ -6231,7 +6329,7 @@ var SetupService = class {
     return inMem || { chargeCodeId: id, ...data };
   }
   async createTaxCode(data) {
-    const code = (data.taxCode || TAX_).toUpperCase().trim();
+    const code = (data.taxCode || `TAX_${Date.now().toString().slice(-4)}`).toUpperCase().trim();
     const name = data.taxName || code;
     const country = (data.countryCode || "TZ").toUpperCase();
     const rate = String(data.ratePct ?? data.ratePercent ?? "18.000");
@@ -6258,7 +6356,12 @@ var SetupService = class {
           data: {
             tax_code: code,
             tax_name: name,
+            country_code: country,
             rate_pct: Number(rate),
+            tax_treatment: treatment,
+            effective_from: new Date(newTax.effectiveFrom),
+            output_gl_account: outputGl,
+            fiscal_tax_class: newTax.fiscalTaxClass,
             is_active: newTax.isActive,
             createdby: "SYSTEM"
           }
@@ -6278,9 +6381,9 @@ var SetupService = class {
     if (inMem) {
       Object.assign(inMem, data);
     } else {
-      const seed2 = taxCodes.find((t) => String(t.taxCodeId) === String(id) || t.taxCode === String(id));
-      if (seed2) {
-        inMem = { ...seed2, ...data };
+      const seed3 = taxCodes.find((t) => String(t.taxCodeId) === String(id) || t.taxCode === String(id));
+      if (seed3) {
+        inMem = { ...seed3, ...data };
         this.customTaxCodes.push(inMem);
       }
     }
@@ -6305,7 +6408,7 @@ var SetupService = class {
     return inMem || { taxCodeId: id, ...data };
   }
   async createPaymentChannel(data) {
-    const code = (data.channelCode || CH_).toUpperCase().trim();
+    const code = (data.channelCode || `CH_${Date.now().toString().slice(-4)}`).toUpperCase().trim();
     const name = data.channelName || code;
     const method = data.method || "BANK_TRANSFER";
     const currency = data.currency || "USD";
@@ -6357,9 +6460,9 @@ var SetupService = class {
     if (inMem) {
       Object.assign(inMem, data);
     } else {
-      const seed2 = paymentChannels.find((c) => String(c.paymentChannelId) === String(id) || c.channelCode === String(id));
-      if (seed2) {
-        inMem = { ...seed2, ...data };
+      const seed3 = paymentChannels.find((c) => String(c.paymentChannelId) === String(id) || c.channelCode === String(id));
+      if (seed3) {
+        inMem = { ...seed3, ...data };
         this.customPaymentChannels.push(inMem);
       }
     }
@@ -6387,7 +6490,7 @@ var SetupService = class {
     return inMem || { channelId: id, ...data };
   }
   async createGlSetting(data) {
-    const key = (data.settingKey || KEY_).toUpperCase().trim();
+    const key = (data.settingKey || `KEY_${Date.now().toString().slice(-4)}`).toUpperCase().trim();
     const newGl = {
       settingKey: key,
       glAccount: data.glAccount || "1000-00",
@@ -6420,9 +6523,9 @@ var SetupService = class {
     if (inMem) {
       Object.assign(inMem, data);
     } else {
-      const seed2 = glSettings.find((g2) => g2.settingKey === String(id));
-      if (seed2) {
-        inMem = { ...seed2, ...data };
+      const seed3 = glSettings.find((g2) => g2.settingKey === String(id));
+      if (seed3) {
+        inMem = { ...seed3, ...data };
         this.customGlSettings.push(inMem);
       }
     }
@@ -6595,10 +6698,10 @@ function requirePermission(permission, requiredGrant = "VIEW") {
     }
     const grant = role.grants?.[permission];
     const grantPrecedence = {
-      "DO": 4,
-      "APPR": 3,
-      "REQ": 2,
-      "VIEW": 1
+      DO: 4,
+      APPR: 3,
+      REQ: 2,
+      VIEW: 1
     };
     if (!grant || grantPrecedence[grant] < grantPrecedence[requiredGrant]) {
       res.status(403).json({
@@ -6616,115 +6719,55 @@ function requirePermission(permission, requiredGrant = "VIEW") {
   };
 }
 
-// src/data/gate.ts
-var VISIT_TYPES = {
-  IMPORT_PICKUP: "Import pick-up",
-  EXPORT_DROP: "Export drop-off",
-  EMPTY_RETURN: "Empty return",
-  EMPTY_PICKUP: "Empty pick-up",
-  VEHICLE_DELIVERY: "Vehicle delivery",
-  VEHICLE_RECEIPT: "Vehicle receipt (self-driven)",
-  TRANSFER_IN: "Transfer from port"
-};
-var cp = (code, seq, hrs, result = "PASSED", reason, offline) => ({
-  checkpointCode: code,
-  seqNo: seq,
-  result,
-  failureReason: reason,
-  occurredAt: at(hrs),
-  by: seq % 2 ? "Gate \xB7 Hamisi J." : "Gate \xB7 Rose A.",
-  isOffline: offline
-});
-var vu = (s, dir, status = "PLANNED") => ({
-  visitUnitTxnId: s.unitStayId * 10,
-  unitStayId: s.unitStayId,
-  unitNo: s.cargoUnit.unitNo,
-  direction: dir,
-  status,
-  sealExpected: s.sealNo ?? void 0,
-  eirNo: status === "DONE" ? `EIR-DAR1-26-${s.unitStayId}` : void 0
-});
-var inYard = allStays.filter((s) => s.physicalStatus === "IN_YARD" && s.cargoUnit.category === "CONTAINER");
-var visits = [
-  { truckVisitId: 4410, visitNo: "TV-26-04410", visitTypeCode: "TRANSFER_IN", conveyance: "TRUCK", plateNo: "T 902 DMB", driverName: "Musa Rajabu", transporter: "Simba Haulage Co.", status: "HELD", currentSeqNo: 1, nextCheckpointCode: "INNER_IN", arrivedAt: at(0.6), waitingMin: 34, blockedReason: "Seal mismatch: approval requested", lane: "In 1", units: [vu(inYard[20], "DROP", "IN_PROGRESS")], checkpoints: [cp("OUTER_IN", 1, 0.6), cp("INNER_IN", 2, 0.4, "FAILED", "Seal found ML-7781208, expected ML-7781203")] },
-  { truckVisitId: 4411, visitNo: "TV-26-04411", visitTypeCode: "IMPORT_PICKUP", conveyance: "TRUCK", plateNo: "T 412 DKL", driverName: "Baraka Mwita", transporter: "Upepo Transporters", status: "AT_OUTER_GATE", currentSeqNo: 0, nextCheckpointCode: "OUTER_IN", arrivedAt: at(0.2), waitingMin: 12, lane: "In 2", nominationRef: "RO-DAR1-26-01942", units: [vu(HERO, "PICK")], checkpoints: [] },
-  { truckVisitId: 4412, visitNo: "TV-26-04412", visitTypeCode: "IMPORT_PICKUP", conveyance: "TRUCK", plateNo: "T 118 DPE", driverName: "Said Omari", transporter: "Simba Haulage Co.", status: "WORKING", currentSeqNo: 2, nextCheckpointCode: "INNER_OUT", arrivedAt: at(1.4), admittedAt: at(1.2), waitingMin: 72, units: [vu(inYard[2], "PICK", "IN_PROGRESS")], checkpoints: [cp("OUTER_IN", 1, 1.4), cp("INNER_IN", 2, 1.2)] },
-  { truckVisitId: 4413, visitNo: "TV-26-04413", visitTypeCode: "EMPTY_RETURN", conveyance: "TRUCK", plateNo: "T 771 DGH", driverName: "John Massawe", transporter: "Upepo Transporters", status: "ADMITTED", currentSeqNo: 2, nextCheckpointCode: "INNER_OUT", arrivedAt: at(0.9), admittedAt: at(0.7), waitingMin: 41, units: [vu(inYard[30], "DROP", "IN_PROGRESS")], checkpoints: [cp("OUTER_IN", 1, 0.9), cp("INNER_IN", 2, 0.7)] },
-  { truckVisitId: 4414, visitNo: "TV-26-04414", visitTypeCode: "IMPORT_PICKUP", conveyance: "TRUCK", plateNo: "T 230 DLX", driverName: "Elia Mrema", transporter: "Simba Haulage Co.", status: "CHECKED_OUT", currentSeqNo: 3, nextCheckpointCode: "OUTER_OUT", arrivedAt: at(2.1), admittedAt: at(1.9), checkedOutAt: at(0.1), waitingMin: 8, gatePassNo: "GP-26-08811", units: [vu(inYard[5], "PICK", "DONE")], checkpoints: [cp("OUTER_IN", 1, 2.1), cp("INNER_IN", 2, 1.9), cp("INNER_OUT", 3, 0.1)] },
-  { truckVisitId: 4415, visitNo: "TV-26-04415", visitTypeCode: "EXPORT_DROP", conveyance: "TRUCK", plateNo: "T 655 DQA", driverName: "Hassan Ali", transporter: "Upepo Transporters", status: "ANNOUNCED", currentSeqNo: 0, nextCheckpointCode: "OUTER_IN", expectedFrom: at(-0.5), expectedTo: at(-2.5), waitingMin: 0, units: [], checkpoints: [] },
-  { truckVisitId: 4416, visitNo: "TV-26-04416", visitTypeCode: "VEHICLE_DELIVERY", conveyance: "CAR_CARRIER", plateNo: "T 340 DRC", driverName: "Abdul Kombo", transporter: "Simba Haulage Co.", status: "WORKING", currentSeqNo: 2, nextCheckpointCode: "INNER_OUT", arrivedAt: at(1), admittedAt: at(0.8), waitingMin: 55, units: allStays.filter((s) => s.siteId === 2 && s.releaseStatus === "APPROVED").slice(0, 3).map((s) => vu(s, "PICK", "IN_PROGRESS")), checkpoints: [cp("OUTER_IN", 1, 1), cp("INNER_IN", 2, 0.8)] },
-  { truckVisitId: 4402, visitNo: "TV-26-04402", visitTypeCode: "IMPORT_PICKUP", conveyance: "TRUCK", plateNo: "T 505 DJN", driverName: "Peter Lyimo", transporter: "Pwani Hardware (own truck)", status: "REJECTED", currentSeqNo: 2, nextCheckpointCode: "INNER_OUT", arrivedAt: at(3.4), admittedAt: at(3.2), waitingMin: 0, blockedReason: "Release order expired at 07:30", units: [vu(inYard[9], "PICK", "CANCELLED")], checkpoints: [cp("OUTER_IN", 1, 3.4), cp("INNER_IN", 2, 3.2), cp("INNER_OUT", 3, 3, "FAILED", "RELEASE_VALID: expired")] },
-  { truckVisitId: 4398, visitNo: "TV-26-04398", visitTypeCode: "EMPTY_PICKUP", conveyance: "TRUCK", plateNo: "T 880 DFF", driverName: "Yusuf Bakari", transporter: "Upepo Transporters", status: "EXITED", currentSeqNo: 4, arrivedAt: at(5), admittedAt: at(4.8), checkedOutAt: at(4.2), exitedAt: at(4.1), waitingMin: 0, gatePassNo: "GP-26-08802", isOfflineEntry: true, units: [vu(inYard[33], "PICK", "DONE")], checkpoints: [cp("OUTER_IN", 1, 5, "PASSED", void 0, true), cp("INNER_IN", 2, 4.8, "PASSED", void 0, true), cp("INNER_OUT", 3, 4.2), cp("OUTER_OUT", 4, 4.1)] }
-];
-registerSearch((q) => {
-  const n = q.replace(/\s/g, "").toUpperCase();
-  const hits = visits.filter((v) => (v.plateNo ?? "").replace(/\s/g, "").includes(n) || (v.visitNo ?? "").includes(n)).slice(0, 5).map((v) => ({
-    id: v.truckVisitId,
-    title: `${v.plateNo} \xB7 ${v.visitNo}`,
-    subtitle: `${VISIT_TYPES[v.visitTypeCode]} \xB7 ${v.driverName}`,
-    status: v.status,
-    link: { entityName: "truck_visit", entityId: v.truckVisitId },
-    to: `/gate/visits/${v.truckVisitId}`
-  }));
-  return hits.length ? { entity: "TRUCK_VISIT", label: "Truck visits", hits } : null;
-});
-
 // src/v1/controllers/gate/queue.controller.ts
 var gateQueueController = {
   getQueue: async (req, res) => {
     try {
-      let items = [];
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const dbVisits = await prisma5.truck_visit.findMany({
-            where: {
-              status: { in: ["WAITING", "CALLED", "ADMITTED", "ANNOUNCED", "ARRIVED"] }
-            },
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
+      }
+      const dbVisits = await prisma4.truck_visit.findMany({
+        where: {
+          status: { in: ["WAITING", "CALLED", "ADMITTED", "ANNOUNCED", "ARRIVED"] }
+        },
+        include: {
+          m_truck_truck_visit_truck_idTom_truck: true,
+          m_driver: true,
+          m_party_truck_visit: true,
+          m_visit_type: true,
+          visit_unit_txn: {
             include: {
-              m_truck_truck_visit_truck_idTom_truck: true,
-              m_driver: true,
-              m_party_truck_visit: true,
-              m_visit_type: true,
-              visit_unit_txn: {
+              unit_stay: {
                 include: {
-                  unit_stay: {
-                    include: {
-                      unit_stay_cargo_units: true
-                    }
-                  }
+                  unit_stay_cargo_units: true
                 }
               }
-            },
-            orderBy: { arrived_at: "asc" }
-          });
-          if (dbVisits && dbVisits.length > 0) {
-            items = dbVisits.map((v, i) => ({
-              queueNo: i + 1,
-              truckVisitId: Number(v.truck_visit_id),
-              visitNo: v.visit_no,
-              plateNo: v.m_truck_truck_visit_truck_idTom_truck?.plate_no || "T 000 AAA",
-              driverName: v.m_driver?.driver_name || "Driver",
-              driverPhone: v.m_driver?.phone,
-              visitTypeCode: v.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
-              visitTypeName: v.m_visit_type?.visit_type_name,
-              status: v.status,
-              arrivedAt: v.arrived_at?.toISOString() || v.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
-              waitingMin: v.arrived_at ? Math.max(0, Math.round((Date.now() - new Date(v.arrived_at).getTime()) / 6e4)) : 15,
-              lane: "L1",
-              units: (v.visit_unit_txn || []).map((u) => ({
-                unitStayId: Number(u.unit_stay_id),
-                direction: u.direction,
-                status: u.status,
-                unitNumber: u.unit_stay?.unit_stay_cargo_units?.unit_number
-              }))
-            }));
+            }
           }
-        }
-      }
-      if (items.length === 0) {
-        items = visits.filter((v) => v.status === "WAITING" || v.status === "CALLED");
-      }
+        },
+        orderBy: { arrived_at: "asc" }
+      });
+      const items = (dbVisits || []).map((v, i) => ({
+        queueNo: i + 1,
+        truckVisitId: Number(v.truck_visit_id),
+        visitNo: v.visit_no,
+        plateNo: v.m_truck_truck_visit_truck_idTom_truck?.plate_no || "T 000 AAA",
+        driverName: v.m_driver?.driver_name || "Driver",
+        driverPhone: v.m_driver?.phone,
+        visitTypeCode: v.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
+        visitTypeName: v.m_visit_type?.visit_type_name,
+        status: v.status,
+        arrivedAt: v.arrived_at?.toISOString() || v.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
+        waitingMin: v.arrived_at ? Math.max(0, Math.round((Date.now() - new Date(v.arrived_at).getTime()) / 6e4)) : 15,
+        lane: "L1",
+        units: (v.visit_unit_txn || []).map((u) => ({
+          unitStayId: Number(u.unit_stay_id),
+          direction: u.direction,
+          status: u.status,
+          unitNumber: u.unit_stay?.unit_stay_cargo_units?.unit_number
+        }))
+      }));
       res.json({ items, total: items.length });
     } catch (err) {
       console.error("getQueue error:", err);
@@ -6733,33 +6776,25 @@ var gateQueueController = {
   },
   getQueueSummary: async (_req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const waiting = await prisma5.truck_visit.count({
-            where: { status: { in: ["WAITING", "ANNOUNCED"] } }
-          });
-          const inProgress = await prisma5.truck_visit.count({
-            where: { status: { in: ["CALLED", "ADMITTED", "ARRIVED"] } }
-          });
-          const openLanes = await prisma5.m_gate_lane.count({
-            where: { is_active: true }
-          });
-          return res.json({
-            waiting,
-            inProgress,
-            avgWaitMinutes: waiting > 0 ? 14 : 5,
-            openLanes: openLanes || 4,
-            peakHours: "09:00 - 15:00"
-          });
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({
-        waiting: 6,
-        inProgress: 3,
-        avgWaitMinutes: 12,
-        openLanes: 4,
-        peakHours: "10:00 - 14:00"
+      const waiting = await prisma4.truck_visit.count({
+        where: { status: { in: ["WAITING", "ANNOUNCED"] } }
+      });
+      const inProgress = await prisma4.truck_visit.count({
+        where: { status: { in: ["CALLED", "ADMITTED", "ARRIVED"] } }
+      });
+      const openLanes = await prisma4.m_gate_lane.count({
+        where: { is_active: true }
+      });
+      return res.json({
+        waiting,
+        inProgress,
+        avgWaitMinutes: waiting > 0 ? 14 : 5,
+        openLanes: openLanes || 4,
+        peakHours: "09:00 - 15:00"
       });
     } catch (err) {
       console.error("getQueueSummary error:", err);
@@ -6772,40 +6807,29 @@ var gateQueueController = {
 var gateLaneController = {
   getLanes: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const lanes = await prisma5.m_gate_lane.findMany({
-            include: { m_gate: true },
-            orderBy: { gate_lane_id: "asc" }
-          });
-          if (lanes && lanes.length > 0) {
-            const items = lanes.map((l) => ({
-              laneId: l.gate_lane_id,
-              gateId: l.gate_id,
-              gateCode: l.m_gate?.gate_code || "GATE-1",
-              gateName: l.m_gate?.gate_name || "Main Gate",
-              laneCode: l.lane_code,
-              direction: l.direction,
-              hasScale: true,
-              hasOcr: true,
-              hasRfid: true,
-              hasKiosk: true,
-              barrierOpen: false,
-              status: l.is_active ? "ONLINE" : "OFFLINE"
-            }));
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({
-        items: [
-          { laneId: 1, gateId: 1, gateCode: "MAIN", laneCode: "L1", direction: "IN", hasScale: true, hasOcr: true, barrierOpen: false, status: "ONLINE" },
-          { laneId: 2, gateId: 1, gateCode: "MAIN", laneCode: "L2", direction: "IN", hasScale: false, hasOcr: true, barrierOpen: false, status: "ONLINE" },
-          { laneId: 3, gateId: 1, gateCode: "MAIN", laneCode: "L3", direction: "OUT", hasScale: true, hasOcr: true, barrierOpen: false, status: "ONLINE" }
-        ],
-        total: 3
+      const lanes = await prisma4.m_gate_lane.findMany({
+        include: { m_gate: true },
+        orderBy: { gate_lane_id: "asc" }
       });
+      const items = (lanes || []).map((l) => ({
+        laneId: l.gate_lane_id,
+        gateId: l.gate_id,
+        gateCode: l.m_gate?.gate_code || "GATE-1",
+        gateName: l.m_gate?.gate_name || "Main Gate",
+        laneCode: l.lane_code,
+        direction: l.direction,
+        hasScale: true,
+        hasOcr: true,
+        hasRfid: true,
+        hasKiosk: true,
+        barrierOpen: false,
+        status: l.is_active ? "ONLINE" : "OFFLINE"
+      }));
+      return res.json({ items, total: items.length });
     } catch (err) {
       console.error("getLanes error:", err);
       res.status(500).json({ error: err.message });
@@ -6814,93 +6838,85 @@ var gateLaneController = {
   openBarrier: async (req, res) => {
     try {
       const { laneId } = req.params;
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const id = Number(laneId);
-        const lane = await prisma5.m_gate_lane.findFirst({
-          where: { gate_lane_id: isNaN(id) ? void 0 : id },
-          include: { m_gate: true }
-        });
-        return res.json({
-          success: true,
-          laneId: lane?.gate_lane_id || Number(laneId) || 1,
-          laneCode: lane?.lane_code || "L1",
-          gateCode: lane?.m_gate?.gate_code || "GATE-1",
-          barrierStatus: "OPEN",
-          openedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          openedBy: req.user?.username || "operator",
-          autoCloseSec: 15
-        });
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({
+      const id = Number(laneId);
+      const lane = await prisma4.m_gate_lane.findFirst({
+        where: { gate_lane_id: isNaN(id) ? void 0 : id },
+        include: { m_gate: true }
+      });
+      return res.json({
         success: true,
-        laneId: Number(laneId) || laneId,
-        barrierStatus: "OPEN",
-        openedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        openedBy: req.user?.username || "operator",
-        autoCloseSec: 15
+        laneId: id,
+        barrierOpen: true,
+        message: `Barrier manually opened for lane ${lane?.lane_code || id}`
       });
     } catch (err) {
       console.error("openBarrier error:", err);
       res.status(500).json({ error: err.message });
     }
   },
+  closeBarrier: async (req, res) => {
+    try {
+      const { laneId } = req.params;
+      return res.json({
+        success: true,
+        laneId: Number(laneId),
+        barrierOpen: false,
+        message: `Barrier closed for lane ${laneId}`
+      });
+    } catch (err) {
+      console.error("closeBarrier error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
   getGatePass: async (req, res) => {
     try {
       const { token } = req.params;
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const visit = await prisma5.truck_visit.findFirst({
-          where: {
-            OR: [
-              { gate_pass_token: token },
-              { gate_pass_no: token },
-              { visit_no: token }
-            ]
-          },
-          include: {
-            m_truck_truck_visit_truck_idTom_truck: true,
-            m_driver: true,
-            m_party_truck_visit: true,
-            visit_unit_txn: {
-              include: {
-                unit_stay: {
-                  include: {
-                    unit_stay_cargo_units: true
-                  }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
+      }
+      const visit = await prisma4.truck_visit.findFirst({
+        where: {
+          OR: [{ gate_pass_no: token }, { visit_no: token }]
+        },
+        include: {
+          m_truck_truck_visit_truck_idTom_truck: true,
+          m_driver: true,
+          m_party_truck_visit: true,
+          visit_unit_txn: {
+            include: {
+              unit_stay: {
+                include: {
+                  unit_stay_cargo_units: true
                 }
               }
             }
           }
-        });
-        if (visit) {
-          return res.json({
-            valid: true,
-            truckVisitId: Number(visit.truck_visit_id),
-            passNo: visit.gate_pass_no || `GP-${token.slice(0, 8).toUpperCase()}`,
-            token: visit.gate_pass_token || token,
-            visitNo: visit.visit_no,
-            truckPlate: visit.m_truck_truck_visit_truck_idTom_truck?.plate_no || "T 000 AAA",
-            driverName: visit.m_driver?.driver_name || "Driver",
-            transporter: visit.m_party_truck_visit?.party_name,
-            issuedAt: visit.arrived_at?.toISOString() || visit.createdate?.toISOString(),
-            expiresAt: new Date(Date.now() + 864e5).toISOString(),
-            status: visit.status,
-            units: (visit.visit_unit_txn || []).map((u) => ({
-              unitNumber: u.unit_stay?.unit_stay_cargo_units?.unit_number,
-              action: u.direction
-            }))
-          });
         }
+      });
+      if (!visit) {
+        return res.status(404).json({ error: "Gate pass not found" });
       }
-      res.json({
+      return res.json({
         valid: true,
-        passNo: `GP-${token.slice(0, 8).toUpperCase()}`,
-        truckPlate: "T 123 ABC",
-        driverName: "John Doe",
-        issuedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        expiresAt: new Date(Date.now() + 36e5).toISOString(),
-        status: "ACTIVE"
+        truckVisitId: Number(visit.truck_visit_id),
+        passNo: visit.gate_pass_no || `GP-${token.slice(0, 8).toUpperCase()}`,
+        token,
+        visitNo: visit.visit_no,
+        truckPlate: visit.m_truck_truck_visit_truck_idTom_truck?.plate_no || "T 000 AAA",
+        driverName: visit.m_driver?.driver_name || "Driver",
+        transporter: visit.m_party_truck_visit?.party_name,
+        issuedAt: visit.arrived_at?.toISOString() || visit.createdate?.toISOString(),
+        expiresAt: new Date(Date.now() + 864e5).toISOString(),
+        status: visit.status,
+        units: (visit.visit_unit_txn || []).map((u) => ({
+          unitNo: u.unit_stay?.unit_stay_cargo_units?.unit_no,
+          action: u.direction
+        }))
       });
     } catch (err) {
       console.error("getGatePass error:", err);
@@ -6913,52 +6929,48 @@ var gateLaneController = {
 var gateAppointmentsController = {
   getAppointments: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const appts = await prisma5.appointment.findMany({
-            include: {
-              m_truck: true,
-              m_driver: true,
-              m_party_appointment: true,
-              appointments_visit_types: true,
-              appointments_sites: true
-            },
-            orderBy: { appointment_id: "desc" }
-          });
-          if (appts && appts.length > 0) {
-            const items = appts.map((a) => {
-              const start = a.slot_start ? new Date(a.slot_start) : /* @__PURE__ */ new Date();
-              const end = a.slot_end ? new Date(a.slot_end) : new Date(Date.now() + 36e5);
-              return {
-                appointmentId: Number(a.appointment_id),
-                appointmentNo: a.appointment_no,
-                apptNo: a.appointment_no,
-                date: start.toISOString().slice(0, 10),
-                hour: start.getUTCHours(),
-                slotStart: start.toISOString(),
-                slotEnd: end.toISOString(),
-                status: a.status,
-                bookedVia: a.booked_via,
-                truckPlate: a.m_truck?.plate_no || "T 000 AAA",
-                plateNo: a.m_truck?.plate_no || "T 000 AAA",
-                plate: a.m_truck?.plate_no || "T 000 AAA",
-                driverName: a.m_driver?.driver_name || "Driver",
-                driverPhone: a.m_driver?.phone,
-                partyId: a.transporter_party_id,
-                transporterPartyId: a.transporter_party_id,
-                partyName: a.m_party_appointment?.party_name || "Global Transporter",
-                visitType: a.appointments_visit_types?.visit_type_name || a.appointments_visit_types?.visit_type_code || "IMPORT_PICKUP",
-                visitTypeCode: a.appointments_visit_types?.visit_type_code || "IMPORT_PICKUP",
-                visitTypeName: a.appointments_visit_types?.visit_type_name,
-                createdDate: a.createdate?.toISOString()
-              };
-            });
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({ items: [], total: 0 });
+      const appts = await prisma4.appointment.findMany({
+        include: {
+          m_truck: true,
+          m_driver: true,
+          m_party_appointment: true,
+          appointments_visit_types: true,
+          appointments_sites: true
+        },
+        orderBy: { appointment_id: "desc" }
+      });
+      const items = (appts || []).map((a) => {
+        const start = a.slot_start ? new Date(a.slot_start) : /* @__PURE__ */ new Date();
+        const end = a.slot_end ? new Date(a.slot_end) : new Date(Date.now() + 36e5);
+        return {
+          appointmentId: Number(a.appointment_id),
+          appointmentNo: a.appointment_no,
+          apptNo: a.appointment_no,
+          date: start.toISOString().slice(0, 10),
+          hour: start.getUTCHours(),
+          slotStart: start.toISOString(),
+          slotEnd: end.toISOString(),
+          status: a.status,
+          bookedVia: a.booked_via,
+          truckPlate: a.m_truck?.plate_no || "T 000 AAA",
+          plateNo: a.m_truck?.plate_no || "T 000 AAA",
+          plate: a.m_truck?.plate_no || "T 000 AAA",
+          driverName: a.m_driver?.driver_name || "Driver",
+          driverPhone: a.m_driver?.phone,
+          partyId: a.transporter_party_id,
+          transporterPartyId: a.transporter_party_id,
+          partyName: a.m_party_appointment?.party_name || "Global Transporter",
+          visitType: a.appointments_visit_types?.visit_type_name || a.appointments_visit_types?.visit_type_code || "IMPORT_PICKUP",
+          visitTypeCode: a.appointments_visit_types?.visit_type_code || "IMPORT_PICKUP",
+          visitTypeName: a.appointments_visit_types?.visit_type_name,
+          createdDate: a.createdate?.toISOString()
+        };
+      });
+      return res.json({ items, total: items.length });
     } catch (err) {
       console.error("getAppointments error:", err);
       res.status(500).json({ error: err.message });
@@ -6967,10 +6979,10 @@ var gateAppointmentsController = {
   getAppointmentById: async (req, res) => {
     try {
       const { id } = req.params;
-      const prisma5 = getPrisma();
-      if (prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const numId = Number(id);
-        const a = await prisma5.appointment.findFirst({
+        const a = await prisma4.appointment.findFirst({
           where: {
             OR: [
               ...isNaN(numId) ? [] : [{ appointment_id: BigInt(numId) }],
@@ -7016,21 +7028,22 @@ var gateAppointmentsController = {
   },
   createAppointment: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (!prisma5) return res.status(500).json({ error: "Database unavailable" });
+      const prisma4 = getPrisma();
+      if (!prisma4)
+        return res.status(500).json({ error: "Database unavailable" });
       let truckId = req.body.truckId ? Number(req.body.truckId) : void 0;
       let driverId = req.body.driverId ? Number(req.body.driverId) : void 0;
       let partyId = req.body.partyId || req.body.transporterPartyId ? Number(req.body.partyId || req.body.transporterPartyId) : void 0;
       let visitTypeId = req.body.visitTypeId ? Number(req.body.visitTypeId) : void 0;
       const plateNo = req.body.truckPlate || req.body.plateNo || req.body.plate;
       if (!truckId && plateNo) {
-        const foundTruck = await prisma5.m_truck.findFirst({
+        const foundTruck = await prisma4.m_truck.findFirst({
           where: { plate_no: plateNo }
         });
         if (foundTruck) {
           truckId = foundTruck.truck_id;
         } else {
-          const newTruck = await prisma5.m_truck.create({
+          const newTruck = await prisma4.m_truck.create({
             data: {
               plate_no: plateNo,
               plate_display: plateNo,
@@ -7042,13 +7055,13 @@ var gateAppointmentsController = {
         }
       }
       if (!driverId && req.body.driverName) {
-        const foundDriver = await prisma5.m_driver.findFirst({
+        const foundDriver = await prisma4.m_driver.findFirst({
           where: { driver_name: req.body.driverName }
         });
         if (foundDriver) {
           driverId = foundDriver.driver_id;
         } else {
-          const newDriver = await prisma5.m_driver.create({
+          const newDriver = await prisma4.m_driver.create({
             data: {
               driver_name: req.body.driverName,
               licence_no: `LIC-${Date.now().toString().slice(-6)}`,
@@ -7060,25 +7073,29 @@ var gateAppointmentsController = {
         }
       }
       if (!partyId) {
-        const firstParty = await prisma5.m_party.findFirst();
+        const firstParty = await prisma4.m_party.findFirst();
         partyId = firstParty?.party_id || 1;
       }
       if (!visitTypeId) {
         if (req.body.visitTypeCode) {
-          const vt2 = await prisma5.m_visit_type.findFirst({
+          const vt2 = await prisma4.m_visit_type.findFirst({
             where: { visit_type_code: req.body.visitTypeCode }
           });
           if (vt2) visitTypeId = vt2.visit_type_id;
         }
         if (!visitTypeId) {
-          const firstVt = await prisma5.m_visit_type.findFirst();
+          const firstVt = await prisma4.m_visit_type.findFirst();
           visitTypeId = firstVt?.visit_type_id || 1;
         }
       }
-      const slotStart = new Date(req.body.slotStart || req.body.slotTime || Date.now() + 18e5);
-      const slotEnd = new Date(req.body.slotEnd || slotStart.getTime() + 36e5);
+      const slotStart = new Date(
+        req.body.slotStart || req.body.slotTime || Date.now() + 18e5
+      );
+      const slotEnd = new Date(
+        req.body.slotEnd || slotStart.getTime() + 36e5
+      );
       const apptNo = req.body.appointmentNo || req.body.apptNo || `APT-${(/* @__PURE__ */ new Date()).toISOString().slice(2, 4)}-${Math.floor(1e4 + Math.random() * 9e4)}`;
-      const created = await prisma5.appointment.create({
+      const created = await prisma4.appointment.create({
         data: {
           site_id: Number(req.body.siteId) || 1,
           appointment_no: apptNo,
@@ -7125,10 +7142,10 @@ var gateAppointmentsController = {
     try {
       const { id } = req.params;
       const status = req.body.status || "CONFIRMED";
-      const prisma5 = getPrisma();
-      if (prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const numId = Number(id);
-        const updated = await prisma5.appointment.update({
+        const updated = await prisma4.appointment.update({
           where: isNaN(numId) ? { appointment_no: id } : { appointment_id: BigInt(numId) },
           data: { status, updatedate: /* @__PURE__ */ new Date() }
         });
@@ -7146,9 +7163,11 @@ var gateAppointmentsController = {
   },
   getSlotRules: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (!prisma5) return res.json({ items: [], total: 0 });
-      const dbRules = await prisma5.m_appointment_slot_rule.findMany({
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
+      }
+      const dbRules = await prisma4.m_appointment_slot_rule.findMany({
         include: { m_visit_type: true },
         orderBy: { appointment_slot_rule_id: "asc" }
       });
@@ -7158,22 +7177,22 @@ var gateAppointmentsController = {
         const m = String(d.getUTCMinutes()).padStart(2, "0");
         return `${h}:${m}`;
       };
-      const items = (dbRules || []).map((r) => ({
-        appointmentSlotRuleId: r.appointment_slot_rule_id,
-        ruleId: r.appointment_slot_rule_id,
-        weekday: r.weekday,
-        flow: r.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
-        visitTypeCode: r.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
-        visitTypeName: r.m_visit_type?.visit_type_name || "Import pick-up",
-        slotStart: formatTime(r.slot_start, "07:00"),
-        slotEnd: formatTime(r.slot_end, "17:00"),
+      const items = (dbRules || []).map((r3) => ({
+        appointmentSlotRuleId: r3.appointment_slot_rule_id,
+        ruleId: r3.appointment_slot_rule_id,
+        weekday: r3.weekday,
+        flow: r3.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
+        visitTypeCode: r3.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
+        visitTypeName: r3.m_visit_type?.visit_type_name || "Import pick-up",
+        slotStart: formatTime(r3.slot_start, "07:00"),
+        slotEnd: formatTime(r3.slot_end, "17:00"),
         slotDurationMin: 60,
-        capacityTrucks: r.capacity_trucks || 6,
-        maxSlotsPerHour: r.capacity_trucks || 6,
-        lateGraceMin: r.late_grace_min || 30,
-        isActive: r.is_active ?? true
+        capacityTrucks: r3.capacity_trucks || 6,
+        maxSlotsPerHour: r3.capacity_trucks || 6,
+        lateGraceMin: r3.late_grace_min || 30,
+        isActive: r3.is_active ?? true
       }));
-      res.json({ items, total: items.length });
+      return res.json({ items, total: items.length });
     } catch (err) {
       console.error("getSlotRules error:", err);
       res.status(500).json({ error: err.message });
@@ -7206,74 +7225,67 @@ function getCheckpointCode(status, currentSeqNo) {
 var gateVisitsController = {
   getVisits: async (req, res) => {
     try {
-      let items = [];
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const dbVisits = await prisma5.truck_visit.findMany({
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
+      }
+      const dbVisits = await prisma4.truck_visit.findMany({
+        include: {
+          m_truck_truck_visit_truck_idTom_truck: true,
+          m_driver: true,
+          m_party_truck_visit: true,
+          m_visit_type: true,
+          visit_unit_txn: {
             include: {
-              m_truck_truck_visit_truck_idTom_truck: true,
-              m_driver: true,
-              m_party_truck_visit: true,
-              m_visit_type: true,
-              visit_unit_txn: {
+              unit_stay: {
                 include: {
-                  unit_stay: {
-                    include: {
-                      unit_stay_cargo_units: true
-                    }
-                  }
+                  unit_stay_cargo_units: true
                 }
               }
-            },
-            orderBy: { arrived_at: "desc" }
-          });
-          if (dbVisits && dbVisits.length > 0) {
-            items = dbVisits.map((v, index) => {
-              const chkCode = getCheckpointCode(v.status, v.current_seq_no || index % 3 + 1);
-              return {
-                truckVisitId: Number(v.truck_visit_id),
-                visitNo: v.visit_no,
-                siteId: v.site_id,
-                truckId: v.truck_id,
-                driverId: v.driver_id,
-                partyId: v.transporter_party_id,
-                status: v.status,
-                nextCheckpointCode: chkCode,
-                currentSeqNo: v.current_seq_no || 1,
-                arrivedAt: v.arrived_at?.toISOString() || v.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
-                calledAt: v.admitted_at?.toISOString(),
-                admittedAt: v.admitted_at?.toISOString(),
-                exitedAt: v.exited_at?.toISOString(),
-                waitingMin: v.arrived_at ? Math.max(0, Math.round((Date.now() - new Date(v.arrived_at).getTime()) / 6e4)) : 12 + index * 5,
-                plateNo: v.m_truck_truck_visit_truck_idTom_truck?.plate_no || "T 000 AAA",
-                driverName: v.m_driver?.driver_name || "Driver",
-                driverPhone: v.m_driver?.phone,
-                driverLicence: v.m_driver?.license_no,
-                transporter: v.m_party_truck_visit?.party_name || "Global Transporter",
-                carrierName: v.m_party_truck_visit?.party_name || "Global Transporter",
-                visitTypeCode: v.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
-                visitTypeName: v.m_visit_type?.visit_type_name,
-                lane: "L1",
-                units: (v.visit_unit_txn || []).map((u) => ({
-                  visitUnitTxnId: Number(u.visit_unit_txn_id),
-                  unitStayId: Number(u.unit_stay_id),
-                  action: u.direction,
-                  direction: u.direction,
-                  status: u.status,
-                  unitNo: u.unit_stay?.unit_stay_cargo_units?.unit_number || "MSKU 000000 0",
-                  unitNumber: u.unit_stay?.unit_stay_cargo_units?.unit_number || "MSKU 000000 0",
-                  isoCode: u.unit_stay?.unit_stay_cargo_units?.iso_code || "22G1",
-                  sealStatus: u.seal_status || "MATCH"
-                }))
-              };
-            });
+            }
           }
-        }
-      }
-      if (!isDbLive() && items.length === 0) {
-        items = visits;
-      }
+        },
+        orderBy: { arrived_at: "desc" }
+      });
+      const items = (dbVisits || []).map((v, index) => {
+        const chkCode = getCheckpointCode(v.status, v.current_seq_no || index % 3 + 1);
+        return {
+          truckVisitId: Number(v.truck_visit_id),
+          visitNo: v.visit_no,
+          siteId: v.site_id,
+          truckId: v.truck_id,
+          driverId: v.driver_id,
+          partyId: v.transporter_party_id,
+          status: v.status,
+          nextCheckpointCode: chkCode,
+          currentSeqNo: v.current_seq_no || 1,
+          arrivedAt: v.arrived_at?.toISOString() || v.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
+          calledAt: v.admitted_at?.toISOString(),
+          admittedAt: v.admitted_at?.toISOString(),
+          exitedAt: v.exited_at?.toISOString(),
+          waitingMin: v.arrived_at ? Math.max(0, Math.round((Date.now() - new Date(v.arrived_at).getTime()) / 6e4)) : 12 + index * 5,
+          plateNo: v.m_truck_truck_visit_truck_idTom_truck?.plate_no || "T 000 AAA",
+          driverName: v.m_driver?.driver_name || "Driver",
+          driverPhone: v.m_driver?.phone,
+          driverLicence: v.m_driver?.license_no,
+          transporter: v.m_party_truck_visit?.party_name || "Global Transporter",
+          carrierName: v.m_party_truck_visit?.party_name || "Global Transporter",
+          visitTypeCode: v.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
+          visitTypeName: v.m_visit_type?.visit_type_name,
+          lane: "L1",
+          units: (v.visit_unit_txn || []).map((u) => ({
+            visitUnitTxnId: Number(u.visit_unit_txn_id),
+            unitStayId: Number(u.unit_stay_id),
+            action: u.direction,
+            direction: u.direction,
+            status: u.status,
+            unitNo: u.unit_stay?.unit_stay_cargo_units?.unit_number || "MSKU 000000 0",
+            unitNumber: u.unit_stay?.unit_stay_cargo_units?.unit_number || "MSKU 000000 0",
+            isoCode: u.unit_stay?.unit_stay_cargo_units?.iso_code || "22G1",
+            sealStatus: u.seal_status || "MATCH"
+          }))
+        };
+      });
       res.json({ items, total: items.length, nextCursor: null });
     } catch (err) {
       console.error("getVisits error:", err);
@@ -7283,10 +7295,10 @@ var gateVisitsController = {
   getVisitById: async (req, res) => {
     try {
       const { id } = req.params;
-      const prisma5 = getPrisma();
-      if (prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const numId = Number(id);
-        const v = await prisma5.truck_visit.findFirst({
+        const v = await prisma4.truck_visit.findFirst({
           where: {
             OR: [
               ...isNaN(numId) ? [] : [{ truck_visit_id: BigInt(numId) }],
@@ -7329,7 +7341,7 @@ var gateVisitsController = {
             plateNo: v.m_truck_truck_visit_truck_idTom_truck?.plate_no,
             driverName: v.m_driver?.driver_name,
             driverPhone: v.m_driver?.phone,
-            driverLicence: v.m_driver?.license_no,
+            driverLicence: v.m_driver?.licence_no,
             transporter: v.m_party_truck_visit?.party_name,
             carrierName: v.m_party_truck_visit?.party_name,
             visitTypeCode: v.m_visit_type?.visit_type_code,
@@ -7349,10 +7361,6 @@ var gateVisitsController = {
           });
         }
       }
-      if (!isDbLive()) {
-        const found = visits.find((v) => String(v.truckVisitId) === id || v.visitNo === id);
-        if (found) return res.json(found);
-      }
       return res.status(404).json({ error: "Truck visit not found" });
     } catch (err) {
       console.error("getVisitById error:", err);
@@ -7361,23 +7369,23 @@ var gateVisitsController = {
   },
   createVisit: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         let truckId = req.body.truckId ? Number(req.body.truckId) : void 0;
         let driverId = req.body.driverId ? Number(req.body.driverId) : void 0;
         let transporterPartyId = req.body.partyId || req.body.transporterPartyId ? Number(req.body.partyId || req.body.transporterPartyId) : void 0;
         let visitTypeId = req.body.visitTypeId ? Number(req.body.visitTypeId) : void 0;
         if (!truckId && req.body.plateNo) {
-          const foundTruck = await prisma5.m_truck.findFirst({
+          const foundTruck = await prisma4.m_truck.findFirst({
             where: { plate_no: req.body.plateNo }
           });
           if (foundTruck) {
             truckId = foundTruck.truck_id;
           } else {
-            const newTruck = await prisma5.m_truck.create({
+            const newTruck = await prisma4.m_truck.create({
               data: {
                 plate_no: req.body.plateNo,
-                truck_type: "SEMI_TRAILER",
+                plate_display: req.body.plateNo,
                 createdby: "gate_operator"
               }
             });
@@ -7385,16 +7393,16 @@ var gateVisitsController = {
           }
         }
         if (!driverId && req.body.driverName) {
-          const foundDriver = await prisma5.m_driver.findFirst({
+          const foundDriver = await prisma4.m_driver.findFirst({
             where: { driver_name: req.body.driverName }
           });
           if (foundDriver) {
             driverId = foundDriver.driver_id;
           } else {
-            const newDriver = await prisma5.m_driver.create({
+            const newDriver = await prisma4.m_driver.create({
               data: {
                 driver_name: req.body.driverName,
-                license_no: req.body.licenseNo || `LIC-${Date.now().toString().slice(-6)}`,
+                licence_no: req.body.licenseNo || req.body.licenceNo || `LIC-${Date.now().toString().slice(-6)}`,
                 phone: req.body.driverPhone,
                 createdby: "gate_operator"
               }
@@ -7403,24 +7411,24 @@ var gateVisitsController = {
           }
         }
         if (!transporterPartyId) {
-          const p2 = await prisma5.m_party.findFirst();
+          const p2 = await prisma4.m_party.findFirst();
           transporterPartyId = p2?.party_id || 1;
         }
         if (!visitTypeId) {
           if (req.body.visitTypeCode) {
-            const vt2 = await prisma5.m_visit_type.findFirst({
+            const vt2 = await prisma4.m_visit_type.findFirst({
               where: { visit_type_code: req.body.visitTypeCode }
             });
             if (vt2) visitTypeId = vt2.visit_type_id;
           }
           if (!visitTypeId) {
-            const defaultVt = await prisma5.m_visit_type.findFirst();
+            const defaultVt = await prisma4.m_visit_type.findFirst();
             visitTypeId = defaultVt?.visit_type_id || 1;
           }
         }
         const visitNo = req.body.visitNo || `VIS-${(/* @__PURE__ */ new Date()).toISOString().slice(2, 4)}-${Math.floor(1e4 + Math.random() * 9e4)}`;
         const normalizedStatus = normalizeVisitStatus(req.body.status || "AT_OUTER_GATE");
-        const created = await prisma5.truck_visit.create({
+        const created = await prisma4.truck_visit.create({
           data: {
             site_id: Number(req.body.siteId) || 1,
             visit_no: visitNo,
@@ -7438,16 +7446,15 @@ var gateVisitsController = {
         if (req.body.unitStayId || unitNo) {
           let stayId2 = req.body.unitStayId ? Number(req.body.unitStayId) : void 0;
           if (!stayId2 && unitNo) {
-            const cargo = await prisma5.cargo_unit.findFirst({
-              where: { unit_number: unitNo },
-              include: { unit_stay: true }
+            const stay2 = await prisma4.unit_stay.findFirst({
+              where: { unit_stay_cargo_units: { unit_no: unitNo } }
             });
-            if (cargo && cargo.unit_stay && cargo.unit_stay.length > 0) {
-              stayId2 = Number(cargo.unit_stay[0].unit_stay_id);
+            if (stay2) {
+              stayId2 = Number(stay2.unit_stay_id);
             }
           }
           if (stayId2) {
-            await prisma5.visit_unit_txn.create({
+            await prisma4.visit_unit_txn.create({
               data: {
                 truck_visit_id: created.truck_visit_id,
                 unit_stay_id: BigInt(stayId2),
@@ -7468,9 +7475,7 @@ var gateVisitsController = {
           driverName: req.body.driverName
         });
       }
-      const newVisit = { truckVisitId: visits.length + 1, ...req.body };
-      visits.push(newVisit);
-      res.status(201).json(newVisit);
+      return res.status(500).json({ error: "Database connection unavailable" });
     } catch (err) {
       console.error("createVisit error:", err);
       res.status(500).json({ error: err.message });
@@ -7480,8 +7485,8 @@ var gateVisitsController = {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      const prisma5 = getPrisma();
-      if (prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const numId = Number(id);
         const normalizedStatus = normalizeVisitStatus(status);
         const updateData = { status: normalizedStatus, updatedate: /* @__PURE__ */ new Date() };
@@ -7492,7 +7497,7 @@ var gateVisitsController = {
           updateData.exited_at = /* @__PURE__ */ new Date();
           updateData.current_seq_no = 4;
         }
-        const updated = await prisma5.truck_visit.update({
+        const updated = await prisma4.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: updateData
         });
@@ -7503,9 +7508,7 @@ var gateVisitsController = {
           updatedAt: updated.updatedate?.toISOString()
         });
       }
-      const v = visits.find((x) => String(x.truckVisitId) === id);
-      if (v) v.status = status;
-      res.json(v || { success: true });
+      return res.status(500).json({ error: "Database connection unavailable" });
     } catch (err) {
       console.error("updateVisitStatus error:", err);
       res.status(500).json({ error: err.message });
@@ -7514,10 +7517,10 @@ var gateVisitsController = {
   checkin: async (req, res) => {
     try {
       const id = req.params.id?.replace(/:checkin$/, "");
-      const prisma5 = getPrisma();
-      if (prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const numId = Number(id);
-        const updated = await prisma5.truck_visit.update({
+        const updated = await prisma4.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: {
             status: "ADMITTED",
@@ -7542,10 +7545,10 @@ var gateVisitsController = {
   checkout: async (req, res) => {
     try {
       const id = req.params.id?.replace(/:checkout$/, "");
-      const prisma5 = getPrisma();
-      if (prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const numId = Number(id);
-        const updated = await prisma5.truck_visit.update({
+        const updated = await prisma4.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: {
             status: "EXITED",
@@ -7571,14 +7574,13 @@ var gateVisitsController = {
   cancelVisit: async (req, res) => {
     try {
       const id = req.params.id?.replace(/:cancel$/, "");
-      const prisma5 = getPrisma();
-      if (prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const numId = Number(id);
-        const updated = await prisma5.truck_visit.update({
+        const updated = await prisma4.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: {
             status: "CANCELLED",
-            cancel_reason: req.body.reason || "User cancelled",
             updatedate: /* @__PURE__ */ new Date()
           }
         });
@@ -7597,10 +7599,10 @@ var gateVisitsController = {
   turnBack: async (req, res) => {
     try {
       const { id } = req.params;
-      const prisma5 = getPrisma();
-      if (prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const numId = Number(id);
-        const updated = await prisma5.truck_visit.update({
+        const updated = await prisma4.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: {
             status: "REJECTED",
@@ -7930,6 +7932,682 @@ function responseEnhancer(req, res, next) {
   next();
 }
 
+// src/v1/controllers/gate/weighbridge.controller.ts
+var gateWeighbridgeController = {
+  getTickets: async (req, res) => {
+    try {
+      const siteIdParam = req.query.siteId || req.siteId;
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return sendError(res, "Database connection unavailable", 500);
+      }
+      const whereClause = {};
+      if (siteIdParam && siteIdParam.toLowerCase() !== "all") {
+        const sid = Number(siteIdParam);
+        if (!isNaN(sid) && sid > 0) {
+          whereClause.site_id = sid;
+        }
+      }
+      const dbTickets = await prisma4.weighing.findMany({
+        where: whereClause,
+        include: {
+          truck_visit: {
+            include: { m_truck_truck_visit_truck_idTom_truck: true, m_driver: true }
+          },
+          unit_stay: {
+            include: { unit_stay_cargo_units: true }
+          }
+        },
+        orderBy: { weighing_id: "desc" }
+      });
+      const items = (dbTickets || []).map((t) => {
+        const net = t.gross_kg && t.tare_kg ? Number(t.gross_kg) - Number(t.tare_kg) : void 0;
+        let status = "OK";
+        if (t.override_approval_ref) {
+          status = "OVERRIDDEN";
+        } else if (t.within_tolerance === false) {
+          status = "OVERRIDE_PENDING";
+        } else if (!t.declared_kg) {
+          status = "NO_DECLARED";
+        }
+        return {
+          weighingId: Number(t.weighing_id),
+          ticketId: Number(t.weighing_id),
+          ticketNo: t.ticket_no,
+          siteId: t.site_id || 1,
+          weighKind: t.weigh_kind,
+          truckVisitId: t.truck_visit_id ? Number(t.truck_visit_id) : void 0,
+          unitStayId: t.unit_stay_id ? Number(t.unit_stay_id) : void 0,
+          plateNo: t.truck_visit?.m_truck_truck_visit_truck_idTom_truck?.plate_no || (t.device_ref?.startsWith("PL:") ? t.device_ref.slice(3) : void 0) || "T 902 DMB",
+          unitNo: t.unit_stay?.unit_stay_cargo_units?.unit_no || void 0,
+          grossKg: String(t.gross_kg ?? 0),
+          tareKg: String(t.tare_kg ?? 0),
+          netKg: net !== void 0 ? String(net) : void 0,
+          containerTareKg: t.container_tare_kg ? String(t.container_tare_kg) : void 0,
+          declaredKg: t.declared_kg ? String(t.declared_kg) : void 0,
+          variancePct: t.variance_pct ? String(t.variance_pct) : void 0,
+          withinTolerance: t.within_tolerance ?? true,
+          source: t.source || "DEVICE",
+          deviceRef: t.device_ref || "WB-01",
+          weighedAt: t.weighed_at?.toISOString() || t.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
+          operator: t.createdby || "Ally S.",
+          status,
+          approvalNo: t.override_approval_ref ? `APR-26-00${t.override_approval_ref}` : t.within_tolerance === false ? "APR-26-00416" : void 0
+        };
+      });
+      return res.json(items);
+    } catch (err) {
+      console.error("[gateWeighbridgeController.getTickets] Error:", err);
+      return sendError(res, err.message, 500);
+    }
+  },
+  createTicket: async (req, res) => {
+    try {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return sendError(res, "Database connection unavailable", 500);
+      }
+      const siteId = Number(req.siteId || req.body.siteId) || 1;
+      let validTruckVisitId = null;
+      if (req.body.truckVisitId) {
+        try {
+          const tvId = BigInt(req.body.truckVisitId);
+          const tv = await prisma4.truck_visit.findUnique({
+            where: { truck_visit_id: tvId },
+            select: { truck_visit_id: true }
+          });
+          if (tv) {
+            validTruckVisitId = tv.truck_visit_id;
+          }
+        } catch {
+        }
+      }
+      if (!validTruckVisitId && (req.body.plateNo || req.body.visitNo)) {
+        try {
+          const cleanPlate = req.body.plateNo?.replace(/\s+/g, "");
+          const tv = await prisma4.truck_visit.findFirst({
+            where: {
+              site_id: siteId,
+              OR: [
+                ...cleanPlate ? [{ m_truck_truck_visit_truck_idTom_truck: { plate_no: cleanPlate } }] : [],
+                ...req.body.plateNo ? [{ m_truck_truck_visit_truck_idTom_truck: { plate_no: req.body.plateNo } }] : [],
+                ...req.body.visitNo ? [{ visit_no: String(req.body.visitNo) }] : []
+              ]
+            },
+            select: { truck_visit_id: true }
+          });
+          if (tv) {
+            validTruckVisitId = tv.truck_visit_id;
+          }
+        } catch {
+        }
+      }
+      let validUnitStayId = null;
+      if (req.body.unitStayId) {
+        try {
+          const usId = BigInt(req.body.unitStayId);
+          const us = await prisma4.unit_stay.findUnique({
+            where: { unit_stay_id: usId },
+            select: { unit_stay_id: true }
+          });
+          if (us) {
+            validUnitStayId = us.unit_stay_id;
+          }
+        } catch {
+        }
+      }
+      if (!validUnitStayId && req.body.unitNo) {
+        try {
+          const cleanNo = req.body.unitNo.replace(/\s+/g, "").toUpperCase();
+          const us = await prisma4.unit_stay.findFirst({
+            where: {
+              site_id: siteId,
+              unit_stay_cargo_units: {
+                unit_no: cleanNo
+              }
+            },
+            select: { unit_stay_id: true }
+          });
+          if (us) {
+            validUnitStayId = us.unit_stay_id;
+          }
+        } catch {
+        }
+      }
+      const gross = req.body.grossKg ? parseFloat(req.body.grossKg) : 37820;
+      const tare = req.body.tareKg ? parseFloat(req.body.tareKg) : 15400;
+      const ctrTare = req.body.containerTareKg ? parseFloat(req.body.containerTareKg) : null;
+      const declared = req.body.declaredKg ? parseFloat(req.body.declaredKg) : null;
+      const kind = req.body.weighKind || "OUT";
+      const source = req.body.source || "DEVICE";
+      const net = gross - tare;
+      const compare = kind === "VGM" ? gross - tare + (ctrTare || 0) : net;
+      const variance = declared ? (compare - declared) / declared * 100 : void 0;
+      const withinTol = req.body.withinTolerance !== void 0 ? Boolean(req.body.withinTolerance) : variance !== void 0 ? Math.abs(variance) <= 5 : true;
+      const ticketNo = req.body.ticketNo || `WT-DAR1-26-${Date.now().toString().slice(-6)}`;
+      let status = "OK";
+      if (!declared) {
+        status = "NO_DECLARED";
+      } else if (!withinTol) {
+        status = "OVERRIDE_PENDING";
+      }
+      const created = await prisma4.weighing.create({
+        data: {
+          site_id: siteId,
+          ticket_no: ticketNo,
+          weigh_kind: kind,
+          truck_visit_id: validTruckVisitId,
+          unit_stay_id: validUnitStayId,
+          gross_kg: gross,
+          tare_kg: tare,
+          container_tare_kg: ctrTare,
+          declared_kg: declared,
+          variance_pct: variance !== void 0 ? variance : null,
+          within_tolerance: withinTol,
+          source,
+          device_ref: source === "DEVICE" ? req.body.deviceRef || "WB-01" : req.body.plateNo ? `PL:${req.body.plateNo}` : "MANUAL",
+          weighed_at: /* @__PURE__ */ new Date(),
+          createdby: req.body.operator || "User"
+        }
+      });
+      return sendCreated(res, {
+        weighingId: Number(created.weighing_id),
+        ticketId: Number(created.weighing_id),
+        ticketNo: created.ticket_no,
+        status,
+        withinTolerance: withinTol
+      });
+    } catch (err) {
+      return sendError(res, err.message, 500);
+    }
+  },
+  requestOverride: async (req, res) => {
+    try {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return sendError(res, "Database connection unavailable", 500);
+      }
+      const id = parseInt(req.params.ticketId || req.params.id, 10);
+      const approvalNo = `APR-26-00${420 + id % 100}`;
+      await prisma4.weighing.update({
+        where: { weighing_id: id },
+        data: {
+          override_approval_ref: BigInt(420 + id % 100)
+        }
+      });
+      return sendSuccess(res, {
+        success: true,
+        approvalNo,
+        message: "Override approved by duty manager"
+      });
+    } catch (err) {
+      return sendError(res, err.message, 500);
+    }
+  },
+  printTicket: async (req, res) => {
+    const id = parseInt(req.params.ticketId || req.params.id, 10);
+    return sendSuccess(res, {
+      success: true,
+      printedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      ticketId: id
+    });
+  }
+};
+
+// src/v1/routes/gate/gate.routes.ts
+var gateRoutes = (0, import_express2.Router)();
+gateRoutes.get("/gate/queue", requireSite(false), requirePermission("gate.visit.checkin"), gateQueueController.getQueue);
+gateRoutes.get("/gate/queue/summary", requireSite(false), requirePermission("gate.visit.checkin"), gateQueueController.getQueueSummary);
+gateRoutes.get("/gate/lanes", requireSite(false), requirePermission("gate.visit.checkin"), gateLaneController.getLanes);
+gateRoutes.post("/gate/lanes/:laneId/open-barrier", requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateLaneController.openBarrier);
+gateRoutes.get("/gate-passes/:token", requireSite(false), requirePermission("gate.visit.checkin"), gateLaneController.getGatePass);
+gateRoutes.get("/appointments", requireSite(false), requirePermission("appointment.manage"), gateAppointmentsController.getAppointments);
+gateRoutes.post("/appointments", requireSite(false), requirePermission("appointment.manage", "DO"), gateAppointmentsController.createAppointment);
+gateRoutes.patch(["/appointments/:id", "/appointments/:id/status"], requireSite(false), requirePermission("appointment.manage", "DO"), gateAppointmentsController.updateAppointmentStatus);
+gateRoutes.get("/appointments/slot-rules", requireSite(false), requirePermission("appointment.manage"), gateAppointmentsController.getSlotRules);
+gateRoutes.get("/appointments/:id", requireSite(false), requirePermission("appointment.manage"), gateAppointmentsController.getAppointmentById);
+gateRoutes.get(["/truck-visits", "/gate/visits"], requireSite(false), requirePermission("gate.visit.checkin"), gateVisitsController.getVisits);
+gateRoutes.post(["/truck-visits", "/gate/visits"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.createVisit);
+gateRoutes.get(["/truck-visits/:id", "/gate/visits/:id"], requireSite(false), requirePermission("gate.visit.checkin"), gateVisitsController.getVisitById);
+gateRoutes.patch(["/truck-visits/:id", "/gate/visits/:id"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.updateVisitStatus);
+gateRoutes.post(["/truck-visits/:id\\:checkin", "/gate/visits/:id\\:checkin", "/truck-visits/:id/checkin", "/gate/visits/:id/checkin"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.checkin);
+gateRoutes.post(["/truck-visits/:id\\:checkout", "/gate/visits/:id\\:checkout", "/truck-visits/:id/checkout", "/gate/visits/:id/checkout"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.checkout);
+gateRoutes.post(["/truck-visits/:id\\:cancel", "/gate/visits/:id\\:cancel", "/truck-visits/:id/cancel", "/gate/visits/:id/cancel"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.cancelVisit);
+gateRoutes.post(["/truck-visits/:id/turn-back", "/gate/visits/:id/turn-back"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.turnBack);
+gateRoutes.post(["/truck-visits/:id/checkpoint-events", "/gate/visits/:id/checkpoint-events"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.recordCheckpointEvent);
+gateRoutes.post(["/truck-visits/:id/gate-pass\\:print", "/gate/visits/:id/gate-pass\\:print"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.printGatePass);
+gateRoutes.get(["/weighbridge/tickets", "/weighings"], requireSite(false), requirePermission("weighbridge.ticket"), gateWeighbridgeController.getTickets);
+gateRoutes.post(["/weighbridge/tickets", "/weighings"], requireSite(false), requirePermission("weighbridge.ticket", "DO"), gateWeighbridgeController.createTicket);
+gateRoutes.post(["/weighbridge/tickets/:ticketId/override-request", "/weighings/:ticketId/override-request"], requireSite(false), requirePermission("weighbridge.ticket", "DO"), gateWeighbridgeController.requestOverride);
+gateRoutes.post(["/weighbridge/tickets/:ticketId/print", "/weighings/:ticketId/print"], requireSite(false), requirePermission("weighbridge.ticket", "DO"), gateWeighbridgeController.printTicket);
+
+// src/v1/routes/yard/yard.routes.ts
+var import_express3 = require("express");
+
+// src/v1/controllers/yard/map.controller.ts
+var yardMapController = {
+  getYardMap: async (req, res) => {
+    try {
+      const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : 1;
+      const NON_BLOCK_KINDS = /* @__PURE__ */ new Set(["AREA", "KEY_CABINET", "AISLE"]);
+      const NON_BLOCK_CODES = /* @__PURE__ */ new Set(["MAIN", "KC1", "AREA", "GATE", "WH1", "VEH"]);
+      const isRealBlock = (code) => {
+        const c = (code || "").toUpperCase().replace("BLOCK-", "");
+        if (NON_BLOCK_CODES.has(c)) return false;
+        if (c.startsWith("AREA") || c.startsWith("KC") || c.startsWith("WH") || c.startsWith("GATE") || c.startsWith("MAIN")) return false;
+        return true;
+      };
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const dbLocations = await prisma4.m_yard_location.findMany({
+            where: siteId ? { site_id: siteId } : {},
+            include: {
+              unit_stay: {
+                include: {
+                  unit_stay_cargo_units: true
+                }
+              }
+            },
+            orderBy: { yard_location_id: "asc" }
+          });
+          if (dbLocations && dbLocations.length > 0) {
+            const mappedLocations = dbLocations.filter((l) => l.is_slot || l.location_kind === "SLOT").map((l) => {
+              const codeParts = (l.location_code || l.full_code || "A-01-01-1").split("-");
+              let blockLetter = l.location_code.startsWith("BLOCK-") ? l.location_code.replace("BLOCK-", "") : codeParts[0] || "A";
+              if (blockLetter === "REEFER") blockLetter = "R";
+              const bay = parseInt(codeParts[1], 10) || 1;
+              const row = parseInt(codeParts[2], 10) || 1;
+              const tier = parseInt(codeParts[3], 10) || 1;
+              const stays2 = l.unit_stay;
+              const activeStay = stays2 && stays2.length > 0 ? stays2[0] : null;
+              return {
+                yardLocationId: l.yard_location_id,
+                locationCode: l.location_code,
+                fullCode: l.full_code || l.location_code,
+                blockCode: blockLetter,
+                bay,
+                row,
+                tier,
+                status: activeStay ? "OCCUPIED" : l.is_blocked ? "BLOCKED" : "AVAILABLE",
+                isBlocked: l.is_blocked,
+                unitNumber: activeStay?.unit_stay_cargo_units?.unit_no || activeStay?.unit_stay_cargo_units?.unit_number,
+                mapX: l.map_x ? Number(l.map_x) : void 0,
+                mapY: l.map_y ? Number(l.map_y) : void 0,
+                mapW: l.map_w ? Number(l.map_w) : void 0,
+                mapH: l.map_h ? Number(l.map_h) : void 0
+              };
+            });
+            const blockMap = /* @__PURE__ */ new Map();
+            dbLocations.filter((l) => l.location_kind === "BLOCK" && isRealBlock(l.location_code)).forEach((l) => {
+              let code = l.location_code.replace("BLOCK-", "").toUpperCase();
+              if (code === "REEFER") code = "R";
+              blockMap.set(code, {
+                blockId: l.yard_location_id,
+                blockCode: code,
+                blockName: `Block ${code}`,
+                kind: "BLOCK",
+                zoneType: code === "R" ? "REEFER" : code === "EXAM" ? "EXAM" : code.startsWith("V") ? "VEHICLE" : "DRY",
+                baysCount: code === "R" ? 8 : code === "EXAM" ? 6 : code.startsWith("V") ? 6 : 12,
+                rowsCount: code === "R" ? 4 : code === "EXAM" ? 2 : code.startsWith("V") ? 4 : 6,
+                tiersCount: l.max_tier || (code === "R" ? 3 : code === "EXAM" ? 2 : code.startsWith("V") ? 1 : 4),
+                totalSlots: code === "R" ? 96 : code === "EXAM" ? 24 : code.startsWith("V") ? 24 : 288,
+                occupiedSlots: 0
+              });
+            });
+            dbLocations.filter((l) => (l.is_slot || l.location_kind === "SLOT") && isRealBlock(l.location_code)).forEach((l) => {
+              let code = (l.location_code || "").split("-")[0].toUpperCase();
+              if (code === "REEFER") code = "R";
+              if (isRealBlock(code)) {
+                if (!blockMap.has(code)) {
+                  blockMap.set(code, {
+                    blockId: l.parent_id || l.yard_location_id,
+                    blockCode: code,
+                    blockName: `Block ${code}`,
+                    kind: "BLOCK",
+                    zoneType: code === "R" ? "REEFER" : code === "EXAM" ? "EXAM" : code.startsWith("V") ? "VEHICLE" : "DRY",
+                    baysCount: code === "R" ? 8 : code === "EXAM" ? 6 : code.startsWith("V") ? 6 : 12,
+                    rowsCount: code === "R" ? 4 : code === "EXAM" ? 2 : code.startsWith("V") ? 4 : 6,
+                    tiersCount: code === "R" ? 3 : code === "EXAM" ? 2 : code.startsWith("V") ? 1 : 4,
+                    totalSlots: code === "R" ? 96 : code === "EXAM" ? 24 : code.startsWith("V") ? 24 : 288,
+                    occupiedSlots: 0
+                  });
+                }
+                const stays2 = l.unit_stay;
+                if (stays2 && stays2.length > 0 && blockMap.has(code)) {
+                  blockMap.get(code).occupiedSlots += stays2.length;
+                }
+              }
+            });
+            if (blockMap.size === 0) {
+              const standardCodes = siteId === 2 ? ["V1", "V2"] : ["A", "B", "C", "D", "R"];
+              standardCodes.forEach((sc, idx) => {
+                blockMap.set(sc, {
+                  blockId: idx + 1,
+                  blockCode: sc,
+                  blockName: `Block ${sc}`,
+                  kind: "BLOCK",
+                  zoneType: sc === "R" ? "REEFER" : sc.startsWith("V") ? "VEHICLE" : "DRY",
+                  baysCount: sc === "R" ? 8 : sc.startsWith("V") ? 6 : 12,
+                  rowsCount: sc === "R" ? 4 : sc.startsWith("V") ? 4 : 6,
+                  tiersCount: sc === "R" ? 3 : sc.startsWith("V") ? 1 : 4,
+                  totalSlots: sc === "R" ? 96 : sc.startsWith("V") ? 24 : 288,
+                  occupiedSlots: 0
+                });
+              });
+            }
+            const dbBlocks = Array.from(blockMap.values()).sort((a, b) => a.blockCode.localeCompare(b.blockCode));
+            return res.json({
+              blocks: dbBlocks,
+              locations: mappedLocations,
+              totalLocations: mappedLocations.length
+            });
+          }
+        }
+      }
+      const siteFallbackBlocks = blocks.filter((b) => b.siteId === siteId);
+      const defaultBlocks = siteId === 2 ? blocks.filter((b) => b.siteId === 2) : blocks.filter((b) => b.siteId === 1);
+      const effectiveBlocks = siteFallbackBlocks.length > 0 ? siteFallbackBlocks : defaultBlocks;
+      res.json({
+        blocks: effectiveBlocks,
+        nodes: yardNodes.filter((n) => n.siteId === siteId).slice(0, 50),
+        totalLocations: 50
+      });
+    } catch (err) {
+      console.error("getYardMap error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+  getBlocks: async (req, res) => {
+    try {
+      const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : void 0;
+      const NON_BLOCK_CODES = /* @__PURE__ */ new Set(["MAIN", "KC1", "AREA", "GATE", "WH1", "VEH"]);
+      const isRealBlock = (code) => {
+        const c = (code || "").toUpperCase().replace("BLOCK-", "");
+        if (NON_BLOCK_CODES.has(c)) return false;
+        if (c.startsWith("AREA") || c.startsWith("KC") || c.startsWith("WH") || c.startsWith("GATE") || c.startsWith("MAIN")) return false;
+        return true;
+      };
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const dbLocations = await prisma4.m_yard_location.findMany({
+            where: siteId ? { site_id: siteId } : {},
+            include: {
+              unit_stay: true
+            },
+            orderBy: { yard_location_id: "asc" }
+          });
+          if (dbLocations && dbLocations.length > 0) {
+            const blockMap = /* @__PURE__ */ new Map();
+            dbLocations.filter((l) => isRealBlock(l.location_code)).forEach((l) => {
+              const blockCode = l.location_code.startsWith("BLOCK-") ? l.location_code.replace("BLOCK-", "") : l.location_code.split("-")[0] || "A";
+              if (!blockMap.has(blockCode)) {
+                blockMap.set(blockCode, {
+                  blockId: l.yard_location_id,
+                  blockCode,
+                  blockName: `Block ${blockCode}`,
+                  zoneType: blockCode === "R" ? "REEFER" : blockCode.startsWith("V") ? "VEHICLE" : "DRY",
+                  baysCount: blockCode === "R" ? 8 : blockCode.startsWith("V") ? 6 : 12,
+                  rowsCount: blockCode === "R" ? 4 : blockCode.startsWith("V") ? 4 : 6,
+                  tiersCount: blockCode === "R" ? 3 : blockCode.startsWith("V") ? 1 : 4,
+                  totalSlots: blockCode === "R" ? 96 : blockCode.startsWith("V") ? 24 : 288,
+                  occupiedSlots: 0
+                });
+              }
+              const stays2 = l.unit_stay;
+              if (stays2 && stays2.length > 0 && blockMap.has(blockCode)) {
+                blockMap.get(blockCode).occupiedSlots += stays2.length;
+              }
+            });
+            const items = Array.from(blockMap.values());
+            return res.json({ items, total: items.length });
+          }
+        }
+      }
+      const siteFallbackBlocks = blocks.filter((b) => !siteId || b.siteId === siteId);
+      res.json({ items: siteFallbackBlocks.length > 0 ? siteFallbackBlocks : blocks, total: siteFallbackBlocks.length });
+    } catch (err) {
+      console.error("getBlocks error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+  getLocations: async (req, res) => {
+    try {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const dbLocs = await prisma4.m_yard_location.findMany({
+            include: {
+              unit_stay: {
+                include: {
+                  unit_stay_cargo_units: true
+                }
+              }
+            },
+            orderBy: { yard_location_id: "asc" }
+          });
+          if (dbLocs && dbLocs.length > 0) {
+            const items2 = dbLocs.map((l) => {
+              const codeParts = (l.location_code || l.full_code || "A-01-01-1").split("-");
+              const blockLetter = l.location_code.startsWith("BLOCK-") ? l.location_code.replace("BLOCK-", "") : codeParts[0] || "A";
+              const bay = parseInt(codeParts[1], 10) || 1;
+              const row = parseInt(codeParts[2], 10) || 1;
+              const tier = parseInt(codeParts[3], 10) || 1;
+              const stays2 = l.unit_stay;
+              const activeStay = stays2 && stays2.length > 0 ? stays2[0] : null;
+              return {
+                yardLocationId: l.yard_location_id,
+                siteId: l.site_id,
+                locationCode: l.location_code,
+                fullCode: l.full_code || l.location_code,
+                blockCode: blockLetter,
+                bay,
+                row,
+                tier,
+                isBlocked: l.is_blocked,
+                status: activeStay ? "OCCUPIED" : l.is_blocked ? "BLOCKED" : "AVAILABLE",
+                unitNumber: activeStay?.unit_stay_cargo_units?.unit_no || activeStay?.unit_stay_cargo_units?.unit_number,
+                logInst: l.log_inst || 1
+              };
+            });
+            return res.json({ items: items2, total: items2.length, nextCursor: null });
+          }
+        }
+      }
+      const items = yardNodes.slice(0, 100).map((n, i) => ({
+        yardLocationId: i + 1,
+        siteId: 1,
+        locationCode: n.fullCode || `LOC-${i + 1}`,
+        fullCode: n.fullCode || `A-01-${String(i + 1).padStart(2, "0")}-1`,
+        blockCode: n.fullCode ? n.fullCode.slice(0, 1) : "A",
+        bay: 1,
+        row: 1,
+        tier: 1,
+        isBlocked: Boolean(blockedSlots[n.fullCode]),
+        status: "ACTIVE",
+        logInst: 1
+      }));
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err) {
+      console.error("getLocations error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+  getOccupancy: async (_req, res) => {
+    try {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const totalUnitsInYard = await prisma4.unit_stay.count({
+            where: {
+              physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
+            }
+          });
+          const reeferUnits = await prisma4.unit_stay.count({
+            where: {
+              reefer_set_temp_c: { not: null },
+              physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
+            }
+          });
+          const dgUnits = await prisma4.unit_stay.count({
+            where: {
+              imo_class: { not: null },
+              physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
+            }
+          });
+          const totalCapacityTeu = 12500;
+          const occupiedTeu = Math.max(totalUnitsInYard * 1.5, 420);
+          const occupancyRate = Number((occupiedTeu / totalCapacityTeu * 100).toFixed(2));
+          return res.json({
+            totalCapacityTeu,
+            occupiedTeu: Math.round(occupiedTeu),
+            occupancyRate,
+            reeferOccupancyRate: reeferUnits > 0 ? Number((reeferUnits / 500 * 100).toFixed(1)) : 42.5,
+            dangerousGoodsRate: dgUnits > 0 ? Number((dgUnits / 200 * 100).toFixed(1)) : 14.2,
+            availableSlots: totalCapacityTeu - Math.round(occupiedTeu)
+          });
+        }
+      }
+      res.json({
+        totalCapacityTeu: 12500,
+        occupiedTeu: 8420,
+        occupancyRate: 67.36,
+        reeferOccupancyRate: 54.2,
+        dangerousGoodsRate: 18.4,
+        availableSlots: 4080
+      });
+    } catch (err) {
+      console.error("getOccupancy error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+  getBlockSlots: async (req, res) => {
+    try {
+      const blockIdOrCode = req.params.blockId;
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const id = Number(blockIdOrCode);
+          let blockLetter = String(blockIdOrCode).toUpperCase();
+          if (Number.isFinite(id)) {
+            const blockLoc = await prisma4.m_yard_location.findUnique({ where: { yard_location_id: id } });
+            if (blockLoc) {
+              blockLetter = blockLoc.location_code.replace("BLOCK-", "");
+            }
+          }
+          const slots = await prisma4.m_yard_location.findMany({
+            where: {
+              OR: [
+                { location_code: { startsWith: blockLetter + "-" } },
+                { full_code: { startsWith: blockLetter + "-" } },
+                ...Number.isFinite(id) ? [{ parent_id: id }] : []
+              ]
+            },
+            include: {
+              unit_stay: {
+                include: {
+                  unit_stay_cargo_units: true
+                }
+              }
+            },
+            orderBy: { location_code: "asc" }
+          });
+          const items = slots.map((s) => ({
+            yardLocationId: s.yard_location_id,
+            locationCode: s.location_code,
+            fullCode: s.full_code,
+            isBlocked: s.is_blocked,
+            blockedReason: s.blocked_reason,
+            units: (s.unit_stay || []).map((u) => ({
+              unitStayId: u.unit_stay_id,
+              unitNo: u.unit_stay_cargo_units?.unit_no,
+              physicalStatus: u.physical_status,
+              flow: u.flow
+            }))
+          }));
+          return res.json({ block: blockLetter, slots: items, total: items.length });
+        }
+      }
+      return res.json({ block: blockIdOrCode, slots: [], total: 0 });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+  blockSlot: async (req, res) => {
+    try {
+      const slotCode = req.params.slotCode || req.body.slotCode || req.body.locationCode;
+      const reason = req.body.reason || "Blocked by user";
+      const result = await setupService.blockSlot(slotCode, reason);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+  unblockSlot: async (req, res) => {
+    try {
+      const slotCode = req.params.slotCode || req.body.slotCode || req.body.locationCode;
+      const result = await setupService.unblockSlot(slotCode);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+};
+
+// src/data/gate.ts
+var VISIT_TYPES = {
+  IMPORT_PICKUP: "Import pick-up",
+  EXPORT_DROP: "Export drop-off",
+  EMPTY_RETURN: "Empty return",
+  EMPTY_PICKUP: "Empty pick-up",
+  VEHICLE_DELIVERY: "Vehicle delivery",
+  VEHICLE_RECEIPT: "Vehicle receipt (self-driven)",
+  TRANSFER_IN: "Transfer from port"
+};
+var cp = (code, seq, hrs, result = "PASSED", reason, offline) => ({
+  checkpointCode: code,
+  seqNo: seq,
+  result,
+  failureReason: reason,
+  occurredAt: at(hrs),
+  by: seq % 2 ? "Gate \xB7 Hamisi J." : "Gate \xB7 Rose A.",
+  isOffline: offline
+});
+var vu = (s, dir, status = "PLANNED") => ({
+  visitUnitTxnId: s.unitStayId * 10,
+  unitStayId: s.unitStayId,
+  unitNo: s.cargoUnit.unitNo,
+  direction: dir,
+  status,
+  sealExpected: s.sealNo ?? void 0,
+  eirNo: status === "DONE" ? `EIR-DAR1-26-${s.unitStayId}` : void 0
+});
+var inYard = allStays.filter((s) => s.physicalStatus === "IN_YARD" && s.cargoUnit.category === "CONTAINER");
+var visits = [
+  { truckVisitId: 4410, visitNo: "TV-26-04410", visitTypeCode: "TRANSFER_IN", conveyance: "TRUCK", plateNo: "T 902 DMB", driverName: "Musa Rajabu", transporter: "Simba Haulage Co.", status: "HELD", currentSeqNo: 1, nextCheckpointCode: "INNER_IN", arrivedAt: at(0.6), waitingMin: 34, blockedReason: "Seal mismatch: approval requested", lane: "In 1", units: [vu(inYard[20], "DROP", "IN_PROGRESS")], checkpoints: [cp("OUTER_IN", 1, 0.6), cp("INNER_IN", 2, 0.4, "FAILED", "Seal found ML-7781208, expected ML-7781203")] },
+  { truckVisitId: 4411, visitNo: "TV-26-04411", visitTypeCode: "IMPORT_PICKUP", conveyance: "TRUCK", plateNo: "T 412 DKL", driverName: "Baraka Mwita", transporter: "Upepo Transporters", status: "AT_OUTER_GATE", currentSeqNo: 0, nextCheckpointCode: "OUTER_IN", arrivedAt: at(0.2), waitingMin: 12, lane: "In 2", nominationRef: "RO-DAR1-26-01942", units: [vu(HERO, "PICK")], checkpoints: [] },
+  { truckVisitId: 4412, visitNo: "TV-26-04412", visitTypeCode: "IMPORT_PICKUP", conveyance: "TRUCK", plateNo: "T 118 DPE", driverName: "Said Omari", transporter: "Simba Haulage Co.", status: "WORKING", currentSeqNo: 2, nextCheckpointCode: "INNER_OUT", arrivedAt: at(1.4), admittedAt: at(1.2), waitingMin: 72, units: [vu(inYard[2], "PICK", "IN_PROGRESS")], checkpoints: [cp("OUTER_IN", 1, 1.4), cp("INNER_IN", 2, 1.2)] },
+  { truckVisitId: 4413, visitNo: "TV-26-04413", visitTypeCode: "EMPTY_RETURN", conveyance: "TRUCK", plateNo: "T 771 DGH", driverName: "John Massawe", transporter: "Upepo Transporters", status: "ADMITTED", currentSeqNo: 2, nextCheckpointCode: "INNER_OUT", arrivedAt: at(0.9), admittedAt: at(0.7), waitingMin: 41, units: [vu(inYard[30], "DROP", "IN_PROGRESS")], checkpoints: [cp("OUTER_IN", 1, 0.9), cp("INNER_IN", 2, 0.7)] },
+  { truckVisitId: 4414, visitNo: "TV-26-04414", visitTypeCode: "IMPORT_PICKUP", conveyance: "TRUCK", plateNo: "T 230 DLX", driverName: "Elia Mrema", transporter: "Simba Haulage Co.", status: "CHECKED_OUT", currentSeqNo: 3, nextCheckpointCode: "OUTER_OUT", arrivedAt: at(2.1), admittedAt: at(1.9), checkedOutAt: at(0.1), waitingMin: 8, gatePassNo: "GP-26-08811", units: [vu(inYard[5], "PICK", "DONE")], checkpoints: [cp("OUTER_IN", 1, 2.1), cp("INNER_IN", 2, 1.9), cp("INNER_OUT", 3, 0.1)] },
+  { truckVisitId: 4415, visitNo: "TV-26-04415", visitTypeCode: "EXPORT_DROP", conveyance: "TRUCK", plateNo: "T 655 DQA", driverName: "Hassan Ali", transporter: "Upepo Transporters", status: "ANNOUNCED", currentSeqNo: 0, nextCheckpointCode: "OUTER_IN", expectedFrom: at(-0.5), expectedTo: at(-2.5), waitingMin: 0, units: [], checkpoints: [] },
+  { truckVisitId: 4416, visitNo: "TV-26-04416", visitTypeCode: "VEHICLE_DELIVERY", conveyance: "CAR_CARRIER", plateNo: "T 340 DRC", driverName: "Abdul Kombo", transporter: "Simba Haulage Co.", status: "WORKING", currentSeqNo: 2, nextCheckpointCode: "INNER_OUT", arrivedAt: at(1), admittedAt: at(0.8), waitingMin: 55, units: allStays.filter((s) => s.siteId === 2 && s.releaseStatus === "APPROVED").slice(0, 3).map((s) => vu(s, "PICK", "IN_PROGRESS")), checkpoints: [cp("OUTER_IN", 1, 1), cp("INNER_IN", 2, 0.8)] },
+  { truckVisitId: 4402, visitNo: "TV-26-04402", visitTypeCode: "IMPORT_PICKUP", conveyance: "TRUCK", plateNo: "T 505 DJN", driverName: "Peter Lyimo", transporter: "Pwani Hardware (own truck)", status: "REJECTED", currentSeqNo: 2, nextCheckpointCode: "INNER_OUT", arrivedAt: at(3.4), admittedAt: at(3.2), waitingMin: 0, blockedReason: "Release order expired at 07:30", units: [vu(inYard[9], "PICK", "CANCELLED")], checkpoints: [cp("OUTER_IN", 1, 3.4), cp("INNER_IN", 2, 3.2), cp("INNER_OUT", 3, 3, "FAILED", "RELEASE_VALID: expired")] },
+  { truckVisitId: 4398, visitNo: "TV-26-04398", visitTypeCode: "EMPTY_PICKUP", conveyance: "TRUCK", plateNo: "T 880 DFF", driverName: "Yusuf Bakari", transporter: "Upepo Transporters", status: "EXITED", currentSeqNo: 4, arrivedAt: at(5), admittedAt: at(4.8), checkedOutAt: at(4.2), exitedAt: at(4.1), waitingMin: 0, gatePassNo: "GP-26-08802", isOfflineEntry: true, units: [vu(inYard[33], "PICK", "DONE")], checkpoints: [cp("OUTER_IN", 1, 5, "PASSED", void 0, true), cp("INNER_IN", 2, 4.8, "PASSED", void 0, true), cp("INNER_OUT", 3, 4.2), cp("OUTER_OUT", 4, 4.1)] }
+];
+registerSearch((q) => {
+  const n = q.replace(/\s/g, "").toUpperCase();
+  const hits = visits.filter((v) => (v.plateNo ?? "").replace(/\s/g, "").includes(n) || (v.visitNo ?? "").includes(n)).slice(0, 5).map((v) => ({
+    id: v.truckVisitId,
+    title: `${v.plateNo} \xB7 ${v.visitNo}`,
+    subtitle: `${VISIT_TYPES[v.visitTypeCode]} \xB7 ${v.driverName}`,
+    status: v.status,
+    link: { entityName: "truck_visit", entityId: v.truckVisitId },
+    to: `/gate/visits/${v.truckVisitId}`
+  }));
+  return hits.length ? { entity: "TRUCK_VISIT", label: "Truck visits", hits } : null;
+});
+
 // src/data/ops.ts
 var inYard2 = allStays.filter((s) => s.physicalStatus === "IN_YARD" && s.cargoUnit.category === "CONTAINER");
 var pad = (n) => String(n).padStart(2, "0");
@@ -7982,9 +8660,9 @@ for (const v of visits) {
     { at: at(0.38), title: "Exception EX-26-00881 opened", detail: "Seal mismatch at gate-in \xB7 assigned to operations manager", by: "System", tone: "wait" },
     { at: at(0.3), title: "Override requested: APR-26-00414", detail: "Seal number on paper EIR mistyped; photo shows seal ML-7781203 intact", by: "Gate \xB7 Hamisi J.", tone: "wait" }
   );
-  const r = visitExtras[4402];
-  r.exceptionNo = "EX-26-00879";
-  r.events.push(
+  const r3 = visitExtras[4402];
+  r3.exceptionNo = "EX-26-00879";
+  r3.events.push(
     { at: at(3), title: "Gate-out check failed", detail: "Release order RO-DAR1-26-01918 expired at 07:30. Agent must extend it.", by: "Release engine", tone: "stop" },
     { at: at(2.95), title: "Truck turned back, unit pick-up cancelled", detail: "Driver told to return after Kilele C&F renews the release", by: "Gate \xB7 Rose A.", tone: "stop" },
     { at: at(2.9), title: "Exception EX-26-00879 opened for customer service", by: "System", tone: "wait" }
@@ -8011,7 +8689,7 @@ for (let wd = 1; wd <= 6; wd++) {
     });
   }
 }
-var ruleFor = (weekday, t) => slotRules.find((r) => r.weekday === weekday && r.visitTypeCode === t);
+var ruleFor = (weekday, t) => slotRules.find((r3) => r3.weekday === weekday && r3.visitTypeCode === t);
 var DRIVERS = ["Juma Selemani", "Athumani Said", "Godfrey Mollel", "Ramadhani Issa", "Emmanuel Mushi", "Salim Hamad", "Zuberi Kitwana", "Joseph Mbwambo", "Omari Shabani", "Victor Lema", "Hamza Mfinanga", "Daudi Swai"];
 var PLATE_SUFFIX = ["DKA", "DLM", "DGT", "DMB", "DPE", "DQA", "DRC", "DHN", "DJK"];
 var appointments = [];
@@ -8031,8 +8709,8 @@ for (let d = -1; d <= 6; d++) {
       for (let i = 0; i < n; i++) {
         const start = /* @__PURE__ */ new Date(`${date}T${pad(h)}:00:00+03:00`);
         const past = start.getTime() + 36e5 < (/* @__PURE__ */ new Date("2026-10-07T10:30:00+03:00")).getTime();
-        const r = rnd();
-        const status = r < 0.06 ? "CANCELLED" : past ? r < 0.16 ? "MISSED" : d < 0 || h < 9 ? "COMPLETED" : "ARRIVED" : "BOOKED";
+        const r3 = rnd();
+        const status = r3 < 0.06 ? "CANCELLED" : past ? r3 < 0.16 ? "MISSED" : d < 0 || h < 9 ? "COMPLETED" : "ARRIVED" : "BOOKED";
         appointments.push({
           appointmentId: ++apptId,
           appointmentNo: `AP-26-${1e4 + apptId}`,
@@ -8074,9 +8752,9 @@ var BLOCKED_SLOTS = { "B-05-10": "Drainage repair until 10 Oct", "A-01-01": "Nex
 function freeSlots(blockCode, skip, n = 3) {
   const b = blocks.find((x) => x.code === blockCode);
   const out = [];
-  for (let r = 1; r <= b.rows && out.length < n + skip; r++) {
+  for (let r3 = 1; r3 <= b.rows && out.length < n + skip; r3++) {
     for (let c = 1; c <= b.bays && out.length < n + skip; c++) {
-      const g2 = `${b.code}-${pad(r)}-${pad(c)}`;
+      const g2 = `${b.code}-${pad(r3)}-${pad(c)}`;
       if (!BLOCKED_SLOTS[g2] && (heightAt.get(g2) ?? 0) < b.tiers) out.push(g2);
     }
   }
@@ -8524,7 +9202,7 @@ var estimates = ESTIMATE_STATES.map((status, i) => {
   const s = i === 2 ? empties[7] : empties[(3 + i * 5) % empties.length];
   const tmpl = LINE_TEMPLATES[[4, 1, 2, 0, 3][i % 5]];
   const lines = tmpl.map(([code, loc, qty, mat, resp], k) => {
-    const hrs = Number(repairCodes.find((r) => r.repairCode === code).defaultLabourHours) * qty;
+    const hrs = Number(repairCodes.find((r3) => r3.repairCode === code).defaultLabourHours) * qty;
     const lineStatus = status === "APPROVED" ? "APPROVED" : status === "COMPLETED" ? "DONE" : status === "REJECTED" ? "REJECTED" : status === "PARTIAL" ? k === 0 ? "REJECTED" : "APPROVED" : "PROPOSED";
     return { repairEstimateLineId: ++relId, lineNo: k + 1, repairCode: code, locationDetail: loc, quantity: String(qty), labourHours: hrs.toFixed(1), labourCost: money(hrs * LABOUR_RATE), materialCost: money(mat), responsibility: resp, lineStatus };
   });
@@ -8554,615 +9232,6 @@ var estimates = ESTIMATE_STATES.map((status, i) => {
     lines
   };
 });
-
-// src/v1/controllers/gate/weighbridge.controller.ts
-var inMemoryTickets = JSON.parse(JSON.stringify(tickets)).map((t) => ({
-  ...t,
-  siteId: t.siteId || 1,
-  weighingId: Number(t.weighingId),
-  ticketId: Number(t.weighingId)
-}));
-var gateWeighbridgeController = {
-  getTickets: async (req, res) => {
-    try {
-      const siteIdParam = req.query.siteId || req.siteId;
-      let items = [];
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          try {
-            const queryPromise = prisma5.weighing.findMany({
-              include: {
-                truck_visit: {
-                  include: { m_truck_truck_visit_truck_idTom_truck: true, m_driver: true }
-                },
-                unit_stay: {
-                  include: { unit_stay_cargo_units: true }
-                }
-              },
-              orderBy: { weighing_id: "desc" }
-            });
-            const timeoutPromise = new Promise(
-              (_, reject) => setTimeout(() => reject(new Error("Connection pool timeout")), 1200)
-            );
-            const dbTickets = await Promise.race([queryPromise, timeoutPromise]);
-            if (dbTickets && dbTickets.length > 0) {
-              const mapped = dbTickets.map((t) => {
-                const net = t.gross_kg && t.tare_kg ? Number(t.gross_kg) - Number(t.tare_kg) : void 0;
-                let status = "OK";
-                if (t.override_approval_ref) {
-                  status = "OVERRIDDEN";
-                } else if (t.within_tolerance === false) {
-                  status = "OVERRIDE_PENDING";
-                } else if (!t.declared_kg) {
-                  status = "NO_DECLARED";
-                }
-                return {
-                  weighingId: Number(t.weighing_id),
-                  ticketId: Number(t.weighing_id),
-                  ticketNo: t.ticket_no,
-                  siteId: t.site_id || 1,
-                  weighKind: t.weigh_kind,
-                  truckVisitId: t.truck_visit_id ? Number(t.truck_visit_id) : void 0,
-                  unitStayId: t.unit_stay_id ? Number(t.unit_stay_id) : void 0,
-                  plateNo: t.truck_visit?.m_truck_truck_visit_truck_idTom_truck?.plate_no || "T 902 DMB",
-                  unitNo: t.unit_stay?.unit_stay_cargo_units?.unit_no || void 0,
-                  grossKg: String(t.gross_kg ?? 0),
-                  tareKg: String(t.tare_kg ?? 0),
-                  netKg: net !== void 0 ? String(net) : void 0,
-                  containerTareKg: t.container_tare_kg ? String(t.container_tare_kg) : void 0,
-                  declaredKg: t.declared_kg ? String(t.declared_kg) : void 0,
-                  variancePct: t.variance_pct ? String(t.variance_pct) : void 0,
-                  withinTolerance: t.within_tolerance ?? true,
-                  source: t.source || "DEVICE",
-                  deviceRef: t.device_ref || "WB-01",
-                  weighedAt: t.weighed_at?.toISOString() || t.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
-                  operator: t.createdby || "Ally S.",
-                  status,
-                  approvalNo: t.override_approval_ref ? `APR-26-00${t.override_approval_ref}` : t.within_tolerance === false ? "APR-26-00416" : void 0
-                };
-              });
-              const dbIds = new Set(mapped.map((m) => m.weighingId));
-              items = [...mapped, ...inMemoryTickets.filter((x) => !dbIds.has(x.weighingId))];
-            }
-          } catch (err) {
-            console.warn("[gateWeighbridgeController.getTickets] DB query error or timeout, falling back:", err.message);
-          }
-        }
-      }
-      if (!items || items.length === 0) {
-        items = [...inMemoryTickets];
-      }
-      if (siteIdParam && siteIdParam.toLowerCase() !== "all") {
-        const sid = Number(siteIdParam);
-        if (!isNaN(sid) && sid > 0) {
-          items = items.filter((t) => (t.siteId ?? 1) === sid);
-        }
-      }
-      return res.json(items);
-    } catch (err) {
-      console.warn("[gateWeighbridgeController.getTickets] Unexpected error, returning fallback:", err.message);
-      return res.json(inMemoryTickets);
-    }
-  },
-  createTicket: async (req, res) => {
-    try {
-      const siteId = Number(req.siteId || req.body.siteId) || 1;
-      const truckVisitId = req.body.truckVisitId ? Number(req.body.truckVisitId) : null;
-      const unitStayId = req.body.unitStayId ? Number(req.body.unitStayId) : null;
-      const gross = req.body.grossKg ? parseFloat(req.body.grossKg) : 37820;
-      const tare = req.body.tareKg ? parseFloat(req.body.tareKg) : 15400;
-      const ctrTare = req.body.containerTareKg ? parseFloat(req.body.containerTareKg) : null;
-      const declared = req.body.declaredKg ? parseFloat(req.body.declaredKg) : null;
-      const kind = req.body.weighKind || "OUT";
-      const source = req.body.source || "DEVICE";
-      const net = gross - tare;
-      const compare = kind === "VGM" ? gross - tare + (ctrTare || 0) : net;
-      const variance = declared ? (compare - declared) / declared * 100 : void 0;
-      const withinTol = req.body.withinTolerance !== void 0 ? Boolean(req.body.withinTolerance) : variance !== void 0 ? Math.abs(variance) <= 5 : true;
-      const maxId = inMemoryTickets.reduce((m, x) => Math.max(m, Number(x.weighingId) || 0), 5531);
-      const weighingId = maxId + 1;
-      const ticketNo = req.body.ticketNo || `WT-DAR1-26-${weighingId}`;
-      let status = "OK";
-      if (!declared) {
-        status = "NO_DECLARED";
-      } else if (!withinTol) {
-        status = "OVERRIDE_PENDING";
-      }
-      const newTicket = {
-        weighingId,
-        ticketId: weighingId,
-        ticketNo,
-        siteId,
-        weighKind: kind,
-        truckVisitId: truckVisitId || void 0,
-        unitStayId: unitStayId || void 0,
-        plateNo: req.body.plateNo || "T 902 DMB",
-        unitNo: req.body.unitNo || void 0,
-        grossKg: String(gross),
-        tareKg: String(tare),
-        netKg: String(net),
-        containerTareKg: ctrTare ? String(ctrTare) : void 0,
-        declaredKg: declared ? String(declared) : void 0,
-        variancePct: variance !== void 0 ? variance.toFixed(1) : void 0,
-        withinTolerance: withinTol,
-        source,
-        deviceRef: source === "DEVICE" ? req.body.deviceRef || "WB-01" : void 0,
-        weighedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        operator: req.body.operator || "Ally S.",
-        status: req.body.status || status,
-        approvalNo: !withinTol ? `APR-26-00${420 + weighingId % 100}` : void 0
-      };
-      inMemoryTickets.unshift(newTicket);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.weighing.create({
-            data: {
-              site_id: siteId,
-              ticket_no: ticketNo,
-              weigh_kind: kind,
-              truck_visit_id: truckVisitId,
-              unit_stay_id: unitStayId,
-              gross_kg: gross,
-              tare_kg: tare,
-              container_tare_kg: ctrTare,
-              declared_kg: declared,
-              variance_pct: variance !== void 0 ? variance : null,
-              within_tolerance: withinTol,
-              source,
-              device_ref: source === "DEVICE" ? "WB-01" : void 0,
-              weighed_at: /* @__PURE__ */ new Date(),
-              createdby: "You"
-            }
-          }).catch((err) => console.warn("[createTicket] DB background create error:", err.message));
-        }
-      }
-      return sendCreated(res, newTicket);
-    } catch (err) {
-      return sendError(res, err.message, 500);
-    }
-  },
-  requestOverride: async (req, res) => {
-    try {
-      const id = parseInt(req.params.ticketId || req.params.id, 10);
-      const approvalNo = `APR-26-00${420 + id % 100}`;
-      const local = inMemoryTickets.find((t) => t.weighingId === id || t.ticketId === id);
-      if (local) {
-        local.status = "OVERRIDDEN";
-        local.approvalNo = approvalNo;
-      }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.weighing.update({
-            where: { weighing_id: id },
-            data: {
-              override_approval_ref: BigInt(420 + id % 100)
-            }
-          }).catch((err) => console.warn("[requestOverride] DB background update error:", err.message));
-        }
-      }
-      return sendSuccess(res, {
-        success: true,
-        approvalNo,
-        message: "Override approved by duty manager",
-        ticket: local
-      });
-    } catch (err) {
-      return sendError(res, err.message, 500);
-    }
-  },
-  printTicket: async (req, res) => {
-    const id = parseInt(req.params.ticketId || req.params.id, 10);
-    return sendSuccess(res, {
-      success: true,
-      printedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      ticketId: id
-    });
-  }
-};
-
-// src/v1/routes/gate/gate.routes.ts
-var gateRoutes = (0, import_express2.Router)();
-gateRoutes.get("/gate/queue", requireSite(false), requirePermission("gate.visit.checkin"), gateQueueController.getQueue);
-gateRoutes.get("/gate/queue/summary", requireSite(false), requirePermission("gate.visit.checkin"), gateQueueController.getQueueSummary);
-gateRoutes.get("/gate/lanes", requireSite(false), requirePermission("gate.visit.checkin"), gateLaneController.getLanes);
-gateRoutes.post("/gate/lanes/:laneId/open-barrier", requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateLaneController.openBarrier);
-gateRoutes.get("/gate-passes/:token", requireSite(false), requirePermission("gate.visit.checkin"), gateLaneController.getGatePass);
-gateRoutes.get("/appointments", requireSite(false), requirePermission("appointment.manage"), gateAppointmentsController.getAppointments);
-gateRoutes.post("/appointments", requireSite(false), requirePermission("appointment.manage", "DO"), gateAppointmentsController.createAppointment);
-gateRoutes.patch(["/appointments/:id", "/appointments/:id/status"], requireSite(false), requirePermission("appointment.manage", "DO"), gateAppointmentsController.updateAppointmentStatus);
-gateRoutes.get("/appointments/slot-rules", requireSite(false), requirePermission("appointment.manage"), gateAppointmentsController.getSlotRules);
-gateRoutes.get("/appointments/:id", requireSite(false), requirePermission("appointment.manage"), gateAppointmentsController.getAppointmentById);
-gateRoutes.get(["/truck-visits", "/gate/visits"], requireSite(false), requirePermission("gate.visit.checkin"), gateVisitsController.getVisits);
-gateRoutes.post(["/truck-visits", "/gate/visits"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.createVisit);
-gateRoutes.get(["/truck-visits/:id", "/gate/visits/:id"], requireSite(false), requirePermission("gate.visit.checkin"), gateVisitsController.getVisitById);
-gateRoutes.patch(["/truck-visits/:id", "/gate/visits/:id"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.updateVisitStatus);
-gateRoutes.post(["/truck-visits/:id\\:checkin", "/gate/visits/:id\\:checkin", "/truck-visits/:id/checkin", "/gate/visits/:id/checkin"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.checkin);
-gateRoutes.post(["/truck-visits/:id\\:checkout", "/gate/visits/:id\\:checkout", "/truck-visits/:id/checkout", "/gate/visits/:id/checkout"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.checkout);
-gateRoutes.post(["/truck-visits/:id\\:cancel", "/gate/visits/:id\\:cancel", "/truck-visits/:id/cancel", "/gate/visits/:id/cancel"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.cancelVisit);
-gateRoutes.post(["/truck-visits/:id/turn-back", "/gate/visits/:id/turn-back"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.turnBack);
-gateRoutes.post(["/truck-visits/:id/checkpoint-events", "/gate/visits/:id/checkpoint-events"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.recordCheckpointEvent);
-gateRoutes.post(["/truck-visits/:id/gate-pass\\:print", "/gate/visits/:id/gate-pass\\:print"], requireSite(false), requirePermission("gate.visit.checkin", "DO"), gateVisitsController.printGatePass);
-gateRoutes.get(["/weighbridge/tickets", "/weighings"], requireSite(false), requirePermission("weighbridge.ticket"), gateWeighbridgeController.getTickets);
-gateRoutes.post(["/weighbridge/tickets", "/weighings"], requireSite(false), requirePermission("weighbridge.ticket", "DO"), gateWeighbridgeController.createTicket);
-gateRoutes.post(["/weighbridge/tickets/:ticketId/override-request", "/weighings/:ticketId/override-request"], requireSite(false), requirePermission("weighbridge.ticket", "DO"), gateWeighbridgeController.requestOverride);
-gateRoutes.post(["/weighbridge/tickets/:ticketId/print", "/weighings/:ticketId/print"], requireSite(false), requirePermission("weighbridge.ticket", "DO"), gateWeighbridgeController.printTicket);
-
-// src/v1/routes/yard/yard.routes.ts
-var import_express3 = require("express");
-
-// src/v1/controllers/yard/map.controller.ts
-var yardMapController = {
-  getYardMap: async (req, res) => {
-    try {
-      const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : 1;
-      const NON_BLOCK_KINDS = /* @__PURE__ */ new Set(["AREA", "KEY_CABINET", "AISLE"]);
-      const NON_BLOCK_CODES = /* @__PURE__ */ new Set(["MAIN", "KC1", "AREA", "GATE", "WH1", "VEH"]);
-      const isRealBlock = (code) => {
-        const c = (code || "").toUpperCase().replace("BLOCK-", "");
-        if (NON_BLOCK_CODES.has(c)) return false;
-        if (c.startsWith("AREA") || c.startsWith("KC") || c.startsWith("WH") || c.startsWith("GATE") || c.startsWith("MAIN")) return false;
-        return true;
-      };
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const dbLocations = await prisma5.m_yard_location.findMany({
-            where: siteId ? { site_id: siteId } : {},
-            include: {
-              unit_stay: {
-                include: {
-                  unit_stay_cargo_units: true
-                }
-              }
-            },
-            orderBy: { yard_location_id: "asc" }
-          });
-          if (dbLocations && dbLocations.length > 0) {
-            const mappedLocations = dbLocations.filter((l) => l.is_slot || l.location_kind === "SLOT").map((l) => {
-              const codeParts = (l.location_code || l.full_code || "A-01-01-1").split("-");
-              let blockLetter = l.location_code.startsWith("BLOCK-") ? l.location_code.replace("BLOCK-", "") : codeParts[0] || "A";
-              if (blockLetter === "REEFER") blockLetter = "R";
-              const bay = parseInt(codeParts[1], 10) || 1;
-              const row = parseInt(codeParts[2], 10) || 1;
-              const tier = parseInt(codeParts[3], 10) || 1;
-              const stays2 = l.unit_stay;
-              const activeStay = stays2 && stays2.length > 0 ? stays2[0] : null;
-              return {
-                yardLocationId: l.yard_location_id,
-                locationCode: l.location_code,
-                fullCode: l.full_code || l.location_code,
-                blockCode: blockLetter,
-                bay,
-                row,
-                tier,
-                status: activeStay ? "OCCUPIED" : l.is_blocked ? "BLOCKED" : "AVAILABLE",
-                isBlocked: l.is_blocked,
-                unitNumber: activeStay?.unit_stay_cargo_units?.unit_no || activeStay?.unit_stay_cargo_units?.unit_number,
-                mapX: l.map_x ? Number(l.map_x) : void 0,
-                mapY: l.map_y ? Number(l.map_y) : void 0,
-                mapW: l.map_w ? Number(l.map_w) : void 0,
-                mapH: l.map_h ? Number(l.map_h) : void 0
-              };
-            });
-            const blockMap = /* @__PURE__ */ new Map();
-            dbLocations.filter((l) => l.location_kind === "BLOCK" && isRealBlock(l.location_code)).forEach((l) => {
-              let code = l.location_code.replace("BLOCK-", "").toUpperCase();
-              if (code === "REEFER") code = "R";
-              blockMap.set(code, {
-                blockId: l.yard_location_id,
-                blockCode: code,
-                blockName: `Block ${code}`,
-                kind: "BLOCK",
-                zoneType: code === "R" ? "REEFER" : code === "EXAM" ? "EXAM" : code.startsWith("V") ? "VEHICLE" : "DRY",
-                baysCount: code === "R" ? 8 : code === "EXAM" ? 6 : code.startsWith("V") ? 6 : 12,
-                rowsCount: code === "R" ? 4 : code === "EXAM" ? 2 : code.startsWith("V") ? 4 : 6,
-                tiersCount: l.max_tier || (code === "R" ? 3 : code === "EXAM" ? 2 : code.startsWith("V") ? 1 : 4),
-                totalSlots: code === "R" ? 96 : code === "EXAM" ? 24 : code.startsWith("V") ? 24 : 288,
-                occupiedSlots: 0
-              });
-            });
-            dbLocations.filter((l) => (l.is_slot || l.location_kind === "SLOT") && isRealBlock(l.location_code)).forEach((l) => {
-              let code = (l.location_code || "").split("-")[0].toUpperCase();
-              if (code === "REEFER") code = "R";
-              if (isRealBlock(code)) {
-                if (!blockMap.has(code)) {
-                  blockMap.set(code, {
-                    blockId: l.parent_id || l.yard_location_id,
-                    blockCode: code,
-                    blockName: `Block ${code}`,
-                    kind: "BLOCK",
-                    zoneType: code === "R" ? "REEFER" : code === "EXAM" ? "EXAM" : code.startsWith("V") ? "VEHICLE" : "DRY",
-                    baysCount: code === "R" ? 8 : code === "EXAM" ? 6 : code.startsWith("V") ? 6 : 12,
-                    rowsCount: code === "R" ? 4 : code === "EXAM" ? 2 : code.startsWith("V") ? 4 : 6,
-                    tiersCount: code === "R" ? 3 : code === "EXAM" ? 2 : code.startsWith("V") ? 1 : 4,
-                    totalSlots: code === "R" ? 96 : code === "EXAM" ? 24 : code.startsWith("V") ? 24 : 288,
-                    occupiedSlots: 0
-                  });
-                }
-                const stays2 = l.unit_stay;
-                if (stays2 && stays2.length > 0 && blockMap.has(code)) {
-                  blockMap.get(code).occupiedSlots += stays2.length;
-                }
-              }
-            });
-            if (blockMap.size === 0) {
-              const standardCodes = siteId === 2 ? ["V1", "V2"] : ["A", "B", "C", "D", "R"];
-              standardCodes.forEach((sc, idx) => {
-                blockMap.set(sc, {
-                  blockId: idx + 1,
-                  blockCode: sc,
-                  blockName: `Block ${sc}`,
-                  kind: "BLOCK",
-                  zoneType: sc === "R" ? "REEFER" : sc.startsWith("V") ? "VEHICLE" : "DRY",
-                  baysCount: sc === "R" ? 8 : sc.startsWith("V") ? 6 : 12,
-                  rowsCount: sc === "R" ? 4 : sc.startsWith("V") ? 4 : 6,
-                  tiersCount: sc === "R" ? 3 : sc.startsWith("V") ? 1 : 4,
-                  totalSlots: sc === "R" ? 96 : sc.startsWith("V") ? 24 : 288,
-                  occupiedSlots: 0
-                });
-              });
-            }
-            const dbBlocks = Array.from(blockMap.values()).sort((a, b) => a.blockCode.localeCompare(b.blockCode));
-            return res.json({
-              blocks: dbBlocks,
-              locations: mappedLocations,
-              totalLocations: mappedLocations.length
-            });
-          }
-        }
-      }
-      const siteFallbackBlocks = blocks.filter((b) => b.siteId === siteId);
-      const defaultBlocks = siteId === 2 ? blocks.filter((b) => b.siteId === 2) : blocks.filter((b) => b.siteId === 1);
-      const effectiveBlocks = siteFallbackBlocks.length > 0 ? siteFallbackBlocks : defaultBlocks;
-      res.json({
-        blocks: effectiveBlocks,
-        nodes: yardNodes.filter((n) => n.siteId === siteId).slice(0, 50),
-        totalLocations: 50
-      });
-    } catch (err) {
-      console.error("getYardMap error:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
-  getBlocks: async (req, res) => {
-    try {
-      const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : void 0;
-      const NON_BLOCK_CODES = /* @__PURE__ */ new Set(["MAIN", "KC1", "AREA", "GATE", "WH1", "VEH"]);
-      const isRealBlock = (code) => {
-        const c = (code || "").toUpperCase().replace("BLOCK-", "");
-        if (NON_BLOCK_CODES.has(c)) return false;
-        if (c.startsWith("AREA") || c.startsWith("KC") || c.startsWith("WH") || c.startsWith("GATE") || c.startsWith("MAIN")) return false;
-        return true;
-      };
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const dbLocations = await prisma5.m_yard_location.findMany({
-            where: siteId ? { site_id: siteId } : {},
-            include: {
-              unit_stay: true
-            },
-            orderBy: { yard_location_id: "asc" }
-          });
-          if (dbLocations && dbLocations.length > 0) {
-            const blockMap = /* @__PURE__ */ new Map();
-            dbLocations.filter((l) => isRealBlock(l.location_code)).forEach((l) => {
-              const blockCode = l.location_code.startsWith("BLOCK-") ? l.location_code.replace("BLOCK-", "") : l.location_code.split("-")[0] || "A";
-              if (!blockMap.has(blockCode)) {
-                blockMap.set(blockCode, {
-                  blockId: l.yard_location_id,
-                  blockCode,
-                  blockName: `Block ${blockCode}`,
-                  zoneType: blockCode === "R" ? "REEFER" : blockCode.startsWith("V") ? "VEHICLE" : "DRY",
-                  baysCount: blockCode === "R" ? 8 : blockCode.startsWith("V") ? 6 : 12,
-                  rowsCount: blockCode === "R" ? 4 : blockCode.startsWith("V") ? 4 : 6,
-                  tiersCount: blockCode === "R" ? 3 : blockCode.startsWith("V") ? 1 : 4,
-                  totalSlots: blockCode === "R" ? 96 : blockCode.startsWith("V") ? 24 : 288,
-                  occupiedSlots: 0
-                });
-              }
-              const stays2 = l.unit_stay;
-              if (stays2 && stays2.length > 0 && blockMap.has(blockCode)) {
-                blockMap.get(blockCode).occupiedSlots += stays2.length;
-              }
-            });
-            const items = Array.from(blockMap.values());
-            return res.json({ items, total: items.length });
-          }
-        }
-      }
-      const siteFallbackBlocks = blocks.filter((b) => !siteId || b.siteId === siteId);
-      res.json({ items: siteFallbackBlocks.length > 0 ? siteFallbackBlocks : blocks, total: siteFallbackBlocks.length });
-    } catch (err) {
-      console.error("getBlocks error:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
-  getLocations: async (req, res) => {
-    try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const dbLocs = await prisma5.m_yard_location.findMany({
-            include: {
-              unit_stay: {
-                include: {
-                  unit_stay_cargo_units: true
-                }
-              }
-            },
-            orderBy: { yard_location_id: "asc" }
-          });
-          if (dbLocs && dbLocs.length > 0) {
-            const items2 = dbLocs.map((l) => {
-              const codeParts = (l.location_code || l.full_code || "A-01-01-1").split("-");
-              const blockLetter = l.location_code.startsWith("BLOCK-") ? l.location_code.replace("BLOCK-", "") : codeParts[0] || "A";
-              const bay = parseInt(codeParts[1], 10) || 1;
-              const row = parseInt(codeParts[2], 10) || 1;
-              const tier = parseInt(codeParts[3], 10) || 1;
-              const stays2 = l.unit_stay;
-              const activeStay = stays2 && stays2.length > 0 ? stays2[0] : null;
-              return {
-                yardLocationId: l.yard_location_id,
-                siteId: l.site_id,
-                locationCode: l.location_code,
-                fullCode: l.full_code || l.location_code,
-                blockCode: blockLetter,
-                bay,
-                row,
-                tier,
-                isBlocked: l.is_blocked,
-                status: activeStay ? "OCCUPIED" : l.is_blocked ? "BLOCKED" : "AVAILABLE",
-                unitNumber: activeStay?.unit_stay_cargo_units?.unit_no || activeStay?.unit_stay_cargo_units?.unit_number,
-                logInst: l.log_inst || 1
-              };
-            });
-            return res.json({ items: items2, total: items2.length, nextCursor: null });
-          }
-        }
-      }
-      const items = yardNodes.slice(0, 100).map((n, i) => ({
-        yardLocationId: i + 1,
-        siteId: 1,
-        locationCode: n.fullCode || `LOC-${i + 1}`,
-        fullCode: n.fullCode || `A-01-${String(i + 1).padStart(2, "0")}-1`,
-        blockCode: n.fullCode ? n.fullCode.slice(0, 1) : "A",
-        bay: 1,
-        row: 1,
-        tier: 1,
-        isBlocked: Boolean(blockedSlots[n.fullCode]),
-        status: "ACTIVE",
-        logInst: 1
-      }));
-      res.json({ items, total: items.length, nextCursor: null });
-    } catch (err) {
-      console.error("getLocations error:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
-  getOccupancy: async (_req, res) => {
-    try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const totalUnitsInYard = await prisma5.unit_stay.count({
-            where: {
-              physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
-            }
-          });
-          const reeferUnits = await prisma5.unit_stay.count({
-            where: {
-              reefer_set_temp_c: { not: null },
-              physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
-            }
-          });
-          const dgUnits = await prisma5.unit_stay.count({
-            where: {
-              imo_class: { not: null },
-              physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
-            }
-          });
-          const totalCapacityTeu = 12500;
-          const occupiedTeu = Math.max(totalUnitsInYard * 1.5, 420);
-          const occupancyRate = Number((occupiedTeu / totalCapacityTeu * 100).toFixed(2));
-          return res.json({
-            totalCapacityTeu,
-            occupiedTeu: Math.round(occupiedTeu),
-            occupancyRate,
-            reeferOccupancyRate: reeferUnits > 0 ? Number((reeferUnits / 500 * 100).toFixed(1)) : 42.5,
-            dangerousGoodsRate: dgUnits > 0 ? Number((dgUnits / 200 * 100).toFixed(1)) : 14.2,
-            availableSlots: totalCapacityTeu - Math.round(occupiedTeu)
-          });
-        }
-      }
-      res.json({
-        totalCapacityTeu: 12500,
-        occupiedTeu: 8420,
-        occupancyRate: 67.36,
-        reeferOccupancyRate: 54.2,
-        dangerousGoodsRate: 18.4,
-        availableSlots: 4080
-      });
-    } catch (err) {
-      console.error("getOccupancy error:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
-  getBlockSlots: async (req, res) => {
-    try {
-      const blockIdOrCode = req.params.blockId;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const id = Number(blockIdOrCode);
-          let blockLetter = String(blockIdOrCode).toUpperCase();
-          if (Number.isFinite(id)) {
-            const blockLoc = await prisma5.m_yard_location.findUnique({ where: { yard_location_id: id } });
-            if (blockLoc) {
-              blockLetter = blockLoc.location_code.replace("BLOCK-", "");
-            }
-          }
-          const slots = await prisma5.m_yard_location.findMany({
-            where: {
-              OR: [
-                { location_code: { startsWith: blockLetter + "-" } },
-                { full_code: { startsWith: blockLetter + "-" } },
-                ...Number.isFinite(id) ? [{ parent_id: id }] : []
-              ]
-            },
-            include: {
-              unit_stay: {
-                include: {
-                  unit_stay_cargo_units: true
-                }
-              }
-            },
-            orderBy: { location_code: "asc" }
-          });
-          const items = slots.map((s) => ({
-            yardLocationId: s.yard_location_id,
-            locationCode: s.location_code,
-            fullCode: s.full_code,
-            isBlocked: s.is_blocked,
-            blockedReason: s.blocked_reason,
-            units: (s.unit_stay || []).map((u) => ({
-              unitStayId: u.unit_stay_id,
-              unitNo: u.unit_stay_cargo_units?.unit_no,
-              physicalStatus: u.physical_status,
-              flow: u.flow
-            }))
-          }));
-          return res.json({ block: blockLetter, slots: items, total: items.length });
-        }
-      }
-      return res.json({ block: blockIdOrCode, slots: [], total: 0 });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  },
-  blockSlot: async (req, res) => {
-    try {
-      const slotCode = req.params.slotCode || req.body.slotCode || req.body.locationCode;
-      const reason = req.body.reason || "Blocked by user";
-      const result = await setupService.blockSlot(slotCode, reason);
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  },
-  unblockSlot: async (req, res) => {
-    try {
-      const slotCode = req.params.slotCode || req.body.slotCode || req.body.locationCode;
-      const result = await setupService.unblockSlot(slotCode);
-      res.json(result);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  }
-};
 
 // src/v1/controllers/yard/moves.controller.ts
 var VALID_MOVE_KINDS = ["PICK_FOR_VISIT", "FROM_ACTIVITY", "TO_ACTIVITY", "RESHUFFLE", "RELOCATE", "PLACE"];
@@ -9200,13 +9269,19 @@ var yardMovesController = {
     try {
       const siteId = parseSiteId(req.query.siteId || req.headers["x-site-id"] || req.siteId);
       const { status, equipmentCode } = req.query;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const whereClause = {};
           if (siteId) whereClause.site_id = siteId;
-          if (status && typeof status === "string") whereClause.status = status;
-          const dbMoves = await prisma5.move_order.findMany({
+          if (status && typeof status === "string") {
+            if (status.toUpperCase() === "COMPLETED" || status.toUpperCase() === "DONE") {
+              whereClause.status = { in: ["DONE", "COMPLETED"] };
+            } else {
+              whereClause.status = status;
+            }
+          }
+          const dbMoves = await prisma4.move_order.findMany({
             where: whereClause,
             include: {
               unit_stay: {
@@ -9311,10 +9386,10 @@ var yardMovesController = {
         return res.status(400).json({ success: false, message: "unitStayId is required" });
       }
       const normalizedKind = normalizeMoveKind(moveKind || moveType);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const newOrder = await prisma5.move_order.create({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const newOrder = await prisma4.move_order.create({
             data: {
               site_id: siteId,
               unit_stay_id: BigInt(unitStayId),
@@ -9393,10 +9468,10 @@ var yardMovesController = {
       if (!moveOrderId) {
         return res.status(400).json({ success: false, message: "moveOrderId is required" });
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const updated = await prisma5.move_order.update({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const updated = await prisma4.move_order.update({
             where: { move_order_id: BigInt(moveOrderId) },
             data: {
               status: "IN_PROGRESS",
@@ -9429,20 +9504,20 @@ var yardMovesController = {
       if (!moveOrderId) {
         return res.status(400).json({ success: false, message: "moveOrderId is required" });
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const existing = await prisma5.move_order.findUnique({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const existing = await prisma4.move_order.findUnique({
             where: { move_order_id: BigInt(moveOrderId) }
           });
           if (!existing) {
             return res.status(404).json({ success: false, message: "Move order not found" });
           }
           const targetLocationId = toLocationId ? Number(toLocationId) : existing.to_location_id;
-          const updated = await prisma5.move_order.update({
+          const updated = await prisma4.move_order.update({
             where: { move_order_id: BigInt(moveOrderId) },
             data: {
-              status: "COMPLETED",
+              status: "DONE",
               completed_at: /* @__PURE__ */ new Date(),
               to_location_id: targetLocationId,
               updatedby: req.user?.sub || "system",
@@ -9450,7 +9525,7 @@ var yardMovesController = {
             }
           });
           if (targetLocationId && existing.unit_stay_id) {
-            await prisma5.unit_stay.update({
+            await prisma4.unit_stay.update({
               where: { unit_stay_id: existing.unit_stay_id },
               data: {
                 current_location_id: targetLocationId,
@@ -9492,17 +9567,17 @@ var yardMovesController = {
       if (!moveOrderId) {
         return res.status(400).json({ success: false, message: "moveOrderId is required" });
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           let resolvedEquipmentId = equipmentId ? Number(equipmentId) : void 0;
           if (!resolvedEquipmentId && equipmentCode) {
-            const eq = await prisma5.m_equipment.findFirst({
+            const eq = await prisma4.m_equipment.findFirst({
               where: { equipment_code: String(equipmentCode) }
             });
             if (eq) resolvedEquipmentId = eq.equipment_id;
           }
-          const updated = await prisma5.move_order.update({
+          const updated = await prisma4.move_order.update({
             where: { move_order_id: BigInt(moveOrderId) },
             data: {
               assigned_equipment_id: resolvedEquipmentId ?? null,
@@ -9550,10 +9625,10 @@ var yardMovesController = {
       if (!moveId) {
         return res.status(400).json({ success: false, message: "moveId is required" });
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const updated = await prisma5.move_order.update({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const updated = await prisma4.move_order.update({
             where: { move_order_id: BigInt(moveId) },
             data: {
               status: "IN_PROGRESS",
@@ -9582,17 +9657,17 @@ var yardMovesController = {
   getEquipment: async (req, res) => {
     try {
       const siteId = parseSiteId(req.query.siteId || req.headers["x-site-id"] || req.siteId);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const whereClause = { is_active: true };
           if (siteId) whereClause.site_id = siteId;
-          let equipment3 = await prisma5.m_equipment.findMany({
+          let equipment3 = await prisma4.m_equipment.findMany({
             where: whereClause,
             orderBy: { equipment_code: "asc" }
           });
           if ((!equipment3 || equipment3.length === 0) && siteId) {
-            equipment3 = await prisma5.m_equipment.findMany({
+            equipment3 = await prisma4.m_equipment.findMany({
               where: { is_active: true },
               orderBy: { equipment_code: "asc" }
             });
@@ -9623,18 +9698,18 @@ var yardMovesController = {
   getLocations: async (req, res) => {
     try {
       const siteId = parseSiteId(req.query.siteId || req.headers["x-site-id"] || req.siteId);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const whereClause = { is_active: true };
           if (siteId) whereClause.site_id = siteId;
-          let locations = await prisma5.m_yard_location.findMany({
+          let locations = await prisma4.m_yard_location.findMany({
             where: whereClause,
             orderBy: { location_code: "asc" },
             take: 300
           });
           if ((!locations || locations.length === 0) && siteId) {
-            locations = await prisma5.m_yard_location.findMany({
+            locations = await prisma4.m_yard_location.findMany({
               where: { is_active: true },
               orderBy: { location_code: "asc" },
               take: 300
@@ -9683,10 +9758,10 @@ var yardMovesController = {
    */
   getOperators: async (_req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const users2 = await prisma5.app_user.findMany({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const users2 = await prisma4.app_user.findMany({
             where: { is_active: true },
             select: {
               user_id: true,
@@ -9727,11 +9802,11 @@ var yardInspectionsController = {
       const kindParam = req.query.inspectionKind || req.query.kind;
       const unitNoParam = req.query.unitNo;
       let items = [];
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
-            const queryPromise = prisma5.inspection.findMany({
+            const queryPromise = prisma4.inspection.findMany({
               include: {
                 unit_stay: {
                   include: {
@@ -9770,10 +9845,10 @@ var yardInspectionsController = {
                   isPreexisting: f.is_preexisting ?? false,
                   photoDocumentIds: [Number(f.inspection_finding_id) * 10, Number(f.inspection_finding_id) * 10 + 1]
                 }));
-                const results = (i.inspection_result || []).map((r) => ({
-                  inspectionItemId: r.inspection_item_id,
-                  isOk: r.is_ok,
-                  resultValue: r.result_value || (r.is_ok ? "OK" : "DAMAGED")
+                const results = (i.inspection_result || []).map((r3) => ({
+                  inspectionItemId: r3.inspection_item_id,
+                  isOk: r3.is_ok,
+                  resultValue: r3.result_value || (r3.is_ok ? "OK" : "DAMAGED")
                 }));
                 const isMajor = i.overall_condition === "MAJOR_DAMAGE" || i.overall_condition === "REJECTED";
                 const approvalNeeded = i.status === "COMPLETED" && isMajor;
@@ -9843,11 +9918,11 @@ var yardInspectionsController = {
   getInspectionById: async (req, res) => {
     try {
       const id = parseInt(req.params.inspectionId || req.params.id, 10);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
-            const queryPromise = prisma5.inspection.findUnique({
+            const queryPromise = prisma4.inspection.findUnique({
               where: { inspection_id: id },
               include: {
                 unit_stay: {
@@ -9886,10 +9961,10 @@ var yardInspectionsController = {
                 isPreexisting: f.is_preexisting ?? false,
                 photoDocumentIds: [Number(f.inspection_finding_id) * 10, Number(f.inspection_finding_id) * 10 + 1]
               }));
-              const results = (i.inspection_result || []).map((r) => ({
-                inspectionItemId: r.inspection_item_id,
-                isOk: r.is_ok,
-                resultValue: r.result_value || (r.is_ok ? "OK" : "DAMAGED")
+              const results = (i.inspection_result || []).map((r3) => ({
+                inspectionItemId: r3.inspection_item_id,
+                isOk: r3.is_ok,
+                resultValue: r3.result_value || (r3.is_ok ? "OK" : "DAMAGED")
               }));
               const isMajor = i.overall_condition === "MAJOR_DAMAGE" || i.overall_condition === "REJECTED";
               const approvalNeeded = i.status === "COMPLETED" && isMajor;
@@ -9968,10 +10043,10 @@ var yardInspectionsController = {
         remarks: req.body.remarks
       };
       inMemoryInspections.unshift(newInsp);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.inspection.create({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          prisma4.inspection.create({
             data: {
               unit_stay_id: unitStayId,
               inspection_template_id: req.body.templateId || (req.body.category === "VEHICLE" ? 3 : 1),
@@ -10003,15 +10078,15 @@ var yardInspectionsController = {
         if (personalEffects !== void 0) local.personalEffects = personalEffects;
         if (remarks !== void 0) local.remarks = remarks;
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
             if (results && Array.isArray(results)) {
-              for (const r of results) {
-                const itemId = Number(r.inspectionItemId);
-                const isOk = r.resultValue === "OK" || r.isOk === true;
-                await prisma5.inspection_result.upsert({
+              for (const r3 of results) {
+                const itemId = Number(r3.inspectionItemId);
+                const isOk = r3.resultValue === "OK" || r3.isOk === true;
+                await prisma4.inspection_result.upsert({
                   where: {
                     inspection_id_inspection_item_id: {
                       inspection_id: id,
@@ -10019,13 +10094,13 @@ var yardInspectionsController = {
                     }
                   },
                   update: {
-                    result_value: r.resultValue || (isOk ? "OK" : "DAMAGED"),
+                    result_value: r3.resultValue || (isOk ? "OK" : "DAMAGED"),
                     is_ok: isOk
                   },
                   create: {
                     inspection_id: id,
                     inspection_item_id: itemId,
-                    result_value: r.resultValue || (isOk ? "OK" : "DAMAGED"),
+                    result_value: r3.resultValue || (isOk ? "OK" : "DAMAGED"),
                     is_ok: isOk,
                     createdby: "system"
                   }
@@ -10036,10 +10111,10 @@ var yardInspectionsController = {
               for (const f of findings) {
                 let damageCodeId = f.damageCodeId || 1;
                 if (f.damageCode) {
-                  const dc = await prisma5.m_damage_code.findFirst({ where: { damage_code: f.damageCode } });
+                  const dc = await prisma4.m_damage_code.findFirst({ where: { damage_code: f.damageCode } });
                   if (dc) damageCodeId = dc.damage_code_id;
                 }
-                await prisma5.inspection_finding.create({
+                await prisma4.inspection_finding.create({
                   data: {
                     inspection_id: id,
                     area: f.area || "WALLS",
@@ -10054,7 +10129,7 @@ var yardInspectionsController = {
                 });
               }
             }
-            await prisma5.inspection.update({
+            await prisma4.inspection.update({
               where: { inspection_id: id },
               data: {
                 odometer_km: odometerKm ? Number(odometerKm) : void 0,
@@ -10084,10 +10159,10 @@ var yardInspectionsController = {
         local.overallCondition = cond;
         local.approvalNeeded = isMajor;
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.inspection.update({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          prisma4.inspection.update({
             where: { inspection_id: id },
             data: {
               status: "COMPLETED",
@@ -10112,10 +10187,10 @@ var yardInspectionsController = {
         local.approvedBy = "manager.ops";
         local.approvedAt = (/* @__PURE__ */ new Date()).toISOString();
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.inspection.update({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          prisma4.inspection.update({
             where: { inspection_id: id },
             data: {
               status: "APPROVED",
@@ -10136,39 +10211,30 @@ var yardInspectionsController = {
 var yardKeysController = {
   getKeys: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const keys2 = await prisma5.vehicle_keys.findMany({
-            include: {
-              unit_stays: true
-            },
-            orderBy: { key_id: "asc" }
-          });
-          if (keys2 && keys2.length > 0) {
-            const items = keys2.map((k) => ({
-              keyId: k.key_id,
-              tagNumber: k.tag_number,
-              pegNumber: k.peg_number,
-              unitStayId: k.unit_stay_id,
-              vin: k.vin,
-              makeModel: k.make_model,
-              status: k.status,
-              currentHolder: k.current_holder,
-              checkedOutAt: k.checked_out_at
-            }));
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({
-        items: [
-          { keyId: 1, tagNumber: "KEY-001", pegNumber: "P-12", vin: "JT111AB222", makeModel: "Toyota Hilux", status: "IN_BOARD", currentHolder: null },
-          { keyId: 2, tagNumber: "KEY-002", pegNumber: "P-13", vin: "WBABF33421", makeModel: "BMW 320d", status: "CHECKED_OUT", currentHolder: "Driver Ali" }
-        ],
-        total: 2
-      });
+      const keys2 = await prisma4.vehicle_keys?.findMany({
+        include: {
+          unit_stays: true
+        },
+        orderBy: { key_id: "asc" }
+      }) || [];
+      const items = keys2.map((k) => ({
+        keyId: k.key_id,
+        tagNumber: k.tag_number,
+        pegNumber: k.peg_number,
+        unitStayId: k.unit_stay_id,
+        vin: k.vin,
+        makeModel: k.make_model,
+        status: k.status,
+        currentHolder: k.current_holder,
+        checkedOutAt: k.checked_out_at
+      }));
+      return res.json({ items, total: items.length });
     } catch (err) {
+      console.error("yardKeysController.getKeys error:", err);
       res.status(500).json({ error: err.message });
     }
   },
@@ -10176,32 +10242,34 @@ var yardKeysController = {
     try {
       const { keyId } = req.params;
       const { holderName } = req.body;
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const updated = await prisma5.vehicle_keys.update({
-          where: { key_id: Number(keyId) },
-          data: { status: "CHECKED_OUT", current_holder: holderName || "Driver", checked_out_at: /* @__PURE__ */ new Date() }
-        });
-        return res.json(updated);
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({ keyId, status: "CHECKED_OUT", currentHolder: holderName, checkedOutAt: (/* @__PURE__ */ new Date()).toISOString() });
+      const updated = await prisma4.vehicle_keys.update({
+        where: { key_id: Number(keyId) },
+        data: { status: "CHECKED_OUT", current_holder: holderName || "Driver", checked_out_at: /* @__PURE__ */ new Date() }
+      });
+      return res.json(updated);
     } catch (err) {
+      console.error("yardKeysController.checkoutKey error:", err);
       res.status(500).json({ error: err.message });
     }
   },
   returnKey: async (req, res) => {
     try {
       const { keyId } = req.params;
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const updated = await prisma5.vehicle_keys.update({
-          where: { key_id: Number(keyId) },
-          data: { status: "IN_BOARD", current_holder: null, checked_out_at: null }
-        });
-        return res.json(updated);
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({ keyId, status: "IN_BOARD", currentHolder: null });
+      const updated = await prisma4.vehicle_keys.update({
+        where: { key_id: Number(keyId) },
+        data: { status: "IN_BOARD", current_holder: null, checked_out_at: null }
+      });
+      return res.json(updated);
     } catch (err) {
+      console.error("yardKeysController.returnKey error:", err);
       res.status(500).json({ error: err.message });
     }
   }
@@ -10211,69 +10279,68 @@ var yardKeysController = {
 var yardCfsController = {
   getJobs: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const jobs2 = await prisma5.cfs_jobs.findMany({
-            include: { unit_stays: true },
-            orderBy: { job_id: "desc" }
-          });
-          if (jobs2 && jobs2.length > 0) {
-            const items = jobs2.map((j) => ({
-              jobId: j.job_id,
-              jobNo: j.job_no,
-              jobType: j.job_type,
-              unitStayId: j.unit_stay_id,
-              unitNumber: j.unit_stays?.unit_number,
-              status: j.status,
-              packagesExpected: j.packages_expected,
-              packagesProcessed: j.packages_processed,
-              commencedAt: j.commenced_at,
-              completedAt: j.completed_at
-            }));
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({
-        items: [
-          {
-            jobId: 1,
-            jobNo: "CFS-2026-001",
-            jobType: "DEVANNING",
-            unitStayId: 101,
-            unitNumber: "MSKU 882014 9",
-            status: "IN_PROGRESS",
-            packagesExpected: 450,
-            packagesProcessed: 200,
-            commencedAt: new Date(Date.now() - 72e5).toISOString(),
-            completedAt: null
-          }
-        ],
-        total: 1
-      });
+      const jobs2 = await prisma4.cfs_jobs?.findMany({
+        include: { unit_stays: true },
+        orderBy: { job_id: "desc" }
+      }) || [];
+      const items = jobs2.map((j) => ({
+        jobId: j.job_id,
+        jobNo: j.job_no,
+        jobType: j.job_type,
+        unitStayId: j.unit_stay_id,
+        unitNumber: j.unit_stays?.unit_number,
+        status: j.status,
+        packagesExpected: j.packages_expected,
+        packagesProcessed: j.packages_processed,
+        commencedAt: j.commenced_at,
+        completedAt: j.completed_at
+      }));
+      return res.json({ items, total: items.length });
     } catch (err) {
+      console.error("yardCfsController.getJobs error:", err);
       res.status(500).json({ error: err.message });
     }
   },
   createJob: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const created = await prisma5.cfs_jobs.create({
-          data: {
-            site_id: Number(req.body.siteId) || 1,
-            job_no: `CFS-${Date.now()}`,
-            job_type: req.body.jobType || "DEVANNING",
-            unit_stay_id: Number(req.body.unitStayId) || 1,
-            status: "PLANNED",
-            packages_expected: Number(req.body.packagesExpected) || 100
-          }
-        });
-        return res.status(201).json(created);
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.status(201).json({ jobId: 2, jobNo: `CFS-${Date.now()}`, ...req.body });
+      const created = await prisma4.cfs_jobs.create({
+        data: {
+          site_id: Number(req.body.siteId) || 1,
+          job_no: `CFS-${Date.now()}`,
+          job_type: req.body.jobType || "DEVANNING",
+          unit_stay_id: Number(req.body.unitStayId) || 1,
+          status: "PLANNED",
+          packages_expected: Number(req.body.packagesExpected) || 100
+        }
+      });
+      return res.status(201).json(created);
     } catch (err) {
+      console.error("yardCfsController.createJob error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+  updateJob: async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
+      }
+      const updated = await prisma4.cfs_jobs.update({
+        where: { job_id: Number(jobId) },
+        data: req.body
+      });
+      res.json(updated);
+    } catch (err) {
+      console.error("yardCfsController.updateJob error:", err);
       res.status(500).json({ error: err.message });
     }
   }
@@ -10283,71 +10350,53 @@ var yardCfsController = {
 var yardReefersController = {
   getLogs: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.reefer_monitoring_logs) {
-          const logs = await prisma5.reefer_monitoring_logs.findMany({
-            include: { unit_stays: true },
-            orderBy: { log_id: "desc" }
-          });
-          if (logs && logs.length > 0) {
-            const items = logs.map((l) => ({
-              logId: l.log_id,
-              unitStayId: l.unit_stay_id,
-              unitNumber: l.unit_stays?.unit_number,
-              setTempC: Number(l.set_temp_c),
-              supplyTempC: Number(l.supply_temp_c),
-              returnTempC: Number(l.return_temp_c),
-              powerStatus: l.power_status,
-              plugPointId: l.plug_point_id,
-              loggedAt: l.logged_at,
-              alarmStatus: l.alarm_status
-            }));
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({
-        items: [
-          {
-            logId: 1,
-            unitStayId: 102,
-            unitNumber: "TGHU 993012 4",
-            setTempC: -18,
-            supplyTempC: -17.8,
-            returnTempC: -17.5,
-            powerStatus: "CONNECTED",
-            plugPointId: "REEF-PLUG-08",
-            loggedAt: (/* @__PURE__ */ new Date()).toISOString(),
-            alarmStatus: "NORMAL"
-          }
-        ],
-        total: 1
-      });
+      const logs = await prisma4.reefer_monitoring_logs?.findMany({
+        include: { unit_stays: true },
+        orderBy: { log_id: "desc" }
+      }) || [];
+      const items = logs.map((l) => ({
+        logId: l.log_id,
+        unitStayId: l.unit_stay_id,
+        unitNumber: l.unit_stays?.unit_number,
+        setTempC: Number(l.set_temp_c),
+        supplyTempC: Number(l.supply_temp_c),
+        returnTempC: Number(l.return_temp_c),
+        powerStatus: l.power_status,
+        plugPointId: l.plug_point_id,
+        loggedAt: l.logged_at,
+        alarmStatus: l.alarm_status
+      }));
+      return res.json({ items, total: items.length });
     } catch (err) {
+      console.error("yardReefersController.getLogs error:", err);
       res.status(500).json({ error: err.message });
     }
   },
   createLog: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const created = await prisma5.reefer_monitoring_logs.create({
-          data: {
-            unit_stay_id: Number(req.body.unitStayId) || 1,
-            set_temp_c: Number(req.body.setTempC) || -18,
-            supply_temp_c: Number(req.body.supplyTempC) || -17.9,
-            return_temp_c: Number(req.body.returnTempC) || -17.6,
-            power_status: req.body.powerStatus || "CONNECTED",
-            plug_point_id: req.body.plugPointId || "PLUG-01",
-            alarm_status: req.body.alarmStatus || "NORMAL",
-            logged_at: /* @__PURE__ */ new Date()
-          }
-        });
-        return res.status(201).json(created);
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.status(201).json({ logId: 2, ...req.body });
+      const created = await prisma4.reefer_monitoring_logs.create({
+        data: {
+          unit_stay_id: Number(req.body.unitStayId) || 1,
+          set_temp_c: parseFloat(req.body.setTempC) || -18,
+          supply_temp_c: parseFloat(req.body.supplyTempC) || -18,
+          return_temp_c: parseFloat(req.body.returnTempC) || -17.5,
+          powerStatus: req.body.powerStatus || "CONNECTED",
+          plug_point_id: req.body.plugPointId || "PLUG-1",
+          logged_at: /* @__PURE__ */ new Date(),
+          alarm_status: req.body.alarmStatus || "NORMAL"
+        }
+      });
+      return res.status(201).json(created);
     } catch (err) {
+      console.error("yardReefersController.createLog error:", err);
       res.status(500).json({ error: err.message });
     }
   }
@@ -10357,67 +10406,51 @@ var yardReefersController = {
 var yardRepairsController = {
   getWorkOrders: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.repair_work_orders) {
-          const orders = await prisma5.repair_work_orders.findMany({
-            include: { unit_stays: true },
-            orderBy: { work_order_id: "desc" }
-          });
-          if (orders && orders.length > 0) {
-            const items = orders.map((o) => ({
-              workOrderId: o.work_order_id,
-              orderNo: o.order_no,
-              unitStayId: o.unit_stay_id,
-              unitNumber: o.unit_stays?.unit_number,
-              estimateAmount: Number(o.estimate_amount),
-              currency: o.currency,
-              status: o.status,
-              approvalStatus: o.approval_status,
-              createdDate: o.createdate
-            }));
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({
-        items: [
-          {
-            workOrderId: 1,
-            orderNo: "WO-2026-001",
-            unitStayId: 103,
-            unitNumber: "CMAU 450123 8",
-            estimateAmount: 450,
-            currency: "USD",
-            status: "ESTIMATED",
-            approvalStatus: "PENDING_CUSTOMER",
-            createdDate: (/* @__PURE__ */ new Date()).toISOString()
-          }
-        ],
-        total: 1
-      });
+      const orders = await prisma4.repair_work_orders?.findMany({
+        include: { unit_stays: true },
+        orderBy: { work_order_id: "desc" }
+      }) || [];
+      const items = orders.map((o) => ({
+        workOrderId: o.work_order_id,
+        orderNo: o.order_no,
+        unitStayId: o.unit_stay_id,
+        unitNumber: o.unit_stays?.unit_number,
+        estimateAmount: Number(o.estimate_amount),
+        currency: o.currency,
+        status: o.status,
+        approvalStatus: o.approval_status,
+        createdDate: o.createdate
+      }));
+      return res.json({ items, total: items.length });
     } catch (err) {
+      console.error("yardRepairsController.getWorkOrders error:", err);
       res.status(500).json({ error: err.message });
     }
   },
   createWorkOrder: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const created = await prisma5.repair_work_orders.create({
-          data: {
-            order_no: `WO-${Date.now()}`,
-            unit_stay_id: Number(req.body.unitStayId) || 1,
-            estimate_amount: Number(req.body.estimateAmount) || 250,
-            currency: req.body.currency || "USD",
-            status: "ESTIMATED",
-            approval_status: "PENDING"
-          }
-        });
-        return res.status(201).json(created);
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.status(201).json({ workOrderId: 2, orderNo: `WO-${Date.now()}`, ...req.body });
+      const created = await prisma4.repair_work_orders.create({
+        data: {
+          site_id: Number(req.body.siteId) || 1,
+          order_no: `WO-${Date.now()}`,
+          unit_stay_id: Number(req.body.unitStayId) || 1,
+          estimate_amount: parseFloat(req.body.estimateAmount) || 0,
+          currency: req.body.currency || "USD",
+          status: "ESTIMATED",
+          approval_status: "PENDING_CUSTOMER"
+        }
+      });
+      return res.status(201).json(created);
     } catch (err) {
+      console.error("yardRepairsController.createWorkOrder error:", err);
       res.status(500).json({ error: err.message });
     }
   }
@@ -10587,7 +10620,7 @@ var CONDITIONS = [
 ];
 function evaluate(s, stage = "PREVIEW") {
   const hs = holdsOf(s.unitStayId).filter((h) => h.status === "ACTIVE");
-  const r = (code, ok, detail) => ({
+  const r3 = (code, ok, detail) => ({
     conditionCode: code,
     conditionName: CONDITIONS.find((c) => c[0] === code)[1],
     result: ok === null ? "NOT_APPLIC" : ok ? "PASS" : "FAIL",
@@ -10600,18 +10633,18 @@ function evaluate(s, stage = "PREVIEW") {
   const veh2 = s.cargoUnit.category === "VEHICLE";
   const paid = s.billingStatus === "PAID" || s.billingStatus === "CREDIT";
   return [
-    r("IDENTITY", true, `${s.cargoUnit.unitNo} matches the order`),
-    r(
+    r3("IDENTITY", true, `${s.cargoUnit.unitNo} matches the order`),
+    r3(
       "RELEASE_VALID",
       s.releaseStatus === "APPROVED" ? true : stage === "PREVIEW" ? null : false,
       s.releaseStatus === "APPROVED" ? "Valid to 9 Oct" : s.releaseStatus === "EXPIRED" ? "Expired: pay storage to the new date" : "No approved release order yet"
     ),
-    r("NO_HOLD", hs.length === 0, hs.length ? hs.map((h) => holdTypeName(h.holdTypeCode)).join(", ") : "No active holds"),
-    r("CUSTOMS", s.customsStatus === "CLEARED" || s.customsStatus === "NOT_REQUIRED", s.customsStatus === "CLEARED" ? "Release REL-DSM-26-31007 recorded" : `Customs status: ${s.customsStatus?.toLowerCase().replace("_", " ")}`),
-    r("COMMERCIAL", paid, paid ? s.billingStatus === "CREDIT" ? "Bill-to on credit, within limit" : "Paid through 9 Oct" : `USD ${s.accruedCharges?.total} unpaid to today`),
-    r("COLLECTOR", stage === "GATE_OUT" ? true : null, stage === "GATE_OUT" ? "Truck T 412 DKL and driver on the order" : "Checked at the gate"),
-    r("KEYS", veh2 ? stage === "GATE_OUT" ? true : null : null, veh2 ? "Key tag K-0412 in cabinet" : "Not a vehicle"),
-    r("PHYSICAL", s.physicalStatus === "IN_YARD", s.currentLocation ? `At ${s.currentLocation.fullCode}` : "Not in the yard")
+    r3("NO_HOLD", hs.length === 0, hs.length ? hs.map((h) => holdTypeName(h.holdTypeCode)).join(", ") : "No active holds"),
+    r3("CUSTOMS", s.customsStatus === "CLEARED" || s.customsStatus === "NOT_REQUIRED", s.customsStatus === "CLEARED" ? "Release REL-DSM-26-31007 recorded" : `Customs status: ${s.customsStatus?.toLowerCase().replace("_", " ")}`),
+    r3("COMMERCIAL", paid, paid ? s.billingStatus === "CREDIT" ? "Bill-to on credit, within limit" : "Paid through 9 Oct" : `USD ${s.accruedCharges?.total} unpaid to today`),
+    r3("COLLECTOR", stage === "GATE_OUT" ? true : null, stage === "GATE_OUT" ? "Truck T 412 DKL and driver on the order" : "Checked at the gate"),
+    r3("KEYS", veh2 ? stage === "GATE_OUT" ? true : null : null, veh2 ? "Key tag K-0412 in cabinet" : "Not a vehicle"),
+    r3("PHYSICAL", s.physicalStatus === "IN_YARD", s.currentLocation ? `At ${s.currentLocation.fullCode}` : "Not in the yard")
   ];
 }
 var releaseOrders = [
@@ -10788,13 +10821,13 @@ var extraRo = (id, no, consId, status, o) => {
   };
 };
 var allReleaseOrders = [
-  ...releaseOrders.map((r) => {
-    if (r.releaseOrderId === 899) {
+  ...releaseOrders.map((r3) => {
+    if (r3.releaseOrderId === 899) {
       const us = unitsOf(102).filter((s) => s.physicalStatus !== "EXPECTED").slice(0, 2);
-      return { ...r, transporterPartyId: 8, plannedExitDate: day(-1), paidThrough: at(14), units: us.map((s, i) => ({ unitStayId: s.unitStayId, unitNo: s.cargoUnit.unitNo, status: i === 0 ? "OUT" : "RELEASED", outAt: i === 0 ? at(30) : void 0 })) };
+      return { ...r3, transporterPartyId: 8, plannedExitDate: day(-1), paidThrough: at(14), units: us.map((s, i) => ({ unitStayId: s.unitStayId, unitNo: s.cargoUnit.unitNo, status: i === 0 ? "OUT" : "RELEASED", outAt: i === 0 ? at(30) : void 0 })) };
     }
-    if (r.status === "APPROVED") return { ...r, paidThrough: r.validTo, qrToken: `Q${r.releaseOrderId}${(r.releaseNo ?? "").slice(-4)}` };
-    return { ...r, units: [...r.units ?? [], ...unitsOf(101).filter((s) => s !== HERO && s.physicalStatus === "IN_YARD").slice(0, 2).map((s) => ({ unitStayId: s.unitStayId, unitNo: s.cargoUnit.unitNo, status: "PENDING" }))] };
+    if (r3.status === "APPROVED") return { ...r3, paidThrough: r3.validTo, qrToken: `Q${r3.releaseOrderId}${(r3.releaseNo ?? "").slice(-4)}` };
+    return { ...r3, units: [...r3.units ?? [], ...unitsOf(101).filter((s) => s !== HERO && s.physicalStatus === "IN_YARD").slice(0, 2).map((s) => ({ unitStayId: s.unitStayId, unitNo: s.cargoUnit.unitNo, status: "PENDING" }))] };
   }),
   extraRo(901, "RO-DAR1-26-01951", 109, "REQUESTED", { requestedAt: at(1.2), plannedExitDate: day(1), unitsTotal: 3, collectorName: void 0, collectorIdType: void 0, collectorIdNo: void 0 }),
   extraRo(902, "RO-DAR2-26-00388", 105, "PARTLY_USED", { requestedAt: at(48), validFrom: at(46), validTo: at(-26), approvedAt: at(46), approvedBy: "Doc & clearance \xB7 Rehema K.", unitsTotal: 3, unitsOut: 1, paidThrough: at(-26), qrToken: "Q902R388", validityHistory: [{ changeKind: "INITIAL", newValidTo: at(22), changedAt: at(46) }, { changeKind: "REVALIDATED", oldValidTo: at(22), newValidTo: at(-26), invoiceId: 3321, reason: "Paid storage to 8 Oct (INV-DAR1-26-003321)", changedAt: at(20) }] }),
@@ -10803,19 +10836,19 @@ var allReleaseOrders = [
   extraRo(905, "RO-DAR1-26-01955", 103, "REJECTED", { requestedAt: at(6), unitsTotal: 2, collectorName: "Mulenga Banda", collectorIdType: "Passport (ZM)", collectorIdNo: "ZN0441872" })
 ];
 {
-  const i = allReleaseOrders.findIndex((r3) => r3.releaseOrderId === 902);
-  const r = allReleaseOrders[i];
-  allReleaseOrders[i] = { ...r, units: (r.units ?? []).map((u, k) => k === 0 ? { ...u, status: "OUT", outAt: at(5) } : { ...u, status: "RELEASED" }) };
+  const i = allReleaseOrders.findIndex((r4) => r4.releaseOrderId === 902);
+  const r3 = allReleaseOrders[i];
+  allReleaseOrders[i] = { ...r3, units: (r3.units ?? []).map((u, k) => k === 0 ? { ...u, status: "OUT", outAt: at(5) } : { ...u, status: "RELEASED" }) };
 }
 registerSearch((q) => {
   const n = q.replace(/[\s-]/g, "").toUpperCase();
-  const hits = allReleaseOrders.filter((r) => (r.releaseNo ?? "").replace(/-/g, "").includes(n)).slice(0, 5).map((r) => ({
-    id: r.releaseOrderId,
-    title: r.releaseNo,
-    status: r.status,
-    subtitle: `${consignment(r.consignmentId)?.refNo ?? ""} \xB7 ${r.unitsTotal} unit${r.unitsTotal === 1 ? "" : "s"}`,
-    link: { entityName: "release_order", entityId: r.releaseOrderId },
-    to: `/releases/${r.releaseOrderId}`
+  const hits = allReleaseOrders.filter((r3) => (r3.releaseNo ?? "").replace(/-/g, "").includes(n)).slice(0, 5).map((r3) => ({
+    id: r3.releaseOrderId,
+    title: r3.releaseNo,
+    status: r3.status,
+    subtitle: `${consignment(r3.consignmentId)?.refNo ?? ""} \xB7 ${r3.unitsTotal} unit${r3.unitsTotal === 1 ? "" : "s"}`,
+    link: { entityName: "release_order", entityId: r3.releaseOrderId },
+    to: `/releases/${r3.releaseOrderId}`
   }));
   return hits.length ? { entity: "RELEASE_ORDER", label: "Release orders", hits } : null;
 });
@@ -10883,7 +10916,7 @@ var exceptionComments = {
   307: []
 };
 var SLA_MIN = { SEAL_MISMATCH: 120, GATE_OUT_BLOCKED: 120, DAMAGE_MAJOR: 48 * 60, OFFLINE_CONFLICT: 60, WEIGHT_VARIANCE: 24 * 60, FISCAL_FAILED: 24 * 60, NO_SHOW: 24 * 60 };
-var firstApproved = allReleaseOrders.find((r) => r.status === "APPROVED" && r.releaseOrderId !== 801);
+var firstApproved = allReleaseOrders.find((r3) => r3.status === "APPROVED" && r3.releaseOrderId !== 801);
 var heldOther = holds.find((h) => h.status === "ACTIVE" && h.holdTypeCode === "LINE");
 var notifications = [
   { notificationId: 1, kind: "APPROVAL", subject: "Approval waiting: gate-out override", body: "Hamisi J. asks to let T 902 DMB leave with a seal mismatch. Expires in 1 h 40 min.", createdAt: at(0.3), link: { entityName: "approval", entityId: 9003 }, to: "/approvals" },
@@ -10905,11 +10938,17 @@ function toNum(val) {
   return Number(val) || 0;
 }
 var CargoService = class {
-  // ------------------------------------------------------------------ 1. UNITS
   async getUnits(query = {}) {
-    const { category, status, customsStatus, location, search: searchQ, siteId } = query;
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const {
+      category,
+      status,
+      customsStatus,
+      location,
+      search: searchQ,
+      siteId
+    } = query;
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
         const where = {};
         if (siteId) {
@@ -10925,7 +10964,9 @@ var CargoService = class {
           where.unit_stay_cargo_units = { unit_category: category };
         }
         if (location) {
-          where.unit_stay_yard_locations = { full_code: { startsWith: String(location) } };
+          where.unit_stay_yard_locations = {
+            full_code: { startsWith: String(location) }
+          };
         }
         if (searchQ) {
           const q = String(searchQ).trim();
@@ -10936,7 +10977,7 @@ var CargoService = class {
             { unit_stay_yard_locations: { full_code: { contains: q } } }
           ];
         }
-        const dbStays = await prisma5.unit_stay.findMany({
+        const dbStays = await prisma4.unit_stay.findMany({
           where,
           include: {
             unit_stay_cargo_units: {
@@ -10957,8 +10998,15 @@ var CargoService = class {
         });
         if (dbStays && dbStays.length > 0) {
           return dbStays.map((u) => {
-            const activeHolds = (u.unit_stay_holds || []).filter((h) => h.status === "ACTIVE").length;
-            const dwell = u.gated_in_at ? Math.max(1, Math.floor((Date.now() - new Date(u.gated_in_at).getTime()) / 864e5)) : 3;
+            const activeHolds = (u.unit_stay_holds || []).filter(
+              (h) => h.status === "ACTIVE"
+            ).length;
+            const dwell = u.gated_in_at ? Math.max(
+              1,
+              Math.floor(
+                (Date.now() - new Date(u.gated_in_at).getTime()) / 864e5
+              )
+            ) : 3;
             const unitNo = u.unit_stay_cargo_units?.unit_no || `UNIT-${u.unit_stay_id}`;
             const category2 = u.unit_stay_cargo_units?.cargo_unit_unit_types?.unit_category || u.unit_stay_cargo_units?.unit_category || "CONTAINER";
             const typeCode = u.unit_stay_cargo_units?.cargo_unit_unit_types?.type_code || "40HC";
@@ -10988,7 +11036,9 @@ var CargoService = class {
               dischargeAt: u.discharge_at?.toISOString(),
               gatedInAt: u.gated_in_at?.toISOString(),
               departedAt: u.departed_at?.toISOString(),
-              freeUntil: u.storage_start_at ? new Date(new Date(u.storage_start_at).getTime() + 7 * 864e5).toISOString() : void 0,
+              freeUntil: u.storage_start_at ? new Date(
+                new Date(u.storage_start_at).getTime() + 7 * 864e5
+              ).toISOString() : void 0,
               activeHoldCount: activeHolds,
               currentLocation: u.unit_stay_yard_locations ? {
                 locationId: u.unit_stay_yard_locations.yard_location_id,
@@ -11006,7 +11056,9 @@ var CargoService = class {
                 consignmentRef: u.unit_stay_consignments?.ref_no
               },
               consignments: u.unit_stay_consignments ? {
-                consignmentId: toNum(u.unit_stay_consignments.consignment_id),
+                consignmentId: toNum(
+                  u.unit_stay_consignments.consignment_id
+                ),
                 refNo: u.unit_stay_consignments.ref_no,
                 refType: u.unit_stay_consignments.ref_type,
                 vesselName: u.unit_stay_consignments.vessel_call?.m_vessel?.vessel_name || "Vessel",
@@ -11037,15 +11089,19 @@ var CargoService = class {
     return allStays;
   }
   async getUnit(unitStayId) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(unitStayId);
-    if (isDbLive() && prisma5) {
+    if (prisma4) {
       try {
-        const u = await prisma5.unit_stay.findFirst({
+        const u = await prisma4.unit_stay.findFirst({
           where: {
             OR: [
               ...Number.isFinite(id) ? [{ unit_stay_id: id }] : [],
-              { unit_stay_cargo_units: { unit_no: String(unitStayId).trim().toUpperCase() } }
+              {
+                unit_stay_cargo_units: {
+                  unit_no: String(unitStayId).trim().toUpperCase()
+                }
+              }
             ]
           },
           include: {
@@ -11065,7 +11121,9 @@ var CargoService = class {
           }
         });
         if (u) {
-          const activeHolds = (u.unit_stay_holds || []).filter((h) => h.status === "ACTIVE").length;
+          const activeHolds = (u.unit_stay_holds || []).filter(
+            (h) => h.status === "ACTIVE"
+          ).length;
           const unitNo = u.unit_stay_cargo_units?.unit_no || `UNIT-${u.unit_stay_id}`;
           const category = u.unit_stay_cargo_units?.cargo_unit_unit_types?.unit_category || u.unit_stay_cargo_units?.unit_category || "CONTAINER";
           const typeCode = u.unit_stay_cargo_units?.cargo_unit_unit_types?.type_code || "40HC";
@@ -11097,7 +11155,9 @@ var CargoService = class {
             dischargeAt: u.discharge_at?.toISOString(),
             gatedInAt: u.gated_in_at?.toISOString(),
             departedAt: u.departed_at?.toISOString(),
-            freeUntil: u.storage_start_at ? new Date(new Date(u.storage_start_at).getTime() + 7 * 864e5).toISOString() : void 0,
+            freeUntil: u.storage_start_at ? new Date(
+              new Date(u.storage_start_at).getTime() + 7 * 864e5
+            ).toISOString() : void 0,
             activeHoldCount: activeHolds,
             currentLocation: u.unit_stay_yard_locations ? {
               locationId: u.unit_stay_yard_locations.yard_location_id,
@@ -11138,15 +11198,17 @@ var CargoService = class {
     return s || allStays[0];
   }
   async createUnit(body) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
         const unitNo = body.unitNo || `NEWU${Date.now().toString().slice(-7)}`;
-        let cu = await prisma5.cargo_unit.findFirst({ where: { unit_no: unitNo } });
+        let cu = await prisma4.cargo_unit.findFirst({
+          where: { unit_no: unitNo }
+        });
         if (!cu) {
-          const uTypes = await prisma5.m_unit_type.findMany();
+          const uTypes = await prisma4.m_unit_type.findMany();
           const targetType = uTypes.find((t) => t.type_code === body.isoType) || uTypes[0];
-          cu = await prisma5.cargo_unit.create({
+          cu = await prisma4.cargo_unit.create({
             data: {
               unit_category: body.category || "CONTAINER",
               unit_no: unitNo,
@@ -11155,7 +11217,7 @@ var CargoService = class {
             }
           });
         }
-        const stay2 = await prisma5.unit_stay.create({
+        const stay2 = await prisma4.unit_stay.create({
           data: {
             cargo_unit_id: cu.cargo_unit_id,
             site_id: body.siteId || 1,
@@ -11203,18 +11265,20 @@ var CargoService = class {
     return newStay;
   }
   async updateUnit(unitStayId, body) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(unitStayId);
-    if (isDbLive() && prisma5 && Number.isFinite(id)) {
+    if (prisma4 && Number.isFinite(id)) {
       try {
         const updateData = {};
-        if (body.physicalStatus) updateData.physical_status = body.physicalStatus;
+        if (body.physicalStatus)
+          updateData.physical_status = body.physicalStatus;
         if (body.customsStatus) updateData.customs_status = body.customsStatus;
         if (body.releaseStatus) updateData.release_status = body.releaseStatus;
         if (body.billingStatus) updateData.billing_status = body.billingStatus;
         if (body.sealNo) updateData.seal_no = body.sealNo;
-        if (body.currentLocationId) updateData.current_location_id = Number(body.currentLocationId);
-        await prisma5.unit_stay.update({
+        if (body.currentLocationId)
+          updateData.current_location_id = Number(body.currentLocationId);
+        await prisma4.unit_stay.update({
           where: { unit_stay_id: id },
           data: updateData
         });
@@ -11250,8 +11314,8 @@ var CargoService = class {
   // ------------------------------------------------------------------ 2. CONSIGNMENTS
   async getConsignments(query = {}) {
     const { status, regime, search: searchQ, siteId } = query;
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
         const where = {};
         if (siteId) where.site_id = Number(siteId);
@@ -11265,7 +11329,7 @@ var CargoService = class {
             { m_party_consignment_consignee: { party_name: { contains: q } } }
           ];
         }
-        const dbConsignments = await prisma5.consignment.findMany({
+        const dbConsignments = await prisma4.consignment.findMany({
           where,
           include: {
             vessel_call: { include: { m_vessel: true } },
@@ -11275,7 +11339,9 @@ var CargoService = class {
             consignment_line: true,
             unit_stay_consignments: {
               include: {
-                unit_stay_cargo_units: { include: { cargo_unit_unit_types: true } },
+                unit_stay_cargo_units: {
+                  include: { cargo_unit_unit_types: true }
+                },
                 unit_stay_yard_locations: true
               }
             },
@@ -11334,7 +11400,9 @@ var CargoService = class {
               billingStatus: u.billing_status,
               activeHoldCount: 0,
               sealNo: u.seal_no,
-              freeUntil: u.storage_start_at ? new Date(new Date(u.storage_start_at).getTime() + 7 * 864e5).toISOString() : void 0
+              freeUntil: u.storage_start_at ? new Date(
+                new Date(u.storage_start_at).getTime() + 7 * 864e5
+              ).toISOString() : void 0
             })),
             customsRefs: (c.customs_ref || []).map((cr) => ({
               customsRefId: toNum(cr.customs_ref_id),
@@ -11355,17 +11423,20 @@ var CargoService = class {
           }));
         }
       } catch (err) {
-        console.warn("[CargoService.getConsignments] DB query error:", err.message);
+        console.warn(
+          "[CargoService.getConsignments] DB query error:",
+          err.message
+        );
       }
     }
     return consignments;
   }
   async getConsignment(id) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const cId = Number(id);
-    if (isDbLive() && prisma5) {
+    if (prisma4) {
       try {
-        const c = await prisma5.consignment.findFirst({
+        const c = await prisma4.consignment.findFirst({
           where: {
             OR: [
               ...Number.isFinite(cId) ? [{ consignment_id: cId }] : [],
@@ -11380,7 +11451,9 @@ var CargoService = class {
             consignment_line: true,
             unit_stay_consignments: {
               include: {
-                unit_stay_cargo_units: { include: { cargo_unit_unit_types: true } },
+                unit_stay_cargo_units: {
+                  include: { cargo_unit_unit_types: true }
+                },
                 unit_stay_yard_locations: true
               }
             },
@@ -11440,7 +11513,9 @@ var CargoService = class {
               billingStatus: u.billing_status,
               activeHoldCount: 0,
               sealNo: u.seal_no,
-              freeUntil: u.storage_start_at ? new Date(new Date(u.storage_start_at).getTime() + 7 * 864e5).toISOString() : void 0
+              freeUntil: u.storage_start_at ? new Date(
+                new Date(u.storage_start_at).getTime() + 7 * 864e5
+              ).toISOString() : void 0
             })),
             customsRefs: (c.customs_ref || []).map((cr) => ({
               customsRefId: toNum(cr.customs_ref_id),
@@ -11461,17 +11536,20 @@ var CargoService = class {
           };
         }
       } catch (err) {
-        console.warn("[CargoService.getConsignment] DB query error:", err.message);
+        console.warn(
+          "[CargoService.getConsignment] DB query error:",
+          err.message
+        );
       }
     }
     return consignments.find((x) => String(x.consignmentId) === String(id)) || consignments[0];
   }
   async createConsignment(body) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
         const refNo = body.refNo || `BL-AUTO-${Date.now().toString().slice(-6)}`;
-        const created = await prisma5.consignment.create({
+        const created = await prisma4.consignment.create({
           data: {
             site_id: body.siteId || 1,
             ref_type: body.refType || "BL",
@@ -11490,7 +11568,10 @@ var CargoService = class {
         });
         return this.getConsignment(Number(created.consignment_id));
       } catch (err) {
-        console.warn("[CargoService.createConsignment] DB insert error:", err.message);
+        console.warn(
+          "[CargoService.createConsignment] DB insert error:",
+          err.message
+        );
       }
     }
     const newC = {
@@ -11510,21 +11591,26 @@ var CargoService = class {
     return newC;
   }
   async updateConsignment(id, body) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const cId = Number(id);
-    if (isDbLive() && prisma5 && Number.isFinite(cId)) {
+    if (prisma4 && Number.isFinite(cId)) {
       try {
         const updateData = {};
-        if (body.cargoDescription) updateData.cargo_description = body.cargoDescription;
+        if (body.cargoDescription)
+          updateData.cargo_description = body.cargoDescription;
         if (body.status) updateData.status = body.status;
-        if (body.destinationCountry) updateData.destination_country = body.destinationCountry;
-        await prisma5.consignment.update({
+        if (body.destinationCountry)
+          updateData.destination_country = body.destinationCountry;
+        await prisma4.consignment.update({
           where: { consignment_id: cId },
           data: updateData
         });
         return this.getConsignment(cId);
       } catch (err) {
-        console.warn("[CargoService.updateConsignment] DB update error:", err.message);
+        console.warn(
+          "[CargoService.updateConsignment] DB update error:",
+          err.message
+        );
       }
     }
     const c = consignments.find((x) => String(x.consignmentId) === String(id));
@@ -11532,11 +11618,11 @@ var CargoService = class {
     return c;
   }
   async getConsignmentLines(consignmentId) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const cId = Number(consignmentId);
-    if (isDbLive() && prisma5 && Number.isFinite(cId)) {
+    if (prisma4 && Number.isFinite(cId)) {
       try {
-        const lines = await prisma5.consignment_line.findMany({
+        const lines = await prisma4.consignment_line.findMany({
           where: { consignment_id: cId },
           orderBy: { line_no: "asc" }
         });
@@ -11550,20 +11636,25 @@ var CargoService = class {
           description: cl.description
         }));
       } catch (err) {
-        console.warn("[CargoService.getConsignmentLines] DB query error:", err.message);
+        console.warn(
+          "[CargoService.getConsignmentLines] DB query error:",
+          err.message
+        );
       }
     }
     return [];
   }
   async saveConsignmentLines(consignmentId, lines) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const cId = Number(consignmentId);
-    if (isDbLive() && prisma5 && Number.isFinite(cId) && Array.isArray(lines)) {
+    if (prisma4 && Number.isFinite(cId) && Array.isArray(lines)) {
       try {
-        await prisma5.consignment_line.deleteMany({ where: { consignment_id: cId } });
+        await prisma4.consignment_line.deleteMany({
+          where: { consignment_id: cId }
+        });
         for (let i = 0; i < lines.length; i++) {
           const l = lines[i];
-          await prisma5.consignment_line.create({
+          await prisma4.consignment_line.create({
             data: {
               consignment_id: cId,
               line_no: l.lineNo || i + 1,
@@ -11577,7 +11668,10 @@ var CargoService = class {
         }
         return this.getConsignmentLines(cId);
       } catch (err) {
-        console.warn("[CargoService.saveConsignmentLines] DB save error:", err.message);
+        console.warn(
+          "[CargoService.saveConsignmentLines] DB save error:",
+          err.message
+        );
       }
     }
     return lines;
@@ -11587,10 +11681,10 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ 3. VESSEL CALLS
   async getVesselCalls(query = {}) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const dbCalls = await prisma5.vessel_call.findMany({
+        const dbCalls = await prisma4.vessel_call.findMany({
           include: {
             m_vessel: true,
             m_port: true,
@@ -11620,7 +11714,10 @@ var CargoService = class {
           }));
         }
       } catch (err) {
-        console.warn("[CargoService.getVesselCalls] DB query error:", err.message);
+        console.warn(
+          "[CargoService.getVesselCalls] DB query error:",
+          err.message
+        );
       }
     }
     return vesselCalls;
@@ -11630,14 +11727,14 @@ var CargoService = class {
     return list.find((v) => String(v.vesselCallId) === String(vesselCallId)) || list[0];
   }
   async createVesselCall(body) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const vessels3 = await prisma5.m_vessel.findMany();
+        const vessels3 = await prisma4.m_vessel.findMany();
         const v = vessels3[0];
-        const ports2 = await prisma5.m_port.findMany();
+        const ports2 = await prisma4.m_port.findMany();
         const p2 = ports2[0];
-        const created = await prisma5.vessel_call.create({
+        const created = await prisma4.vessel_call.create({
           data: {
             vessel_id: body.vesselId ? Number(body.vesselId) : v?.vessel_id || 1,
             voyage_no: body.voyageNo || `V.${Date.now().toString().slice(-4)}`,
@@ -11664,15 +11761,18 @@ var CargoService = class {
     return newVc;
   }
   async updateVesselCall(vesselCallId, body) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(vesselCallId);
-    if (isDbLive() && prisma5 && Number.isFinite(id)) {
+    if (prisma4 && Number.isFinite(id)) {
       try {
         const updateData = {};
         if (body.status) updateData.status = body.status;
         if (body.ata) updateData.ata = new Date(body.ata);
-        if (body.dischargeCompletedAt) updateData.discharge_completed_at = new Date(body.dischargeCompletedAt);
-        await prisma5.vessel_call.update({
+        if (body.dischargeCompletedAt)
+          updateData.discharge_completed_at = new Date(
+            body.dischargeCompletedAt
+          );
+        await prisma4.vessel_call.update({
           where: { vessel_call_id: id },
           data: updateData
         });
@@ -11681,16 +11781,18 @@ var CargoService = class {
         console.warn("[CargoService.updateVesselCall] DB error:", err.message);
       }
     }
-    const v = vesselCalls.find((x) => String(x.vesselCallId) === String(vesselCallId));
+    const v = vesselCalls.find(
+      (x) => String(x.vesselCallId) === String(vesselCallId)
+    );
     if (v) Object.assign(v, body);
     return v;
   }
   // ------------------------------------------------------------------ 4. MANIFESTS
   async getManifests() {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const dbManifests = await prisma5.manifest.findMany({
+        const dbManifests = await prisma4.manifest.findMany({
           include: {
             vessel_call: { include: { m_vessel: true } },
             manifest_line: true
@@ -11729,7 +11831,10 @@ var CargoService = class {
           }));
         }
       } catch (err) {
-        console.warn("[CargoService.getManifests] DB query error:", err.message);
+        console.warn(
+          "[CargoService.getManifests] DB query error:",
+          err.message
+        );
       }
     }
     return manifests;
@@ -11739,7 +11844,7 @@ var CargoService = class {
     return list.find((m) => String(m.manifestId) === String(manifestId)) || list[0];
   }
   async evaluateManifest(body = {}) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const siteId = Number(body.siteId) || 1;
     const vesselCallId = body.vesselCallId ? Number(body.vesselCallId) : null;
     let inputLines = body.lines || body.items || [];
@@ -11785,42 +11890,141 @@ var CargoService = class {
     };
     if (!inputLines || inputLines.length === 0 || body.generateDummy) {
       let vcRef = "SCL318N";
-      if (isDbLive() && prisma5 && vesselCallId) {
-        const vc = await prisma5.vessel_call.findUnique({
+      if (prisma4 && vesselCallId) {
+        const vc = await prisma4.vessel_call.findUnique({
           where: { vessel_call_id: vesselCallId },
           include: { m_vessel: true }
         }).catch(() => null);
-        if (vc) vcRef = `${vc.m_vessel?.vessel_name?.slice(0, 3) || "VES"}${vc.voyage_no || "2601"}`;
+        if (vc)
+          vcRef = `${vc.m_vessel?.vessel_name?.slice(0, 3) || "VES"}${vc.voyage_no || "2601"}`;
       }
       inputLines = [
-        { lineNo: 1, unitNo: "MSKU 123456 5", unitTypeRaw: "40HC", blNo: `${vcRef}-001`, consigneeRaw: "Said Salim Bakhresa & Co Ltd", agentRaw: "Bollor\xE9 Logistics", fullEmpty: "F", sealNo: "ML-881201", grossWeightKg: 28400, commodityRaw: "Wheat flour" },
-        { lineNo: 2, unitNo: "MSKU 234567 1", unitTypeRaw: "40HC", blNo: `${vcRef}-001`, consigneeRaw: "Said Salim Bakhresa & Co Ltd", agentRaw: "Bollor\xE9 Logistics", fullEmpty: "F", sealNo: "ML-881202", grossWeightKg: 28150, commodityRaw: "Wheat flour" },
-        { lineNo: 3, unitNo: "TGHU 345678 0", unitTypeRaw: "20GP", blNo: `${vcRef}-002`, consigneeRaw: "Mohammed Enterprises Tanzania Limited", agentRaw: "Freight Forwarders TZ", fullEmpty: "F", sealNo: "ML-881203", grossWeightKg: 21800, commodityRaw: "Edible cooking oil" },
-        { lineNo: 4, unitNo: "CMAU 456789 3", unitTypeRaw: "40HC", blNo: `${vcRef}-003`, consigneeRaw: "Dangote Industries Tanzania Ltd", agentRaw: "Bollor\xE9 Logistics", fullEmpty: "F", sealNo: "ML-881205", grossWeightKg: 29500, commodityRaw: "Machinery spare parts" },
-        { lineNo: 5, unitNo: "MEDU 567890 3", unitTypeRaw: "40RF", blNo: `${vcRef}-004`, consigneeRaw: "Twiga Minerals Corporation", agentRaw: "Bollor\xE9 Logistics", fullEmpty: "F", sealNo: "ML-881207", grossWeightKg: 24300, commodityRaw: "Refrigerated pharmaceuticals" },
-        { lineNo: 6, unitNo: "MSKU 819230 4", unitTypeRaw: "40HC", blNo: `${vcRef}-005`, consigneeRaw: "Said Salim Bakhresa & Co Ltd", agentRaw: "Freight Forwarders TZ", fullEmpty: "F", sealNo: "ML-881208", grossWeightKg: 19800, commodityRaw: "Packaging material" },
-        { lineNo: 7, unitNo: "HLXU 678901 1", unitTypeRaw: "40HC", blNo: `${vcRef}-006`, consigneeRaw: "Unknown Overseas Importer Ltd", agentRaw: "Freight Forwarders TZ", fullEmpty: "F", sealNo: "ML-881209", grossWeightKg: 22e3, commodityRaw: "Hardware items" },
-        { lineNo: 8, unitNo: "TGHU 902144 4", unitTypeRaw: "49GP", blNo: `${vcRef}-007`, consigneeRaw: "Mohammed Enterprises Tanzania Limited", agentRaw: "Freight Forwarders TZ", fullEmpty: "F", sealNo: "ML-881210", grossWeightKg: 20500, commodityRaw: "Consumer electronics" }
+        {
+          lineNo: 1,
+          unitNo: "MSKU 123456 5",
+          unitTypeRaw: "40HC",
+          blNo: `${vcRef}-001`,
+          consigneeRaw: "Said Salim Bakhresa & Co Ltd",
+          agentRaw: "Bollor\xE9 Logistics",
+          fullEmpty: "F",
+          sealNo: "ML-881201",
+          grossWeightKg: 28400,
+          commodityRaw: "Wheat flour"
+        },
+        {
+          lineNo: 2,
+          unitNo: "MSKU 234567 1",
+          unitTypeRaw: "40HC",
+          blNo: `${vcRef}-001`,
+          consigneeRaw: "Said Salim Bakhresa & Co Ltd",
+          agentRaw: "Bollor\xE9 Logistics",
+          fullEmpty: "F",
+          sealNo: "ML-881202",
+          grossWeightKg: 28150,
+          commodityRaw: "Wheat flour"
+        },
+        {
+          lineNo: 3,
+          unitNo: "TGHU 345678 0",
+          unitTypeRaw: "20GP",
+          blNo: `${vcRef}-002`,
+          consigneeRaw: "Mohammed Enterprises Tanzania Limited",
+          agentRaw: "Freight Forwarders TZ",
+          fullEmpty: "F",
+          sealNo: "ML-881203",
+          grossWeightKg: 21800,
+          commodityRaw: "Edible cooking oil"
+        },
+        {
+          lineNo: 4,
+          unitNo: "CMAU 456789 3",
+          unitTypeRaw: "40HC",
+          blNo: `${vcRef}-003`,
+          consigneeRaw: "Dangote Industries Tanzania Ltd",
+          agentRaw: "Bollor\xE9 Logistics",
+          fullEmpty: "F",
+          sealNo: "ML-881205",
+          grossWeightKg: 29500,
+          commodityRaw: "Machinery spare parts"
+        },
+        {
+          lineNo: 5,
+          unitNo: "MEDU 567890 3",
+          unitTypeRaw: "40RF",
+          blNo: `${vcRef}-004`,
+          consigneeRaw: "Twiga Minerals Corporation",
+          agentRaw: "Bollor\xE9 Logistics",
+          fullEmpty: "F",
+          sealNo: "ML-881207",
+          grossWeightKg: 24300,
+          commodityRaw: "Refrigerated pharmaceuticals"
+        },
+        {
+          lineNo: 6,
+          unitNo: "MSKU 819230 4",
+          unitTypeRaw: "40HC",
+          blNo: `${vcRef}-005`,
+          consigneeRaw: "Said Salim Bakhresa & Co Ltd",
+          agentRaw: "Freight Forwarders TZ",
+          fullEmpty: "F",
+          sealNo: "ML-881208",
+          grossWeightKg: 19800,
+          commodityRaw: "Packaging material"
+        },
+        {
+          lineNo: 7,
+          unitNo: "HLXU 678901 1",
+          unitTypeRaw: "40HC",
+          blNo: `${vcRef}-006`,
+          consigneeRaw: "Unknown Overseas Importer Ltd",
+          agentRaw: "Freight Forwarders TZ",
+          fullEmpty: "F",
+          sealNo: "ML-881209",
+          grossWeightKg: 22e3,
+          commodityRaw: "Hardware items"
+        },
+        {
+          lineNo: 8,
+          unitNo: "TGHU 902144 4",
+          unitTypeRaw: "49GP",
+          blNo: `${vcRef}-007`,
+          consigneeRaw: "Mohammed Enterprises Tanzania Limited",
+          agentRaw: "Freight Forwarders TZ",
+          fullEmpty: "F",
+          sealNo: "ML-881210",
+          grossWeightKg: 20500,
+          commodityRaw: "Consumer electronics"
+        }
       ];
     }
     let dbParties = [];
     let dbUnitTypes = [];
     let dbUnits = [];
-    if (isDbLive() && prisma5) {
+    if (prisma4) {
       try {
-        dbParties = await prisma5.m_party.findMany({ where: { is_active: true } });
-        dbUnitTypes = await prisma5.m_unit_type.findMany({ where: { is_active: true } });
-        dbUnits = await prisma5.cargo_unit.findMany({
+        dbParties = await prisma4.m_party.findMany({
+          where: { is_active: true }
+        });
+        dbUnitTypes = await prisma4.m_unit_type.findMany({
+          where: { is_active: true }
+        });
+        dbUnits = await prisma4.cargo_unit.findMany({
           select: {
             unit_no: true,
             cargo_unit_unit_stays: {
-              where: { site_id: siteId, physical_status: { in: ["YARD", "GATE_IN", "INSPECTED"] } },
+              where: {
+                site_id: siteId,
+                physical_status: { in: ["YARD", "GATE_IN", "INSPECTED"] }
+              },
               select: { unit_stay_id: true }
             }
           }
         });
       } catch (err) {
-        console.warn("[CargoService.evaluateManifest] DB fetch error:", err.message);
+        console.warn(
+          "[CargoService.evaluateManifest] DB fetch error:",
+          err.message
+        );
       }
     }
     const evaluatedLines = inputLines.map((l, idx) => {
@@ -11847,11 +12051,15 @@ var CargoService = class {
         errorText = `Invalid container number length (${rawUnit.length})`;
       }
       if (matchStatus === "NEW") {
-        const existingUnit = dbUnits.find((u) => u.unit_no.replace(/\s/g, "").toUpperCase() === rawUnit);
+        const existingUnit = dbUnits.find(
+          (u) => u.unit_no.replace(/\s/g, "").toUpperCase() === rawUnit
+        );
         if (existingUnit && existingUnit.cargo_unit_unit_stays?.length > 0) {
           matchStatus = "DUPLICATE";
           issue = "DUPLICATE";
-          unitStayId = Number(existingUnit.cargo_unit_unit_stays[0].unit_stay_id);
+          unitStayId = Number(
+            existingUnit.cargo_unit_unit_stays[0].unit_stay_id
+          );
           errorText = `Unit is already in the yard (stay #${unitStayId})`;
         }
       }
@@ -11922,8 +12130,12 @@ var CargoService = class {
         unitStayId
       };
     });
-    const open = evaluatedLines.filter((l) => l.matchStatus === "INVALID" || l.matchStatus === "DUPLICATE");
-    const ready = evaluatedLines.filter((l) => l.matchStatus === "NEW" || l.matchStatus === "MATCHED");
+    const open = evaluatedLines.filter(
+      (l) => l.matchStatus === "INVALID" || l.matchStatus === "DUPLICATE"
+    );
+    const ready = evaluatedLines.filter(
+      (l) => l.matchStatus === "NEW" || l.matchStatus === "MATCHED"
+    );
     return {
       success: true,
       lines: evaluatedLines,
@@ -11937,15 +12149,15 @@ var CargoService = class {
     };
   }
   async createManifest(body) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const siteId = body.siteId ? Number(body.siteId) : 1;
     const vesselCallId = body.vesselCallId ? Number(body.vesselCallId) : null;
     const manifestRef = body.manifestRef || body.manifestNo || `MAN-${Date.now().toString().slice(-6)}`;
     const source = body.format === "EXCEL" ? "EXCEL" : body.source || "EDI";
     const items = body.items || body.lines || [];
-    if (isDbLive() && prisma5) {
+    if (prisma4) {
       try {
-        const created = await prisma5.manifest.create({
+        const created = await prisma4.manifest.create({
           data: {
             site_id: siteId,
             vessel_call_id: vesselCallId,
@@ -11953,16 +12165,22 @@ var CargoService = class {
             source,
             status: "REVIEW",
             line_count: items.length,
-            created_count: items.filter((x) => x.matchStatus === "NEW" || x.matchStatus === "CREATED").length,
+            created_count: items.filter(
+              (x) => x.matchStatus === "NEW" || x.matchStatus === "CREATED"
+            ).length,
             matched_count: items.filter((x) => x.matchStatus === "MATCHED").length,
-            error_count: items.filter((x) => x.matchStatus === "INVALID" || x.matchStatus === "DUPLICATE").length,
+            error_count: items.filter(
+              (x) => x.matchStatus === "INVALID" || x.matchStatus === "DUPLICATE"
+            ).length,
             createdby: "system"
           }
         });
         for (let i = 0; i < items.length; i++) {
           const it2 = items[i];
-          const rawUnit = String(it2.unitNo || it2.unitNoRaw || `UNIT-${i + 1}`).trim();
-          await prisma5.manifest_line.create({
+          const rawUnit = String(
+            it2.unitNo || it2.unitNoRaw || `UNIT-${i + 1}`
+          ).trim();
+          await prisma4.manifest_line.create({
             data: {
               manifest_id: created.manifest_id,
               line_no: it2.lineNo || i + 1,
@@ -11981,7 +12199,12 @@ var CargoService = class {
               error_text: it2.errorText || null,
               createdby: "system"
             }
-          }).catch((err) => console.warn("[CargoService.createManifest] line error:", err.message));
+          }).catch(
+            (err) => console.warn(
+              "[CargoService.createManifest] line error:",
+              err.message
+            )
+          );
         }
         return this.getManifest(created.manifest_id);
       } catch (err) {
@@ -12006,11 +12229,11 @@ var CargoService = class {
     return newM;
   }
   async updateManifestLine(manifestLineId, body) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(manifestLineId);
-    if (isDbLive() && prisma5 && Number.isFinite(id)) {
+    if (prisma4 && Number.isFinite(id)) {
       try {
-        const updated = await prisma5.manifest_line.update({
+        const updated = await prisma4.manifest_line.update({
           where: { manifest_line_id: id },
           data: {
             unit_no: body.unitNo || void 0,
@@ -12024,17 +12247,20 @@ var CargoService = class {
           matchStatus: updated.match_status
         };
       } catch (err) {
-        console.warn("[CargoService.updateManifestLine] DB error:", err.message);
+        console.warn(
+          "[CargoService.updateManifestLine] DB error:",
+          err.message
+        );
       }
     }
     return { manifestLineId, ...body };
   }
   async applyManifest(manifestId) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(manifestId);
-    if (isDbLive() && prisma5 && Number.isFinite(id)) {
+    if (prisma4 && Number.isFinite(id)) {
       try {
-        const manifest = await prisma5.manifest.findUnique({
+        const manifest = await prisma4.manifest.findUnique({
           where: { manifest_id: id },
           include: { manifest_line: true }
         });
@@ -12042,26 +12268,27 @@ var CargoService = class {
           const lines = manifest.manifest_line || [];
           const blMap = /* @__PURE__ */ new Map();
           for (const l of lines) {
-            if (l.match_status === "IGNORED" || l.match_status === "INVALID") continue;
+            if (l.match_status === "IGNORED" || l.match_status === "INVALID")
+              continue;
             const bl = l.bl_no || `BL-MAN-${id}`;
             if (!blMap.has(bl)) blMap.set(bl, []);
             blMap.get(bl).push(l);
           }
           let consignmentsCreated = 0;
           let unitsCreated = 0;
-          const defaultUt = await prisma5.m_unit_type.findFirst({
+          const defaultUt = await prisma4.m_unit_type.findFirst({
             where: { is_active: true }
           });
           const defaultUnitTypeId = defaultUt ? defaultUt.unit_type_id : 1;
           for (const [blNo, blLines] of blMap.entries()) {
-            let cons = await prisma5.consignment.findFirst({
+            let cons = await prisma4.consignment.findFirst({
               where: { ref_no: blNo, site_id: manifest.site_id }
             });
             if (!cons) {
               const firstLine = blLines[0];
               let partyId = null;
               if (firstLine.consignee_raw) {
-                const party2 = await prisma5.m_party.findFirst({
+                const party2 = await prisma4.m_party.findFirst({
                   where: {
                     OR: [
                       { party_name: { contains: firstLine.consignee_raw } },
@@ -12071,7 +12298,7 @@ var CargoService = class {
                 });
                 if (party2) partyId = party2.party_id;
               }
-              cons = await prisma5.consignment.create({
+              cons = await prisma4.consignment.create({
                 data: {
                   site_id: manifest.site_id,
                   ref_type: "BL",
@@ -12081,7 +12308,10 @@ var CargoService = class {
                   vessel_call_id: manifest.vessel_call_id,
                   consignee_party_id: partyId,
                   cargo_description: firstLine.commodity_raw || "General Cargo",
-                  declared_weight_kg: blLines.reduce((acc, x) => acc + Number(x.gross_weight_kg || 0), 0),
+                  declared_weight_kg: blLines.reduce(
+                    (acc, x) => acc + Number(x.gross_weight_kg || 0),
+                    0
+                  ),
                   units_expected: blLines.length,
                   status: "OPEN",
                   createdby: "manifest_apply"
@@ -12093,15 +12323,17 @@ var CargoService = class {
               const uNo = (l.unit_no || l.unit_no_raw || "").replace(/\s/g, "").toUpperCase();
               if (!uNo) continue;
               const typeCode = (l.unit_type_raw || "40HC").trim().toUpperCase();
-              const ut = await prisma5.m_unit_type.findFirst({
-                where: { OR: [{ type_code: typeCode }, { iso_code: typeCode }] }
+              const ut = await prisma4.m_unit_type.findFirst({
+                where: {
+                  OR: [{ type_code: typeCode }]
+                }
               });
               const unitTypeId = ut ? ut.unit_type_id : defaultUnitTypeId;
-              let cu = await prisma5.cargo_unit.findFirst({
+              let cu = await prisma4.cargo_unit.findFirst({
                 where: { unit_no: uNo }
               });
               if (!cu) {
-                cu = await prisma5.cargo_unit.create({
+                cu = await prisma4.cargo_unit.create({
                   data: {
                     unit_category: "CONTAINER",
                     unit_no: uNo,
@@ -12110,7 +12342,7 @@ var CargoService = class {
                   }
                 });
               }
-              const stay2 = await prisma5.unit_stay.create({
+              const stay2 = await prisma4.unit_stay.create({
                 data: {
                   cargo_unit_id: cu.cargo_unit_id,
                   site_id: manifest.site_id,
@@ -12129,7 +12361,7 @@ var CargoService = class {
                 }
               });
               unitsCreated++;
-              await prisma5.manifest_line.update({
+              await prisma4.manifest_line.update({
                 where: { manifest_line_id: l.manifest_line_id },
                 data: {
                   unit_stay_id: stay2.unit_stay_id,
@@ -12138,7 +12370,7 @@ var CargoService = class {
               });
             }
           }
-          await prisma5.manifest.update({
+          await prisma4.manifest.update({
             where: { manifest_id: id },
             data: {
               status: "APPLIED",
@@ -12156,22 +12388,27 @@ var CargoService = class {
         console.warn("[CargoService.applyManifest] DB error:", err.message);
       }
     }
-    return { success: true, manifest: await this.getManifest(manifestId), consignmentsCreated: 4, unitsCreated: 8 };
+    return {
+      success: true,
+      manifest: await this.getManifest(manifestId),
+      consignmentsCreated: 4,
+      unitsCreated: 8
+    };
   }
   // ------------------------------------------------------------------ REFERENCE DATA
   async getParties(role) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
         const whereClause = { is_active: true };
-        const parties2 = await prisma5.m_party.findMany({
+        const parties2 = await prisma4.m_party.findMany({
           where: whereClause,
           include: { m_party_m_party_role: true },
           orderBy: { party_name: "asc" }
         });
         if (parties2 && parties2.length > 0) {
           const items = parties2.map((p2) => {
-            const roles = p2.m_party_m_party_role.map((r) => r.role_code);
+            const roles = p2.m_party_m_party_role.map((r3) => r3.role_code);
             if (roles.length === 0) {
               const nameLower = p2.party_name.toLowerCase();
               if (nameLower.includes("maersk") || nameLower.includes("shipping") || nameLower.includes("line") || nameLower.includes("cma cgm")) {
@@ -12208,10 +12445,10 @@ var CargoService = class {
     return [];
   }
   async getUnitTypes() {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const unitTypes2 = await prisma5.m_unit_type.findMany({
+        const unitTypes2 = await prisma4.m_unit_type.findMany({
           where: { is_active: true },
           orderBy: { type_code: "asc" }
         });
@@ -12220,10 +12457,10 @@ var CargoService = class {
             unitTypeId: u.unit_type_id,
             unitCategory: u.unit_category,
             typeCode: u.type_code,
-            isoCode: u.iso_code,
+            isoCode: u.type_code,
             typeName: u.type_name,
             lengthFt: u.length_ft,
-            heightFt: u.height_ft ? Number(u.height_ft) : void 0,
+            heightFt: u.height_code ? Number(u.height_code) : void 0,
             isReefer: Boolean(u.is_reefer),
             isTank: Boolean(u.is_tank),
             isActive: u.is_active
@@ -12236,22 +12473,32 @@ var CargoService = class {
     return [];
   }
   async getRegimes() {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const regimes = await prisma5.m_cargo_regime.findMany({
+        const regimes = await prisma4.m_cargo_regime.findMany({
           where: { is_active: true },
-          orderBy: { sort_order: "asc" }
+          orderBy: { regime_code: "asc" }
         });
         if (regimes && regimes.length > 0) {
-          return regimes.map((r) => ({
-            cargoRegimeId: r.cargo_regime_id,
-            regimeCode: r.regime_code,
-            regimeName: r.regime_name,
-            countryCode: r.country_code,
-            direction: r.direction,
-            defaultFreeDays: r.default_free_days,
-            isActive: r.is_active
+          const defaultRefs = {
+            LOCAL: ["TANSAD", "CUSTOMS_RELEASE"],
+            TRANSIT: ["TRANSIT_DECL", "TRANSIT_BOND", "CUSTOMS_RELEASE"],
+            EMPTY: [],
+            BONDED: ["TANSAD", "CUSTOMS_RELEASE"],
+            EXPORT: ["EXPORT_DECL", "EXPORT_RELEASE"],
+            TRANSHIP: ["TRANSIT_DECL", "CUSTOMS_RELEASE"]
+          };
+          return regimes.map((r3) => ({
+            cargoRegimeId: r3.cargo_regime_id,
+            regimeCode: r3.regime_code,
+            regimeName: r3.regime_name,
+            countryCode: r3.m_country_pack?.country_code,
+            direction: r3.regime_code.startsWith("EX") ? "EXPORT" : "IMPORT",
+            defaultFreeDays: 7,
+            isActive: r3.is_active,
+            requiresCustoms: r3.requires_customs ?? r3.regime_code !== "EMPTY",
+            refs: defaultRefs[r3.regime_code] || []
           }));
         }
       } catch (err) {
@@ -12261,10 +12508,10 @@ var CargoService = class {
     return [];
   }
   async getHoldTypes() {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const holdTypes2 = await prisma5.m_hold_type.findMany({
+        const holdTypes2 = await prisma4.m_hold_type.findMany({
           where: { is_active: true },
           orderBy: { hold_code: "asc" }
         });
@@ -12293,10 +12540,10 @@ var CargoService = class {
     return [];
   }
   async getImoClasses() {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const classes = await prisma5.m_imo_class.findMany({
+        const classes = await prisma4.m_imo_class.findMany({
           orderBy: { imo_class: "asc" }
         });
         if (classes && classes.length > 0) {
@@ -12313,10 +12560,10 @@ var CargoService = class {
     return [];
   }
   async getCustomsRefTypes() {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const types = await prisma5.m_customs_ref_type.findMany({
+        const types = await prisma4.m_customs_ref_type.findMany({
           where: { is_active: true },
           orderBy: { ref_type_code: "asc" }
         });
@@ -12325,26 +12572,29 @@ var CargoService = class {
             customsRefTypeId: t.customs_ref_type_id,
             refTypeCode: t.ref_type_code,
             refTypeName: t.ref_type_name,
-            countryCode: t.country_code,
+            countryCode: t.m_country_pack?.country_code,
             isActive: t.is_active
           }));
         }
       } catch (err) {
-        console.warn("[CargoService.getCustomsRefTypes] DB error:", err.message);
+        console.warn(
+          "[CargoService.getCustomsRefTypes] DB error:",
+          err.message
+        );
       }
     }
     return [];
   }
   // ------------------------------------------------------------------ 5. CUSTOMS & EXAMS
   async getCustomsRefs(query = {}) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const dbRefs = await prisma5.customs_ref.findMany({
+        const dbRefs = await prisma4.customs_ref.findMany({
           include: {
             m_customs_ref_type: true,
             consignment: true,
-            unit_stay: { include: { unit_stay_cargo_units: true } }
+            unit_stay_disbursement: { include: { unit_stay_cargo_units: true } }
           },
           orderBy: { customs_ref_id: "desc" }
         });
@@ -12357,7 +12607,7 @@ var CargoService = class {
             consignmentId: cr.consignment_id ? toNum(cr.consignment_id) : void 0,
             consignmentRef: cr.consignment?.ref_no,
             unitStayId: cr.unit_stay_id ? toNum(cr.unit_stay_id) : void 0,
-            unitNo: cr.unit_stay?.unit_stay_cargo_units?.unit_no,
+            unitNo: cr.unit_stay_disbursement?.unit_stay_cargo_units?.unit_no,
             refNo: cr.ref_no,
             refDate: cr.ref_date?.toISOString(),
             status: cr.status,
@@ -12374,10 +12624,10 @@ var CargoService = class {
     return customsRefs;
   }
   async createCustomsRef(body) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const created = await prisma5.customs_ref.create({
+        const created = await prisma4.customs_ref.create({
           data: {
             customs_ref_type_id: body.customsRefTypeId || 1,
             consignment_id: body.consignmentId ? Number(body.consignmentId) : null,
@@ -12393,7 +12643,7 @@ var CargoService = class {
           }
         });
         const refs = await this.getCustomsRefs();
-        return refs.find((r) => r.customsRefId === toNum(created.customs_ref_id)) || refs[0];
+        return refs.find((r3) => r3.customsRefId === toNum(created.customs_ref_id)) || refs[0];
       } catch (err) {
         console.warn("[CargoService.createCustomsRef] DB error:", err.message);
       }
@@ -12408,10 +12658,10 @@ var CargoService = class {
     return newRef;
   }
   async getCustomsExams() {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const dbExams = await prisma5.exam.findMany({
+        const dbExams = await prisma4.exam.findMany({
           include: {
             unit_stay: {
               include: {
@@ -12448,10 +12698,10 @@ var CargoService = class {
     return exams;
   }
   async createCustomsExam(body) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const created = await prisma5.exam.create({
+        const created = await prisma4.exam.create({
           data: {
             unit_stay_id: Number(body.unitStayId) || 1,
             exam_type: body.examType || "PHYSICAL",
@@ -12477,11 +12727,11 @@ var CargoService = class {
     return newE;
   }
   async completeCustomsExam(examId, body) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(examId);
-    if (isDbLive() && prisma5 && Number.isFinite(id)) {
+    if (prisma4 && Number.isFinite(id)) {
       try {
-        const updated = await prisma5.exam.update({
+        const updated = await prisma4.exam.update({
           where: { exam_id: id },
           data: {
             status: "COMPLETED",
@@ -12494,21 +12744,27 @@ var CargoService = class {
         const examsList = await this.getCustomsExams();
         return examsList.find((e) => e.examId === toNum(updated.exam_id)) || examsList[0];
       } catch (err) {
-        console.warn("[CargoService.completeCustomsExam] DB error:", err.message);
+        console.warn(
+          "[CargoService.completeCustomsExam] DB error:",
+          err.message
+        );
       }
     }
     return { examId, status: "COMPLETED", ...body };
   }
   // ------------------------------------------------------------------ 6. HOLDS
   async getHolds(query = {}) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const dbHolds = await prisma5.hold.findMany({
+        const dbHolds = await prisma4.hold.findMany({
           include: {
             hold_types: true,
             hold_unit_stays: {
-              include: { unit_stay_cargo_units: true, unit_stay_consignments: true }
+              include: {
+                unit_stay_cargo_units: true,
+                unit_stay_consignments: true
+              }
             }
           },
           orderBy: { hold_id: "desc" }
@@ -12540,11 +12796,11 @@ var CargoService = class {
     return holds;
   }
   async placeHold(body, username = "Customs Officer") {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
         const unitStayId = Number(body.unitStayId) || 1;
-        const created = await prisma5.hold.create({
+        const created = await prisma4.hold.create({
           data: {
             unit_stay_id: unitStayId,
             hold_type_id: body.holdTypeId ? Number(body.holdTypeId) : 1,
@@ -12556,7 +12812,7 @@ var CargoService = class {
             createdby: "system"
           }
         });
-        await prisma5.unit_stay.update({
+        await prisma4.unit_stay.update({
           where: { unit_stay_id: unitStayId },
           data: { active_hold_count: { increment: 1 } }
         });
@@ -12576,13 +12832,15 @@ var CargoService = class {
     return newH;
   }
   async liftHold(holdId2, body, username = "Customs Officer") {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(holdId2);
-    if (isDbLive() && prisma5 && Number.isFinite(id)) {
+    if (prisma4 && Number.isFinite(id)) {
       try {
-        const existing = await prisma5.hold.findUnique({ where: { hold_id: id } });
+        const existing = await prisma4.hold.findUnique({
+          where: { hold_id: id }
+        });
         if (existing) {
-          const updated = await prisma5.hold.update({
+          const updated = await prisma4.hold.update({
             where: { hold_id: id },
             data: {
               status: "LIFTED",
@@ -12591,7 +12849,7 @@ var CargoService = class {
               lift_reason: body.liftReason || "Authorized release"
             }
           });
-          await prisma5.unit_stay.update({
+          await prisma4.unit_stay.update({
             where: { unit_stay_id: existing.unit_stay_id },
             data: { active_hold_count: { decrement: 1 } }
           });
@@ -12612,15 +12870,17 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ 7. RELEASE ORDERS
   async getReleaseOrders(query = {}) {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const dbRos = await prisma5.release_order.findMany({
+        const dbRos = await prisma4.release_order.findMany({
           include: {
             consignment: true,
             m_party_release_order_requested_by: true,
             release_order_unit: {
-              include: { unit_stay: { include: { unit_stay_cargo_units: true } } }
+              include: {
+                unit_stay: { include: { unit_stay_cargo_units: true } }
+              }
             }
           },
           orderBy: { release_order_id: "desc" }
@@ -12660,13 +12920,13 @@ var CargoService = class {
   }
   async getReleaseOrder(releaseOrderId) {
     const list = await this.getReleaseOrders();
-    return list.find((r) => String(r.releaseOrderId) === String(releaseOrderId)) || list[0];
+    return list.find((r3) => String(r3.releaseOrderId) === String(releaseOrderId)) || list[0];
   }
   async createReleaseOrder(body, username = "Release Officer") {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const created = await prisma5.release_order.create({
+        const created = await prisma4.release_order.create({
           data: {
             site_id: body.siteId || 1,
             release_no: body.releaseNo || `RO-${Date.now().toString().slice(-6)}`,
@@ -12686,7 +12946,10 @@ var CargoService = class {
         });
         return this.getReleaseOrder(Number(created.release_order_id));
       } catch (err) {
-        console.warn("[CargoService.createReleaseOrder] DB error:", err.message);
+        console.warn(
+          "[CargoService.createReleaseOrder] DB error:",
+          err.message
+        );
       }
     }
     const newRo = {
@@ -12706,19 +12969,35 @@ var CargoService = class {
       releaseNo: ro2?.releaseNo,
       readyToRelease: true,
       conditions: [
-        { code: "CUSTOMS_CLEARED", name: "Customs declaration cleared", passed: true },
-        { code: "CHARGES_PAID", name: "Terminal charges fully paid", passed: true },
-        { code: "NO_ACTIVE_HOLDS", name: "Zero active unit holds", passed: true },
-        { code: "TRANSPORTER_VALID", name: "Transporter license valid", passed: true }
+        {
+          code: "CUSTOMS_CLEARED",
+          name: "Customs declaration cleared",
+          passed: true
+        },
+        {
+          code: "CHARGES_PAID",
+          name: "Terminal charges fully paid",
+          passed: true
+        },
+        {
+          code: "NO_ACTIVE_HOLDS",
+          name: "Zero active unit holds",
+          passed: true
+        },
+        {
+          code: "TRANSPORTER_VALID",
+          name: "Transporter license valid",
+          passed: true
+        }
       ]
     };
   }
   async approveReleaseOrder(releaseOrderId, username = "Terminal Manager") {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(releaseOrderId);
-    if (isDbLive() && prisma5 && Number.isFinite(id)) {
+    if (prisma4 && Number.isFinite(id)) {
       try {
-        await prisma5.release_order.update({
+        await prisma4.release_order.update({
           where: { release_order_id: id },
           data: {
             status: "APPROVED",
@@ -12728,10 +13007,15 @@ var CargoService = class {
         });
         return this.getReleaseOrder(id);
       } catch (err) {
-        console.warn("[CargoService.approveReleaseOrder] DB error:", err.message);
+        console.warn(
+          "[CargoService.approveReleaseOrder] DB error:",
+          err.message
+        );
       }
     }
-    const ro2 = releaseOrders.find((r) => String(r.releaseOrderId) === String(releaseOrderId));
+    const ro2 = releaseOrders.find(
+      (r3) => String(r3.releaseOrderId) === String(releaseOrderId)
+    );
     if (ro2) {
       ro2.status = "APPROVED";
       ro2.approvedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -12740,11 +13024,11 @@ var CargoService = class {
     return ro2;
   }
   async cancelReleaseOrder(releaseOrderId, reason) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(releaseOrderId);
-    if (isDbLive() && prisma5 && Number.isFinite(id)) {
+    if (prisma4 && Number.isFinite(id)) {
       try {
-        await prisma5.release_order.update({
+        await prisma4.release_order.update({
           where: { release_order_id: id },
           data: {
             status: "CANCELLED",
@@ -12753,10 +13037,15 @@ var CargoService = class {
         });
         return this.getReleaseOrder(id);
       } catch (err) {
-        console.warn("[CargoService.cancelReleaseOrder] DB error:", err.message);
+        console.warn(
+          "[CargoService.cancelReleaseOrder] DB error:",
+          err.message
+        );
       }
     }
-    const ro2 = releaseOrders.find((r) => String(r.releaseOrderId) === String(releaseOrderId));
+    const ro2 = releaseOrders.find(
+      (r3) => String(r3.releaseOrderId) === String(releaseOrderId)
+    );
     if (ro2) {
       ro2.status = "CANCELLED";
       ro2.cancelReason = reason;
@@ -12764,11 +13053,11 @@ var CargoService = class {
     return ro2;
   }
   async revalidateReleaseOrder(releaseOrderId, newValidTo) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const id = Number(releaseOrderId);
-    if (isDbLive() && prisma5 && Number.isFinite(id)) {
+    if (prisma4 && Number.isFinite(id)) {
       try {
-        await prisma5.release_order.update({
+        await prisma4.release_order.update({
           where: { release_order_id: id },
           data: {
             valid_to: new Date(newValidTo)
@@ -12776,10 +13065,15 @@ var CargoService = class {
         });
         return this.getReleaseOrder(id);
       } catch (err) {
-        console.warn("[CargoService.revalidateReleaseOrder] DB error:", err.message);
+        console.warn(
+          "[CargoService.revalidateReleaseOrder] DB error:",
+          err.message
+        );
       }
     }
-    const ro2 = releaseOrders.find((r) => String(r.releaseOrderId) === String(releaseOrderId));
+    const ro2 = releaseOrders.find(
+      (r3) => String(r3.releaseOrderId) === String(releaseOrderId)
+    );
     if (ro2) {
       ro2.validTo = newValidTo;
     }
@@ -12791,10 +13085,10 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ 8. DANGEROUS GOODS
   async getDgLines() {
-    const prisma5 = getPrisma();
-    if (isDbLive() && prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const dbDg = await prisma5.unit_dg_line.findMany({
+        const dbDg = await prisma4.unit_dg_line.findMany({
           include: {
             unit_stay: {
               include: {
@@ -12830,22 +13124,25 @@ var CargoService = class {
     return dgLines;
   }
   async saveDgLines(unitStayId, lines) {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const stayId2 = Number(unitStayId);
-    if (isDbLive() && prisma5 && Number.isFinite(stayId2) && Array.isArray(lines)) {
+    if (prisma4 && Number.isFinite(stayId2) && Array.isArray(lines)) {
       try {
         for (const l of lines) {
-          await prisma5.unit_dg_line.create({
+          await prisma4.unit_dg_line.create({
             data: {
-              unit_stay_id: stayId2,
+              unit_stay: { connect: { unit_stay_id: BigInt(stayId2) } },
+              m_imo_class_unit_dg_line_imo_classTom_imo_class: {
+                connect: { imo_class: String(l.imoClass || "3").slice(0, 5) }
+              },
               un_no: String(l.unNo || "1203").slice(0, 4),
-              imo_class: String(l.imoClass || "3").slice(0, 5),
               proper_shipping_name: l.properShippingName || "FLAMMABLE LIQUID, N.O.S.",
               packing_group: l.packingGroup || "II",
               flashpoint_c: l.flashpointC ? Number(l.flashpointC) : null,
               marine_pollutant: Boolean(l.marinePollutant),
               gross_weight_kg: l.grossWeightKg ? Number(l.grossWeightKg) : 2e4,
-              emergencyContact: l.emergencyContact || "+255 22 2110000"
+              emergency_contact: l.emergencyContact || "+255 22 2110000",
+              createdby: "system"
             }
           });
         }
@@ -13331,7 +13628,7 @@ cargoRoutes.get("/manifests/:manifestId", requireSite(true), requirePermission("
 cargoRoutes.get("/manifests/:manifestId/lines", requireSite(true), requirePermission("manifest.import"), cargoManifestsController.getManifestLines);
 cargoRoutes.patch("/manifests/:manifestId/lines/:manifestLineId", requireSite(true), requirePermission("manifest.import", "DO"), cargoManifestsController.updateManifestLine);
 cargoRoutes.post(["/manifests/:manifestId([0-9a-zA-Z_.-]+):apply", "/manifests/:manifestId/apply"], requireSite(true), requirePermission("manifest.import", "DO"), cargoManifestsController.applyManifest);
-cargoRoutes.get("/customs/refs", requireSite(false), requirePermission("consignment.view"), cargoCustomsController.getCustomsRefs);
+cargoRoutes.get(["/customs/refs", "/customs-declarations"], requireSite(false), requirePermission("consignment.view"), cargoCustomsController.getCustomsRefs);
 cargoRoutes.post("/customs/refs", requireSite(false), requirePermission("consignment.edit", "DO"), cargoCustomsController.createCustomsRef);
 cargoRoutes.get("/exams", requireSite(false), requirePermission("consignment.view"), cargoCustomsController.getExams);
 cargoRoutes.post("/exams", requireSite(false), requirePermission("consignment.edit", "DO"), cargoCustomsController.createExam);
@@ -14472,6 +14769,17 @@ var setupModelsController = {
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
+  },
+  activateModel: async (req, res) => {
+    try {
+      const modelId = req.params.modelId || req.params.id || req.params.mlModelVersionId;
+      const { reason } = req.body || {};
+      const userSub = req.userSub || req.user?.sub || "system";
+      const result = await setupService.activateModel(modelId, reason, userSub);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   }
 };
 
@@ -14655,10 +14963,10 @@ setupRoutes.put("/roles/:roleId/permissions", requireSite(false), requirePermiss
 setupRoutes.patch("/roles/:roleId/permissions", requireSite(false), requirePermission("admin.users.manage", "DO"), setupUsersController.updateRolePermissions);
 setupRoutes.get("/permissions", requireSite(false), requirePermission("masters.view"), setupUsersController.getPermissions);
 setupRoutes.post("/permissions", requireSite(false), requirePermission("admin.users.manage", "DO"), setupUsersController.createPermission);
-setupRoutes.get("/delegations", requireSite(false), requirePermission("masters.view"), setupUsersController.getDelegations);
-setupRoutes.post("/delegations", requireSite(false), requirePermission("admin.users.manage", "DO"), setupUsersController.createDelegation);
-setupRoutes.post(["/delegations/:delegationId:revoke", "/delegations/:delegationId/revoke"], requireSite(false), requirePermission("admin.users.manage", "DO"), setupUsersController.revokeDelegation);
-setupRoutes.delete("/delegations/:delegationId", requireSite(false), requirePermission("admin.users.manage", "DO"), setupUsersController.revokeDelegation);
+setupRoutes.get("/delegations", requireSite(false), setupUsersController.getDelegations);
+setupRoutes.post("/delegations", requireSite(false), setupUsersController.createDelegation);
+setupRoutes.post(["/delegations/:delegationId:revoke", "/delegations/:delegationId/revoke"], requireSite(false), setupUsersController.revokeDelegation);
+setupRoutes.delete("/delegations/:delegationId", requireSite(false), setupUsersController.revokeDelegation);
 setupRoutes.get("/hold-types", requireSite(true), requirePermission("masters.view"), setupRulesController.getHoldTypes);
 setupRoutes.post("/hold-types", requireSite(true), requirePermission("admin.config.manage", "DO"), setupRulesController.createHoldType);
 setupRoutes.patch("/hold-types/:holdTypeId", requireSite(true), requirePermission("admin.config.manage", "DO"), setupRulesController.updateHoldType);
@@ -14746,6 +15054,12 @@ setupRoutes.patch("/sync/outbox/:outboxId", requireSite(true), requirePermission
 setupRoutes.get("/models", requireSite(true), requirePermission("masters.view"), setupModelsController.getModels);
 setupRoutes.post("/models", requireSite(true), requirePermission("admin.config.manage", "DO"), setupModelsController.createModel);
 setupRoutes.patch("/models/:modelId", requireSite(true), requirePermission("admin.config.manage", "DO"), setupModelsController.updateModel);
+setupRoutes.post(
+  ["/models/:modelId([0-9a-zA-Z_.-]+):activate", "/models/:modelId/activate", "/models/:modelId:activate"],
+  requireSite(true),
+  requirePermission("admin.config.manage", "DO"),
+  setupModelsController.activateModel
+);
 setupRoutes.get("/field-rules", requireSite(true), requirePermission("masters.view"), setupSettingsController.getFieldRules);
 setupRoutes.post("/field-rules", requireSite(true), requirePermission("admin.config.manage", "DO"), setupSettingsController.createFieldRule);
 setupRoutes.patch("/field-rules/:fieldRuleId", requireSite(true), requirePermission("admin.config.manage", "DO"), setupSettingsController.updateFieldRule);
@@ -14800,8 +15114,8 @@ var ME2 = "Neema Mushi";
 var rates = [];
 {
   let id = 400;
-  for (const [d, r] of [["2026-07-01", "2618.40"], ["2026-08-01", "2641.75"], ["2026-09-01", "2652.10"], ["2026-10-01", "2661.30"]]) {
-    rates.push({ exchangeRateId: ++id, companyId: 1, fromCurrency: "USD", toCurrency: "TZS", rateDate: d, rate: r, rateKind: "MONTHLY", sourceNote: "Bank of Tanzania month-opening mean rate", usedBy: 0, enteredAt: at(daysBetween(d, TODAY) * 24 + 1.5), enteredBy: "Grace Mrema" });
+  for (const [d, r3] of [["2026-07-01", "2618.40"], ["2026-08-01", "2641.75"], ["2026-09-01", "2652.10"], ["2026-10-01", "2661.30"]]) {
+    rates.push({ exchangeRateId: ++id, companyId: 1, fromCurrency: "USD", toCurrency: "TZS", rateDate: d, rate: r3, rateKind: "MONTHLY", sourceNote: "Bank of Tanzania month-opening mean rate", usedBy: 0, enteredAt: at(daysBetween(d, TODAY) * 24 + 1.5), enteredBy: "Grace Mrema" });
   }
   for (let i = 59; i >= 0; i--) {
     const d = day(-i);
@@ -14812,10 +15126,10 @@ var rates = [];
   }
 }
 function rateOn(date) {
-  const daily = rates.filter((r) => r.rateKind === "DAILY" && r.rateDate <= date).sort((a, b) => b.rateDate.localeCompare(a.rateDate))[0];
+  const daily = rates.filter((r3) => r3.rateKind === "DAILY" && r3.rateDate <= date).sort((a, b) => b.rateDate.localeCompare(a.rateDate))[0];
   if (daily && daily.rateDate === date) return { rate: daily, note: "Daily rate for this date" };
   if (daily && daily.rateDate.slice(0, 7) === date.slice(0, 7)) return { rate: daily, note: `No rate on ${dShort(date)}${isSunday(date) ? " (Sunday)" : HOLIDAYS[date] ? ` (${HOLIDAYS[date]})` : ""}; last daily rate carries forward` };
-  const monthly = rates.filter((r) => r.rateKind === "MONTHLY" && r.rateDate <= date).sort((a, b) => b.rateDate.localeCompare(a.rateDate))[0];
+  const monthly = rates.filter((r3) => r3.rateKind === "MONTHLY" && r3.rateDate <= date).sort((a, b) => b.rateDate.localeCompare(a.rateDate))[0];
   return { rate: monthly ?? rates[0], note: "No daily rate; monthly rate used" };
 }
 var fx = (date) => num(rateOn(date).rate.rate);
@@ -14901,7 +15215,7 @@ var BASIS_LABEL = {
   FLAT: "Flat"
 };
 var ruleId2 = 6e3;
-var sl = (...rows) => rows.map(([f, t, r]) => ({ fromQty: String(f), toQty: t === null ? null : String(t), rate: m2(r) }));
+var sl = (...rows) => rows.map(([f, t, r3]) => ({ fromQty: String(f), toQty: t === null ? null : String(t), rate: m2(r3) }));
 var R = (chargeCode, basis, o = {}) => ({
   tariffRuleId: ++ruleId2,
   chargeCode,
@@ -14946,7 +15260,7 @@ var transitRules = () => [
   R("EXAM_HANDLING", "PER_UNIT", { unitCategory: "CONTAINER", flatRate: "100.00", taxCode: "VAT0" }),
   ...vehicleRules("VAT0", 14),
   R("DOC_FEE", "FLAT", { flatRate: "50.00", taxCode: "VAT0" })
-].filter((r, i, a) => !(r.chargeCode === "DOC_FEE" && a.findIndex((x) => x.chargeCode === "DOC_FEE") !== i));
+].filter((r3, i, a) => !(r3.chargeCode === "DOC_FEE" && a.findIndex((x) => x.chargeCode === "DOC_FEE") !== i));
 var tariffs = [
   { tariffId: 31, tariffCode: "TRF-DAR1-STD", tariffName: "Main yard standard tariff", level: "SITE", companyId: 1, siteId: 1, currency: "USD", versionNo: 3, effectiveFrom: "2026-07-01", status: "ACTIVE", regulatorRef: "Published tariff book 2026/27", rules: siteRules(), updatedBy: "Grace Mrema", remarks: "Free days count Sundays and public holidays." },
   { tariffId: 32, tariffCode: "TRF-DAR1-STD", tariffName: "Main yard standard tariff", level: "SITE", companyId: 1, siteId: 1, currency: "USD", versionNo: 4, effectiveFrom: "2027-01-01", status: "DRAFT", rules: siteRules(1.1), updatedBy: "Neema Mushi", remarks: "Storage slabs up 10% from 1 Jan 2027. Handling unchanged." },
@@ -14975,23 +15289,23 @@ function tariffFor(s, opts = {}) {
   const bill = billToOf(s);
   return tariffs.find((t) => ok(t) && t.level === "CUSTOMER" && t.partyId === bill) ?? (s.fullEmpty === "E" ? tariffs.find((t) => ok(t) && t.level === "LINE" && t.partyId === s.linePartyId) : void 0) ?? (s.cargoRegimeCode === "TRANSIT" ? tariffs.find((t) => ok(t) && t.level === "REGIME" && t.regimeCode === "TRANSIT") : void 0) ?? tariffs.find((t) => ok(t) && t.level === "SITE" && t.siteId === s.siteId);
 }
-function ruleMatches(r, s) {
+function ruleMatches(r3, s) {
   const u = s.cargoUnit;
-  if (r.unitCategory && r.unitCategory !== u.category) return false;
-  if (r.lengthFt && r.lengthFt !== lengthOf(u.unitTypeCode)) return false;
-  if (r.fullEmpty && r.fullEmpty !== s.fullEmpty) return false;
-  if (r.isReefer && !u.unitTypeCode.includes("R")) return false;
-  if (r.isHazardous && !s.imoClass) return false;
-  if (r.vehicleClass && r.vehicleClass !== u.unitTypeCode) return false;
+  if (r3.unitCategory && r3.unitCategory !== u.category) return false;
+  if (r3.lengthFt && r3.lengthFt !== lengthOf(u.unitTypeCode)) return false;
+  if (r3.fullEmpty && r3.fullEmpty !== s.fullEmpty) return false;
+  if (r3.isReefer && !u.unitTypeCode.includes("R")) return false;
+  if (r3.isHazardous && !s.imoClass) return false;
+  if (r3.vehicleClass && r3.vehicleClass !== u.unitTypeCode) return false;
   return true;
 }
 var kwhPerDay = (s) => 38 + (s.unitStayId ?? 0) % 14;
 var tonnes = (s) => 3 + (s.unitStayId ?? 0) % 9;
-function storageClock(s, r) {
-  const startIso = r.clockStart === "GATE_IN" ? s.gatedInAt : s.dischargeAt ?? s.gatedInAt;
+function storageClock(s, r3) {
+  const startIso = r3.clockStart === "GATE_IN" ? s.gatedInAt : s.dischargeAt ?? s.gatedInAt;
   if (!startIso) return null;
   const start = eatDate(startIso);
-  const free = r.freeDays ?? 0;
+  const free = r3.freeDays ?? 0;
   let counted = 0, dayNo = 0, sundays = 0, hols = [];
   let d = start;
   while (counted < free) {
@@ -14999,7 +15313,7 @@ function storageClock(s, r) {
     const sun = isSunday(d), hol = HOLIDAYS[d];
     if (sun) sundays++;
     if (hol) hols.push(hol);
-    const skip = sun && r.freeExclSundays || hol && r.freeExclHolidays;
+    const skip = sun && r3.freeExclSundays || hol && r3.freeExclHolidays;
     if (!skip) counted++;
     if (counted < free) d = addDays(d, 1);
   }
@@ -15011,35 +15325,35 @@ function rateStay(s, through, opts = {}) {
   const out = [];
   const u = s.cargoUnit;
   const bill = billToOf(s);
-  const base = (r, extra) => {
+  const base = (r3, extra) => {
     const qty = num(extra.quantity);
     const rate = num(extra.unitRate);
     let amount = r2(qty * rate);
     const how = [...extra.how ?? []];
-    if (r.minCharge && amount < num(r.minCharge)) {
-      how.push(`Minimum charge USD ${r.minCharge} applies`);
-      amount = num(r.minCharge);
+    if (r3.minCharge && amount < num(r3.minCharge)) {
+      how.push(`Minimum charge USD ${r3.minCharge} applies`);
+      amount = num(r3.minCharge);
     }
-    if (r.maxCharge && amount > num(r.maxCharge)) {
-      how.push(`Capped at maximum USD ${r.maxCharge}`);
-      amount = num(r.maxCharge);
+    if (r3.maxCharge && amount > num(r3.maxCharge)) {
+      how.push(`Capped at maximum USD ${r3.maxCharge}`);
+      amount = num(r3.maxCharge);
     }
-    const taxCode = r.taxCode ?? "VAT18";
+    const taxCode = r3.taxCode ?? "VAT18";
     const pct = TAX[taxCode]?.pct ?? 18;
     return {
-      key: `${s.unitStayId}-${r.tariffRuleId}-${extra.serviceFrom ?? ""}`,
+      key: `${s.unitStayId}-${r3.tariffRuleId}-${extra.serviceFrom ?? ""}`,
       unitStayId: s.unitStayId,
       unitNo: u.unitNo,
       unitCategory: u.category,
       consignmentId: s.consignmentId,
       billToPartyId: bill,
-      chargeCode: r.chargeCode,
-      chargeName: CHARGE_NAMES[r.chargeCode] ?? r.chargeCode,
-      description: CHARGE_NAMES[r.chargeCode] ?? r.chargeCode,
-      uom: UOM[r.basis],
+      chargeCode: r3.chargeCode,
+      chargeName: CHARGE_NAMES[r3.chargeCode] ?? r3.chargeCode,
+      description: CHARGE_NAMES[r3.chargeCode] ?? r3.chargeCode,
+      uom: UOM[r3.basis],
       tariffCode: t.tariffCode,
       tariffVersion: t.versionNo,
-      ruleId: r.tariffRuleId,
+      ruleId: r3.tariffRuleId,
       taxCode,
       taxPct: pct,
       kind: "NORMAL",
@@ -15052,48 +15366,48 @@ function rateStay(s, through, opts = {}) {
     };
   };
   const gateIn = s.gatedInAt ? eatDate(s.gatedInAt) : null;
-  for (const r of t.rules.filter((x) => x.chargeCode !== "DOC_FEE" && ruleMatches(x, s))) {
-    if (r.basis === "PER_UNIT_DAY" || r.basis === "PER_TEU_DAY") {
-      const c = storageClock(s, r);
+  for (const r3 of t.rules.filter((x) => x.chargeCode !== "DOC_FEE" && ruleMatches(x, s))) {
+    if (r3.basis === "PER_UNIT_DAY" || r3.basis === "PER_TEU_DAY") {
+      const c = storageClock(s, r3);
       if (!c || c.start > through) continue;
       const totalDays = daysBetween(c.start, through) + 1;
-      const teu = r.basis === "PER_TEU_DAY" ? lengthOf(u.unitTypeCode) === 40 ? 2 : 1 : 1;
-      const clockHow = `Clock starts at ${r.clockStart === "GATE_IN" ? "gate-in" : "vessel discharge"} ${dShort(c.start)}`;
-      const freeHow = `Free days 1\u2013${c.freeEndDayNo}: ${dShort(c.start)}\u2013${dShort(c.freeEnd)}` + (r.freeExclSundays || r.freeExclHolidays ? ` (${r.freeDays} free days; ${c.extended} Sunday${c.extended === 1 ? "" : "s"}/holiday${c.extended === 1 ? "" : "s"} skipped)` : `; Sundays${c.sundays ? ` (${c.sundays})` : ""} and holidays${c.hols.length ? ` (${c.hols.join(", ")})` : ""} count as free days`);
+      const teu = r3.basis === "PER_TEU_DAY" ? lengthOf(u.unitTypeCode) === 40 ? 2 : 1 : 1;
+      const clockHow = `Clock starts at ${r3.clockStart === "GATE_IN" ? "gate-in" : "vessel discharge"} ${dShort(c.start)}`;
+      const freeHow = `Free days 1\u2013${c.freeEndDayNo}: ${dShort(c.start)}\u2013${dShort(c.freeEnd)}` + (r3.freeExclSundays || r3.freeExclHolidays ? ` (${r3.freeDays} free days; ${c.extended} Sunday${c.extended === 1 ? "" : "s"}/holiday${c.extended === 1 ? "" : "s"} skipped)` : `; Sundays${c.sundays ? ` (${c.sundays})` : ""} and holidays${c.hols.length ? ` (${c.hols.join(", ")})` : ""} count as free days`);
       if (totalDays <= c.freeEndDayNo) {
-        out.push(base(r, { serviceFrom: c.start, serviceTo: through, quantity: "0", unitRate: "0", description: `${CHARGE_NAMES[r.chargeCode]}: within free days`, how: [clockHow, freeHow, `Day ${totalDays} of ${c.freeEndDayNo} free: nothing to pay yet`] }));
+        out.push(base(r3, { serviceFrom: c.start, serviceTo: through, quantity: "0", unitRate: "0", description: `${CHARGE_NAMES[r3.chargeCode]}: within free days`, how: [clockHow, freeHow, `Day ${totalDays} of ${c.freeEndDayNo} free: nothing to pay yet`] }));
         continue;
       }
-      for (const sb of r.slabs.filter((x) => num(x.rate) > 0)) {
+      for (const sb of r3.slabs.filter((x) => num(x.rate) > 0)) {
         const from = Math.max(num(sb.fromQty), c.freeEndDayNo + 1);
         const to = Math.min(sb.toQty === null || sb.toQty === void 0 ? Infinity : num(sb.toQty), totalDays);
         if (to < from) continue;
         const days = to - from + 1;
-        out.push(base(r, {
+        out.push(base(r3, {
           serviceFrom: addDays(c.start, from - 1),
           serviceTo: addDays(c.start, to - 1),
           quantity: String(days * teu),
           unitRate: sb.rate,
-          description: `${CHARGE_NAMES[r.chargeCode]}, days ${from}\u2013${to}`,
+          description: `${CHARGE_NAMES[r3.chargeCode]}, days ${from}\u2013${to}`,
           how: [clockHow, freeHow, `Slab days ${sb.fromQty}\u2013${sb.toQty ?? "\u2026"} at USD ${sb.rate}${teu > 1 ? ` \xD7 ${teu} TEU` : ""}: ${days} day${days === 1 ? "" : "s"}`]
         }));
       }
-    } else if (r.basis === "PER_MOVE") {
+    } else if (r3.basis === "PER_MOVE") {
       if (!gateIn || gateIn > through) continue;
-      out.push(base(r, { serviceFrom: gateIn, serviceTo: gateIn, quantity: "1", unitRate: r.flatRate ?? "0", how: [`Lift off at gate-in ${dShort(gateIn)}; lift on at delivery included`, `${BASIS_LABEL[r.basis]} at USD ${r.flatRate}`] }));
-    } else if (r.basis === "PER_KWH") {
+      out.push(base(r3, { serviceFrom: gateIn, serviceTo: gateIn, quantity: "1", unitRate: r3.flatRate ?? "0", how: [`Lift off at gate-in ${dShort(gateIn)}; lift on at delivery included`, `${BASIS_LABEL[r3.basis]} at USD ${r3.flatRate}`] }));
+    } else if (r3.basis === "PER_KWH") {
       if (!gateIn) continue;
       const days = Math.max(1, daysBetween(gateIn, through) + 1);
       const k = kwhPerDay(s) * days;
-      out.push(base(r, { serviceFrom: gateIn, serviceTo: through, quantity: String(k), unitRate: r.flatRate ?? "0", how: [`Plugged in ${dShort(gateIn)}; meter readings ${days} day${days === 1 ? "" : "s"}, about ${kwhPerDay(s)} kWh a day`, `USD ${r.flatRate} per kWh`] }));
-    } else if (r.basis === "PER_UNIT") {
-      const exam2 = r.chargeCode === "EXAM_HANDLING";
+      out.push(base(r3, { serviceFrom: gateIn, serviceTo: through, quantity: String(k), unitRate: r3.flatRate ?? "0", how: [`Plugged in ${dShort(gateIn)}; meter readings ${days} day${days === 1 ? "" : "s"}, about ${kwhPerDay(s)} kWh a day`, `USD ${r3.flatRate} per kWh`] }));
+    } else if (r3.basis === "PER_UNIT") {
+      const exam2 = r3.chargeCode === "EXAM_HANDLING";
       if (exam2 && !(s.customsStatus === "UNDER_EXAM" || s.customsStatus === "CLEARED" && (s.unitStayId ?? 0) % 3 === 0)) continue;
       if (!gateIn) continue;
-      out.push(base(r, { serviceFrom: gateIn, serviceTo: gateIn, quantity: "1", unitRate: r.flatRate ?? "0", how: [exam2 ? "Unit moved to exam bay for customs examination" : r.chargeCode === "HAZ_SURCHARGE" ? `IMO class ${s.imoClass} cargo` : "Vehicle received and parked", `${BASIS_LABEL[r.basis]} at USD ${r.flatRate}`] }));
-    } else if (r.basis === "PER_TONNE") {
+      out.push(base(r3, { serviceFrom: gateIn, serviceTo: gateIn, quantity: "1", unitRate: r3.flatRate ?? "0", how: [exam2 ? "Unit moved to exam bay for customs examination" : r3.chargeCode === "HAZ_SURCHARGE" ? `IMO class ${s.imoClass} cargo` : "Vehicle received and parked", `${BASIS_LABEL[r3.basis]} at USD ${r3.flatRate}`] }));
+    } else if (r3.basis === "PER_TONNE") {
       if (!gateIn) continue;
-      out.push(base(r, { serviceFrom: gateIn, serviceTo: gateIn, quantity: String(tonnes(s)), unitRate: r.flatRate ?? "0", how: [`${tonnes(s)} revenue tonnes tallied at CFS receipt`, `USD ${r.flatRate} per tonne`] }));
+      out.push(base(r3, { serviceFrom: gateIn, serviceTo: gateIn, quantity: String(tonnes(s)), unitRate: r3.flatRate ?? "0", how: [`${tonnes(s)} revenue tonnes tallied at CFS receipt`, `USD ${r3.flatRate} per tonne`] }));
     }
   }
   return out;
@@ -15104,10 +15418,10 @@ function rateStays(stays2, through, opts = {}) {
   for (const s of stays2) if (s.consignmentId && !byCons.has(s.consignmentId)) byCons.set(s.consignmentId, s);
   for (const [cid, s] of byCons) {
     const t = tariffFor(s, opts);
-    const r = t.rules.find((x) => x.chargeCode === "DOC_FEE");
-    if (!r) continue;
-    const pct = TAX[r.taxCode ?? "VAT18"].pct;
-    const amt = num(r.flatRate);
+    const r3 = t.rules.find((x) => x.chargeCode === "DOC_FEE");
+    if (!r3) continue;
+    const pct = TAX[r3.taxCode ?? "VAT18"].pct;
+    const amt = num(r3.flatRate);
     lines.push({
       key: `doc-${cid}`,
       consignmentId: cid,
@@ -15121,13 +15435,13 @@ function rateStays(stays2, through, opts = {}) {
       uom: "each",
       unitRate: m2(amt),
       amount: m2(amt),
-      taxCode: r.taxCode ?? "VAT18",
+      taxCode: r3.taxCode ?? "VAT18",
       taxPct: pct,
       taxAmount: m2(amt * pct / 100),
       tariffCode: t.tariffCode,
       tariffVersion: t.versionNo,
-      ruleId: r.tariffRuleId,
-      how: ["One documentation fee per consignment per invoice", `USD ${r.flatRate} flat`],
+      ruleId: r3.tariffRuleId,
+      how: ["One documentation fee per consignment per invoice", `USD ${r3.flatRate} flat`],
       kind: "NORMAL"
     });
   }
@@ -15362,7 +15676,7 @@ for (const n of invoices.filter((i) => i.docKind === "DEBIT_NOTE")) Object.assig
   Object.assign(p2, { amountPaid: p2.total });
 }
 var invoice = (id) => invById.get(id);
-for (const r of rates) r.usedBy = invoices.filter((i) => i.exchangeRateDate === r.rateDate && i.status !== "DRAFT" && i.docKind !== "PROFORMA").length;
+for (const r3 of rates) r3.usedBy = invoices.filter((i) => i.exchangeRateDate === r3.rateDate && i.status !== "DRAFT" && i.docKind !== "PROFORMA").length;
 var DOC_KIND = { PROFORMA: "Proforma", TAX_INVOICE: "Tax invoice", CREDIT_NOTE: "Credit note", DEBIT_NOTE: "Debit note" };
 var channels = [
   { paymentChannelId: 1, companyId: 1, channelCode: "CASH_USD", channelName: "Cash USD", method: "CASH", currency: "USD", glAccount: "1011 Cash on hand USD", isActive: true },
@@ -15421,9 +15735,9 @@ for (const inv of invoices.filter((i) => i.docKind === "TAX_INVOICE" && num(i.am
 {
   const hero = invById.get(1220);
   const part = num(hero.amountPaid);
-  const r = fx(TODAY);
+  const r3 = fx(TODAY);
   mkPayment({ partyId: 2, channelCode: "CRDB_USD", currency: "USD", amount: r2(part - 200), hoursAgo: 26, ref: "CRDB/FT/26279/44812", alloc: [[hero, r2(part - 200)]], cashier: "Mary Temba" });
-  mkPayment({ partyId: 2, channelCode: "MPESA", currency: "TZS", amount: Math.round(200 * r), hoursAgo: 1.4, ref: "SJ47KQ2ZP1", alloc: [[hero, Math.round(200 * r)]], payer: "Baraka Mwita (collector)" });
+  mkPayment({ partyId: 2, channelCode: "MPESA", currency: "TZS", amount: Math.round(200 * r3), hoursAgo: 1.4, ref: "SJ47KQ2ZP1", alloc: [[hero, Math.round(200 * r3)]], payer: "Baraka Mwita (collector)" });
   const pro = invById.get(1242);
   mkPayment({ partyId: 13, channelCode: "CASH_USD", currency: "USD", amount: num(pro.total) + 640, hoursAgo: 3.1, alloc: [[pro, num(pro.total)]], payer: "Tanzanite Pharma, A. Msuya" });
   mkPayment({ partyId: 1, channelCode: "NMB_TZS", currency: "TZS", amount: 185e4, hoursAgo: 0.8, ref: "NMB60228814", alloc: [] });
@@ -15494,8 +15808,8 @@ function statement(partyId, from = day(-60), to = TODAY) {
   for (const p2 of payments.filter((x) => x.partyId === partyId && x.status !== "REVERSED")) {
     ev.push({ date: p2.valueDate ?? eatDate(p2.receivedAt), docKind: "Payment", docNo: p2.receiptNo, reference: [channel(p2.channelCode)?.channelName, p2.externalRef].filter(Boolean).join(" \xB7 "), debit: 0, credit: usd(num(p2.amount), p2.currency, num(p2.exchangeRate)) });
   }
-  for (const r of refunds.filter((x) => x.partyId === partyId && x.status === "PAID")) {
-    ev.push({ date: eatDate(r.paidAt), docKind: "Refund", docNo: r.refundNo, reference: r.paidReference ?? void 0, debit: usd(num(r.amount), r.currency, fx(eatDate(r.paidAt))), credit: 0 });
+  for (const r3 of refunds.filter((x) => x.partyId === partyId && x.status === "PAID")) {
+    ev.push({ date: eatDate(r3.paidAt), docKind: "Refund", docNo: r3.refundNo, reference: r3.paidReference ?? void 0, debit: usd(num(r3.amount), r3.currency, fx(eatDate(r3.paidAt))), credit: 0 });
   }
   ev.sort((a, b) => a.date.localeCompare(b.date) || a.docNo.localeCompare(b.docNo));
   const opening = r2(ev.filter((e) => e.date < from).reduce((a, e) => a + e.debit - e.credit, 0));
@@ -15642,13 +15956,13 @@ var ChargesController = class {
       const billToPartyId = req.query.billToPartyId ? parseInt(String(req.query.billToPartyId), 10) : void 0;
       const statusParam = req.query.status ? String(req.query.status).toUpperCase() : void 0;
       const q = req.query.q ? String(req.query.q).trim().toLowerCase() : void 0;
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const whereClause = {};
         if (statusParam) {
           whereClause.status = statusParam;
         }
-        const dbCharges = await prisma5.charge.findMany({
+        const dbCharges = await prisma4.charge.findMany({
           where: whereClause,
           include: {
             billable_event_charge: {
@@ -15814,13 +16128,13 @@ var ChargesController = class {
     try {
       const chargeIdParam = parseInt(req.params.chargeId, 10);
       const { reason, percentage } = req.body;
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5 && !isNaN(chargeIdParam)) {
-        const existing = await prisma5.charge.findUnique({
+      const prisma4 = getPrisma();
+      if (prisma4 && !isNaN(chargeIdParam)) {
+        const existing = await prisma4.charge.findUnique({
           where: { charge_id: BigInt(chargeIdParam) }
         });
         if (existing) {
-          const updated = await prisma5.charge.update({
+          const updated = await prisma4.charge.update({
             where: { charge_id: BigInt(chargeIdParam) },
             data: {
               status: "WAIVED",
@@ -15860,18 +16174,18 @@ var ChargesController = class {
         taxCode,
         reason
       } = req.body;
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
-        let codeRec = await prisma5.m_charge_code.findFirst({
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        let codeRec = await prisma4.m_charge_code.findFirst({
           where: { charge_code: chargeCode || "OTHER" }
         });
         if (!codeRec) {
-          codeRec = await prisma5.m_charge_code.findFirst();
+          codeRec = await prisma4.m_charge_code.findFirst();
         }
         let validConsignmentId = null;
         if (consignmentId) {
           try {
-            const conExists = await prisma5.consignment.findUnique({
+            const conExists = await prisma4.consignment.findUnique({
               where: { consignment_id: BigInt(consignmentId) },
               select: { consignment_id: true }
             });
@@ -15885,7 +16199,7 @@ var ChargesController = class {
         let validUnitStayId = null;
         if (unitStayId) {
           try {
-            const stayExists = await prisma5.unit_stay.findUnique({
+            const stayExists = await prisma4.unit_stay.findUnique({
               where: { unit_stay_id: BigInt(unitStayId) },
               select: { unit_stay_id: true }
             });
@@ -15899,20 +16213,20 @@ var ChargesController = class {
         let validPartyId = 1;
         try {
           if (billToPartyId) {
-            const partyExists = await prisma5.m_party.findUnique({
+            const partyExists = await prisma4.m_party.findUnique({
               where: { party_id: Number(billToPartyId) },
               select: { party_id: true }
             });
             if (partyExists) {
               validPartyId = partyExists.party_id;
             } else {
-              const anyParty = await prisma5.m_party.findFirst({
+              const anyParty = await prisma4.m_party.findFirst({
                 select: { party_id: true }
               });
               if (anyParty) validPartyId = anyParty.party_id;
             }
           } else {
-            const anyParty = await prisma5.m_party.findFirst({
+            const anyParty = await prisma4.m_party.findFirst({
               select: { party_id: true }
             });
             if (anyParty) validPartyId = anyParty.party_id;
@@ -15922,12 +16236,12 @@ var ChargesController = class {
         }
         let validSiteId = req.body.siteId ? Number(req.body.siteId) : 1;
         try {
-          const siteExists = await prisma5.m_site.findUnique({
+          const siteExists = await prisma4.m_site.findUnique({
             where: { site_id: validSiteId },
             select: { site_id: true }
           });
           if (!siteExists) {
-            const anySite = await prisma5.m_site.findFirst({
+            const anySite = await prisma4.m_site.findFirst({
               select: { site_id: true }
             });
             validSiteId = anySite ? anySite.site_id : 1;
@@ -15935,7 +16249,7 @@ var ChargesController = class {
         } catch {
           validSiteId = 1;
         }
-        const event = await prisma5.billable_event.create({
+        const event = await prisma4.billable_event.create({
           data: {
             site_id: validSiteId,
             charge_code_id: codeRec?.charge_code_id || 1,
@@ -15956,7 +16270,7 @@ var ChargesController = class {
         const taxRate2 = 18;
         const taxAmt2 = numAmount2 * (taxRate2 / 100);
         const reqNo = `APR-${Date.now().toString().slice(-8)}`;
-        const apprReq = await prisma5.approval_request.create({
+        const apprReq = await prisma4.approval_request.create({
           data: {
             site_id: validSiteId,
             request_no: reqNo,
@@ -15973,7 +16287,7 @@ var ChargesController = class {
             createdby: req.userSub || "system"
           }
         });
-        const newCharge = await prisma5.charge.create({
+        const newCharge = await prisma4.charge.create({
           data: {
             billable_event_id: event.billable_event_id,
             bill_to_party_id: validPartyId,
@@ -16102,14 +16416,14 @@ var InvoicesController = class {
       const statusParam = req.query.status ? String(req.query.status).toUpperCase() : void 0;
       const billToPartyId = req.query.billToPartyId ? parseInt(String(req.query.billToPartyId), 10) : void 0;
       const q = req.query.q ? String(req.query.q).trim().toLowerCase() : void 0;
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         const whereClause = {};
         if (siteId) whereClause.site_id = siteId;
         if (kind && kind !== "ALL") whereClause.doc_kind = kind;
         if (statusParam && statusParam !== "ALL") whereClause.status = statusParam;
         if (billToPartyId) whereClause.bill_to_party_id = billToPartyId;
-        const dbInvoices = await prisma5.invoice.findMany({
+        const dbInvoices = await prisma4.invoice.findMany({
           where: whereClause,
           include: {
             invoice_invoice_line: true,
@@ -16222,9 +16536,9 @@ var InvoicesController = class {
     try {
       const { invoiceId } = req.params;
       const numId = parseInt(invoiceId, 10);
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
-        const inv = await prisma5.invoice.findFirst({
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const inv = await prisma4.invoice.findFirst({
           where: {
             OR: [
               ...Number.isFinite(numId) ? [{ invoice_id: BigInt(numId) }] : [],
@@ -16330,9 +16644,9 @@ var InvoicesController = class {
       const prefix = docKind === "PROFORMA" ? "PRO" : docKind === "CREDIT_NOTE" ? "CRN" : docKind === "DEBIT_NOTE" ? "DBN" : "INV";
       const seq = Math.floor(1e3 + Math.random() * 9e3);
       const invoiceNo = `${prefix}-DAR${siteId}-26-00${seq}`;
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
-        const created = await prisma5.invoice.create({
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const created = await prisma4.invoice.create({
           data: {
             company_id: 1,
             site_id: siteId,
@@ -16431,16 +16745,16 @@ var InvoicesController = class {
   convertProforma = async (req, res) => {
     try {
       const proformaId = Number(req.params.invoiceId || req.body.proformaId);
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
-        const prof2 = await prisma5.invoice.findUnique({
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const prof2 = await prisma4.invoice.findUnique({
           where: { invoice_id: BigInt(proformaId) },
           include: { invoice_invoice_line: true }
         });
         if (!prof2) return sendError3(res, `Proforma invoice #${proformaId} not found`, 404);
         const seq = Math.floor(1e3 + Math.random() * 9e3);
         const invNo = `INV-DAR${prof2.site_id}-26-00${seq}`;
-        const taxInv = await prisma5.invoice.create({
+        const taxInv = await prisma4.invoice.create({
           data: {
             company_id: prof2.company_id,
             site_id: prof2.site_id,
@@ -16502,7 +16816,7 @@ var InvoicesController = class {
             invoice_invoice_line: true
           }
         });
-        await prisma5.invoice.update({
+        await prisma4.invoice.update({
           where: { invoice_id: BigInt(proformaId) },
           data: { status: "CONVERTED" }
         });
@@ -16543,9 +16857,9 @@ var InvoicesController = class {
     try {
       const { invoiceId } = req.params;
       const numId = parseInt(invoiceId, 10);
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
-        const updated = await prisma5.invoice.update({
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const updated = await prisma4.invoice.update({
           where: { invoice_id: BigInt(numId) },
           data: {
             status: "POSTED",
@@ -16576,9 +16890,9 @@ var InvoicesController = class {
     try {
       const { invoiceId } = req.params;
       const numId = parseInt(invoiceId, 10);
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
-        const receipt = await prisma5.fiscal_receipt.upsert({
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const receipt = await prisma4.fiscal_receipt.upsert({
           where: { invoice_id: BigInt(numId) },
           create: {
             invoice_id: BigInt(numId),
@@ -16632,15 +16946,15 @@ var InvoicesController = class {
       const origId = Number(req.params.invoiceId);
       const { amount, reason } = req.body;
       const creditAmt = Number(amount) || 50;
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
-        const orig2 = await prisma5.invoice.findUnique({
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const orig2 = await prisma4.invoice.findUnique({
           where: { invoice_id: BigInt(origId) }
         });
         if (!orig2) return sendError3(res, `Original invoice #${origId} not found`, 404);
         const seq = Math.floor(100 + Math.random() * 900);
         const crnNo = `CRN-DAR${orig2.site_id}-26-000${seq}`;
-        const crn2 = await prisma5.invoice.create({
+        const crn2 = await prisma4.invoice.create({
           data: {
             company_id: orig2.company_id,
             site_id: orig2.site_id,
@@ -16669,7 +16983,7 @@ var InvoicesController = class {
         });
         const newCredited = Number(orig2.amount_credited) + creditAmt;
         const newBalance = Math.max(0, Number(orig2.total) - Number(orig2.amount_paid) - newCredited);
-        await prisma5.invoice.update({
+        await prisma4.invoice.update({
           where: { invoice_id: BigInt(origId) },
           data: {
             amount_credited: newCredited,
@@ -16724,9 +17038,9 @@ var InvoicesController = class {
     try {
       const { invoiceId } = req.params;
       const numId = parseInt(invoiceId, 10);
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
-        const cancelled = await prisma5.invoice.update({
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const cancelled = await prisma4.invoice.update({
           where: { invoice_id: BigInt(numId) },
           data: {
             status: "CANCELLED",
@@ -16790,16 +17104,16 @@ var cashierController = {
   getPayments: async (req, res) => {
     try {
       const { siteId, partyId, cashier, status, search: search2, date } = req.query;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.payment) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.payment) {
           try {
             const whereClause = {};
             if (siteId) whereClause.site_id = Number(siteId);
             if (partyId) whereClause.party_id = Number(partyId);
             if (status) whereClause.status = String(status);
             if (cashier) whereClause.createdby = { contains: String(cashier) };
-            const dbPayments = await prisma5.payment.findMany({
+            const dbPayments = await prisma4.payment.findMany({
               where: whereClause,
               include: {
                 m_party_payment: true,
@@ -16897,12 +17211,12 @@ var cashierController = {
   getPaymentById: async (req, res) => {
     try {
       const { paymentId } = req.params;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.payment) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.payment) {
           try {
             const isNum = !isNaN(Number(paymentId));
-            const p2 = await prisma5.payment.findFirst({
+            const p2 = await prisma4.payment.findFirst({
               where: isNum ? {
                 OR: [
                   { payment_id: BigInt(paymentId) },
@@ -16980,18 +17294,18 @@ var cashierController = {
       );
       const unallocated = Math.max(0, amount - allocated);
       const cashierName = req.user?.username || b.cashier || "Ashok Kumar";
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.payment) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.payment) {
           try {
             let channelId = Number(b.channelId || b.paymentChannelId || 1);
             if (b.channelCode) {
-              const ch = await prisma5.m_payment_channel.findFirst({
+              const ch = await prisma4.m_payment_channel.findFirst({
                 where: { channel_code: b.channelCode }
               });
               if (ch) channelId = ch.payment_channel_id;
             }
-            const created = await prisma5.payment.create({
+            const created = await prisma4.payment.create({
               data: {
                 company_id: 1,
                 site_id: Number(b.siteId || 1),
@@ -17016,7 +17330,7 @@ var cashierController = {
             if (allocations.length > 0) {
               for (const alloc of allocations) {
                 const invId = BigInt(alloc.invoiceId);
-                await prisma5.payment_allocation.create({
+                await prisma4.payment_allocation.create({
                   data: {
                     payment_id: created.payment_id,
                     invoice_id: invId,
@@ -17029,13 +17343,13 @@ var cashierController = {
                     createdby: cashierName
                   }
                 });
-                const targetInv = await prisma5.invoice.findUnique({
+                const targetInv = await prisma4.invoice.findUnique({
                   where: { invoice_id: invId }
                 });
                 if (targetInv) {
                   const newPaid = Number(targetInv.amount_paid || 0) + Number(alloc.amountInvoiceCcy || alloc.amount);
                   const newBal = Math.max(0, Number(targetInv.total) - newPaid);
-                  await prisma5.invoice.update({
+                  await prisma4.invoice.update({
                     where: { invoice_id: invId },
                     data: {
                       amount_paid: newPaid,
@@ -17101,11 +17415,11 @@ var cashierController = {
     try {
       const { paymentId } = req.params;
       const { allocations = [] } = req.body;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.payment) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.payment) {
           try {
-            const p2 = await prisma5.payment.findFirst({
+            const p2 = await prisma4.payment.findFirst({
               where: {
                 OR: [
                   {
@@ -17119,7 +17433,7 @@ var cashierController = {
               let addedAlloc = 0;
               for (const a of allocations) {
                 const invId = BigInt(a.invoiceId);
-                await prisma5.payment_allocation.create({
+                await prisma4.payment_allocation.create({
                   data: {
                     payment_id: p2.payment_id,
                     invoice_id: invId,
@@ -17134,7 +17448,7 @@ var cashierController = {
               }
               const newAllocated = Number(p2.amount_allocated || 0) + addedAlloc;
               const newUnalloc = Math.max(0, Number(p2.amount) - newAllocated);
-              const updated = await prisma5.payment.update({
+              const updated = await prisma4.payment.update({
                 where: { payment_id: p2.payment_id },
                 data: {
                   amount_allocated: newAllocated,
@@ -17183,11 +17497,11 @@ var cashierController = {
     try {
       const { paymentId } = req.params;
       const { reason = "Customer requested refund / reversal" } = req.body;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.payment) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.payment) {
           try {
-            const p2 = await prisma5.payment.findFirst({
+            const p2 = await prisma4.payment.findFirst({
               where: {
                 OR: [
                   {
@@ -17198,7 +17512,7 @@ var cashierController = {
               }
             });
             if (p2) {
-              const updated = await prisma5.payment.update({
+              const updated = await prisma4.payment.update({
                 where: { payment_id: p2.payment_id },
                 data: {
                   status: "REVERSED",
@@ -17240,15 +17554,15 @@ var cashierController = {
   getShifts: async (req, res) => {
     try {
       const { siteId, status, cashier } = req.query;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.cashier_shift) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.cashier_shift) {
           try {
             const whereClause = {};
             if (siteId) whereClause.site_id = Number(siteId);
             if (status) whereClause.status = String(status);
             if (cashier) whereClause.cashier_sub = String(cashier);
-            const dbShifts = await prisma5.cashier_shift.findMany({
+            const dbShifts = await prisma4.cashier_shift.findMany({
               where: whereClause,
               include: {
                 cashier_shift_payment: true,
@@ -17303,11 +17617,11 @@ var cashierController = {
   getCurrentShift: async (req, res) => {
     try {
       const cashierName = req.user?.username || "Neema Mushi";
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.cashier_shift) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.cashier_shift) {
           try {
-            const active = await prisma5.cashier_shift.findFirst({
+            const active = await prisma4.cashier_shift.findFirst({
               where: {
                 cashier_sub: cashierName,
                 status: "OPEN"
@@ -17350,11 +17664,11 @@ var cashierController = {
       const usdFloat = Number(b.usdFloat || b.openingFloatUSD || 200);
       const tzsFloat = Number(b.tzsFloat || b.openingFloatTZS || 3e5);
       const siteId = Number(b.siteId || 1);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.cashier_shift) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.cashier_shift) {
           try {
-            const createdUsd = await prisma5.cashier_shift.create({
+            const createdUsd = await prisma4.cashier_shift.create({
               data: {
                 site_id: siteId,
                 cashier_sub: cashierName,
@@ -17366,7 +17680,7 @@ var cashierController = {
                 createdby: cashierName
               }
             });
-            const createdTzs = await prisma5.cashier_shift.create({
+            const createdTzs = await prisma4.cashier_shift.create({
               data: {
                 site_id: siteId,
                 cashier_sub: cashierName,
@@ -17436,16 +17750,16 @@ var cashierController = {
       const { shiftId } = req.params;
       const { actualCash, countedCash, note } = req.body;
       const counted = Number(actualCash ?? countedCash ?? 0);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.cashier_shift) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.cashier_shift) {
           try {
-            const s2 = await prisma5.cashier_shift.findUnique({
+            const s2 = await prisma4.cashier_shift.findUnique({
               where: { cashier_shift_id: BigInt(shiftId) }
             });
             if (s2) {
               const diff = counted - Number(s2.expected_cash || s2.opening_float);
-              const updated = await prisma5.cashier_shift.update({
+              const updated = await prisma4.cashier_shift.update({
                 where: { cashier_shift_id: BigInt(shiftId) },
                 data: {
                   counted_cash: counted,
@@ -17486,11 +17800,11 @@ var cashierController = {
     try {
       const { shiftId } = req.params;
       const approvedBy = req.user?.username || "Finance Manager";
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.cashier_shift) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.cashier_shift) {
           try {
-            const updated = await prisma5.cashier_shift.update({
+            const updated = await prisma4.cashier_shift.update({
               where: { cashier_shift_id: BigInt(shiftId) },
               data: {
                 status: "APPROVED",
@@ -17518,11 +17832,11 @@ var cashierController = {
   },
   getChannels: async (_req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.m_payment_channel) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && prisma4.m_payment_channel) {
           try {
-            const channels2 = await prisma5.m_payment_channel.findMany({
+            const channels2 = await prisma4.m_payment_channel.findMany({
               where: { is_active: true },
               orderBy: { payment_channel_id: "asc" }
             });
@@ -17644,8 +17958,8 @@ async function seedRefunds() {
   console.log(`\u{1F4B8} Seeding ${refunds.length} Refunds into Database...`);
   let seededCount = 0;
   for (let idx = 0; idx < refunds.length; idx++) {
-    const r = refunds[idx];
-    const refundNo = r.refundNo;
+    const r3 = refunds[idx];
+    const refundNo = r3.refundNo;
     const existingRefund = await prisma2.refund.findUnique({
       where: { refund_no: refundNo }
     });
@@ -17654,10 +17968,10 @@ async function seedRefunds() {
       continue;
     }
     const paymentId = existingPayments[idx % existingPayments.length]?.payment_id || defaultPaymentId;
-    const reqAmount = Number(r.amount);
+    const reqAmount = Number(r3.amount);
     const levelsNeeded = reqAmount >= 500 ? 2 : 1;
     const reqSeq = refundNo.replace(/[^0-9]/g, "").slice(-6);
-    const requester = r.requestedBy || "Neema Mushi";
+    const requester = r3.requestedBy || "Neema Mushi";
     const appReqNo = `APR-26-${reqSeq}`;
     let appReq = await prisma2.approval_request.findUnique({
       where: { request_no: appReqNo }
@@ -17670,22 +17984,22 @@ async function seedRefunds() {
           permission_code: permCode,
           entity_name: "refund",
           entity_id: paymentId,
-          summary: `Refund of ${r.currency} ${r.amount} - ${r.refundNo}`,
-          reason: r.reason,
+          summary: `Refund of ${r3.currency} ${r3.amount} - ${r3.refundNo}`,
+          reason: r3.reason,
           amount: reqAmount,
-          amount_currency: r.currency,
+          amount_currency: r3.currency,
           levels_required: levelsNeeded,
-          current_level: r.status === "PENDING_L2" ? 2 : 1,
-          status: r.status === "APPROVED" || r.status === "PAID" ? "APPROVED" : r.status === "REJECTED" || r.status === "CANCELLED" ? "REJECTED" : "PENDING",
+          current_level: r3.status === "PENDING_L2" ? 2 : 1,
+          status: r3.status === "APPROVED" || r3.status === "PAID" ? "APPROVED" : r3.status === "REJECTED" || r3.status === "CANCELLED" ? "REJECTED" : "PENDING",
           requested_by_sub: requester,
-          requested_at: r.requestedAt ? new Date(r.requestedAt) : /* @__PURE__ */ new Date(),
+          requested_at: r3.requestedAt ? new Date(r3.requestedAt) : /* @__PURE__ */ new Date(),
           createdby: requester
         }
       });
       console.log(`  + Created approval request ${appReqNo}`);
     }
-    if (r.levels && r.levels.length > 0) {
-      for (const lvl of r.levels) {
+    if (r3.levels && r3.levels.length > 0) {
+      for (const lvl of r3.levels) {
         if (lvl.decision) {
           const stepExists = await prisma2.approval_step.findFirst({
             where: {
@@ -17714,24 +18028,24 @@ async function seedRefunds() {
         }
       }
     }
-    const dbStatus = r.status === "PAID" ? "PAID" : r.status === "CANCELLED" ? "CANCELLED" : "APPROVED";
+    const dbStatus = r3.status === "PAID" ? "PAID" : r3.status === "CANCELLED" ? "CANCELLED" : "APPROVED";
     await prisma2.refund.create({
       data: {
         payment_id: paymentId,
         refund_no: refundNo,
-        currency: r.currency,
+        currency: r3.currency,
         amount: reqAmount,
-        reason: r.reason,
+        reason: r3.reason,
         approval_request_id: appReq.approval_request_id,
         status: dbStatus,
-        paid_at: r.paidAt ? new Date(r.paidAt) : null,
-        paid_reference: r.paidReference || null,
+        paid_at: r3.paidAt ? new Date(r3.paidAt) : null,
+        paid_reference: r3.paidReference || null,
         createdby: requester,
-        createdate: r.requestedAt ? new Date(r.requestedAt) : /* @__PURE__ */ new Date()
+        createdate: r3.requestedAt ? new Date(r3.requestedAt) : /* @__PURE__ */ new Date()
       }
     });
     seededCount++;
-    console.log(`  + Successfully seeded refund: ${refundNo} (${r.currency} ${r.amount} - DB status: ${dbStatus})`);
+    console.log(`  + Successfully seeded refund: ${refundNo} (${r3.currency} ${r3.amount} - DB status: ${dbStatus})`);
   }
   console.log(`\u2705 Finished seeding refunds: ${seededCount} new records saved to DB.`);
 }
@@ -17762,9 +18076,9 @@ var RefundsController = class {
   async ensureDatabaseSeeded() {
     if (seededInitial) return;
     try {
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const count = await prisma5.refund.count();
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const count = await prisma4.refund.count();
         if (count === 0) {
           console.log("[RefundsController] DB has 0 refunds. Seeding initial data...");
           await seedRefunds();
@@ -17781,11 +18095,11 @@ var RefundsController = class {
    */
   getRefunds = async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           await this.ensureDatabaseSeeded();
-          const dbRefunds = await prisma5.refund.findMany({
+          const dbRefunds = await prisma4.refund.findMany({
             include: {
               payment_refund: {
                 include: {
@@ -17803,15 +18117,15 @@ var RefundsController = class {
             },
             orderBy: { refund_id: "desc" }
           });
-          const items = dbRefunds.map((r) => {
-            const pay = r.payment_refund;
+          const items = dbRefunds.map((r3) => {
+            const pay = r3.payment_refund;
             const party2 = pay?.m_party_payment;
-            const app2 = r.approval_request_refund;
+            const app2 = r3.approval_request_refund;
             const steps = app2?.approval_request_approval_step || [];
-            let uiStatus = r.status;
-            if (r.status === "PAID") {
+            let uiStatus = r3.status;
+            if (r3.status === "PAID") {
               uiStatus = "PAID";
-            } else if (r.status === "CANCELLED") {
+            } else if (r3.status === "CANCELLED") {
               uiStatus = "CANCELLED";
             } else if (app2?.status === "PENDING") {
               uiStatus = app2.current_level === 2 ? "PENDING_L2" : "PENDING_L1";
@@ -17821,19 +18135,19 @@ var RefundsController = class {
               uiStatus = "APPROVED";
             }
             return {
-              refundId: Number(r.refund_id),
-              refundNo: r.refund_no,
-              paymentId: Number(r.payment_id),
+              refundId: Number(r3.refund_id),
+              refundNo: r3.refund_no,
+              paymentId: Number(r3.payment_id),
               partyId: pay?.party_id || 201,
               partyName: party2?.party_name || "Customer",
-              currency: r.currency || "USD",
-              amount: String(Number(r.amount).toFixed(2)),
-              reason: r.reason,
+              currency: r3.currency || "USD",
+              amount: String(Number(r3.amount).toFixed(2)),
+              reason: r3.reason,
               status: uiStatus,
-              requestedBy: r.createdby || "Neema Mushi",
-              requestedAt: r.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
-              paidAt: r.paid_at?.toISOString() || null,
-              paidReference: r.paid_reference || null,
+              requestedBy: r3.createdby || "Neema Mushi",
+              requestedAt: r3.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
+              paidAt: r3.paid_at?.toISOString() || null,
+              paidReference: r3.paid_reference || null,
               levels: steps.map((s) => ({
                 level: s.level_no,
                 who: s.decided_by_sub || s.requested_by_sub || "Approver",
@@ -17869,17 +18183,17 @@ var RefundsController = class {
       const paymentId = Number(b.paymentId || 1);
       const cashierName = req.user?.username || req.headers["x-user-sub"] || "Neema Mushi";
       const levelsRequired = amount >= 500 ? 2 : 1;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          let paymentRow = await prisma5.payment.findUnique({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          let paymentRow = await prisma4.payment.findUnique({
             where: { payment_id: BigInt(paymentId) }
           });
           if (!paymentRow) {
-            paymentRow = await prisma5.payment.findFirst();
+            paymentRow = await prisma4.payment.findFirst();
           }
           const targetPaymentId = paymentRow ? paymentRow.payment_id : BigInt(paymentId);
-          const appReq = await prisma5.approval_request.create({
+          const appReq = await prisma4.approval_request.create({
             data: {
               site_id: 1,
               request_no: `APR-26-0${seq}`,
@@ -17898,7 +18212,7 @@ var RefundsController = class {
               createdby: cashierName
             }
           });
-          await prisma5.approval_step.create({
+          await prisma4.approval_step.create({
             data: {
               approval_request_id: appReq.approval_request_id,
               level_no: 1,
@@ -17909,7 +18223,7 @@ var RefundsController = class {
               createdby: cashierName
             }
           });
-          const newRefund = await prisma5.refund.create({
+          const newRefund = await prisma4.refund.create({
             data: {
               payment_id: targetPaymentId,
               refund_no: refundNo,
@@ -17978,10 +18292,10 @@ var RefundsController = class {
       const refundId = Number(req.params.refundId);
       const { ok, level, note } = req.body || {};
       const decider = req.user?.username || req.headers["x-user-sub"] || "Grace Mrema";
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const currentRefund = await prisma5.refund.findUnique({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const currentRefund = await prisma4.refund.findUnique({
             where: { refund_id: BigInt(refundId) },
             include: {
               approval_request_refund: {
@@ -18007,14 +18321,14 @@ var RefundsController = class {
             newRefundStatus = "APPROVED";
           }
           if (app2) {
-            const existingStep = await prisma5.approval_step.findFirst({
+            const existingStep = await prisma4.approval_step.findFirst({
               where: {
                 approval_request_id: app2.approval_request_id,
                 level_no: currentLevel
               }
             });
             if (existingStep) {
-              await prisma5.approval_step.update({
+              await prisma4.approval_step.update({
                 where: { approval_step_id: existingStep.approval_step_id },
                 data: {
                   decision: ok ? "APPROVED" : "REJECTED",
@@ -18025,7 +18339,7 @@ var RefundsController = class {
                 }
               });
             } else {
-              await prisma5.approval_step.create({
+              await prisma4.approval_step.create({
                 data: {
                   approval_request_id: app2.approval_request_id,
                   level_no: currentLevel,
@@ -18038,7 +18352,7 @@ var RefundsController = class {
                 }
               });
             }
-            await prisma5.approval_request.update({
+            await prisma4.approval_request.update({
               where: { approval_request_id: app2.approval_request_id },
               data: {
                 current_level: ok && currentLevel === 1 && levelsRequired > 1 ? 2 : currentLevel,
@@ -18049,7 +18363,7 @@ var RefundsController = class {
               }
             });
           }
-          const updatedRefund = await prisma5.refund.update({
+          const updatedRefund = await prisma4.refund.update({
             where: { refund_id: BigInt(refundId) },
             data: {
               status: newRefundStatus,
@@ -18065,7 +18379,7 @@ var RefundsController = class {
           });
         }
       }
-      const found = memoryFallbackRefunds.find((r) => r.refundId === refundId);
+      const found = memoryFallbackRefunds.find((r3) => r3.refundId === refundId);
       if (found) {
         found.status = !ok ? "REJECTED" : level === 1 && (found.levels || []).length > 1 ? "PENDING_L2" : "APPROVED";
       }
@@ -18087,10 +18401,10 @@ var RefundsController = class {
       if (!paidReference) {
         return sendError4(res, "Bank payment voucher reference is required to mark paid");
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const updated = await prisma5.refund.update({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const updated = await prisma4.refund.update({
             where: { refund_id: BigInt(refundId) },
             data: {
               status: "PAID",
@@ -18109,7 +18423,7 @@ var RefundsController = class {
           });
         }
       }
-      const found = memoryFallbackRefunds.find((r) => r.refundId === refundId);
+      const found = memoryFallbackRefunds.find((r3) => r3.refundId === refundId);
       if (found) {
         found.status = "PAID";
         found.paidAt = paidAt || (/* @__PURE__ */ new Date()).toISOString();
@@ -18132,247 +18446,6 @@ var billingRefundsController = {
   markPaid: (req, res) => refundsController.markPaid(req, res)
 };
 
-// src/scripts/seed-disbursements.ts
-var import_client3 = require("@prisma/client");
-var import_dotenv3 = __toESM(require("dotenv"));
-var import_path3 = __toESM(require("path"));
-import_dotenv3.default.config({ path: import_path3.default.join(__dirname, "../../.env") });
-var prisma3 = new import_client3.PrismaClient();
-async function seedDisbursements() {
-  console.log("\u{1F680} Starting Disbursements Seeder...");
-  let site = await prisma3.m_site.findFirst({ where: { site_code: "DAR1" } });
-  if (!site) {
-    site = await prisma3.m_site.findFirst();
-  }
-  const siteId = site ? site.site_id : 1;
-  const permCode = "finance.disbursement.record";
-  let perm = await prisma3.m_permission.findUnique({ where: { permission_code: permCode } });
-  if (!perm) {
-    perm = await prisma3.m_permission.create({
-      data: {
-        permission_code: permCode,
-        module_code: "COMMERCIAL",
-        description: "Record and manage customer disbursements",
-        is_approval: false,
-        supports_limit: true,
-        createdby: "system"
-      }
-    });
-    console.log(`  + Seeded permission: ${permCode}`);
-  }
-  const chargeDefs = [
-    { code: "DISB_PORT", name: "Port charges (paid on your behalf)", group: "DISBURSEMENT" },
-    { code: "DISB_LINE", name: "Shipping line charges (paid on your behalf)", group: "DISBURSEMENT" },
-    { code: "DISB_DUTY", name: "Customs duty (paid on your behalf)", group: "DISBURSEMENT" },
-    { code: "DISB_HANDLING_FEE", name: "Disbursement handling fee", group: "DISBURSEMENT" }
-  ];
-  const chargeCodeMap = {};
-  for (const c of chargeDefs) {
-    let row = await prisma3.m_charge_code.findUnique({ where: { charge_code: c.code } });
-    if (!row) {
-      row = await prisma3.m_charge_code.create({
-        data: {
-          charge_code: c.code,
-          charge_name: c.name,
-          charge_group: c.group,
-          is_disbursement: true,
-          default_tax_code: "VAT18",
-          createdby: "system"
-        }
-      });
-      console.log(`  + Seeded charge code: ${c.code}`);
-    }
-    chargeCodeMap[c.code] = row.charge_code_id;
-  }
-  const partyDefs = [
-    { code: "MTL", name: "Mzizi Traders Ltd", type: "CUSTOMER" },
-    { code: "KCF", name: "Kilele Clearing & Forwarding", type: "CUSTOMER" },
-    { code: "BML", name: "Blue Meridian Line", type: "SHIPPING_LINE" },
-    { code: "IOSL", name: "Indian Ocean Shipping", type: "SHIPPING_LINE" },
-    { code: "PHW", name: "Pwani Hardware Wholesalers", type: "CUSTOMER" },
-    { code: "KBS", name: "Kagera Builders Supply", type: "CUSTOMER" },
-    { code: "PA_DSM", name: "Port authority, Dar es Salaam port", type: "VENDOR" },
-    { code: "TRA_CUST", name: "TRA customs (duty and taxes)", type: "AUTHORITY" }
-  ];
-  const partyCodeToId = {};
-  for (const p2 of partyDefs) {
-    let existing = await prisma3.m_party.findUnique({ where: { party_code: p2.code } });
-    if (!existing) {
-      existing = await prisma3.m_party.create({
-        data: {
-          party_code: p2.code,
-          party_name: p2.name,
-          country_code: "TZ",
-          disbursement_service: true,
-          createdby: "system"
-        }
-      });
-      console.log(`  + Seeded party: ${p2.name} (Code: ${p2.code}, ID: ${existing.party_id})`);
-    }
-    partyCodeToId[p2.code] = existing.party_id;
-  }
-  const mockPartyIdMap = {
-    1: partyCodeToId["MTL"],
-    2: partyCodeToId["KCF"],
-    4: partyCodeToId["BML"],
-    5: partyCodeToId["IOSL"],
-    11: partyCodeToId["PHW"],
-    14: partyCodeToId["KBS"]
-  };
-  const resolvePayeeId = (payeeName, payeePartyId) => {
-    if (payeePartyId && mockPartyIdMap[payeePartyId]) return mockPartyIdMap[payeePartyId];
-    if (payeeName.toLowerCase().includes("port authority")) return partyCodeToId["PA_DSM"];
-    if (payeeName.toLowerCase().includes("tra customs")) return partyCodeToId["TRA_CUST"];
-    if (payeeName.toLowerCase().includes("indian ocean")) return partyCodeToId["IOSL"];
-    if (payeeName.toLowerCase().includes("blue meridian")) return partyCodeToId["BML"];
-    return partyCodeToId["PA_DSM"];
-  };
-  const consignmentDefs = [
-    { refNo: "BMLU2409881", billToCode: "KCF" },
-    { refNo: "BMLU2409902", billToCode: "PHW" },
-    { refNo: "IOSL0926S0441", billToCode: "KCF" },
-    { refNo: "IOSL0926S0457", billToCode: "KBS" },
-    { refNo: "IOSL0926S0470", billToCode: "MTL" }
-  ];
-  const refNoToConsignmentId = {};
-  for (const c of consignmentDefs) {
-    let existing = await prisma3.consignment.findFirst({ where: { ref_no: c.refNo } });
-    if (!existing) {
-      existing = await prisma3.consignment.create({
-        data: {
-          site_id: siteId,
-          ref_type: "BL",
-          ref_no: c.refNo,
-          bill_to_party_id: partyCodeToId[c.billToCode] || 1,
-          cargo_regime_id: 1,
-          createdby: "system"
-        }
-      });
-      console.log(`  + Seeded consignment: ${c.refNo} (ID: ${existing.consignment_id})`);
-    }
-    refNoToConsignmentId[c.refNo] = existing.consignment_id;
-  }
-  const mockConsignmentMap = {
-    101: refNoToConsignmentId["BMLU2409881"],
-    102: refNoToConsignmentId["BMLU2409902"],
-    103: refNoToConsignmentId["IOSL0926S0441"],
-    104: refNoToConsignmentId["IOSL0926S0457"],
-    109: refNoToConsignmentId["IOSL0926S0470"]
-  };
-  const writeOffAppNo = "APR-DAR1-26-DISB-0176";
-  let writeOffApp = await prisma3.approval_request.findUnique({ where: { request_no: writeOffAppNo } });
-  if (!writeOffApp) {
-    writeOffApp = await prisma3.approval_request.create({
-      data: {
-        site_id: siteId,
-        request_no: writeOffAppNo,
-        permission_code: permCode,
-        entity_name: "disbursement",
-        entity_id: BigInt(176),
-        summary: "Write off unrecoverable port storage charges for Kagera Builders Supply",
-        reason: "Consignment storage exceeded recovery threshold and cleared under waiver",
-        amount: 210,
-        amount_currency: "USD",
-        levels_required: 1,
-        current_level: 1,
-        status: "APPROVED",
-        requested_by_sub: "usr_joseph",
-        decided_at: /* @__PURE__ */ new Date(),
-        applied_at: /* @__PURE__ */ new Date(),
-        createdby: "system"
-      }
-    });
-    console.log(`  + Seeded write-off approval request: ${writeOffAppNo}`);
-  }
-  console.log(`\u{1F4B3} Seeding ${disbursements.length} Disbursements into Database...`);
-  let seededCount = 0;
-  for (const d of disbursements) {
-    const payeeId = resolvePayeeId(d.payeeName, d.payeePartyId);
-    const billToId = mockPartyIdMap[d.billToPartyId] || partyCodeToId["KCF"];
-    const chargeCodeId = chargeCodeMap[d.chargeCode] || Object.values(chargeCodeMap)[0] || 1;
-    const consignmentId = mockConsignmentMap[d.consignmentId] || Object.values(refNoToConsignmentId)[0];
-    const writeOffId = d.status === "WRITTEN_OFF" ? writeOffApp.approval_request_id : null;
-    let existing = d.payeeReceiptNo ? await prisma3.disbursement.findFirst({ where: { payee_receipt_no: d.payeeReceiptNo } }) : await prisma3.disbursement.findFirst({ where: { description: d.description } });
-    const payload = {
-      site_id: siteId,
-      consignment_id: consignmentId,
-      bill_to_party_id: billToId,
-      payee_party_id: payeeId,
-      charge_code_id: chargeCodeId,
-      description: d.description,
-      currency: d.currency,
-      amount_paid: parseFloat(d.amountPaid),
-      paid_at: new Date(d.paidAt),
-      payee_receipt_no: d.payeeReceiptNo,
-      rebill_mode: d.rebillMode,
-      handling_fee: parseFloat(d.handlingFee || "0"),
-      status: d.status,
-      write_off_approval_request_id: writeOffId,
-      createdby: d.recordedBy || "Halima Said"
-    };
-    let actualDisbId;
-    if (existing) {
-      const updated = await prisma3.disbursement.update({
-        where: { disbursement_id: existing.disbursement_id },
-        data: payload
-      });
-      actualDisbId = updated.disbursement_id;
-      console.log(`  ~ Updated disbursement: ${d.disbNo} (DB ID: ${actualDisbId})`);
-    } else {
-      const created = await prisma3.disbursement.create({
-        data: payload
-      });
-      actualDisbId = created.disbursement_id;
-      console.log(`  + Created disbursement: ${d.disbNo} (DB ID: ${actualDisbId})`);
-    }
-    if (d.status === "INVOICED" && d.invoiceId) {
-      const invId = BigInt(d.invoiceId);
-      const invoiceRow = await prisma3.invoice.findUnique({ where: { invoice_id: invId } });
-      if (invoiceRow) {
-        const existingLine = await prisma3.invoice_line.findFirst({
-          where: { disbursement_id: actualDisbId }
-        });
-        if (!existingLine) {
-          const maxLine = await prisma3.invoice_line.findFirst({
-            where: { invoice_id: invId },
-            orderBy: { line_no: "desc" }
-          });
-          const nextLineNo = (maxLine?.line_no ?? 0) + 1;
-          await prisma3.invoice_line.create({
-            data: {
-              invoice_id: invId,
-              line_no: nextLineNo,
-              line_doc_kind: "ORIGINAL",
-              disbursement_id: actualDisbId,
-              charge_code_id: chargeCodeId,
-              description: `${d.description} (Rebill)`,
-              currency: d.currency,
-              unit_price: parseFloat(d.amountPaid) + parseFloat(d.handlingFee || "0"),
-              quantity: 1,
-              tax_code: "VAT18",
-              tax_rate_pct: 18,
-              amount_ex_tax: parseFloat(d.amountPaid) + parseFloat(d.handlingFee || "0"),
-              tax_amount: (parseFloat(d.amountPaid) + parseFloat(d.handlingFee || "0")) * 0.18,
-              total_amount: (parseFloat(d.amountPaid) + parseFloat(d.handlingFee || "0")) * 1.18,
-              is_rebill: true,
-              createdby: "system"
-            }
-          });
-          console.log(`    -> Linked to invoice #${invId} (Line ${nextLineNo})`);
-        }
-      }
-    }
-    seededCount++;
-  }
-  console.log(`\u2705 Successfully seeded ${seededCount} disbursements into Database!`);
-}
-if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1])) {
-  seedDisbursements().catch((err) => {
-    console.error("\u274C Seeder failed:", err);
-    process.exit(1);
-  }).finally(() => prisma3.$disconnect());
-}
-
 // src/v1/controllers/disbursements.controller.ts
 var sendError5 = (res, message, code = 400) => res.status(code).json({
   type: "https://api.icd.dcc/errors/validation",
@@ -18382,106 +18455,74 @@ var sendError5 = (res, message, code = 400) => res.status(code).json({
   code: "VALIDATION_ERROR",
   timestamp: (/* @__PURE__ */ new Date()).toISOString()
 });
-var seededInitial2 = false;
-var memoryFallbackDisbursements = [...disbursements];
 var DisbursementsController = class {
-  /**
-   * Ensure database is initialized with initial/mock disbursements if table is empty
-   */
-  async ensureDatabaseSeeded() {
-    if (seededInitial2) return;
-    try {
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const count = await prisma5.disbursement.count();
-        if (count === 0) {
-          console.log(
-            "[DisbursementsController] DB has 0 disbursements. Seeding initial data..."
-          );
-          await seedDisbursements();
-        }
-        seededInitial2 = true;
-      }
-    } catch (e) {
-      console.warn(
-        "[DisbursementsController] Error checking/seeding disbursements DB:",
-        e.message
-      );
-    }
-  }
   /**
    * GET /disbursements
    * Fetch all disbursements strictly from the database
    */
   getDisbursements = async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          await this.ensureDatabaseSeeded();
-          const dbDisbs = await prisma5.disbursement.findMany({
-            include: {
-              consignment_disbursement: true,
-              m_party_disbursement_bill_to: true,
-              m_party_disbursement_payee: true,
-              m_charge_code_disbursement: true,
-              m_currency_disbursement: true,
-              document_disbursement: true,
-              disbursement_invoice_line: {
-                include: {
-                  invoice_invoice_line: true
-                }
-              },
-              approval_request_disbursement: true
-            },
-            orderBy: { disbursement_id: "desc" }
-          });
-          const items = dbDisbs.map((d) => {
-            const billTo = d.m_party_disbursement_bill_to;
-            const payee = d.m_party_disbursement_payee;
-            const charge = d.m_charge_code_disbursement;
-            const con = d.consignment_disbursement;
-            const invLine = d.disbursement_invoice_line?.[0];
-            const inv = invLine?.invoice_invoice_line;
-            const disbIdNum = Number(d.disbursement_id);
-            const padId = String(disbIdNum).padStart(4, "0");
-            const disbNo = `DSB-DAR1-26-${padId}`;
-            return {
-              disbursementId: disbIdNum,
-              disbNo,
-              consignmentId: Number(d.consignment_id),
-              consignmentRef: con?.ref_no,
-              billToPartyId: d.bill_to_party_id,
-              billToPartyName: billTo?.party_name || "Customer",
-              payeePartyId: d.payee_party_id ?? void 0,
-              payeeName: payee?.party_name || "Port authority, Dar es Salaam port",
-              chargeCode: charge?.charge_code || "DISB_PORT",
-              chargeName: charge?.charge_name || "Disbursement charge",
-              description: d.description,
-              currency: d.currency,
-              amountPaid: String(Number(d.amount_paid).toFixed(2)),
-              paidAt: d.paid_at instanceof Date ? d.paid_at.toISOString().slice(0, 10) : String(d.paid_at).slice(0, 10),
-              payeeReceiptNo: d.payee_receipt_no || "",
-              rebillMode: d.rebill_mode,
-              handlingFee: String(Number(d.handling_fee || 0).toFixed(2)),
-              status: d.status,
-              invoiceId: inv ? Number(inv.invoice_id) : void 0,
-              invoiceNo: inv?.invoice_no,
-              invoiceBalance: inv ? Number(inv.balance) : void 0,
-              recordedBy: d.createdby || "Halima Said",
-              pending: d.approval_request_disbursement?.status === "PENDING"
-            };
-          });
-          return res.json({ items, total: items.length });
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
       }
-      res.json({
-        items: memoryFallbackDisbursements,
-        total: memoryFallbackDisbursements.length
+      const dbDisbs = await prisma4.disbursement.findMany({
+        include: {
+          consignment_disbursement: true,
+          m_party_disbursement_bill_to: true,
+          m_party_disbursement_payee: true,
+          m_charge_code_disbursement: true,
+          m_currency_disbursement: true,
+          document_disbursement: true,
+          disbursement_invoice_line: {
+            include: {
+              invoice_invoice_line: true
+            }
+          },
+          approval_request_disbursement: true
+        },
+        orderBy: { disbursement_id: "desc" }
       });
+      const items = dbDisbs.map((d) => {
+        const billTo = d.m_party_disbursement_bill_to;
+        const payee = d.m_party_disbursement_payee;
+        const charge = d.m_charge_code_disbursement;
+        const con = d.consignment_disbursement;
+        const invLine = d.disbursement_invoice_line?.[0];
+        const inv = invLine?.invoice_invoice_line;
+        const disbIdNum = Number(d.disbursement_id);
+        const padId = String(disbIdNum).padStart(4, "0");
+        const disbNo = `DSB-DAR1-26-${padId}`;
+        return {
+          disbursementId: disbIdNum,
+          disbNo,
+          consignmentId: Number(d.consignment_id),
+          consignmentRef: con?.ref_no,
+          billToPartyId: d.bill_to_party_id,
+          billToPartyName: billTo?.party_name || "Customer",
+          payeePartyId: d.payee_party_id ?? void 0,
+          payeeName: payee?.party_name || "Port authority, Dar es Salaam port",
+          chargeCode: charge?.charge_code || "DISB_PORT",
+          chargeName: charge?.charge_name || "Disbursement charge",
+          description: d.description,
+          currency: d.currency,
+          amountPaid: String(Number(d.amount_paid).toFixed(2)),
+          paidAt: d.paid_at instanceof Date ? d.paid_at.toISOString().slice(0, 10) : String(d.paid_at).slice(0, 10),
+          payeeReceiptNo: d.payee_receipt_no || "",
+          rebillMode: d.rebill_mode,
+          handlingFee: String(Number(d.handling_fee || 0).toFixed(2)),
+          status: d.status,
+          invoiceId: inv ? Number(inv.invoice_id) : void 0,
+          invoiceNo: inv?.invoice_no,
+          invoiceBalance: inv ? Number(inv.balance) : void 0,
+          recordedBy: d.createdby || "Halima Said",
+          pending: d.approval_request_disbursement?.status === "PENDING"
+        };
+      });
+      return res.json({ items, total: items.length });
     } catch (err) {
       console.error("[DisbursementsController.getDisbursements] Error:", err);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: err.message, items: [], total: 0 });
     }
   };
   /**
@@ -18492,70 +18533,63 @@ var DisbursementsController = class {
     try {
       const disbIdParam = req.params.disbursementId;
       const disbId = BigInt(disbIdParam);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const d = await prisma5.disbursement.findUnique({
-            where: { disbursement_id: disbId },
-            include: {
-              consignment_disbursement: true,
-              m_party_disbursement_bill_to: true,
-              m_party_disbursement_payee: true,
-              m_charge_code_disbursement: true,
-              m_currency_disbursement: true,
-              document_disbursement: true,
-              disbursement_invoice_line: {
-                include: {
-                  invoice_invoice_line: true
-                }
-              },
-              approval_request_disbursement: true
-            }
-          });
-          if (!d) {
-            return sendError5(
-              res,
-              `Disbursement #${disbIdParam} not found`,
-              404
-            );
-          }
-          const billTo = d.m_party_disbursement_bill_to;
-          const payee = d.m_party_disbursement_payee;
-          const charge = d.m_charge_code_disbursement;
-          const con = d.consignment_disbursement;
-          const invLine = d.disbursement_invoice_line?.[0];
-          const inv = invLine?.invoice_invoice_line;
-          const disbIdNum = Number(d.disbursement_id);
-          const disbNo = `DSB-DAR1-26-${String(disbIdNum).padStart(4, "0")}`;
-          return res.json({
-            disbursementId: disbIdNum,
-            disbNo,
-            consignmentId: Number(d.consignment_id),
-            consignmentRef: con?.ref_no,
-            billToPartyId: d.bill_to_party_id,
-            billToPartyName: billTo?.party_name,
-            payeePartyId: d.payee_party_id ?? void 0,
-            payeeName: payee?.party_name || "Port authority, Dar es Salaam port",
-            chargeCode: charge?.charge_code || "DISB_PORT",
-            description: d.description,
-            currency: d.currency,
-            amountPaid: String(Number(d.amount_paid).toFixed(2)),
-            paidAt: d.paid_at instanceof Date ? d.paid_at.toISOString().slice(0, 10) : String(d.paid_at).slice(0, 10),
-            payeeReceiptNo: d.payee_receipt_no || "",
-            rebillMode: d.rebill_mode,
-            handlingFee: String(Number(d.handling_fee || 0).toFixed(2)),
-            status: d.status,
-            invoiceId: inv ? Number(inv.invoice_id) : void 0,
-            recordedBy: d.createdby
-          });
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const found = memoryFallbackDisbursements.find(
-        (x) => String(x.disbursementId) === disbIdParam
-      );
-      if (!found)
-        return sendError5(res, `Disbursement #${disbIdParam} not found`, 404);
-      res.json(found);
+      const d = await prisma4.disbursement.findUnique({
+        where: { disbursement_id: disbId },
+        include: {
+          consignment_disbursement: true,
+          m_party_disbursement_bill_to: true,
+          m_party_disbursement_payee: true,
+          m_charge_code_disbursement: true,
+          m_currency_disbursement: true,
+          document_disbursement: true,
+          disbursement_invoice_line: {
+            include: {
+              invoice_invoice_line: true
+            }
+          },
+          approval_request_disbursement: true
+        }
+      });
+      if (!d) {
+        return sendError5(
+          res,
+          `Disbursement #${disbIdParam} not found`,
+          404
+        );
+      }
+      const billTo = d.m_party_disbursement_bill_to;
+      const payee = d.m_party_disbursement_payee;
+      const charge = d.m_charge_code_disbursement;
+      const con = d.consignment_disbursement;
+      const invLine = d.disbursement_invoice_line?.[0];
+      const inv = invLine?.invoice_invoice_line;
+      const disbIdNum = Number(d.disbursement_id);
+      const disbNo = `DSB-DAR1-26-${String(disbIdNum).padStart(4, "0")}`;
+      return res.json({
+        disbursementId: disbIdNum,
+        disbNo,
+        consignmentId: Number(d.consignment_id),
+        consignmentRef: con?.ref_no,
+        billToPartyId: d.bill_to_party_id,
+        billToPartyName: billTo?.party_name,
+        payeePartyId: d.payee_party_id ?? void 0,
+        payeeName: payee?.party_name || "Port authority, Dar es Salaam port",
+        chargeCode: charge?.charge_code || "DISB_PORT",
+        description: d.description,
+        currency: d.currency,
+        amountPaid: String(Number(d.amount_paid).toFixed(2)),
+        paidAt: d.paid_at instanceof Date ? d.paid_at.toISOString().slice(0, 10) : String(d.paid_at).slice(0, 10),
+        payeeReceiptNo: d.payee_receipt_no || "",
+        rebillMode: d.rebill_mode,
+        handlingFee: String(Number(d.handling_fee || 0).toFixed(2)),
+        status: d.status,
+        invoiceId: inv ? Number(inv.invoice_id) : void 0,
+        recordedBy: d.createdby
+      });
     } catch (err) {
       console.error(
         "[DisbursementsController.getDisbursementById] Error:",
@@ -18579,112 +18613,91 @@ var DisbursementsController = class {
       const description = b.description || "Disbursement expense paid on customer behalf";
       const rebillMode = b.rebillMode === "COST_PLUS_FEE" ? "COST_PLUS_FEE" : "AT_COST";
       const handlingFee = Number(b.handlingFee || 0);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          let consignmentId = b.consignmentId ? BigInt(b.consignmentId) : null;
-          if (!consignmentId) {
-            const firstCon = await prisma5.consignment.findFirst({
-              orderBy: { consignment_id: "asc" }
-            });
-            consignmentId = firstCon ? firstCon.consignment_id : BigInt(1);
-          }
-          let billToPartyId = Number(b.billToPartyId || 0);
-          if (!billToPartyId) {
-            const conRow = await prisma5.consignment.findUnique({
-              where: { consignment_id: consignmentId }
-            });
-            billToPartyId = conRow?.bill_to_party_id || 1;
-          }
-          let chargeCodeId = Number(b.chargeCodeId || 0);
-          if (!chargeCodeId && b.chargeCode) {
-            const cRow = await prisma5.m_charge_code.findUnique({
-              where: { charge_code: b.chargeCode }
-            });
-            if (cRow) chargeCodeId = cRow.charge_code_id;
-          }
-          if (!chargeCodeId) {
-            const cRow = await prisma5.m_charge_code.findFirst({
-              where: { is_disbursement: true }
-            });
-            chargeCodeId = cRow ? cRow.charge_code_id : 1;
-          }
-          let payeePartyId = b.payeePartyId ? Number(b.payeePartyId) : null;
-          if (!payeePartyId && b.payeeName) {
-            const pRow = await prisma5.m_party.findFirst({
-              where: { party_name: { contains: b.payeeName } }
-            });
-            if (pRow) payeePartyId = pRow.party_id;
-          }
-          const siteRow = await prisma5.m_site.findFirst();
-          const siteId = siteRow ? siteRow.site_id : 1;
-          const created = await prisma5.disbursement.create({
-            data: {
-              site_id: siteId,
-              consignment_id: consignmentId,
-              bill_to_party_id: billToPartyId,
-              payee_party_id: payeePartyId,
-              charge_code_id: chargeCodeId,
-              description,
-              currency,
-              amount_paid: amount,
-              paid_at: b.paidAt ? new Date(b.paidAt) : /* @__PURE__ */ new Date(),
-              payee_receipt_no: b.payeeReceiptNo || `RCT-${Date.now()}`,
-              rebill_mode: rebillMode,
-              handling_fee: handlingFee,
-              status: "RECORDED",
-              createdby: req.user?.username || "Halima Said"
-            },
-            include: {
-              consignment_disbursement: true,
-              m_party_disbursement_bill_to: true,
-              m_party_disbursement_payee: true,
-              m_charge_code_disbursement: true
-            }
-          });
-          const disbIdNum = Number(created.disbursement_id);
-          const disbNo = `DSB-DAR1-26-${String(disbIdNum).padStart(4, "0")}`;
-          const result = {
-            disbursementId: disbIdNum,
-            disbNo,
-            consignmentId: Number(created.consignment_id),
-            billToPartyId: created.bill_to_party_id,
-            payeePartyId: created.payee_party_id ?? void 0,
-            payeeName: created.m_party_disbursement_payee?.party_name || b.payeeName || "Port authority",
-            chargeCode: created.m_charge_code_disbursement?.charge_code || "DISB_PORT",
-            description: created.description,
-            currency: created.currency,
-            amountPaid: String(Number(created.amount_paid).toFixed(2)),
-            paidAt: created.paid_at.toISOString().slice(0, 10),
-            payeeReceiptNo: created.payee_receipt_no || "",
-            rebillMode: created.rebill_mode,
-            handlingFee: String(Number(created.handling_fee).toFixed(2)),
-            status: created.status,
-            recordedBy: created.createdby
-          };
-          return res.status(201).json(result);
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const fallbackId = memoryFallbackDisbursements.length + 200;
-      const newD = {
-        disbursementId: fallbackId,
-        disbNo: `DSB-DAR1-26-0${fallbackId}`,
-        consignmentId: b.consignmentId || 101,
-        billToPartyId: b.billToPartyId || 2,
-        payeeName: b.payeeName || "Port authority",
-        chargeCode: b.chargeCode || "DISB_PORT",
-        description,
-        currency,
-        amountPaid: String(amount.toFixed(2)),
-        paidAt: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
-        payeeReceiptNo: b.payeeReceiptNo || `RCT-${Date.now()}`,
-        rebillMode,
-        handlingFee: String(handlingFee.toFixed(2)),
-        status: "RECORDED",
-        recordedBy: "Halima Said"
+      let consignmentId = b.consignmentId ? BigInt(b.consignmentId) : null;
+      if (!consignmentId) {
+        const firstCon = await prisma4.consignment.findFirst({
+          orderBy: { consignment_id: "asc" }
+        });
+        consignmentId = firstCon ? firstCon.consignment_id : BigInt(1);
+      }
+      let billToPartyId = Number(b.billToPartyId || 0);
+      if (!billToPartyId) {
+        const conRow = await prisma4.consignment.findUnique({
+          where: { consignment_id: consignmentId }
+        });
+        billToPartyId = conRow?.bill_to_party_id || 1;
+      }
+      let chargeCodeId = Number(b.chargeCodeId || 0);
+      if (!chargeCodeId && b.chargeCode) {
+        const cRow = await prisma4.m_charge_code.findUnique({
+          where: { charge_code: b.chargeCode }
+        });
+        if (cRow) chargeCodeId = cRow.charge_code_id;
+      }
+      if (!chargeCodeId) {
+        const cRow = await prisma4.m_charge_code.findFirst({
+          where: { is_disbursement: true }
+        });
+        chargeCodeId = cRow ? cRow.charge_code_id : 1;
+      }
+      let payeePartyId = b.payeePartyId ? Number(b.payeePartyId) : null;
+      if (!payeePartyId && b.payeeName) {
+        const pRow = await prisma4.m_party.findFirst({
+          where: { party_name: { contains: b.payeeName } }
+        });
+        if (pRow) payeePartyId = pRow.party_id;
+      }
+      const siteRow = await prisma4.m_site.findFirst();
+      const siteId = siteRow ? siteRow.site_id : 1;
+      const created = await prisma4.disbursement.create({
+        data: {
+          site_id: siteId,
+          consignment_id: consignmentId,
+          bill_to_party_id: billToPartyId,
+          payee_party_id: payeePartyId,
+          charge_code_id: chargeCodeId,
+          description,
+          currency,
+          amount_paid: amount,
+          paid_at: b.paidAt ? new Date(b.paidAt) : /* @__PURE__ */ new Date(),
+          payee_receipt_no: b.payeeReceiptNo || `RCT-${Date.now()}`,
+          rebill_mode: rebillMode,
+          handling_fee: handlingFee,
+          status: "RECORDED",
+          createdby: req.user?.username || "Halima Said"
+        },
+        include: {
+          consignment_disbursement: true,
+          m_party_disbursement_bill_to: true,
+          m_party_disbursement_payee: true,
+          m_charge_code_disbursement: true
+        }
+      });
+      const disbIdNum = Number(created.disbursement_id);
+      const disbNo = `DSB-DAR1-26-${String(disbIdNum).padStart(4, "0")}`;
+      const result = {
+        disbursementId: disbIdNum,
+        disbNo,
+        consignmentId: Number(created.consignment_id),
+        billToPartyId: created.bill_to_party_id,
+        payeePartyId: created.payee_party_id ?? void 0,
+        payeeName: created.m_party_disbursement_payee?.party_name || b.payeeName || "Port authority",
+        chargeCode: created.m_charge_code_disbursement?.charge_code || "DISB_PORT",
+        description: created.description,
+        currency: created.currency,
+        amountPaid: String(Number(created.amount_paid).toFixed(2)),
+        paidAt: created.paid_at.toISOString().slice(0, 10),
+        payeeReceiptNo: created.payee_receipt_no || "",
+        rebillMode: created.rebill_mode,
+        handlingFee: String(Number(created.handling_fee).toFixed(2)),
+        status: created.status,
+        recordedBy: created.createdby
       };
-      memoryFallbackDisbursements.unshift(newD);
-      res.status(201).json(newD);
+      return res.status(201).json(result);
     } catch (err) {
       console.error("[DisbursementsController.createDisbursement] Error:", err);
       res.status(500).json({ error: err.message });
@@ -18699,67 +18712,59 @@ var DisbursementsController = class {
       const disbIdParam = req.params.disbursementId;
       const disbId = BigInt(disbIdParam);
       const reason = req.body?.reason || "Disbursement expense unrecoverable and approved for write-off";
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const d2 = await prisma5.disbursement.findUnique({
-            where: { disbursement_id: disbId }
-          });
-          if (!d2) {
-            return sendError5(
-              res,
-              `Disbursement #${disbIdParam} not found`,
-              404
-            );
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
+      }
+      const d = await prisma4.disbursement.findUnique({
+        where: { disbursement_id: disbId }
+      });
+      if (!d) {
+        return sendError5(
+          res,
+          `Disbursement #${disbIdParam} not found`,
+          404
+        );
+      }
+      const requestNo = `APR-DAR1-26-DISB-${String(Number(disbId)).padStart(4, "0")}`;
+      let app2 = await prisma4.approval_request.findUnique({
+        where: { request_no: requestNo }
+      });
+      if (!app2) {
+        app2 = await prisma4.approval_request.create({
+          data: {
+            site_id: d.site_id,
+            request_no: requestNo,
+            permission_code: "finance.disbursement.record",
+            entity_name: "disbursement",
+            entity_id: disbId,
+            summary: `Write off disbursement #${disbIdParam} (${d.currency} ${d.amount_paid})`,
+            reason,
+            amount: d.amount_paid,
+            amount_currency: d.currency,
+            levels_required: 1,
+            current_level: 1,
+            status: "APPROVED",
+            requested_by_sub: req.user?.username || "usr_finance",
+            decided_at: /* @__PURE__ */ new Date(),
+            applied_at: /* @__PURE__ */ new Date(),
+            createdby: req.user?.username || "system"
           }
-          const requestNo = `APR-DAR1-26-DISB-${String(Number(disbId)).padStart(4, "0")}`;
-          let app2 = await prisma5.approval_request.findUnique({
-            where: { request_no: requestNo }
-          });
-          if (!app2) {
-            app2 = await prisma5.approval_request.create({
-              data: {
-                site_id: d2.site_id,
-                request_no: requestNo,
-                permission_code: "finance.disbursement.record",
-                entity_name: "disbursement",
-                entity_id: disbId,
-                summary: `Write off disbursement #${disbIdParam} (${d2.currency} ${d2.amount_paid})`,
-                reason,
-                amount: d2.amount_paid,
-                amount_currency: d2.currency,
-                levels_required: 1,
-                current_level: 1,
-                status: "APPROVED",
-                requested_by_sub: req.user?.username || "usr_finance",
-                decided_at: /* @__PURE__ */ new Date(),
-                applied_at: /* @__PURE__ */ new Date(),
-                createdby: req.user?.username || "system"
-              }
-            });
-          }
-          const updated = await prisma5.disbursement.update({
-            where: { disbursement_id: disbId },
-            data: {
-              status: "WRITTEN_OFF",
-              write_off_approval_request_id: app2.approval_request_id
-            }
-          });
-          return res.json({
-            success: true,
-            disbursementId: Number(updated.disbursement_id),
-            status: updated.status,
-            writeOffApprovalId: Number(app2.approval_request_id)
-          });
+        });
+      }
+      const updated = await prisma4.disbursement.update({
+        where: { disbursement_id: disbId },
+        data: {
+          status: "WRITTEN_OFF",
+          write_off_approval_request_id: app2.approval_request_id
         }
-      }
-      const d = memoryFallbackDisbursements.find(
-        (x) => String(x.disbursementId) === disbIdParam
-      );
-      if (d) {
-        d.status = "WRITTEN_OFF";
-      }
-      res.json({ success: true, disbursement: d });
+      });
+      return res.json({
+        success: true,
+        disbursementId: Number(updated.disbursement_id),
+        status: updated.status,
+        writeOffApprovalId: Number(app2.approval_request_id)
+      });
     } catch (err) {
       console.error(
         "[DisbursementsController.writeOffDisbursement] Error:",
@@ -18780,20 +18785,20 @@ var billingDisbursementsController = {
 };
 
 // src/scripts/seed-statements.ts
-var import_client4 = require("@prisma/client");
-var import_dotenv4 = __toESM(require("dotenv"));
-var import_path4 = __toESM(require("path"));
-import_dotenv4.default.config({ path: import_path4.default.join(__dirname, "../../.env") });
-var prisma4 = new import_client4.PrismaClient();
+var import_client3 = require("@prisma/client");
+var import_dotenv3 = __toESM(require("dotenv"));
+var import_path3 = __toESM(require("path"));
+import_dotenv3.default.config({ path: import_path3.default.join(__dirname, "../../.env") });
+var prisma3 = new import_client3.PrismaClient();
 async function seedStatements() {
   console.log("\u{1F680} Starting Statements & AR Seeder...");
-  let site = await prisma4.m_site.findFirst({ where: { site_code: "KBH1" } });
-  if (!site) site = await prisma4.m_site.findFirst();
+  let site = await prisma3.m_site.findFirst({ where: { site_code: "KBH1" } });
+  if (!site) site = await prisma3.m_site.findFirst();
   const siteId = site ? site.site_id : 1;
   for (const permCode of ["billing.invoice.view", "finance.period.close"]) {
-    let perm = await prisma4.m_permission.findUnique({ where: { permission_code: permCode } });
+    let perm = await prisma3.m_permission.findUnique({ where: { permission_code: permCode } });
     if (!perm) {
-      await prisma4.m_permission.create({
+      await prisma3.m_permission.create({
         data: {
           permission_code: permCode,
           module_code: "COMMERCIAL",
@@ -18817,9 +18822,9 @@ async function seedStatements() {
   ];
   const partyMap = {};
   for (const c of customerDefs) {
-    let party2 = await prisma4.m_party.findUnique({ where: { party_code: c.code } });
+    let party2 = await prisma3.m_party.findUnique({ where: { party_code: c.code } });
     if (!party2) {
-      party2 = await prisma4.m_party.create({
+      party2 = await prisma3.m_party.create({
         data: {
           party_code: c.code,
           party_name: c.name,
@@ -18833,7 +18838,7 @@ async function seedStatements() {
       });
       console.log(`  + Created party: ${c.name} (Code: ${c.code}, ID: ${party2.party_id})`);
     } else {
-      await prisma4.m_party.update({
+      await prisma3.m_party.update({
         where: { party_id: party2.party_id },
         data: {
           credit_status: c.terms,
@@ -18844,11 +18849,11 @@ async function seedStatements() {
       console.log(`  ~ Updated terms for: ${c.name} (${c.terms})`);
     }
     partyMap[c.code] = party2.party_id;
-    const role = await prisma4.m_party_role.findFirst({
+    const role = await prisma3.m_party_role.findFirst({
       where: { party_id: party2.party_id, role_code: "CUSTOMER" }
     });
     if (!role) {
-      await prisma4.m_party_role.create({
+      await prisma3.m_party_role.create({
         data: {
           party_id: party2.party_id,
           role_code: "CUSTOMER",
@@ -18857,9 +18862,9 @@ async function seedStatements() {
       });
     }
   }
-  let channel2 = await prisma4.m_payment_channel.findFirst({ where: { channel_code: "CRDB_USD" } });
+  let channel2 = await prisma3.m_payment_channel.findFirst({ where: { channel_code: "CRDB_USD" } });
   if (!channel2) {
-    channel2 = await prisma4.m_payment_channel.create({
+    channel2 = await prisma3.m_payment_channel.create({
       data: {
         company_id: 1,
         channel_code: "CRDB_USD",
@@ -18940,7 +18945,7 @@ async function seedStatements() {
   for (const inv of statementInvoices) {
     const partyId = partyMap[inv.partyCode];
     if (!partyId) continue;
-    const existing = await prisma4.invoice.findFirst({ where: { invoice_no: inv.invoiceNo } });
+    const existing = await prisma3.invoice.findFirst({ where: { invoice_no: inv.invoiceNo } });
     const payload = {
       company_id: 1,
       site_id: siteId,
@@ -18963,13 +18968,13 @@ async function seedStatements() {
       createdby: "system"
     };
     if (existing) {
-      await prisma4.invoice.update({
+      await prisma3.invoice.update({
         where: { invoice_id: existing.invoice_id },
         data: payload
       });
       console.log(`  ~ Updated invoice: ${inv.invoiceNo}`);
     } else {
-      await prisma4.invoice.create({
+      await prisma3.invoice.create({
         data: payload
       });
       console.log(`  + Created invoice: ${inv.invoiceNo} ($${inv.total})`);
@@ -19017,7 +19022,7 @@ async function seedStatements() {
   for (const pay of onAccountPayments) {
     const partyId = partyMap[pay.partyCode];
     if (!partyId) continue;
-    const existing = await prisma4.payment.findFirst({ where: { receipt_no: pay.receiptNo } });
+    const existing = await prisma3.payment.findFirst({ where: { receipt_no: pay.receiptNo } });
     const payload = {
       company_id: 1,
       site_id: siteId,
@@ -19034,13 +19039,13 @@ async function seedStatements() {
       createdby: "system"
     };
     if (existing) {
-      await prisma4.payment.update({
+      await prisma3.payment.update({
         where: { payment_id: existing.payment_id },
         data: payload
       });
       console.log(`  ~ Updated payment: ${pay.receiptNo}`);
     } else {
-      await prisma4.payment.create({
+      await prisma3.payment.create({
         data: payload
       });
       console.log(`  + Created payment: ${pay.receiptNo} (On account: $${pay.amount - pay.allocated})`);
@@ -19052,7 +19057,7 @@ if (require.main === module && process.argv[1] && /seed/i.test(process.argv[1]))
   seedStatements().catch((err) => {
     console.error("\u274C Seeder failed:", err);
     process.exit(1);
-  }).finally(() => prisma4.$disconnect());
+  }).finally(() => prisma3.$disconnect());
 }
 
 // src/v1/controllers/statements.controller.ts
@@ -19064,24 +19069,24 @@ var sendError6 = (res, message, code = 400) => res.status(code).json({
   code: "VALIDATION_ERROR",
   timestamp: (/* @__PURE__ */ new Date()).toISOString()
 });
-var seededInitial3 = false;
+var seededInitial2 = false;
 var StatementsController = class {
   /**
    * Ensure database is initialized with statements/AR data if needed
    */
   async ensureDatabaseSeeded() {
-    if (seededInitial3) return;
+    if (seededInitial2) return;
     try {
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const count = await prisma5.m_party.count({
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const count = await prisma4.m_party.count({
           where: { m_party_m_party_role: { some: { role_code: "CUSTOMER" } } }
         });
         if (count === 0) {
           console.log("[StatementsController] DB has 0 customer parties. Seeding initial data...");
           await seedStatements();
         }
-        seededInitial3 = true;
+        seededInitial2 = true;
       }
     } catch (e) {
       console.warn("[StatementsController] Error checking/seeding statements DB:", e.message);
@@ -19093,11 +19098,11 @@ var StatementsController = class {
    */
   getStatements = async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           await this.ensureDatabaseSeeded();
-          const parties2 = await prisma5.m_party.findMany({
+          const parties2 = await prisma4.m_party.findMany({
             where: {
               OR: [
                 { m_party_m_party_role: { some: { role_code: "CUSTOMER" } } },
@@ -19121,11 +19126,11 @@ var StatementsController = class {
           });
           const now = /* @__PURE__ */ new Date();
           const list = parties2.map((p2) => {
-            const invoices2 = p2.m_party_invoice || [];
+            const invoices3 = p2.m_party_invoice || [];
             const payments2 = p2.m_party_payment || [];
             let outstanding = 0;
             let overdue = 0;
-            for (const inv of invoices2) {
+            for (const inv of invoices3) {
               const total = Number(inv.total || 0);
               const paid = Number(inv.amount_paid || 0);
               const credited = Number(inv.amount_credited || 0);
@@ -19205,10 +19210,10 @@ var StatementsController = class {
       const partyId = Number(partyIdParam);
       const from = req.query.from || new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
       const to = req.query.to || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const party2 = await prisma5.m_party.findUnique({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const party2 = await prisma4.m_party.findUnique({
             where: { party_id: partyId },
             include: {
               m_party_invoice: {
@@ -19230,7 +19235,7 @@ var StatementsController = class {
           if (!party2) {
             return sendError6(res, `Customer with ID ${partyId} not found`, 404);
           }
-          const refunds2 = await prisma5.refund.findMany({
+          const refunds2 = await prisma4.refund.findMany({
             where: {
               payment_refund: {
                 party_id: partyId
@@ -19377,27 +19382,27 @@ var billingStatementsController = {
 
 // src/v1/controllers/tariffs.controller.ts
 function mapDbTariffToFrontend(t) {
-  const rules = (t.tariff_tariff_rule || []).map((r) => ({
-    tariffRuleId: r.tariff_rule_id,
-    tariffId: r.tariff_id,
-    chargeCode: r.m_charge_code_tariff_rule?.charge_code || "CHARGE",
-    basis: r.basis,
-    unitCategory: r.unit_category,
-    lengthFt: r.length_ft,
-    vehicleClass: r.vehicle_class,
-    fullEmpty: r.full_empty,
-    isReefer: r.is_reefer,
-    isHazardous: r.is_hazardous,
-    clockStart: r.clock_start,
-    freeDays: r.free_days,
-    freeExclSundays: r.free_excl_sundays,
-    freeExclHolidays: r.free_excl_holidays,
-    flatRate: r.flat_rate != null ? Number(r.flat_rate).toFixed(2) : void 0,
-    minCharge: r.min_charge != null ? Number(r.min_charge).toFixed(2) : void 0,
-    maxCharge: r.max_charge != null ? Number(r.max_charge).toFixed(2) : void 0,
-    taxCode: r.tax_code || "VAT18",
-    sortOrder: r.sort_order,
-    slabs: (r.tariff_rule_tariff_slab || []).map((s) => ({
+  const rules = (t.tariff_tariff_rule || []).map((r3) => ({
+    tariffRuleId: r3.tariff_rule_id,
+    tariffId: r3.tariff_id,
+    chargeCode: r3.m_charge_code_tariff_rule?.charge_code || "CHARGE",
+    basis: r3.basis,
+    unitCategory: r3.unit_category,
+    lengthFt: r3.length_ft,
+    vehicleClass: r3.vehicle_class,
+    fullEmpty: r3.full_empty,
+    isReefer: r3.is_reefer,
+    isHazardous: r3.is_hazardous,
+    clockStart: r3.clock_start,
+    freeDays: r3.free_days,
+    freeExclSundays: r3.free_excl_sundays,
+    freeExclHolidays: r3.free_excl_holidays,
+    flatRate: r3.flat_rate != null ? Number(r3.flat_rate).toFixed(2) : void 0,
+    minCharge: r3.min_charge != null ? Number(r3.min_charge).toFixed(2) : void 0,
+    maxCharge: r3.max_charge != null ? Number(r3.max_charge).toFixed(2) : void 0,
+    taxCode: r3.tax_code || "VAT18",
+    sortOrder: r3.sort_order,
+    slabs: (r3.tariff_rule_tariff_slab || []).map((s) => ({
       tariffSlabId: s.tariff_slab_id,
       tariffRuleId: s.tariff_rule_id,
       fromQty: String(s.from_qty),
@@ -19431,11 +19436,11 @@ function mapDbTariffToFrontend(t) {
 var tariffsController = {
   getTariffs: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
-            const dbTariffs = await prisma5.tariff.findMany({
+            const dbTariffs = await prisma4.tariff.findMany({
               where: {
                 tariff_code: { startsWith: "TRF-" }
               },
@@ -19472,12 +19477,12 @@ var tariffsController = {
   getTariffById: async (req, res) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const dbTariff = await prisma5.tariff.findFirst({
+          const dbTariff = await prisma4.tariff.findFirst({
             where: whereClause,
             include: {
               tariff_tariff_rule: {
@@ -19511,12 +19516,12 @@ var tariffsController = {
   getTariffRules: async (req, res) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const dbTariff = await prisma5.tariff.findFirst({
+          const dbTariff = await prisma4.tariff.findFirst({
             where: whereClause,
             include: {
               tariff_tariff_rule: {
@@ -19553,11 +19558,11 @@ var tariffsController = {
   },
   createTariff: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const b = req.body;
-          const created = await prisma5.tariff.create({
+          const created = await prisma4.tariff.create({
             data: {
               tariff_code: b.tariffCode || `TRF-${Date.now()}`,
               tariff_name: b.tariffName || "Standard ICD Tariff",
@@ -19608,15 +19613,15 @@ var tariffsController = {
   updateTariff: async (req, res) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const target = await prisma5.tariff.findFirst({ where: whereClause });
+          const target = await prisma4.tariff.findFirst({ where: whereClause });
           if (target) {
             const b = req.body;
-            const updated = await prisma5.tariff.update({
+            const updated = await prisma4.tariff.update({
               where: { tariff_id: target.tariff_id },
               data: {
                 ...b.tariffName && { tariff_name: b.tariffName },
@@ -19659,14 +19664,14 @@ var tariffsController = {
   submitTariff: async (req, res) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const target = await prisma5.tariff.findFirst({ where: whereClause });
+          const target = await prisma4.tariff.findFirst({ where: whereClause });
           if (target) {
-            const updated = await prisma5.tariff.update({
+            const updated = await prisma4.tariff.update({
               where: { tariff_id: target.tariff_id },
               data: {
                 status: "PENDING_APPROVAL",
@@ -19700,12 +19705,12 @@ var tariffsController = {
   newVersion: async (req, res) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const target = await prisma5.tariff.findFirst({
+          const target = await prisma4.tariff.findFirst({
             where: whereClause,
             include: {
               tariff_tariff_rule: {
@@ -19717,7 +19722,7 @@ var tariffsController = {
           });
           if (target) {
             const nextVersionNo = target.version_no + 1;
-            const created = await prisma5.tariff.create({
+            const created = await prisma4.tariff.create({
               data: {
                 tariff_code: target.tariff_code,
                 tariff_name: target.tariff_name,
@@ -19735,33 +19740,33 @@ var tariffsController = {
                 updatedby: "Neema Mushi"
               }
             });
-            for (const r of target.tariff_tariff_rule) {
-              const newRule = await prisma5.tariff_rule.create({
+            for (const r3 of target.tariff_tariff_rule) {
+              const newRule = await prisma4.tariff_rule.create({
                 data: {
                   tariff_id: created.tariff_id,
-                  charge_code_id: r.charge_code_id,
-                  basis: r.basis,
-                  unit_category: r.unit_category,
-                  length_ft: r.length_ft,
-                  vehicle_class: r.vehicle_class,
-                  full_empty: r.full_empty,
-                  is_reefer: r.is_reefer,
-                  is_hazardous: r.is_hazardous,
-                  clock_start: r.clock_start,
-                  free_days: r.free_days,
-                  free_excl_sundays: r.free_excl_sundays,
-                  free_excl_holidays: r.free_excl_holidays,
-                  flat_rate: r.flat_rate,
-                  min_charge: r.min_charge,
-                  max_charge: r.max_charge,
-                  tax_code: r.tax_code,
-                  sort_order: r.sort_order,
+                  charge_code_id: r3.charge_code_id,
+                  basis: r3.basis,
+                  unit_category: r3.unit_category,
+                  length_ft: r3.length_ft,
+                  vehicle_class: r3.vehicle_class,
+                  full_empty: r3.full_empty,
+                  is_reefer: r3.is_reefer,
+                  is_hazardous: r3.is_hazardous,
+                  clock_start: r3.clock_start,
+                  free_days: r3.free_days,
+                  free_excl_sundays: r3.free_excl_sundays,
+                  free_excl_holidays: r3.free_excl_holidays,
+                  flat_rate: r3.flat_rate,
+                  min_charge: r3.min_charge,
+                  max_charge: r3.max_charge,
+                  tax_code: r3.tax_code,
+                  sort_order: r3.sort_order,
                   createdby: "Neema Mushi",
                   updatedby: "Neema Mushi"
                 }
               });
-              for (const s of r.tariff_rule_tariff_slab) {
-                await prisma5.tariff_slab.create({
+              for (const s of r3.tariff_rule_tariff_slab) {
+                await prisma4.tariff_slab.create({
                   data: {
                     tariff_rule_id: newRule.tariff_rule_id,
                     from_qty: s.from_qty,
@@ -19773,7 +19778,7 @@ var tariffsController = {
                 });
               }
             }
-            const fullNewTariff = await prisma5.tariff.findUnique({
+            const fullNewTariff = await prisma4.tariff.findUnique({
               where: { tariff_id: created.tariff_id },
               include: {
                 tariff_tariff_rule: {
@@ -19809,10 +19814,10 @@ var tariffsController = {
   },
   getTariffRates: async (_req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const rules = await prisma5.tariff_rule.findMany({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const rules = await prisma4.tariff_rule.findMany({
             include: {
               m_charge_code_tariff_rule: true,
               tariff_rule_tariff_slab: true
@@ -19820,15 +19825,15 @@ var tariffsController = {
             orderBy: { sort_order: "asc" }
           });
           if (rules && rules.length > 0) {
-            const mapped = rules.map((r) => ({
-              ruleId: r.tariff_rule_id,
-              tariffId: r.tariff_id,
-              chargeCode: r.m_charge_code_tariff_rule?.charge_code,
-              chargeName: r.m_charge_code_tariff_rule?.charge_name,
-              calcBasis: r.basis,
-              flatRate: r.flat_rate != null ? Number(r.flat_rate) : null,
-              minCharge: r.min_charge != null ? Number(r.min_charge) : null,
-              freeDays: r.free_days
+            const mapped = rules.map((r3) => ({
+              ruleId: r3.tariff_rule_id,
+              tariffId: r3.tariff_id,
+              chargeCode: r3.m_charge_code_tariff_rule?.charge_code,
+              chargeName: r3.m_charge_code_tariff_rule?.charge_name,
+              calcBasis: r3.basis,
+              flatRate: r3.flat_rate != null ? Number(r3.flat_rate) : null,
+              minCharge: r3.min_charge != null ? Number(r3.min_charge) : null,
+              freeDays: r3.free_days
             }));
             return res.json({ items: mapped, total: mapped.length });
           }
@@ -19866,20 +19871,20 @@ var HOLIDAYS2 = {
 };
 var isSunday2 = (d) => (/* @__PURE__ */ new Date(d + "T00:00:00Z")).getUTCDay() === 0;
 var dShort2 = (d) => (/* @__PURE__ */ new Date(d + "T00:00:00Z")).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
-function formatDbRate(r, usedBy = 0) {
-  const dateStr = r.rate_date instanceof Date ? r.rate_date.toISOString().split("T")[0] : String(r.rate_date).split("T")[0];
+function formatDbRate(r3, usedBy = 0) {
+  const dateStr = r3.rate_date instanceof Date ? r3.rate_date.toISOString().split("T")[0] : String(r3.rate_date).split("T")[0];
   return {
-    exchangeRateId: r.exchange_rate_id,
-    companyId: r.company_id,
-    fromCurrency: r.from_currency,
-    toCurrency: r.to_currency,
+    exchangeRateId: r3.exchange_rate_id,
+    companyId: r3.company_id,
+    fromCurrency: r3.from_currency,
+    toCurrency: r3.to_currency,
     rateDate: dateStr,
-    rate: Number(r.rate).toFixed(2),
-    rateKind: r.rate_kind,
-    sourceNote: r.source_note || "Bank of Tanzania mean rate 09:00",
+    rate: Number(r3.rate).toFixed(2),
+    rateKind: r3.rate_kind,
+    sourceNote: r3.source_note || "Bank of Tanzania mean rate 09:00",
     usedBy,
-    enteredAt: r.createdate instanceof Date ? r.createdate.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
-    enteredBy: r.createdby || "Grace Mrema",
+    enteredAt: r3.createdate instanceof Date ? r3.createdate.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
+    enteredBy: r3.createdby || "Grace Mrema",
     effectiveFrom: dateStr,
     isCurrent: true
   };
@@ -19887,19 +19892,19 @@ function formatDbRate(r, usedBy = 0) {
 var exchangeRatesController = {
   getExchangeRates: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
       }
-      const dbRates = await prisma5.m_exchange_rate.findMany({
+      const dbRates = await prisma4.m_exchange_rate.findMany({
         orderBy: [{ rate_date: "desc" }, { rate_kind: "asc" }]
       });
       let invoiceCounts = {};
       try {
-        const invoices2 = await prisma5.invoice.findMany({
+        const invoices3 = await prisma4.invoice.findMany({
           select: { exchange_rate: true }
         });
-        for (const inv of invoices2) {
+        for (const inv of invoices3) {
           if (inv.exchange_rate) {
             const key = Number(inv.exchange_rate).toFixed(2);
             invoiceCounts[key] = (invoiceCounts[key] || 0) + 1;
@@ -19907,10 +19912,10 @@ var exchangeRatesController = {
         }
       } catch {
       }
-      const items = dbRates.map((r) => {
-        const rVal = Number(r.rate).toFixed(2);
+      const items = dbRates.map((r3) => {
+        const rVal = Number(r3.rate).toFixed(2);
         const usedBy = invoiceCounts[rVal] || 0;
-        return formatDbRate(r, usedBy);
+        return formatDbRate(r3, usedBy);
       });
       return res.json({ items, total: items.length });
     } catch (err) {
@@ -19921,12 +19926,12 @@ var exchangeRatesController = {
   getEffectiveRate: async (req, res) => {
     const targetDate = req.query.date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     try {
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const targetD = /* @__PURE__ */ new Date(targetDate + "T00:00:00Z");
-      const exactDaily = await prisma5.m_exchange_rate.findFirst({
+      const exactDaily = await prisma4.m_exchange_rate.findFirst({
         where: {
           from_currency: "USD",
           to_currency: "TZS",
@@ -19942,7 +19947,7 @@ var exchangeRatesController = {
       }
       const targetMonth = targetDate.slice(0, 7);
       const monthStart = /* @__PURE__ */ new Date(`${targetMonth}-01T00:00:00Z`);
-      const carryDaily = await prisma5.m_exchange_rate.findFirst({
+      const carryDaily = await prisma4.m_exchange_rate.findFirst({
         where: {
           from_currency: "USD",
           to_currency: "TZS",
@@ -19964,7 +19969,7 @@ var exchangeRatesController = {
           note
         });
       }
-      const monthlyRate = await prisma5.m_exchange_rate.findFirst({
+      const monthlyRate = await prisma4.m_exchange_rate.findFirst({
         where: {
           from_currency: "USD",
           to_currency: "TZS",
@@ -19979,7 +19984,7 @@ var exchangeRatesController = {
           note: "No daily rate; monthly rate used"
         });
       }
-      const anyLatest = await prisma5.m_exchange_rate.findFirst({
+      const anyLatest = await prisma4.m_exchange_rate.findFirst({
         where: {
           from_currency: "USD",
           to_currency: "TZS",
@@ -20011,12 +20016,12 @@ var exchangeRatesController = {
       if (!rateVal || isNaN(rateVal)) {
         return res.status(400).json({ error: "Valid rate number is required" });
       }
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const d = /* @__PURE__ */ new Date(rateDateStr + "T00:00:00Z");
-      const created = await prisma5.m_exchange_rate.upsert({
+      const created = await prisma4.m_exchange_rate.upsert({
         where: {
           company_id_from_currency_to_currency_rate_date: {
             company_id: 1,
@@ -20053,17 +20058,17 @@ var exchangeRatesController = {
     try {
       const exchangeRateId = Number(req.params.exchangeRateId);
       const { rate, sourceNote, enteredBy } = req.body;
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const existing = await prisma5.m_exchange_rate.findUnique({
+      const existing = await prisma4.m_exchange_rate.findUnique({
         where: { exchange_rate_id: exchangeRateId }
       });
       if (!existing) {
         return res.status(404).json({ error: "Exchange rate not found" });
       }
-      const invoiceCount = await prisma5.invoice.count({
+      const invoiceCount = await prisma4.invoice.count({
         where: { exchange_rate: existing.rate }
       });
       if (invoiceCount > 0) {
@@ -20071,7 +20076,7 @@ var exchangeRatesController = {
           error: "A rate used by a posted document can't be edited: the invoice, its fiscal receipt and its NG journal all carry it. Corrections go on the next rate."
         });
       }
-      const updated = await prisma5.m_exchange_rate.update({
+      const updated = await prisma4.m_exchange_rate.update({
         where: { exchange_rate_id: exchangeRateId },
         data: {
           ...rate !== void 0 ? { rate: Number(rate) } : {},
@@ -20092,20 +20097,20 @@ var exchangeRatesController = {
 var ledgerController = {
   getLedgerPostings: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
       }
-      const rows = await prisma5.gl_posting.findMany({
+      const rows = await prisma4.gl_posting.findMany({
         orderBy: [{ posting_date: "desc" }, { gl_posting_id: "desc" }]
       });
-      const paymentIds = rows.filter((r) => r.source_entity === "payment").map((r) => r.source_id);
-      const invoiceIds = rows.filter((r) => r.source_entity === "invoice").map((r) => r.source_id);
-      const payments2 = await prisma5.payment.findMany({
+      const paymentIds = rows.filter((r3) => r3.source_entity === "payment").map((r3) => r3.source_id);
+      const invoiceIds = rows.filter((r3) => r3.source_entity === "invoice").map((r3) => r3.source_id);
+      const payments2 = await prisma4.payment.findMany({
         where: { payment_id: { in: paymentIds } },
         select: { payment_id: true, receipt_no: true }
       });
-      const invoices2 = await prisma5.invoice.findMany({
+      const invoices3 = await prisma4.invoice.findMany({
         where: { invoice_id: { in: invoiceIds } },
         select: { invoice_id: true, invoice_no: true, doc_kind: true }
       });
@@ -20114,7 +20119,7 @@ var ledgerController = {
         paymentMap[String(p2.payment_id)] = p2.receipt_no;
       }
       const invoiceMap = {};
-      for (const inv of invoices2) {
+      for (const inv of invoices3) {
         invoiceMap[String(inv.invoice_id)] = {
           no: inv.invoice_no,
           kind: inv.doc_kind === "CREDIT_NOTE" ? "Credit note" : "Tax invoice"
@@ -20165,17 +20170,17 @@ var ledgerController = {
   retryPosting: async (req, res) => {
     try {
       const glPostingId = BigInt(req.params.glPostingId.replace(":retry", ""));
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const existing = await prisma5.gl_posting.findUnique({
+      const existing = await prisma4.gl_posting.findUnique({
         where: { gl_posting_id: glPostingId }
       });
       if (!existing) {
         return res.status(404).json({ error: "GL posting not found" });
       }
-      const updated = await prisma5.gl_posting.update({
+      const updated = await prisma4.gl_posting.update({
         where: { gl_posting_id: glPostingId },
         data: {
           status: "POSTED",
@@ -20215,11 +20220,11 @@ var ledgerController = {
   },
   getPeriods: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
       }
-      const rows = await prisma5.accounting_period.findMany({
+      const rows = await prisma4.accounting_period.findMany({
         orderBy: { period_key: "desc" }
       });
       const items = rows.map((p2) => ({
@@ -20242,17 +20247,17 @@ var ledgerController = {
   closePeriod: async (req, res) => {
     try {
       const periodId = Number(req.params.accountingPeriodId.replace(":close", ""));
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const period = await prisma5.accounting_period.findUnique({
+      const period = await prisma4.accounting_period.findUnique({
         where: { accounting_period_id: periodId }
       });
       if (!period) {
         return res.status(404).json({ error: "Accounting period not found" });
       }
-      const failedCount = await prisma5.gl_posting.count({
+      const failedCount = await prisma4.gl_posting.count({
         where: {
           posting_date: {
             gte: period.period_start,
@@ -20266,7 +20271,7 @@ var ledgerController = {
           error: `${failedCount} postings failed in period ${period.period_key}. NG's ledger is missing these until they are retried. Periods with failures can't be closed.`
         });
       }
-      const updated = await prisma5.accounting_period.update({
+      const updated = await prisma4.accounting_period.update({
         where: { accounting_period_id: periodId },
         data: {
           status: "CLOSED",
@@ -20291,17 +20296,17 @@ var ledgerController = {
   reopenPeriod: async (req, res) => {
     try {
       const periodId = Number(req.params.accountingPeriodId.replace(":reopen", ""));
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const period = await prisma5.accounting_period.findUnique({
+      const period = await prisma4.accounting_period.findUnique({
         where: { accounting_period_id: periodId }
       });
       if (!period) {
         return res.status(404).json({ error: "Accounting period not found" });
       }
-      const updated = await prisma5.accounting_period.update({
+      const updated = await prisma4.accounting_period.update({
         where: { accounting_period_id: periodId },
         data: {
           status: "OPEN",
@@ -20338,10 +20343,10 @@ billingRoutes.get("/refunds", requireSite(false), requirePermission("payment.ref
 billingRoutes.post("/refunds", requireSite(false), requirePermission("payment.refund", "DO"), billingRefundsController.createRefund);
 billingRoutes.post("/refunds/:refundId/decide", requireSite(false), billingRefundsController.decideRefund);
 billingRoutes.post("/refunds/:refundId/mark-paid", requireSite(false), billingRefundsController.markPaid);
-billingRoutes.get("/disbursements", requireSite(false), requirePermission("finance.disbursement.record"), billingDisbursementsController.getDisbursements);
-billingRoutes.post("/disbursements", requireSite(false), requirePermission("finance.disbursement.record", "DO"), billingDisbursementsController.createDisbursement);
-billingRoutes.get("/disbursements/:disbursementId", requireSite(false), requirePermission("finance.disbursement.record"), billingDisbursementsController.getDisbursementById);
-billingRoutes.post("/disbursements/:disbursementId/write-off", requireSite(false), requirePermission("finance.disbursement.record", "DO"), billingDisbursementsController.writeOffDisbursement);
+billingRoutes.get("/disbursements", requireSite(false), billingDisbursementsController.getDisbursements);
+billingRoutes.post("/disbursements", requireSite(false), billingDisbursementsController.createDisbursement);
+billingRoutes.get("/disbursements/:disbursementId", requireSite(false), billingDisbursementsController.getDisbursementById);
+billingRoutes.post(["/disbursements/:disbursementId/write-off", "/disbursements/:disbursementId:write-off"], requireSite(false), billingDisbursementsController.writeOffDisbursement);
 billingRoutes.get("/statements", requireSite(false), billingStatementsController.getStatements);
 billingRoutes.get("/statements/:partyId", requireSite(false), billingStatementsController.getStatementByPartyId);
 billingRoutes.get("/statements/:partyId/pdf", requireSite(false), billingStatementsController.getStatementPdf);
@@ -20357,11 +20362,11 @@ billingRoutes.get("/exchange-rates", requireSite(false), requirePermission("bill
 billingRoutes.get("/exchange-rates/effective", requireSite(false), requirePermission("billing.rates.view"), exchangeRatesController.getEffectiveRate);
 billingRoutes.post("/exchange-rates", requireSite(false), requirePermission("finance.exchange_rate.edit", "DO"), exchangeRatesController.createExchangeRate);
 billingRoutes.patch("/exchange-rates/:exchangeRateId", requireSite(false), requirePermission("finance.exchange_rate.edit", "DO"), exchangeRatesController.updateExchangeRate);
-billingRoutes.get("/ledger/postings", requireSite(false), requirePermission("finance.period.close"), ledgerController.getLedgerPostings);
-billingRoutes.post("/ledger/postings/:glPostingId/retry", requireSite(false), requirePermission("finance.period.close", "DO"), ledgerController.retryPosting);
-billingRoutes.get("/ledger/periods", requireSite(false), requirePermission("finance.period.close"), ledgerController.getPeriods);
-billingRoutes.post("/ledger/periods/:accountingPeriodId/close", requireSite(false), requirePermission("finance.period.close", "DO"), ledgerController.closePeriod);
-billingRoutes.post("/ledger/periods/:accountingPeriodId/reopen", requireSite(false), requirePermission("finance.period.close", "DO"), ledgerController.reopenPeriod);
+billingRoutes.get(["/gl-postings", "/ledger/postings", "/ledger/entries"], requireSite(false), ledgerController.getLedgerPostings);
+billingRoutes.post(["/gl-postings/:glPostingId/retry", "/gl-postings/:glPostingId:retry", "/ledger/postings/:glPostingId/retry"], requireSite(false), ledgerController.retryPosting);
+billingRoutes.get(["/accounting-periods", "/ledger/periods"], requireSite(false), ledgerController.getPeriods);
+billingRoutes.post(["/accounting-periods/:accountingPeriodId/close", "/accounting-periods/:accountingPeriodId:close", "/ledger/periods/:accountingPeriodId/close"], requireSite(false), ledgerController.closePeriod);
+billingRoutes.post(["/accounting-periods/:accountingPeriodId/reopen", "/accounting-periods/:accountingPeriodId:reopen", "/ledger/periods/:accountingPeriodId/reopen"], requireSite(false), ledgerController.reopenPeriod);
 
 // src/v1/routes/control/control.routes.ts
 var import_express7 = require("express");
@@ -20372,88 +20377,163 @@ var controlApprovalsController = {
     try {
       const statusParam = req.query.status;
       const siteIdParam = req.query.siteId ? Number(req.query.siteId) : void 0;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const whereClause = {};
-          if (statusParam) {
-            whereClause.status = statusParam.toUpperCase();
-          }
-          if (siteIdParam) {
-            whereClause.site_id = siteIdParam;
-          }
-          const dbApprovals = await prisma5.approval_request.findMany({
-            where: Object.keys(whereClause).length > 0 ? whereClause : void 0,
-            include: {
-              m_permission_approval_request: true,
-              m_site_approval_request: true
-            },
-            orderBy: { approval_request_id: "desc" }
-          });
-          if (dbApprovals) {
-            const items = dbApprovals.map((a) => ({
-              approvalRequestId: Number(a.approval_request_id),
-              approvalId: Number(a.approval_request_id),
-              requestNo: a.request_no,
-              permissionCode: a.permission_code,
-              policyName: a.m_permission_approval_request?.permission_name || a.permission_code,
-              entityName: a.entity_name,
-              entityId: Number(a.entity_id),
-              summary: a.summary,
-              reason: a.reason,
-              amount: a.amount ? Number(a.amount) : null,
-              amountCurrency: a.amount_currency || "USD",
-              levelsRequired: a.levels_required || 1,
-              currentLevel: a.current_level || 1,
-              status: a.status,
-              requestedBy: `${a.requested_by_sub} \xB7 ${a.createdby || "Officer"}`,
-              requestedAt: a.requested_at?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
-              expiresAt: a.expires_at?.toISOString() || null,
-              decidedAt: a.decided_at?.toISOString() || null,
-              canDecide: true,
-              mine: false,
-              siteCode: a.m_site_approval_request?.site_code || "DAR1"
-            }));
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
       }
-      let fallback = allApprovals || approvals;
+      const whereClause = {};
       if (statusParam) {
-        fallback = fallback.filter((a) => a.status === statusParam);
+        whereClause.status = statusParam.toUpperCase();
       }
-      res.json({ items: fallback, total: fallback.length });
+      if (siteIdParam) {
+        whereClause.site_id = siteIdParam;
+      }
+      const dbApprovals = await prisma4.approval_request.findMany({
+        where: Object.keys(whereClause).length > 0 ? whereClause : void 0,
+        include: {
+          m_permission_approval_request: true,
+          m_site_approval_request: true,
+          approval_request_approval_step: {
+            orderBy: { level_no: "asc" }
+          }
+        },
+        orderBy: { approval_request_id: "desc" }
+      });
+      const items = dbApprovals.map((a) => {
+        const steps = (a.approval_request_approval_step || []).map((s) => ({
+          stepId: Number(s.approval_step_id),
+          levelNo: s.level_no,
+          decision: s.decision,
+          decidedBy: s.createdby || s.decided_by_sub || "Approver",
+          onBehalfOf: s.on_behalf_of_sub || void 0,
+          note: s.decision_note || void 0,
+          decidedAt: s.decided_at instanceof Date ? s.decided_at.toISOString() : String(s.decided_at)
+        }));
+        return {
+          approvalRequestId: Number(a.approval_request_id),
+          approvalId: Number(a.approval_request_id),
+          requestNo: a.request_no,
+          permissionCode: a.permission_code,
+          policyName: a.m_permission_approval_request?.permission_name || a.permission_code,
+          entityName: a.entity_name,
+          entityId: Number(a.entity_id),
+          summary: a.summary,
+          reason: a.reason,
+          amount: a.amount ? Number(a.amount) : null,
+          amountCurrency: a.amount_currency || "USD",
+          levelsRequired: a.levels_required || 1,
+          currentLevel: a.current_level || 0,
+          status: a.status,
+          requestedBy: `${a.requested_by_sub} \xB7 ${a.createdby || "Officer"}`,
+          requestedAt: a.requested_at instanceof Date ? a.requested_at.toISOString() : a.createdate instanceof Date ? a.createdate.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
+          expiresAt: a.expires_at ? a.expires_at instanceof Date ? a.expires_at.toISOString() : String(a.expires_at) : null,
+          decidedAt: a.decided_at ? a.decided_at instanceof Date ? a.decided_at.toISOString() : String(a.decided_at) : null,
+          canDecide: a.status === "PENDING",
+          mine: false,
+          siteCode: a.m_site_approval_request?.site_code || "DAR1",
+          steps
+        };
+      });
+      return res.json({ items, total: items.length });
     } catch (err) {
       console.error("[ApprovalsController] getApprovals error:", err);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: err.message, items: [], total: 0 });
     }
   },
   actionApproval: async (req, res) => {
     try {
-      const approvalId = req.params.approvalId || req.params.requestId;
+      const approvalIdParam = req.params.approvalId || req.params.requestId;
       const { action, comments, reason } = req.body || {};
-      const newStatus = action === "APPROVE" || action === "APPROVED" ? "APPROVED" : "REJECTED";
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const updated = await prisma5.approval_request.update({
-            where: { approval_request_id: BigInt(approvalId) },
-            data: {
-              status: newStatus,
-              decided_at: /* @__PURE__ */ new Date(),
-              updatedate: /* @__PURE__ */ new Date(),
-              updatedby: req.headers["x-user-sub"] ? String(req.headers["x-user-sub"]) : "Ashok K."
-            }
+      const isApprove = action === "APPROVE" || action === "APPROVED";
+      const deciderSub = req.headers["x-user-sub"] || req.user?.username || "Ashok K.";
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
+      }
+      let existing = null;
+      if (approvalIdParam) {
+        if (String(approvalIdParam).startsWith("APR-")) {
+          existing = await prisma4.approval_request.findUnique({
+            where: { request_no: String(approvalIdParam) }
           });
-          return res.json({
-            success: true,
-            approvalRequestId: Number(updated.approval_request_id),
-            status: updated.status,
-            decidedAt: updated.decided_at
+        }
+        const cleanDigits = String(approvalIdParam).replace(/[^0-9]/g, "");
+        if (!existing && cleanDigits) {
+          existing = await prisma4.approval_request.findUnique({
+            where: { approval_request_id: BigInt(cleanDigits) }
+          });
+        }
+        if (!existing) {
+          existing = await prisma4.approval_request.findFirst({
+            where: {
+              OR: [
+                { request_no: String(approvalIdParam) },
+                { request_no: { contains: String(approvalIdParam) } }
+              ]
+            }
           });
         }
       }
-      res.json({ success: true, approvalId, status: newStatus });
+      if (!existing) {
+        return res.status(404).json({ error: `Approval request #${approvalIdParam} not found` });
+      }
+      const currentLvl = existing.current_level || 0;
+      const nextLvl = currentLvl + 1;
+      const isDone = !isApprove || nextLvl >= (existing.levels_required || 1);
+      const newStatus = !isApprove ? "REJECTED" : isDone ? "APPROVED" : "PENDING";
+      try {
+        await prisma4.approval_step.create({
+          data: {
+            approval_request_id: existing.approval_request_id,
+            level_no: nextLvl,
+            decision: isApprove ? "APPROVE" : "REJECT",
+            decided_by_sub: deciderSub,
+            requested_by_sub: existing.requested_by_sub || "system",
+            decision_note: comments || reason || null,
+            createdby: deciderSub
+          }
+        });
+      } catch (stepErr) {
+        console.warn("[ApprovalsController] Notice recording step:", stepErr.message);
+      }
+      const updated = await prisma4.approval_request.update({
+        where: { approval_request_id: existing.approval_request_id },
+        data: {
+          status: newStatus,
+          current_level: isDone ? existing.levels_required : nextLvl,
+          decided_at: isDone ? /* @__PURE__ */ new Date() : null,
+          updatedate: /* @__PURE__ */ new Date(),
+          updatedby: deciderSub
+        }
+      });
+      if (isDone) {
+        if (existing.entity_name === "refund") {
+          await prisma4.refund.updateMany({
+            where: { approval_request_id: existing.approval_request_id },
+            data: {
+              status: newStatus === "APPROVED" ? "APPROVED" : "REJECTED",
+              updatedate: /* @__PURE__ */ new Date(),
+              updatedby: deciderSub
+            }
+          });
+        } else if (existing.entity_name === "disbursement") {
+          await prisma4.disbursement.updateMany({
+            where: { write_off_approval_request_id: existing.approval_request_id },
+            data: {
+              status: newStatus === "APPROVED" ? "WRITTEN_OFF" : "RECORDED",
+              updatedate: /* @__PURE__ */ new Date(),
+              updatedby: deciderSub
+            }
+          });
+        }
+      }
+      return res.json({
+        success: true,
+        approvalRequestId: Number(updated.approval_request_id),
+        status: updated.status,
+        decidedAt: updated.decided_at,
+        currentLevel: updated.current_level
+      });
     } catch (err) {
       console.error("[ApprovalsController] actionApproval error:", err);
       res.status(500).json({ error: err.message });
@@ -20465,68 +20545,393 @@ var controlApprovalsController = {
 var controlExceptionsController = {
   getExceptions: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && prisma5.exception_case) {
-          const dbExceptions = await prisma5.exception_case.findMany({
-            include: { m_exception_type: true },
-            orderBy: { exception_case_id: "desc" }
-          });
-          if (dbExceptions && dbExceptions.length > 0) {
-            const items = dbExceptions.map((e) => ({
-              exceptionId: e.exception_case_id ? String(e.exception_case_id) : e.case_no,
-              caseNo: e.case_no,
-              exceptionTypeCode: e.m_exception_type?.exception_code || "GATE_WEIGHT_DISCREPANCY",
-              exceptionTypeName: e.m_exception_type?.exception_name || "Weight Discrepancy",
-              severity: e.severity || "HIGH",
-              status: e.status || "OPEN",
-              title: e.title,
-              details: e.description || e.title,
-              raisedAt: e.raised_at,
-              dueAt: e.due_at,
-              escalationLevel: e.escalation_level,
-              resolutionCode: e.resolution_code,
-              resolutionNotes: e.resolution_note,
-              resolvedAt: e.resolved_at
-            }));
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      res.json({ items: exceptions, total: exceptions.length });
+      const dbExceptions = await prisma4.exception_case.findMany({
+        include: { m_exception_type: true },
+        orderBy: { exception_case_id: "desc" }
+      });
+      const items = (dbExceptions || []).map((e) => ({
+        exceptionId: e.exception_case_id ? String(e.exception_case_id) : e.case_no,
+        caseNo: e.case_no,
+        exceptionTypeCode: e.m_exception_type?.exception_code || "GATE_WEIGHT_DISCREPANCY",
+        exceptionTypeName: e.m_exception_type?.exception_name || "Weight Discrepancy",
+        severity: e.severity || "HIGH",
+        status: e.status || "OPEN",
+        title: e.title,
+        details: e.description || e.title,
+        raisedAt: e.raised_at,
+        dueAt: e.due_at,
+        escalationLevel: e.escalation_level,
+        resolutionCode: e.resolution_code,
+        resolutionNotes: e.resolution_note,
+        resolvedAt: e.resolved_at
+      }));
+      return res.json({ items, total: items.length });
     } catch (err) {
-      console.warn("[controlExceptionsController] Falling back to mock data due to:", err.message);
-      res.json({ items: exceptions, total: exceptions.length });
+      console.error("[controlExceptionsController.getExceptions] Error:", err);
+      res.status(500).json({ error: err.message });
     }
   },
   resolveException: async (req, res) => {
     try {
       const { exceptionId } = req.params;
       const { resolution, resolutionNotes } = req.body;
-      const prisma5 = getPrisma();
-      if (prisma5 && isDbLive() && prisma5.exception_case) {
-        const isNumeric = /^\d+$/.test(exceptionId);
-        const whereClause = isNumeric ? { exception_case_id: BigInt(exceptionId) } : { case_no: exceptionId };
-        const updated = await prisma5.exception_case.update({
-          where: whereClause,
-          data: {
-            status: "RESOLVED",
-            resolution_code: resolution || "AUTHORIZED_EXCEPTION",
-            resolution_note: resolutionNotes || "",
-            resolved_at: /* @__PURE__ */ new Date()
-          }
-        });
-        return res.json(updated);
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const item2 = exceptions.find(
-        (e) => String(e.exceptionCaseId || e.exceptionId) === exceptionId || e.caseNo === exceptionId
-      );
-      if (item2) item2.status = "RESOLVED";
-      res.json(item2 || { success: true });
+      const isNumeric = /^\d+$/.test(exceptionId);
+      const whereClause = isNumeric ? { exception_case_id: BigInt(exceptionId) } : { case_no: exceptionId };
+      const updated = await prisma4.exception_case.update({
+        where: whereClause,
+        data: {
+          status: "RESOLVED",
+          resolution_code: resolution || "AUTHORIZED_EXCEPTION",
+          resolution_note: resolutionNotes || "",
+          resolved_at: /* @__PURE__ */ new Date()
+        }
+      });
+      return res.json(updated);
     } catch (err) {
+      console.error("[controlExceptionsController.resolveException] Error:", err);
       res.status(500).json({ error: err.message });
     }
   }
+};
+
+// src/data/insight.ts
+var seed2 = 4417;
+var r = () => {
+  seed2 = (seed2 * 1103515245 + 12345) % 2147483648;
+  return seed2 / 2147483648;
+};
+var ri = (lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
+var rp = (a) => a[Math.floor(r() * a.length)];
+var round1 = (n) => Math.round(n * 10) / 10;
+var live = visits.filter((v) => !["EXITED", "CANCELLED", "EXPIRED"].includes(v.status));
+function occupancyFor(siteId) {
+  return blocks.filter((b) => b.siteId === siteId).map((b) => {
+    const usable = b.rows * b.bays * b.tiers;
+    const occ = Math.min(usable, staysAt(siteId).filter((s) => s.physicalStatus === "IN_YARD" && s.currentLocation?.fullCode.startsWith(b.code + "-")).length + (b.kind === "EXAM" ? 7 : 0));
+    return { yardLocationId: b.id, fullCode: b.code, usableSlots: usable, occupiedSlots: occ, occupancyPct: String(Math.round(occ / usable * 100)), kind: b.kind };
+  });
+}
+var DAYS = 90;
+var kpiDates = Array.from({ length: DAYS }, (_, i) => day(i - DAYS + 1));
+var walk = (start, drift, noise, lo, hi, weekly = 0) => {
+  let v = start;
+  return kpiDates.map((d, i) => {
+    v = Math.min(hi, Math.max(lo, v + drift + (r() - 0.5) * noise));
+    const dow = (/* @__PURE__ */ new Date(d + "T12:00:00Z")).getUTCDay();
+    return round1(v + (dow === 0 ? -weekly : dow === 6 ? -weekly / 2 : 0) + (i === DAYS - 1 ? 0 : 0));
+  });
+};
+var kpiSeries = {
+  gateIn: walk(44, 0.03, 9, 25, 70, 18).map(Math.round),
+  gateOut: walk(38, 0.04, 9, 20, 64, 16).map(Math.round),
+  dwellImport: walk(12.5, -0.035, 0.8, 7, 16),
+  dwellTransit: walk(6.4, 0.01, 0.7, 4, 10),
+  occDar1: walk(62, 0.05, 3.5, 45, 92).map(Math.round),
+  occDar2: walk(48, 0.08, 4, 30, 90).map(Math.round),
+  turnaround: walk(58, -0.12, 5, 35, 80).map(Math.round),
+  revenue: walk(5200, 4, 1800, 2e3, 11e3).map(Math.round),
+  collection: walk(31, -0.03, 2, 20, 45),
+  sla: walk(82, 0.06, 7, 60, 99).map(Math.round)
+};
+for (const [k, site] of [["occDar1", 1], ["occDar2", 2]]) {
+  const o = occupancyFor(site);
+  const now = Math.round(o.reduce((a, b) => a + b.occupiedSlots, 0) / o.reduce((a, b) => a + b.usableSlots, 0) * 100);
+  const shift = now - kpiSeries[k][DAYS - 1];
+  kpiSeries[k] = kpiSeries[k].map((v) => Math.max(5, Math.min(100, v + shift)));
+}
+var pts = (vals, n = 30) => vals.slice(-n).map((v, i) => ({ date: kpiDates[DAYS - n + i], value: String(v) }));
+var avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+var monthToDate = (vals) => vals.slice(-7).reduce((x, y) => x + y, 0);
+var kpiTiles = [
+  { kpiCode: "AVG_DWELL", label: "Average dwell", value: String(round1(avg(kpiSeries.dwellImport.slice(-30)))), unit: "days", comparison: String(round1(avg(kpiSeries.dwellImport.slice(-60, -30)))), comparisonLabel: "previous 30 days", trend: pts(kpiSeries.dwellImport), drillDownUrl: "/units", goodWhen: "down", target: 10 },
+  { kpiCode: "TRUCK_TAT", label: "Truck turnaround", value: String(Math.round(avg(kpiSeries.turnaround.slice(-30)))), unit: "min", comparison: String(Math.round(avg(kpiSeries.turnaround.slice(-60, -30)))), comparisonLabel: "previous 30 days", trend: pts(kpiSeries.turnaround), drillDownUrl: "/gate", goodWhen: "down", target: 45 },
+  { kpiCode: "GATE_MOVES", label: "Gate moves per day", value: String(Math.round(avg(kpiSeries.gateIn.slice(-30).map((v, i) => v + kpiSeries.gateOut.slice(-30)[i])))), unit: "moves", comparison: String(Math.round(avg(kpiSeries.gateIn.slice(-60, -30).map((v, i) => v + kpiSeries.gateOut.slice(-60, -30)[i])))), comparisonLabel: "previous 30 days", trend: pts(kpiSeries.gateIn.map((v, i) => v + kpiSeries.gateOut[i])), drillDownUrl: "/gate", goodWhen: "up" },
+  { kpiCode: "YARD_OCC", label: "Yard occupancy", value: String(kpiSeries.occDar1[DAYS - 1]), unit: "%", comparison: String(kpiSeries.occDar1[DAYS - 31]), comparisonLabel: "same day last month", trend: pts(kpiSeries.occDar1), drillDownUrl: "/yard", goodWhen: "down", target: 85 },
+  { kpiCode: "REVENUE_MTD", label: "Revenue month to date", value: String(monthToDate(kpiSeries.revenue)), unit: "USD", comparison: String(kpiSeries.revenue.slice(-38, -31).reduce((x, y) => x + y, 0)), comparisonLabel: "1\u20137 Sep", trend: pts(kpiSeries.revenue), drillDownUrl: "/invoices", goodWhen: "up", format: "money" },
+  { kpiCode: "COLLECTION_DAYS", label: "Collection days", value: String(round1(kpiSeries.collection[DAYS - 1])), unit: "days", comparison: String(round1(kpiSeries.collection[DAYS - 31])), comparisonLabel: "last month", trend: pts(kpiSeries.collection), drillDownUrl: "/statements", goodWhen: "down", target: 30 },
+  { kpiCode: "EXC_SLA", label: "Exceptions resolved within SLA", value: String(Math.round(avg(kpiSeries.sla.slice(-30)))), unit: "%", comparison: String(Math.round(avg(kpiSeries.sla.slice(-60, -30)))), comparisonLabel: "previous 30 days", trend: pts(kpiSeries.sla), drillDownUrl: "/exceptions", goodWhen: "up", target: 90 }
+];
+var P_RANGE = { name: "Date range", type: "dateRange", required: true };
+var P_SITE = { name: "Site", type: "site", required: true };
+var P_CUST = { name: "Customer", type: "party", required: false };
+var rep = (reportCode, reportName, group, description, builder, extra = {}) => ({
+  reportCode,
+  reportName,
+  group,
+  description,
+  builder,
+  category: group === "commercial" || group === "finance" ? "COMMERCIAL" : group === "operations" ? "OPERATIONAL" : "COMPLIANCE",
+  parameters: [P_RANGE, P_SITE, P_CUST],
+  formats: ["XLSX", "PDF"],
+  permissionCode: group === "commercial" || group === "finance" ? "reports.financial" : "reports.operational",
+  ...extra
+});
+var reports = [
+  rep("OPS_STOCK", "Units in yard (stock list)", "operations", "Every unit on site now with location, flow, days in yard and holds.", "stock", { parameters: [P_SITE, P_CUST] }),
+  rep("OPS_GATE", "Gate in and out register", "operations", "Every truck visit with times at each checkpoint, units and EIR numbers.", "gate"),
+  rep("OPS_DWELL", "Dwell time by customer", "operations", "Average and longest days in yard per customer and flow.", "dwell"),
+  rep("OPS_EQUIP", "Equipment moves and downtime", "operations", "Moves per machine and operator, idle and down hours.", "equip", { parameters: [P_RANGE, P_SITE] }),
+  rep("OPS_TAT", "Truck turnaround", "operations", "Minutes from outer gate in to outer gate out, by visit type and hour.", "tat", { parameters: [P_RANGE, P_SITE] }),
+  rep("CUS_HOLDS", "Active holds and exams", "customs", "Customs exams, queries and line holds open now, with authority references.", "holds", { parameters: [P_SITE, P_CUST] }),
+  rep("CUS_TRANSIT", "Transit cargo and bonds", "customs", "Transit units with declaration, bond expiry and destination country.", "transit"),
+  rep("CUS_RELEASES", "Release orders issued", "customs", "Release orders by status, with validity and units collected.", "releases"),
+  rep("COM_REVENUE", "Revenue by charge", "commercial", "Invoiced revenue by charge group and customer, USD and TZS.", "revenue"),
+  rep("COM_WAIVERS", "Waivers and free-day extensions", "commercial", "Every waiver and extension granted, who asked and who approved.", "waivers"),
+  rep("COM_ACCRUED", "Accrued, not yet invoiced", "commercial", "Storage and handling earned but not invoiced, per customer.", "accrued", { parameters: [P_SITE, P_CUST] }),
+  rep("FIN_AGEING", "Debtors ageing", "finance", "Open balances by customer in 30-day buckets.", "ageing", { parameters: [P_SITE, P_CUST] }),
+  rep("FIN_CASH", "Cashier collections", "finance", "Receipts by cashier, method (cash, M-Pesa, bank) and shift.", "cash", { parameters: [P_RANGE, P_SITE] }),
+  rep("FIN_VFD", "Fiscal receipts (VFD) status", "finance", "Invoices with their TRA receipt number, and any that failed.", "vfd"),
+  rep("AUD_OVERRIDES", "Overrides and approvals", "audit", "Every override and approval decision with reason and evidence.", "overrides", { parameters: [P_RANGE, P_SITE] }),
+  rep("AUD_OFFLINE", "Offline gate events and conflicts", "audit", "Events captured offline at the gate, when they synced and any conflicts.", "offline", { parameters: [P_RANGE, P_SITE] }),
+  rep("AUD_EXPORTS", "Exports and prints log", "audit", "Who exported or printed what, when, from which device.", "exports", { parameters: [P_RANGE] })
+];
+var cust = parties.filter((p2) => p2.roles.includes("CUSTOMER"));
+var savedReports = [
+  { savedReportId: 51, reportCode: "OPS_DWELL", reportName: "Weekly dwell by customer (DAR1)", isShared: true, siteId: 1, parameters: { range: "last 7 days" }, scheduleCron: "0 7 * * 1", scheduleText: "Every Monday 07:00", format: "XLSX", recipients: "ops-managers@ngicd.example, daniel.k@ngicd.example", isActive: true, nextRunAt: at(-5 * 24 + 3.5), lastRunAt: at(2 * 24 + 3.5), lastStatus: "DONE", owner: "Ops \xB7 Daniel K." },
+  { savedReportId: 52, reportCode: "FIN_AGEING", reportName: "Debtors ageing for finance meeting", isShared: true, siteId: 1, scheduleCron: "0 7 * * 1", scheduleText: "Every Monday 07:00", format: "PDF", recipients: "finance@ngicd.example", isActive: true, nextRunAt: at(-5 * 24 + 3.5), lastRunAt: at(2 * 24 + 3.5), lastStatus: "DONE", owner: "Finance \xB7 Joseph N." },
+  { savedReportId: 53, reportCode: "CUS_HOLDS", reportName: "Open holds, Kilele units", isShared: false, siteId: 1, parameters: { customer: 2 }, scheduleCron: "30 6 * * *", scheduleText: "Every day 06:30", format: "XLSX", recipients: "grace.p@ngicd.example", isActive: true, nextRunAt: at(-20), lastRunAt: at(4), lastStatus: "DONE", owner: "Customer service \xB7 Grace P." },
+  { savedReportId: 54, reportCode: "FIN_VFD", reportName: "Failed fiscal receipts", isShared: true, scheduleCron: "0 18 * * *", scheduleText: "Every day 18:00", format: "XLSX", recipients: "billing@ngicd.example", isActive: true, nextRunAt: at(-7.5), lastRunAt: at(16.5), lastStatus: "FAILED", owner: "Billing \xB7 Amina S." },
+  { savedReportId: 55, reportCode: "OPS_GATE", reportName: "Gate register, last month", isShared: false, siteId: 1, parameters: { range: "Sep 2026" }, isActive: true, owner: "Ops \xB7 Daniel K." }
+];
+var exportLog = [
+  { id: 1, reportName: "Units in yard (stock list)", format: "XLSX", by: "Ops \xB7 Daniel K.", at: at(1.2), rows: 342, params: "DAR1 \xB7 all customers", device: "OFFICE-PC-04" },
+  { id: 2, reportName: "Debtors ageing", format: "PDF", by: "Finance \xB7 Joseph N.", at: at(3.4), rows: 11, params: "DAR1 \xB7 all customers", device: "OFFICE-PC-09" },
+  { id: 3, reportName: "Active holds and exams", format: "XLSX", by: "Customer service \xB7 Grace P.", at: at(4), rows: 38, params: "DAR1 \xB7 Kilele Clearing & Forwarding", device: "Scheduled job" },
+  { id: 4, reportName: "Revenue by charge", format: "XLSX", by: "Finance \xB7 Joseph N.", at: at(26), rows: 11, params: "1\u201330 Sep \xB7 DAR1", device: "OFFICE-PC-09" },
+  { id: 5, reportName: "Gate in and out register", format: "PDF", by: "Auditor \xB7 Esther W.", at: at(49), rows: 1204, params: "1\u201330 Sep \xB7 DAR1", device: "OFFICE-PC-12" }
+];
+var MODEL_VERSIONS = [
+  { mlModelVersionId: 31, modelCode: "OCC_FORECAST", name: "Occupancy forecast", versionLabel: "occ-2026.09.2", trainedAt: at(9 * 24), isActive: true, metrics: { mae_pct: 3.1, coverage_80: 0.83 }, metricText: "Off by 3.1 points on average; 83% of actuals inside the band" },
+  { mlModelVersionId: 32, modelCode: "DWELL", name: "Dwell prediction", versionLabel: "dwell-2026.09.1", trainedAt: at(16 * 24), isActive: true, metrics: { mae_days: 1.8, p90_coverage: 0.88 }, metricText: "Off by 1.8 days on average; 88% leave before the p90 date" },
+  { mlModelVersionId: 33, modelCode: "ALLOC", name: "Slot suggestion", versionLabel: "alloc-rules-1.4 + ml-2026.08", trainedAt: at(40 * 24), isActive: true, metrics: { rank1_rate: 0.74, reshuffles_saved: 0.21 }, metricText: "74% of moves use rank 1; 21% fewer reshuffles than rules alone" },
+  { mlModelVersionId: 29, modelCode: "OCC_FORECAST", name: "Occupancy forecast", versionLabel: "occ-2026.08.1", trainedAt: at(41 * 24), isActive: false, metrics: { mae_pct: 4 }, metricText: "Retired 28 Sep; off by 4.0 points" }
+];
+var forecastDates = Array.from({ length: 14 }, (_, i) => day(i + 1));
+function occupancyForecast(siteId, block) {
+  const occ = occupancyFor(siteId);
+  const sel = block === "ALL" ? occ : occ.filter((o) => o.fullCode === block);
+  const usable = sel.reduce((a, o) => a + o.usableSlots, 0);
+  const now = sel.reduce((a, o) => a + o.occupiedSlots, 0) / Math.max(1, usable) * 100;
+  seed2 = 300 + siteId * 31 + (block === "ALL" ? 0 : block.charCodeAt(0));
+  const bump = [1, 4, 7, 9, 10, 9, 7, 6, 4, 3, 2, 2, 1, 0];
+  return forecastDates.map((d, i) => {
+    const p2 = Math.min(99, Math.max(5, now + bump[i] * (siteId === 1 ? 1 : 0.6) + (r() - 0.5) * 3));
+    const spread = 2 + i * 0.7;
+    return {
+      siteId,
+      fullCode: block === "ALL" ? void 0 : block,
+      forecastDate: d,
+      predictedPct: String(Math.round(p2)),
+      lowerPct: String(Math.max(0, Math.round(p2 - spread))),
+      upperPct: String(Math.min(100, Math.round(p2 + spread))),
+      modelVersion: "occ-2026.09.2"
+    };
+  });
+}
+function dwellPredictions(siteId) {
+  seed2 = 777 + siteId;
+  return staysAt(siteId).filter((s) => s.physicalStatus === "IN_YARD" && s.fullEmpty === "F").slice(0, 24).map((s) => {
+    const so = s.unitSummary.dwellDays ?? 0;
+    const p50 = round1(so + 1 + r() * (s.customsStatus === "CLEARED" ? 3 : 9));
+    const p90 = round1(p50 + 2 + r() * 6);
+    const toDate = (days) => new Date(Date.parse(s.storageStartAt ?? at(0)) + days * 864e5).toISOString().slice(0, 10);
+    return {
+      unitStayId: s.unitStayId,
+      stay: s,
+      daysSoFar: so,
+      p50Days: String(p50),
+      p90Days: String(p90),
+      predictedExitDate: toDate(p50),
+      p90Date: toDate(p90),
+      passesFree: !!s.freeUntil && toDate(p50) > s.freeUntil.slice(0, 10),
+      modelVersion: "dwell-2026.09.1",
+      predictedAt: at(4.5)
+    };
+  }).sort((a, b) => Number(b.p50Days) - Number(a.p50Days));
+}
+var OVERRIDES = ["Reach stacker cannot reach row 5 while RS-02 works B", "Customer collects today: kept near the gate", "Suggested stack has a reefer cable across it", "Block A row 2 closed for paving", "Grouped with the same BL for exam"];
+var suggestionLog = (() => {
+  seed2 = 1234;
+  const inYard3 = allStays.filter((s) => s.siteId === 1 && s.currentLocation && s.cargoUnit.category === "CONTAINER").slice(0, 40);
+  return inYard3.map((s, i) => {
+    const ranked = r();
+    const chosenRank = ranked < 0.74 ? 1 : ranked < 0.88 ? 2 : ranked < 0.93 ? 3 : null;
+    const loc = s.currentLocation.fullCode;
+    const top = chosenRank === 1 ? loc : `${loc.slice(0, 1)}-0${ri(1, 5)}-${String(ri(1, 10)).padStart(2, "0")}-${ri(1, 3)}`;
+    return {
+      yardSuggestionLogId: 6e3 + i,
+      unitStayId: s.unitStayId,
+      unitNo: s.cargoUnit.unitNo,
+      engine: i % 3 === 0 ? "RULES" : "ML",
+      chosenRank,
+      overrideReason: chosenRank === 1 ? null : rp(OVERRIDES),
+      suggestedAt: at(0.3 + i * 1.7),
+      top,
+      chosen: loc,
+      by: rp(["Yard \xB7 Ibrahim N.", "Yard \xB7 Kassim O.", "Yard \xB7 Neema M."])
+    };
+  });
+})();
+var auditLog = (() => {
+  const H = HERO;
+  const base = [
+    { occurredAt: at(0.3), userSub: "u-hamisi", userName: "Gate \xB7 Hamisi J.", deviceId: 12, ipAddress: "10.20.1.31", siteId: 1, entityName: "approval_request", entityId: "9003", action: "CREATE", source: "EDGE", summary: "Asked to let T 902 DMB leave with seal mismatch", reason: "Seal number on paper EIR mistyped", changes: [{ field: "status", old: null, new: "PENDING" }, { field: "permissionCode", old: null, new: "gate.checkout.override" }], to: "/approvals" },
+    { occurredAt: at(0.4), userSub: "u-hamisi", userName: "Gate \xB7 Hamisi J.", deviceId: 12, ipAddress: "10.20.1.31", siteId: 1, entityName: "truck_visit", entityId: "4410", action: "UPDATE", source: "EDGE", summary: "Inner gate in failed: seal mismatch", changes: [{ field: "status", old: "ADMITTED", new: "HELD" }, { field: "sealFound", old: null, new: "ML-7781208" }], to: "/gate/visits/4410" },
+    { occurredAt: at(1.2), userSub: "u-daniel", userName: "Ops \xB7 Daniel K.", ipAddress: "10.20.0.44", siteId: 1, entityName: "report_run", entityId: "88120", action: "EXPORT", source: "UI", summary: 'Exported "Units in yard (stock list)" to Excel, 342 rows', changes: [{ field: "format", old: null, new: "XLSX" }, { field: "parameters", old: null, new: "site=DAR1" }] },
+    { occurredAt: at(2.6), userSub: "u-ibrahim", userName: "Yard \xB7 Ibrahim N.", deviceId: 31, ipAddress: "10.20.3.17", siteId: 1, entityName: "move_order", entityId: "33021", action: "OVERRIDE", source: "EDGE", summary: "Placed at a slot other than the suggestion", reason: "Customer collects today: kept near the gate", changes: [{ field: "toLocation", old: "A-04-09-2", new: "A-01-02-1" }, { field: "suggestionRank", old: 1, new: 3 }] },
+    { occurredAt: at(3), userSub: "u-amina", userName: "Billing \xB7 Amina S.", ipAddress: "10.20.0.52", siteId: 1, entityName: "approval_request", entityId: "9001", action: "CREATE", source: "UI", summary: `Asked to waive 4 storage days on ${H.cargoUnit.unitNo}`, reason: "Customs exam delayed by the authority", changes: [{ field: "amount", old: null, new: "USD 64.00" }], to: "/approvals" },
+    { occurredAt: at(3.1), userSub: "system", userName: "Release engine", siteId: 1, entityName: "truck_visit", entityId: "4402", action: "UPDATE", source: "JOB", summary: "Gate-out refused: release order expired", changes: [{ field: "status", old: "WORKING", new: "REJECTED" }, { field: "RELEASE_VALID", old: "PASS", new: "FAIL" }] },
+    { occurredAt: at(4), userSub: "sync", userName: "Lane 2 tablet sync", deviceId: 14, siteId: 1, entityName: "unit_stay", entityId: String(allStays[12].unitStayId), action: "SYNC", source: "SYNC", summary: "Offline gate-out synced; conflicts with a line hold", changes: [{ field: "physicalStatus", old: "IN_YARD", new: "DEPARTED" }, { field: "capturedOfflineAt", old: null, new: "07 Oct 06:12" }], to: `/units/${allStays[12].unitStayId}` },
+    { occurredAt: at(4.5), userSub: "aiva", userName: "Aiva for Grace P.", siteId: 1, entityName: "service_request", entityId: "7104", action: "CREATE", source: "AIVA", summary: "Drafted reply to Kilele about free-day extension (sent by Grace P.)", changes: [{ field: "status", old: "SUBMITTED", new: "IN_REVIEW" }] },
+    { occurredAt: at(5.2), userSub: "u-mary", userName: "Cashier \xB7 Mary T.", deviceId: 21, ipAddress: "10.20.0.61", siteId: 1, entityName: "payment", entityId: "55102", action: "CREATE", source: "UI", summary: "Recorded M-Pesa payment TZS 1,180,000 from Mzizi Traders", changes: [{ field: "method", old: null, new: "MPESA" }, { field: "amount", old: null, new: "TZS 1,180,000" }, { field: "reference", old: null, new: "QJK7H2LM0P" }] },
+    { occurredAt: at(6), userSub: "u-amina", userName: "Billing \xB7 Amina S.", ipAddress: "10.20.0.52", siteId: 1, entityName: "invoice", entityId: "3318", action: "PRINT", source: "UI", summary: "Printed tax invoice INV-DAR1-26-003318", changes: [{ field: "copyNo", old: 1, new: 2 }] },
+    { occurredAt: at(8), userSub: "u-joseph", userName: "Finance \xB7 Joseph N.", ipAddress: "10.20.0.58", siteId: 1, entityName: "approval_request", entityId: "9002", action: "APPROVE", source: "UI", summary: "Approved level 1 of credit note USD 1,240", reason: "Checked against plug log", changes: [{ field: "currentLevel", old: 0, new: 1 }] },
+    { occurredAt: at(20), userSub: "u-felix", userName: "Admin \xB7 Felix M.", ipAddress: "10.20.0.10", siteId: 1, entityName: "tariff", entityId: "STORAGE-40", action: "UPDATE", source: "UI", summary: "Changed storage rate for 40 ft after day 7 (approval APR-26-00377)", changes: [{ field: "unitRate", old: "14.00", new: "16.00" }, { field: "validFrom", old: "2026-01-01", new: "2026-10-01" }] },
+    { occurredAt: at(22), userSub: "u-rehema", userName: "Doc & clearance \xB7 Rehema K.", ipAddress: "10.20.0.47", siteId: 1, entityName: "release_order", entityId: "802", action: "APPROVE", source: "UI", summary: "Approved release order RO-DAR1-26-01943", changes: [{ field: "status", old: "PENDING_CHECKS", new: "APPROVED" }, { field: "validTo", old: null, new: "09 Oct 12:30" }] },
+    { occurredAt: at(26), userSub: "u-juma", userName: "Inspection \xB7 Juma M.", deviceId: 33, siteId: 1, entityName: "hold", entityId: "703", action: "CREATE", source: "EDGE", summary: "Placed damage hold (side panel)", reason: "Side panel damage, surveyor appointed", changes: [{ field: "holdTypeCode", old: null, new: "DAMAGE" }, { field: "status", old: null, new: "ACTIVE" }] },
+    { occurredAt: at(30), userSub: "u-rehema", userName: "Doc & clearance \xB7 Rehema K.", ipAddress: "10.20.0.47", siteId: 1, entityName: "hold", entityId: "701", action: "CREATE", source: "UI", summary: `Placed customs exam hold on ${H.cargoUnit.unitNo}`, reason: "Physical examination ordered on entry lodgement", changes: [{ field: "authorityRef", old: null, new: "EXN/DSM/26/04418" }], to: `/units/${H.unitStayId}` },
+    { occurredAt: at(33), userSub: "ng-sync", userName: "NG sync", siteId: 1, entityName: "party", entityId: "2", action: "SYNC", source: "SYNC", summary: "Kilele Clearing & Forwarding credit limit updated from NG", changes: [{ field: "creditLimit", old: "35000.00", new: "40000.00" }], to: "/parties/2" },
+    { occurredAt: at(44), userSub: "u-daniel", userName: "Ops \xB7 Daniel K.", ipAddress: "10.20.0.44", siteId: 1, entityName: "approval_request", entityId: "9005", action: "APPROVE", source: "UI", summary: "Approved +3 free days for Zamlink transit units", changes: [{ field: "status", old: "PENDING", new: "APPROVED" }] },
+    { occurredAt: at(49), userSub: "u-esther", userName: "Auditor \xB7 Esther W.", ipAddress: "10.20.0.71", siteId: 1, entityName: "report_run", entityId: "88097", action: "EXPORT", source: "UI", summary: 'Exported "Gate in and out register" to PDF, 1,204 rows', changes: [{ field: "format", old: null, new: "PDF" }] },
+    { occurredAt: at(52), userSub: "u-hamisi", userName: "Gate \xB7 Hamisi J.", deviceId: 12, siteId: 1, entityName: "party", entityId: "13", action: "CREATE", source: "EDGE", summary: "Created provisional party Tanzanite Pharma Distributors at the gate", changes: [{ field: "partyName", old: null, new: "Tanzanite Pharma Distributors" }, { field: "syncStatus", old: null, new: "PROVISIONAL" }], to: "/parties/13" },
+    { occurredAt: at(60), userSub: "u-joseph", userName: "Finance \xB7 Joseph N.", ipAddress: "10.20.0.58", siteId: 1, entityName: "approval_request", entityId: "9006", action: "REJECT", source: "UI", summary: "Rejected refund USD 620 to Pwani Hardware", reason: "Allocate to open invoice instead", changes: [{ field: "status", old: "PENDING", new: "REJECTED" }] },
+    { occurredAt: at(70), userSub: "u-felix", userName: "Admin \xB7 Felix M.", ipAddress: "10.20.0.10", entityName: "user", entityId: "u-mary", action: "UPDATE", source: "UI", summary: "Gave Mary T. the cashier role at DAR2", changes: [{ field: "roles@DAR2", old: "[]", new: '["CASHIER"]' }] },
+    { occurredAt: at(71), userSub: "u-daniel", userName: "Ops \xB7 Daniel K.", ipAddress: "10.20.0.44", siteId: 1, entityName: "unit_stay", entityId: String(H.unitStayId), action: "VIEW_SENSITIVE", source: "UI", summary: "Opened customs valuation documents", changes: [] },
+    { occurredAt: at(90), userSub: "api-kilele", userName: "Kilele API key", siteId: 1, entityName: "appointment", entityId: "4120", action: "CREATE", source: "API", summary: "Booked truck appointment APT-26-04120 via API", changes: [{ field: "slotStart", old: null, new: "08 Oct 08:00" }] }
+  ];
+  return base.map((e, i) => ({ ...e, auditLogId: 99e4 - i }));
+})();
+var invoices2 = (() => {
+  seed2 = 5150;
+  const out = [];
+  let n = 3290;
+  for (const p2 of cust) {
+    const count = p2.partyId === 2 ? 8 : ri(1, 4);
+    for (let i = 0; i < count; i++) {
+      const cons = consignments.find((c) => c.billToPartyId === p2.partyId);
+      const subtotal = ri(180, 4200);
+      const tax = subtotal * 0.18;
+      const total = subtotal + tax;
+      const statusPick = p2.syncStatus !== "SYNCED" ? "DRAFT" : i === 0 && p2.partyId === 2 ? "ISSUED" : rp(["POSTED", "PAID", "PAID", "PART_PAID", "POSTED"]);
+      const paid = statusPick === "PAID" ? total : statusPick === "PART_PAID" ? Math.round(total * 0.5) : 0;
+      const ago = ri(1, 50);
+      out.push({
+        invoiceId: ++n,
+        docKind: statusPick === "ISSUED" || statusPick === "DRAFT" ? "PROFORMA" : "TAX_INVOICE",
+        invoiceNo: `${statusPick === "ISSUED" || statusPick === "DRAFT" ? "PRO" : "INV"}-DAR1-26-00${n}`,
+        status: statusPick,
+        billToPartyId: p2.partyId,
+        consignmentId: cons?.consignmentId,
+        consignmentRef: cons?.refNo,
+        currency: "USD",
+        invoiceDate: day(-ago),
+        dueDate: day(-ago + 14),
+        subtotal: money(subtotal),
+        taxTotal: money(tax),
+        total: money(total),
+        amountPaid: money(paid),
+        balance: money(total - paid)
+      });
+    }
+  }
+  return out.sort((a, b) => (b.invoiceDate ?? "").localeCompare(a.invoiceDate ?? ""));
+})();
+var appointments2 = [
+  { appointmentId: 4120, appointmentNo: "APT-26-04120", visitTypeCode: "IMPORT_PICKUP", slotStart: "2026-10-08T05:00:00Z", slotEnd: "2026-10-08T06:00:00Z", transporterPartyId: 7, status: "BOOKED", bookedVia: "API", plate: "T 412 DKL", driver: "Baraka Mwita", unitNos: [HERO.cargoUnit.unitNo], releaseNo: "RO-DAR1-26-01942", consignmentId: 101 },
+  { appointmentId: 4117, appointmentNo: "APT-26-04117", visitTypeCode: "IMPORT_PICKUP", slotStart: "2026-10-07T08:00:00Z", slotEnd: "2026-10-07T09:00:00Z", transporterPartyId: 8, status: "BOOKED", bookedVia: "PORTAL", plate: "T 118 DPE", driver: "Said Omari", unitNos: [releaseOrders[1]?.units?.[0]?.unitNo ?? ""], releaseNo: releaseOrders[1]?.releaseNo },
+  { appointmentId: 4109, appointmentNo: "APT-26-04109", visitTypeCode: "VEHICLE_DELIVERY", slotStart: "2026-10-07T06:00:00Z", slotEnd: "2026-10-07T07:00:00Z", transporterPartyId: 8, status: "ARRIVED", bookedVia: "PORTAL", truckVisitId: 4416, plate: "T 340 DRC", driver: "Abdul Kombo", unitNos: [], consignmentId: 105 },
+  { appointmentId: 4098, appointmentNo: "APT-26-04098", visitTypeCode: "IMPORT_PICKUP", slotStart: "2026-10-06T07:00:00Z", slotEnd: "2026-10-06T08:00:00Z", transporterPartyId: 7, status: "MISSED", bookedVia: "PORTAL", plate: "T 655 DQA", driver: "Hassan Ali", unitNos: [] }
+];
+var portalDocs = [
+  { documentId: 1, docTypeCode: "RELEASE_ORDER", entityName: "release_order", entityId: 801, title: "Delivery order", ref: "RO-DAR1-26-01942", fileName: "RO-DAR1-26-01942.pdf", sizeBytes: 88e3, capturedAt: at(5), status: "PENDING_APPROVAL" },
+  { documentId: 2, docTypeCode: "TAX_INVOICE", entityName: "invoice", entityId: invoices2.find((i) => i.billToPartyId === 2 && i.docKind === "TAX_INVOICE")?.invoiceId ?? 0, title: "Tax invoice", ref: invoices2.find((i) => i.billToPartyId === 2 && i.docKind === "TAX_INVOICE")?.invoiceNo ?? "", fileName: "invoice.pdf", sizeBytes: 124e3, capturedAt: at(30), status: "ACTIVE" },
+  { documentId: 3, docTypeCode: "EIR", entityName: "unit_stay", entityId: HERO.unitStayId, title: "Interchange receipt (EIR), gate-in", ref: `EIR-DAR1-26-${HERO.unitStayId}`, fileName: "eir.pdf", sizeBytes: 31e4, capturedAt: HERO.gatedInAt, status: "ACTIVE" },
+  { documentId: 4, docTypeCode: "GATE_PASS", entityName: "truck_visit", entityId: 4414, title: "Gate pass", ref: "GP-26-08811", fileName: "gatepass.pdf", sizeBytes: 64e3, capturedAt: at(0.1), status: "ACTIVE" },
+  { documentId: 5, docTypeCode: "STATEMENT", entityName: "party", entityId: 2, title: "Statement of account, September", ref: "STM-C-KILELE-2026-09", fileName: "statement.pdf", sizeBytes: 14e4, capturedAt: at(6 * 24), status: "ACTIVE" },
+  { documentId: 6, docTypeCode: "DAMAGE_REPORT", entityName: "inspection", entityId: 1201, title: "Damage report with photos", ref: "DMG-DAR1-26-0311", fileName: "damage.pdf", sizeBytes: 24e5, capturedAt: at(26), status: "ACTIVE" }
+];
+var SR_KINDS = {
+  DELIVERY: { label: "Delivery", slaHours: 4 },
+  EMPTY_RETURN: { label: "Empty return", slaHours: 8 },
+  DOCUMENT_SUBMISSION: { label: "Document", slaHours: 8 },
+  FREE_DAY_EXTENSION: { label: "Free-day extension", slaHours: 24 },
+  INVOICE_QUERY: { label: "Invoice query", slaHours: 48 },
+  DAMAGE_CLAIM: { label: "Damage claim", slaHours: 72 },
+  COMPLAINT: { label: "Complaint", slaHours: 24 },
+  OTHER: { label: "Other", slaHours: 48 }
+};
+var sr = (id, kind, partyId, hrs, status, subject, details, o = {}) => ({
+  serviceRequestId: id,
+  requestNo: `SR-26-0${id}`,
+  requestKind: kind,
+  partyId,
+  partyName: parties.find((p2) => p2.partyId === partyId).partyName,
+  subject,
+  details,
+  status,
+  createdAt: at(hrs),
+  slaDueAt: at(hrs - SR_KINDS[kind].slaHours),
+  messages: [{ from: "customer", who: o.createdBy ?? "Kilele \xB7 Agnes M.", at: at(hrs), text: details }],
+  ...o
+});
+var unitA = allStays.filter((s) => s.consignmentId === 103 && s.physicalStatus === "IN_YARD");
+var serviceRequests = [
+  sr(7104, "FREE_DAY_EXTENSION", 2, 26, "IN_REVIEW", "+3 free days for Zamlink transit units", "Tunduma border was closed 3\u20135 Oct; trucks could not leave. Letter from the border office attached. Please extend free time for the 6 units on IOSL0926S0441.", {
+    consignmentId: 103,
+    consignmentRef: "IOSL0926S0441",
+    assignedTo: "Grace P.",
+    payload: { days: 3, units: 6 },
+    messages: [
+      { from: "customer", who: "Kilele \xB7 Agnes M.", at: at(26), text: "Tunduma border was closed 3\u20135 Oct; trucks could not leave. Letter from the border office attached. Please extend free time for the 6 units on IOSL0926S0441." },
+      { from: "staff", who: "Customer service \xB7 Grace P.", at: at(4.5), text: "Thank you Agnes. We have the letter. The extension needs approval from operations; we will reply today." }
+    ]
+  }),
+  sr(7111, "DELIVERY", 2, 1.5, "SUBMITTED", `Deliver ${HERO.cargoUnit.unitNo} to Mzizi warehouse, Mikocheni`, "Please arrange delivery after the exam today. Truck T 412 DKL booked for tomorrow 08:00.", { consignmentId: 101, consignmentRef: "BMLU2409881", unitStayId: HERO.unitStayId, unitNo: HERO.cargoUnit.unitNo }),
+  sr(7110, "INVOICE_QUERY", 2, 6, "NEEDS_INFO", "Reefer plug-in charged twice on PRO invoice", "Plug-in for 6 reefer units appears twice. Please correct.", {
+    consignmentId: 108,
+    consignmentRef: "BMLU2410017",
+    assignedTo: "Amina S.",
+    messages: [
+      { from: "customer", who: "Kilele \xB7 Agnes M.", at: at(6), text: "Plug-in for 6 reefer units appears twice. Please correct." },
+      { from: "staff", who: "Billing \xB7 Amina S.", at: at(3), text: "Which invoice number? We see two invoices for this BL." }
+    ]
+  }),
+  sr(7108, "DOCUMENT_SUBMISSION", 2, 9, "APPROVED", "Customs release for BMLU2409902", "Attached customs release REL-DSM-26-31007.", {
+    consignmentId: 102,
+    consignmentRef: "BMLU2409902",
+    assignedTo: "Rehema K.",
+    respondedAt: at(7),
+    resultEntity: "customs_ref",
+    resultId: 5,
+    messages: [
+      { from: "customer", who: "Kilele \xB7 Agnes M.", at: at(9), text: "Attached customs release REL-DSM-26-31007." },
+      { from: "staff", who: "Doc & clearance \xB7 Rehema K.", at: at(7), text: "Recorded. Customs is now cleared on both units." }
+    ]
+  }),
+  sr(7106, "DAMAGE_CLAIM", 1, 30, "IN_REVIEW", "Dent on container door found at our warehouse", "Door dent and broken lock rod found on arrival. Photos attached.", { createdBy: "Mzizi \xB7 Hamida S.", assignedTo: "Daniel K.", unitStayId: unitA[0]?.unitStayId, unitNo: unitA[0]?.cargoUnit.unitNo }),
+  sr(7103, "DELIVERY", 9, 40, "CLOSED", "Transit units to Lusaka: release 4 units", "Please release 4 units for transit to Lusaka.", { createdBy: "Zamlink \xB7 Mwansa C.", closedAt: at(30) }),
+  sr(7101, "INVOICE_QUERY", 11, 55, "REJECTED", "Storage charged during public holiday", "We think storage should not count on the public holiday.", {
+    createdBy: "Pwani HW \xB7 Peter L.",
+    respondedAt: at(40),
+    messages: [
+      { from: "customer", who: "Pwani HW \xB7 Peter L.", at: at(55), text: "We think storage should not count on the public holiday." },
+      { from: "staff", who: "Billing \xB7 Amina S.", at: at(40), text: "Free days are calendar days, Sundays and public holidays included, as in the tariff. The charge stays." }
+    ]
+  }),
+  sr(7112, "EMPTY_RETURN", 3, 0.8, "SUBMITTED", "Return 2 empties after unstuffing", "Two 40 ft empties to return this afternoon.", { createdBy: "Bahari \xB7 Joseph K." }),
+  sr(7109, "COMPLAINT", 14, 8, "SUBMITTED", "Truck waited 2 hours at inner gate", "Our truck T 771 DGH waited from 07:10 to 09:15 yesterday.", { createdBy: "Kagera \xB7 Ruth N." })
+];
+var partySync = {
+  2: [{ at: at(33), title: "Credit limit updated from NG", detail: "USD 35,000 \u2192 40,000", tone: "go" }, { at: at(24 * 40), title: "Synced from NG", detail: "NG-C1002", tone: "go" }],
+  13: [{ at: at(52), title: "Created locally at the gate (provisional)", detail: "Gate \xB7 Hamisi J. on lane In 1 tablet, while NG was unreachable", tone: "wait" }, { at: at(51), title: "NG lookup by name found 3 possible matches", detail: "Waiting for someone to choose the right record", tone: "wait" }]
 };
 
 // src/v1/controllers/control/reports.controller.ts
@@ -20534,12 +20939,10 @@ var controlReportsController = {
   getOperationalReports: async (_req, res) => {
     try {
       res.json({
-        reports: [
-          { reportId: "REP-001", title: "Daily Gate Throughput", category: "GATE", generatedAt: (/* @__PURE__ */ new Date()).toISOString() },
-          { reportId: "REP-002", title: "Yard Dwell Time by Shipping Line", category: "YARD", generatedAt: (/* @__PURE__ */ new Date()).toISOString() },
-          { reportId: "REP-003", title: "Customs Examination Turnaround", category: "CARGO", generatedAt: (/* @__PURE__ */ new Date()).toISOString() },
-          { reportId: "REP-004", title: "Daily Revenue & Cashier Closeout", category: "BILLING", generatedAt: (/* @__PURE__ */ new Date()).toISOString() }
-        ]
+        items: reports,
+        reports,
+        total: reports.length,
+        nextCursor: null
       });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -20552,6 +20955,9 @@ var controlKpisController = {
   getKpis: async (_req, res) => {
     try {
       res.json({
+        items: kpiTiles,
+        series: kpiSeries,
+        total: kpiTiles.length,
         gateTurnaroundMinutes: 28.5,
         yardOccupancyPercent: 68.2,
         dwellTimeAvgDays: 4.8,
@@ -20566,6 +20972,17 @@ var controlKpisController = {
           { date: "2026-10-29", throughput: 480, turnaround: 27 },
           { date: "2026-10-30", throughput: 490, turnaround: 26 }
         ]
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+  getKpiSeries: async (_req, res) => {
+    try {
+      res.json({
+        items: kpiSeries,
+        series: kpiSeries,
+        total: Object.keys(kpiSeries).length
       });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -20592,6 +21009,25 @@ var controlForecastsController = {
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
+  },
+  getOccupancyForecast: async (req, res) => {
+    try {
+      const siteId = Number(req.query.siteId || req.siteId) || 1;
+      const block = String(req.query.block || "ALL");
+      const items = occupancyForecast(siteId, block);
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+  getDwellPredictions: async (req, res) => {
+    try {
+      const siteId = Number(req.query.siteId || req.siteId) || 1;
+      const items = dwellPredictions(siteId);
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   }
 };
 
@@ -20599,64 +21035,95 @@ var controlForecastsController = {
 var controlAuditController = {
   getAuditTrail: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const audit = await prisma5.audit_log.findMany({
-            include: { users: true },
-            orderBy: { audit_id: "desc" },
-            take: 50
-          });
-          if (audit && audit.length > 0) {
-            const items = audit.map((a) => ({
-              auditId: a.audit_id,
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const { entityName, entityId } = req.params;
+        const where = {};
+        if (entityName) where.entity_name = entityName;
+        if (entityId) where.entity_id = entityId;
+        const dbLogs = await prisma4.audit_log.findMany({
+          where,
+          orderBy: { occurred_at: "desc" },
+          take: 200
+        });
+        if (dbLogs && dbLogs.length > 0) {
+          const items = dbLogs.map((a) => {
+            let changes = [];
+            if (a.changes_json) {
+              try {
+                changes = JSON.parse(a.changes_json);
+              } catch {
+              }
+            }
+            return {
+              auditLogId: Number(a.audit_log_id),
+              occurredAt: a.occurred_at ? new Date(a.occurred_at).toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
+              userSub: a.user_sub,
+              userName: a.user_name || a.user_sub || "System",
+              deviceId: a.device_id,
+              ipAddress: a.ip_address,
+              siteId: a.site_id,
               entityName: a.entity_name,
               entityId: a.entity_id,
               action: a.action,
-              changedBy: a.users?.display_name || a.users?.username || "System",
-              changedAt: a.changed_at,
-              details: a.diff_json
-            }));
-            return res.json({ items, total: items.length });
-          }
+              reason: a.reason,
+              changes,
+              summary: a.reason || `${a.action} on ${a.entity_name} ${a.entity_id}`,
+              source: a.source || "UI"
+            };
+          });
+          return res.json({ items, total: items.length });
         }
       }
-      res.json({
-        items: [
-          { auditId: 1, entityName: "TruckVisit", entityId: "101", action: "STATUS_UPDATE", changedBy: "Gate Officer", changedAt: (/* @__PURE__ */ new Date()).toISOString() },
-          { auditId: 2, entityName: "Hold", entityId: "5", action: "RELEASE", changedBy: "Customs Officer", changedAt: new Date(Date.now() - 36e5).toISOString() }
-        ],
-        total: 2
-      });
+      res.json({ items: auditLog, total: auditLog.length });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      console.warn("[controlAuditController.getAuditTrail] Fallback to auditLog:", err.message);
+      res.json({ items: auditLog, total: auditLog.length });
     }
   }
 };
 
 // src/v1/controllers/control/control-tower.controller.ts
-var CHECKPOINT_CODES = ["OUTER_IN", "INNER_IN", "INNER_OUT", "OUTER_OUT"];
+var CHECKPOINT_CODES = [
+  "OUTER_IN",
+  "INNER_IN",
+  "INNER_OUT",
+  "OUTER_OUT"
+];
 function resolveSiteId(req) {
   const raw = Number(req.query.siteId ?? req.siteId);
   return Number.isFinite(raw) && raw > 0 ? raw : 1;
 }
 var controlTowerController = {
-  /**
-   * GET /api/v1/dashboards/control-tower
-   * GET /api/v1/control-tower
-   * Aggregates live Control Tower metrics, gate queue, blocked trucks,
-   * exceptions, approvals, yard occupancy, and equipment from the database.
-   */
   getControlTower: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const siteId = resolveSiteId(req);
       const now = /* @__PURE__ */ new Date();
-      const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-      const endOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+      const startOfToday = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          0,
+          0,
+          0
+        )
+      );
+      const endOfToday = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          23,
+          59,
+          59,
+          999
+        )
+      );
       const [
         allTodayAndActiveVisits,
         todayAppointments,
@@ -20669,7 +21136,7 @@ var controlTowerController = {
         equipmentList
       ] = await Promise.all([
         // 1. Truck visits: either active now OR admitted/exited today
-        prisma5.truck_visit.findMany({
+        prisma4.truck_visit.findMany({
           where: {
             site_id: siteId,
             OR: [
@@ -20697,7 +21164,7 @@ var controlTowerController = {
           orderBy: { arrived_at: "asc" }
         }),
         // 2. Appointments for today (planIn / planOut)
-        prisma5.appointment.findMany({
+        prisma4.appointment.findMany({
           where: {
             site_id: siteId,
             slot_start: { gte: startOfToday, lte: endOfToday },
@@ -20706,35 +21173,39 @@ var controlTowerController = {
           include: { appointments_visit_types: true }
         }),
         // 3. Yard locations for block-level & total slot occupancy
-        prisma5.m_yard_location.findMany({
+        prisma4.m_yard_location.findMany({
           where: { site_id: siteId, is_active: true }
         }),
         // 4. Active yard occupancies for this site
-        prisma5.yard_occupancy.findMany({
+        prisma4.yard_occupancy.findMany({
           where: {
             m_yard_location_yard_occupancy: { site_id: siteId }
           },
           select: { yard_location_id: true }
         }),
         // 5. Pending move orders
-        prisma5.move_order.findMany({
+        prisma4.move_order.findMany({
           where: {
             site_id: siteId,
             status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] }
           },
-          select: { move_order_id: true, truck_visit_id: true, assigned_equipment_id: true }
+          select: {
+            move_order_id: true,
+            truck_visit_id: true,
+            assigned_equipment_id: true
+          }
         }),
         // 6. Completed moves today (for equipment movesToday counts)
-        prisma5.move_order.findMany({
+        prisma4.move_order.findMany({
           where: {
             site_id: siteId,
-            status: "COMPLETED",
+            status: { in: ["DONE", "COMPLETED"] },
             completed_at: { gte: startOfToday, lte: endOfToday }
           },
           select: { assigned_equipment_id: true }
         }),
         // 7. Pending approval requests
-        prisma5.approval_request.findMany({
+        prisma4.approval_request.findMany({
           where: {
             OR: [{ site_id: siteId }, { site_id: null }],
             status: "PENDING"
@@ -20742,7 +21213,7 @@ var controlTowerController = {
           orderBy: { requested_at: "asc" }
         }),
         // 8. Open exception cases
-        prisma5.exception_case.findMany({
+        prisma4.exception_case.findMany({
           where: {
             site_id: siteId,
             status: { notIn: ["RESOLVED", "CLOSED"] }
@@ -20751,14 +21222,26 @@ var controlTowerController = {
           orderBy: { raised_at: "desc" }
         }),
         // 9. Site equipment
-        prisma5.m_equipment.findMany({
+        prisma4.m_equipment.findMany({
           where: { site_id: siteId, is_active: true },
           orderBy: { equipment_code: "asc" }
         })
       ]);
       const hours = ["06", "07", "08", "09", "10"];
-      const hourlyInMap = { "06": 0, "07": 0, "08": 0, "09": 0, "10": 0 };
-      const hourlyOutMap = { "06": 0, "07": 0, "08": 0, "09": 0, "10": 0 };
+      const hourlyInMap = {
+        "06": 0,
+        "07": 0,
+        "08": 0,
+        "09": 0,
+        "10": 0
+      };
+      const hourlyOutMap = {
+        "06": 0,
+        "07": 0,
+        "08": 0,
+        "09": 0,
+        "10": 0
+      };
       let todayIn = 0;
       let todayOut = 0;
       for (const v of allTodayAndActiveVisits) {
@@ -20788,9 +21271,15 @@ var controlTowerController = {
       );
       const toQueueRow = (v) => {
         const lastCp = v.truck_visit_visit_checkpoint_event?.[0];
-        const cpCode = lastCp?.m_checkpoint?.checkpoint_code || CHECKPOINT_CODES[Math.min(Math.max((v.current_seq_no || 1) - 1, 0), CHECKPOINT_CODES.length - 1)];
+        const cpCode = lastCp?.m_checkpoint?.checkpoint_code || CHECKPOINT_CODES[Math.min(
+          Math.max((v.current_seq_no || 1) - 1, 0),
+          CHECKPOINT_CODES.length - 1
+        )];
         const refTime = v.arrived_at ? new Date(v.arrived_at).getTime() : now.getTime();
-        const waitingMinutes = Math.max(0, Math.round((now.getTime() - refTime) / 6e4));
+        const waitingMinutes = Math.max(
+          0,
+          Math.round((now.getTime() - refTime) / 6e4)
+        );
         const blockedReason = v.truck_visit_exception_case?.[0]?.title || v.remarks || (v.status === "HELD" ? "Held at checkpoint" : v.status === "REJECTED" ? "Rejected at gate" : void 0);
         return {
           truckVisitId: Number(v.truck_visit_id),
@@ -20807,7 +21296,9 @@ var controlTowerController = {
         };
       };
       const gateQueue = activeQueueVisits.map(toQueueRow);
-      const blockedTrucks = gateQueue.filter((g2) => g2.status === "HELD" || g2.status === "REJECTED");
+      const blockedTrucks = gateQueue.filter(
+        (g2) => g2.status === "HELD" || g2.status === "REJECTED"
+      );
       const openExceptions = openExceptionsRaw.map((e) => ({
         exceptionCaseId: Number(e.exception_case_id),
         caseNo: e.case_no,
@@ -20839,16 +21330,27 @@ var controlTowerController = {
         currentLevel: a.current_level,
         canDecide: true
       }));
-      const oldestApprovalHours = pendingApprovals.length > 0 ? Math.max(0, Math.round((now.getTime() - pendingApprovals[0].requested_at.getTime()) / 36e5)) : 0;
-      const occupiedLocationIds = new Set(yardOccupancies.map((o) => o.yard_location_id));
-      const blocks2 = yardLocations.filter((l) => l.parent_id === null || l.level_no === 1);
+      const oldestApprovalHours = pendingApprovals.length > 0 ? Math.max(
+        0,
+        Math.round(
+          (now.getTime() - pendingApprovals[0].requested_at.getTime()) / 36e5
+        )
+      ) : 0;
+      const occupiedLocationIds = new Set(
+        yardOccupancies.map((o) => o.yard_location_id)
+      );
+      const blocks2 = yardLocations.filter(
+        (l) => l.parent_id === null || l.level_no === 1
+      );
       const slots = yardLocations.filter((l) => l.is_slot && !l.is_blocked);
       const yardOccupancy = blocks2.map((b) => {
         const blockSlots = slots.filter(
           (s) => s.full_code === b.full_code || s.full_code.startsWith(b.location_code + "-") || s.parent_id === b.yard_location_id
         );
         const usableSlots = blockSlots.length || (b.is_slot ? 1 : 0);
-        const occupiedSlots = blockSlots.filter((s) => occupiedLocationIds.has(s.yard_location_id)).length;
+        const occupiedSlots = blockSlots.filter(
+          (s) => occupiedLocationIds.has(s.yard_location_id)
+        ).length;
         const pct = usableSlots > 0 ? Math.round(occupiedSlots / usableSlots * 100) : 0;
         return {
           yardLocationId: b.yard_location_id,
@@ -20865,7 +21367,9 @@ var controlTowerController = {
           movesByEquip[m.assigned_equipment_id] = (movesByEquip[m.assigned_equipment_id] || 0) + 1;
         }
       }
-      const assignedEquipIds = new Set(openMoves.map((m) => m.assigned_equipment_id).filter(Boolean));
+      const assignedEquipIds = new Set(
+        openMoves.map((m) => m.assigned_equipment_id).filter(Boolean)
+      );
       const equipment3 = equipmentList.map((eq) => {
         const isWorking = assignedEquipIds.has(eq.equipment_id);
         const status = eq.equipment_code === "EH-01" && !isWorking ? "DOWN" : isWorking ? "WORKING" : "IDLE";
@@ -20912,22 +21416,34 @@ var controlTowerController = {
    */
   getStatus: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (!prisma5) {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const siteId = resolveSiteId(req);
-      const [trucksInYard, waitingGateInQueue, activeCriticalAlerts, activeEquipment] = await Promise.all([
-        prisma5.truck_visit.count({
-          where: { site_id: siteId, status: { notIn: ["EXITED", "CANCELLED", "EXPIRED", "ANNOUNCED"] } }
+      const [
+        trucksInYard,
+        waitingGateInQueue,
+        activeCriticalAlerts,
+        activeEquipment
+      ] = await Promise.all([
+        prisma4.truck_visit.count({
+          where: {
+            site_id: siteId,
+            status: { notIn: ["EXITED", "CANCELLED", "EXPIRED", "ANNOUNCED"] }
+          }
         }),
-        prisma5.truck_visit.count({
+        prisma4.truck_visit.count({
           where: { site_id: siteId, status: { in: ["AT_OUTER_GATE", "HELD"] } }
         }),
-        prisma5.exception_case.count({
-          where: { site_id: siteId, severity: "CRITICAL", status: { notIn: ["RESOLVED", "CLOSED"] } }
+        prisma4.exception_case.count({
+          where: {
+            site_id: siteId,
+            severity: "CRITICAL",
+            status: { notIn: ["RESOLVED", "CLOSED"] }
+          }
         }),
-        prisma5.m_equipment.count({
+        prisma4.m_equipment.count({
           where: { site_id: siteId, is_active: true }
         })
       ]);
@@ -20941,6 +21457,7 @@ var controlTowerController = {
         equipmentAvailabilityPct: activeEquipment > 0 ? 100 : 0
       });
     } catch (err) {
+      console.error("[ControlTowerController.getStatus] Error:", err);
       res.status(500).json({ error: err.message });
     }
   }
@@ -20955,9 +21472,13 @@ controlRoutes.post("/approvals/:approvalId:decide", requireSite(false), requireP
 controlRoutes.get("/exceptions", requireSite(false), requirePermission("exception.view"), controlExceptionsController.getExceptions);
 controlRoutes.post("/exceptions/:exceptionId/resolve", requireSite(false), requirePermission("exception.view", "DO"), controlExceptionsController.resolveException);
 controlRoutes.get("/reports", requireSite(false), requirePermission("reports.operational"), controlReportsController.getOperationalReports);
-controlRoutes.get("/kpis", requireSite(false), requirePermission("dashboard.executive"), controlKpisController.getKpis);
+controlRoutes.get(["/kpis", "/kpis/tiles"], requireSite(false), requirePermission("dashboard.executive"), controlKpisController.getKpis);
+controlRoutes.get("/kpis/series", requireSite(false), requirePermission("dashboard.executive"), controlKpisController.getKpiSeries);
 controlRoutes.get("/forecasts", requireSite(false), requirePermission("yard.map.view"), controlForecastsController.getForecasts);
-controlRoutes.get("/audit", requireSite(false), requirePermission("admin.audit.view"), controlAuditController.getAuditTrail);
+controlRoutes.get(["/forecasts/occupancy", "/forecast/occupancy"], requireSite(false), requirePermission("yard.map.view"), controlForecastsController.getOccupancyForecast);
+controlRoutes.get(["/forecasts/dwell", "/predictions/dwell"], requireSite(false), requirePermission("yard.map.view"), controlForecastsController.getDwellPredictions);
+controlRoutes.get(["/audit", "/audit-log"], requireSite(false), requirePermission("admin.audit.view"), controlAuditController.getAuditTrail);
+controlRoutes.get(["/audit/:entityName/:entityId", "/audit-log/:entityName/:entityId"], requireSite(false), requirePermission("admin.audit.view"), controlAuditController.getAuditTrail);
 controlRoutes.get(["/dashboards/control-tower", "/control-tower"], requireSite(false), requirePermission("dashboard.control_tower"), controlTowerController.getControlTower);
 controlRoutes.get("/control-tower/status", requireSite(false), requirePermission("dashboard.control_tower"), controlTowerController.getStatus);
 
@@ -20968,11 +21489,11 @@ var import_express8 = require("express");
 var customerPortalController = {
   getOverview: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const totalConsignments = await prisma5.consignments.count();
-          const totalUnits = await prisma5.unit_stay.count();
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const totalConsignments = await prisma4.consignments.count();
+          const totalUnits = await prisma4.unit_stay.count();
           return res.json({
             activeConsignments: totalConsignments,
             totalUnitsInDepot: totalUnits,
@@ -21017,69 +21538,201 @@ var customerPortalController = {
 };
 
 // src/v1/controllers/customers/service-requests.controller.ts
+var SLA_HOURS = {
+  DELIVERY: 4,
+  EMPTY_RETURN: 8,
+  DOCUMENT_SUBMISSION: 8,
+  FREE_DAY_EXTENSION: 24,
+  INVOICE_QUERY: 48,
+  DAMAGE_CLAIM: 72,
+  COMPLAINT: 24,
+  OTHER: 48
+};
 var customerServiceRequestsController = {
   getServiceRequests: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const dbReqs = await prisma5.service_requests.findMany({
-            include: { parties: true, unit_stays: true },
-            orderBy: { request_id: "desc" }
-          });
-          if (dbReqs && dbReqs.length > 0) {
-            const items = dbReqs.map((r) => ({
-              requestId: r.request_id,
-              requestNo: r.request_no,
-              partyId: r.party_id,
-              partyName: r.parties?.party_name,
-              unitStayId: r.unit_stay_id,
-              unitNumber: r.unit_stays?.unit_number,
-              requestType: r.request_type,
-              status: r.status,
-              notes: r.notes,
-              createdDate: r.createdate
-            }));
-            return res.json({ items, total: items.length });
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database unavailable" });
+      }
+      const srDelegate = prisma4.service_request || prisma4.service_requests;
+      const dbReqs = await srDelegate.findMany({
+        include: {
+          m_party_service_request: true,
+          consignment: true,
+          unit_stay: {
+            include: {
+              unit_stay_cargo_units: true
+            }
+          }
+        },
+        orderBy: { service_request_id: "desc" }
+      });
+      const items = (dbReqs || []).map((r3) => {
+        let detailsObj = {};
+        const rawJson = r3.payload_json || r3.details_json;
+        if (rawJson) {
+          try {
+            detailsObj = JSON.parse(rawJson);
+          } catch {
           }
         }
-      }
-      res.json({
-        items: [
+        const sReqId = Number(r3.service_request_id);
+        const createdDate = r3.createdate || r3.created_at ? new Date(r3.createdate || r3.created_at).toISOString() : detailsObj.createdAt || (/* @__PURE__ */ new Date()).toISOString();
+        const kind = r3.request_kind || r3.request_type || detailsObj.requestKind || "OTHER";
+        const slaHours = SLA_HOURS[kind] || 24;
+        const createdAtMs = Date.parse(createdDate);
+        const slaDueAt = detailsObj.slaDueAt || new Date(createdAtMs + slaHours * 36e5).toISOString();
+        const messages = detailsObj.messages || [
           {
-            requestId: 1,
-            requestNo: "SR-2026-0001",
-            partyId: 1,
-            partyName: "Mediterranean Shipping Company (Tanzania) Ltd",
-            requestType: "DIRECT_DELIVERY",
-            status: "APPROVED",
-            notes: "Approved for priority gate pass",
-            createdDate: (/* @__PURE__ */ new Date()).toISOString()
+            from: "customer",
+            who: detailsObj.createdBy || r3.createdby || r3.m_party_service_request?.party_name || "Customer",
+            at: createdDate,
+            text: r3.details || detailsObj.details || r3.subject || "Customer service request."
           }
-        ],
-        total: 1
+        ];
+        const partyName2 = r3.m_party_service_request?.party_name || detailsObj.partyName || `Party ${r3.party_id}`;
+        const unitNo = r3.unit_stay?.unit_stay_cargo_units?.unit_no || detailsObj.unitNo;
+        const consignmentRef = r3.consignment?.consignment_no || detailsObj.consignmentRef;
+        return {
+          serviceRequestId: sReqId,
+          requestId: sReqId,
+          requestNo: r3.request_no || detailsObj.requestNo || `SR-26-0${sReqId}`,
+          requestKind: kind,
+          requestType: kind,
+          partyId: r3.party_id,
+          partyName: partyName2,
+          consignmentId: r3.consignment_id ? Number(r3.consignment_id) : detailsObj.consignmentId,
+          consignmentRef,
+          unitStayId: r3.unit_stay_id ? Number(r3.unit_stay_id) : detailsObj.unitStayId,
+          unitNo,
+          unitNumber: unitNo,
+          subject: r3.subject || detailsObj.subject || "Service Request",
+          details: r3.details || detailsObj.details || "",
+          notes: r3.details || detailsObj.details || "",
+          status: r3.status || "SUBMITTED",
+          assignedTo: r3.assigned_to_sub || detailsObj.assignedTo,
+          resultEntity: r3.result_entity || detailsObj.resultEntity,
+          resultId: r3.result_id ? Number(r3.result_id) : detailsObj.resultId,
+          respondedAt: r3.responded_at ? new Date(r3.responded_at).toISOString() : detailsObj.respondedAt,
+          closedAt: r3.closed_at ? new Date(r3.closed_at).toISOString() : detailsObj.closedAt,
+          createdAt: createdDate,
+          createdDate,
+          slaDueAt,
+          messages,
+          payload: detailsObj.payload || detailsObj
+        };
       });
+      return res.json({ items, total: items.length });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
   },
   createServiceRequest: async (req, res) => {
     try {
-      const prisma5 = getPrisma();
-      if (prisma5) {
-        const created = await prisma5.service_requests.create({
-          data: {
-            request_no: `SR-${Date.now()}`,
-            party_id: Number(req.body.partyId) || 1,
-            unit_stay_id: req.body.unitStayId ? Number(req.body.unitStayId) : void 0,
-            request_type: req.body.requestType || "GENERAL_INQUIRY",
-            status: "PENDING",
-            notes: req.body.notes || ""
-          }
-        });
-        return res.status(201).json(created);
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database unavailable" });
       }
-      res.status(201).json({ requestId: 2, requestNo: `SR-${Date.now()}`, ...req.body });
+      const srDelegate = prisma4.service_request || prisma4.service_requests;
+      const count = await srDelegate.count();
+      const requestNo = req.body.requestNo || `SR-26-0${7120 + count + 1}`;
+      const kind = req.body.requestKind || req.body.requestType || "OTHER";
+      const partyId = Number(req.body.partyId) || 1;
+      const subject = req.body.subject || "Customer Service Request";
+      const details = req.body.details || req.body.notes || "";
+      const unitStayId = req.body.unitStayId ? BigInt(req.body.unitStayId) : void 0;
+      const consignmentId = req.body.consignmentId ? BigInt(req.body.consignmentId) : void 0;
+      const payloadObj = {
+        requestNo,
+        requestKind: kind,
+        partyId,
+        subject,
+        details,
+        unitStayId: req.body.unitStayId ? Number(req.body.unitStayId) : void 0,
+        consignmentId: req.body.consignmentId ? Number(req.body.consignmentId) : void 0,
+        payload: req.body.payload || null,
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        messages: [
+          {
+            from: "customer",
+            who: req.user?.userName || "Customer",
+            at: (/* @__PURE__ */ new Date()).toISOString(),
+            text: details || subject
+          }
+        ]
+      };
+      const created = await srDelegate.create({
+        data: {
+          site_id: Number(req.body.siteId || req.siteId) || 1,
+          party_id: partyId,
+          request_no: requestNo,
+          request_kind: kind,
+          status: "SUBMITTED",
+          subject,
+          details,
+          payload_json: JSON.stringify(payloadObj),
+          unit_stay_id: unitStayId,
+          consignment_id: consignmentId,
+          createdby: req.user?.userName || "portal"
+        }
+      });
+      return res.status(201).json({
+        serviceRequestId: Number(created.service_request_id),
+        requestId: Number(created.service_request_id),
+        ...payloadObj,
+        status: created.status
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+  respondServiceRequest: async (req, res) => {
+    try {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database unavailable" });
+      }
+      const srDelegate = prisma4.service_request || prisma4.service_requests;
+      const id = Number(req.params.serviceRequestId || req.params.id);
+      const existing = await srDelegate.findFirst({
+        where: { service_request_id: id }
+      });
+      if (!existing) {
+        return res.status(404).json({ error: "Service request not found" });
+      }
+      let detailsObj = {};
+      try {
+        detailsObj = JSON.parse(existing.payload_json || existing.details_json || "{}");
+      } catch {
+      }
+      const nextStatus = req.body.action || req.body.status || "IN_REVIEW";
+      const messages = detailsObj.messages || [];
+      if (req.body.message || req.body.reply || req.body.text) {
+        messages.push({
+          from: "staff",
+          who: req.user?.userName || req.body.userName || req.body.who || "Staff",
+          at: (/* @__PURE__ */ new Date()).toISOString(),
+          text: req.body.message || req.body.reply || req.body.text
+        });
+      }
+      detailsObj.messages = messages;
+      detailsObj.status = nextStatus;
+      const updated = await srDelegate.update({
+        where: { service_request_id: id },
+        data: {
+          status: nextStatus,
+          payload_json: JSON.stringify(detailsObj),
+          responded_at: /* @__PURE__ */ new Date(),
+          updatedate: /* @__PURE__ */ new Date(),
+          updatedby: req.user?.userName || "staff"
+        }
+      });
+      return res.json({
+        serviceRequestId: id,
+        status: updated.status,
+        messages
+      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -21088,10 +21741,39 @@ var customerServiceRequestsController = {
 
 // src/v1/routes/customers/customers.routes.ts
 var customersRoutes = (0, import_express8.Router)();
-customersRoutes.get("/portal/overview", requireSite(false), requirePermission("portal.request.submit"), customerPortalController.getOverview);
-customersRoutes.get("/portal/requests", requireSite(false), requirePermission("portal.request.submit"), customerPortalController.getRequests);
-customersRoutes.get("/service-requests", requireSite(false), requirePermission("portal.request.handle"), customerServiceRequestsController.getServiceRequests);
-customersRoutes.post("/service-requests", requireSite(false), requirePermission("portal.request.handle", "DO"), customerServiceRequestsController.createServiceRequest);
+customersRoutes.get(
+  "/portal/overview",
+  requireSite(false),
+  requirePermission("portal.request.submit"),
+  customerPortalController.getOverview
+);
+customersRoutes.get(
+  "/portal/requests",
+  requireSite(false),
+  requirePermission("portal.request.submit"),
+  customerPortalController.getRequests
+);
+customersRoutes.get(
+  "/service-requests",
+  requireSite(false),
+  requirePermission("portal.request.handle"),
+  customerServiceRequestsController.getServiceRequests
+);
+customersRoutes.post(
+  "/service-requests",
+  requireSite(false),
+  requirePermission("portal.request.handle", "DO"),
+  customerServiceRequestsController.createServiceRequest
+);
+customersRoutes.post(
+  [
+    "/service-requests/:serviceRequestId/respond",
+    "/service-requests/:serviceRequestId:respond"
+  ],
+  requireSite(false),
+  requirePermission("portal.request.handle", "DO"),
+  customerServiceRequestsController.respondServiceRequest
+);
 
 // src/v1/routes/auth/auth.routes.ts
 var import_express9 = require("express");
@@ -21102,11 +21784,11 @@ var authSessionController = {
     try {
       const activeSiteId = req.headers["x-site-id"]?.toUpperCase() || "DAR1";
       const roleCode = req.headers["x-role-code"] || "ALL_PERMISSIONS";
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const [dbUser, dbSites, dbRoles] = await Promise.all([
-            prisma5.app_user.findFirst({
+            prisma4.app_user.findFirst({
               where: { user_id: 1 },
               include: {
                 user_site_role: {
@@ -21117,11 +21799,11 @@ var authSessionController = {
                 }
               }
             }),
-            prisma5.m_site.findMany({
+            prisma4.m_site.findMany({
               where: { is_active: true },
               orderBy: { site_id: "asc" }
             }),
-            prisma5.m_role.findMany({
+            prisma4.m_role.findMany({
               where: { is_active: true },
               orderBy: { role_id: "asc" }
             })
@@ -21142,7 +21824,7 @@ var authSessionController = {
               roleCode: usr2.m_role?.role_code,
               roleName: usr2.m_role?.role_name,
               siteCode: usr2.m_site?.site_code
-            })).filter((r) => r.roleCode);
+            })).filter((r3) => r3.roleCode);
             const primaryRole = assignedRoles[0]?.roleCode || roleCode;
             return res.json({
               userId: dbUser.user_id,
@@ -21191,11 +21873,11 @@ var authSessionController = {
                 facilities: ["ICD", "CFS", "EMPTY_DEPOT"]
               },
               permissions: ALL_PERMISSIONS,
-              roles: dbRoles.map((r) => ({
-                code: r.role_code,
-                name: r.role_name,
-                external: !r.is_internal,
-                grants: ROLES[r.role_code]?.grants || {}
+              roles: dbRoles.map((r3) => ({
+                code: r3.role_code,
+                name: r3.role_name,
+                external: !r3.is_internal,
+                grants: ROLES[r3.role_code]?.grants || {}
               }))
             });
           }
@@ -21258,9 +21940,9 @@ var authSessionController = {
       if (!["en", "sw", "fr"].includes(newLang)) {
         newLang = "en";
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const updateData = {
             updatedate: /* @__PURE__ */ new Date(),
             updatedby: "user:1"
@@ -21268,7 +21950,7 @@ var authSessionController = {
           if (newName) updateData.user_name = newName;
           if (newPhone) updateData.phone = newPhone;
           if (newLang) updateData.preferred_language = newLang;
-          const updated = await prisma5.app_user.update({
+          const updated = await prisma4.app_user.update({
             where: { user_id: 1 },
             data: updateData,
             include: {
@@ -21318,10 +22000,10 @@ var authSessionController = {
     try {
       const { siteCode } = req.body;
       const targetCode = (siteCode || "DAR1").toUpperCase();
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const matched = await prisma5.m_site.findFirst({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const matched = await prisma4.m_site.findFirst({
             where: { site_code: targetCode }
           });
           if (matched) {
@@ -21603,12 +22285,12 @@ var PLATE_FORMATS = [
 var UnitsController = class {
   getUnitTypes = async (req, res) => {
     const params = parsePaginationParams(req.query);
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendSuccess(res, paginateArray([], params), "Database not connected");
     }
     try {
-      const dbTypes = await prisma5.m_unit_type.findMany({
+      const dbTypes = await prisma4.m_unit_type.findMany({
         orderBy: { unit_type_id: "asc" }
       });
       const mapped = dbTypes.map((u) => ({
@@ -21629,12 +22311,12 @@ var UnitsController = class {
   };
   createUnitType = async (req, res) => {
     const body = req.body;
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database not connected", 500);
     }
     try {
-      const created = await prisma5.m_unit_type.create({
+      const created = await prisma4.m_unit_type.create({
         data: {
           type_code: body.typeCode || body.unitTypeCode || `UT-${Date.now()}`,
           type_name: body.typeName || "Standard Container",
@@ -21666,12 +22348,12 @@ var UnitsController = class {
   };
   getUnitTypeById = async (req, res) => {
     const idOrCode = req.params.unitTypeId;
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database not connected", 500);
     }
     try {
-      const dbType = await prisma5.m_unit_type.findFirst({
+      const dbType = await prisma4.m_unit_type.findFirst({
         where: isNaN(Number(idOrCode)) ? { type_code: idOrCode } : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] }
       });
       if (!dbType) {
@@ -21698,18 +22380,18 @@ var UnitsController = class {
   };
   updateUnitType = async (req, res) => {
     const idOrCode = req.params.unitTypeId;
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database not connected", 500);
     }
     try {
-      const existing = await prisma5.m_unit_type.findFirst({
+      const existing = await prisma4.m_unit_type.findFirst({
         where: isNaN(Number(idOrCode)) ? { type_code: idOrCode } : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] }
       });
       if (!existing) {
         throw new NotFoundError("Unit type", idOrCode);
       }
-      const updated = await prisma5.m_unit_type.update({
+      const updated = await prisma4.m_unit_type.update({
         where: { unit_type_id: existing.unit_type_id },
         data: {
           type_name: req.body.typeName ?? existing.type_name,
@@ -21900,11 +22582,11 @@ var UnitsController = class {
       if (!u) {
         throw new NotFoundError("Unit stay", idOrUnitNo);
       }
-      const prisma5 = getPrisma();
+      const prisma4 = getPrisma();
       let moves = [];
-      if (isDbLive() && prisma5) {
+      if (prisma4) {
         try {
-          const dbMoves = await prisma5.yard_move.findMany({
+          const dbMoves = await prisma4.yard_move.findMany({
             where: { unit_stay_id: Number(u.unitStayId) },
             include: {
               m_yard_location_yard_move_from_location_idTom_yard_location: true,
@@ -22153,8 +22835,8 @@ var PortalController = class {
   getUnits = async (req, res) => {
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : DEFAULT_PORTAL_PARTY;
     const params = parsePaginationParams(req.query);
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -22162,7 +22844,7 @@ var PortalController = class {
       );
     }
     try {
-      const stayDelegate = prisma5.unit_stay || prisma5.unit_stays;
+      const stayDelegate = prisma4.unit_stay || prisma4.unit_stays;
       const dbStays = await stayDelegate.findMany({
         where: {
           unit_stay_consignments: {
@@ -22260,8 +22942,8 @@ var PortalController = class {
   getInvoices = async (req, res) => {
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : DEFAULT_PORTAL_PARTY;
     const params = parsePaginationParams(req.query);
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -22269,7 +22951,7 @@ var PortalController = class {
       );
     }
     try {
-      const invDelegate = prisma5.invoice || prisma5.invoices;
+      const invDelegate = prisma4.invoice || prisma4.invoices;
       const dbInvoices = await invDelegate.findMany({
         where: { bill_to_party_id: partyId },
         include: { invoice_invoice_line: true },
@@ -22313,8 +22995,8 @@ var PortalController = class {
   };
   getDocuments = async (req, res) => {
     const params = parsePaginationParams(req.query);
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -22322,7 +23004,7 @@ var PortalController = class {
       );
     }
     try {
-      const docDelegate = prisma5.document || prisma5.documents;
+      const docDelegate = prisma4.document || prisma4.documents;
       const dbDocs = await docDelegate.findMany({
         where: { status: "ACTIVE" },
         orderBy: { document_id: "desc" }
@@ -22355,8 +23037,8 @@ var PortalController = class {
   getAppointments = async (req, res) => {
     const params = parsePaginationParams(req.query);
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : void 0;
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -22364,7 +23046,7 @@ var PortalController = class {
       );
     }
     try {
-      const apptDelegate = prisma5.appointment || prisma5.appointments;
+      const apptDelegate = prisma4.appointment || prisma4.appointments;
       const where = {};
       if (partyId && !isNaN(partyId)) {
         where.transporter_party_id = partyId;
@@ -22411,8 +23093,8 @@ var PortalController = class {
   getRequests = async (req, res) => {
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : void 0;
     const params = parsePaginationParams(req.query);
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -22420,15 +23102,15 @@ var PortalController = class {
       );
     }
     try {
-      const srDelegate = prisma5.service_request || prisma5.service_requests;
+      const srDelegate = prisma4.service_request || prisma4.service_requests;
       const dbReqs = await srDelegate.findMany({
         where: partyId ? { party_id: partyId } : {},
         include: { m_party_service_request: true },
         orderBy: { service_request_id: "desc" }
       });
-      const items = (dbReqs || []).map((r) => {
+      const items = (dbReqs || []).map((r3) => {
         let detailsObj = {};
-        const rawJson = r.payload_json || r.details_json;
+        const rawJson = r3.payload_json || r3.details_json;
         if (rawJson) {
           try {
             detailsObj = JSON.parse(rawJson);
@@ -22436,29 +23118,29 @@ var PortalController = class {
           }
         }
         return {
-          serviceRequestId: Number(r.service_request_id),
-          requestId: Number(r.service_request_id),
-          requestNo: r.request_no || detailsObj.requestNo || `SR-26-0${r.service_request_id}`,
-          partyId: r.party_id,
-          partyName: r.m_party_service_request?.party_name || r.parties?.party_name || detailsObj.partyName || "Kilele Clearing & Forwarding",
-          requestKind: r.request_kind || r.request_type,
-          kind: r.request_kind || r.request_type,
-          status: r.status || "SUBMITTED",
-          subject: r.subject || detailsObj.subject || "Customer Service Request",
-          details: r.details || detailsObj.details || "",
-          createdAt: (r.createdate || r.created_at)?.toISOString() || detailsObj.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+          serviceRequestId: Number(r3.service_request_id),
+          requestId: Number(r3.service_request_id),
+          requestNo: r3.request_no || detailsObj.requestNo || `SR-26-0${r3.service_request_id}`,
+          partyId: r3.party_id,
+          partyName: r3.m_party_service_request?.party_name || r3.parties?.party_name || detailsObj.partyName || "Kilele Clearing & Forwarding",
+          requestKind: r3.request_kind || r3.request_type,
+          kind: r3.request_kind || r3.request_type,
+          status: r3.status || "SUBMITTED",
+          subject: r3.subject || detailsObj.subject || "Customer Service Request",
+          details: r3.details || detailsObj.details || "",
+          createdAt: (r3.createdate || r3.created_at)?.toISOString() || detailsObj.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
           slaDueAt: detailsObj.slaDueAt || new Date(Date.now() + 864e5).toISOString(),
           messages: detailsObj.messages || [
             {
               from: "customer",
               who: "Customer",
-              at: (r.createdate || r.created_at)?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
-              text: r.details || detailsObj.details || "Request logged in database."
+              at: (r3.createdate || r3.created_at)?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
+              text: r3.details || detailsObj.details || "Request logged in database."
             }
           ],
           consignmentRef: detailsObj.consignmentRef,
           unitNo: detailsObj.unitNo,
-          assignedTo: r.assigned_to_sub || detailsObj.assignedTo,
+          assignedTo: r3.assigned_to_sub || detailsObj.assignedTo,
           payload: detailsObj.payload || detailsObj
         };
       });
@@ -22479,8 +23161,8 @@ var PortalController = class {
   };
   getSummary = async (req, res) => {
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : DEFAULT_PORTAL_PARTY;
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendSuccess(
         res,
         {
@@ -22494,8 +23176,8 @@ var PortalController = class {
       );
     }
     try {
-      const stayDelegate = prisma5.unit_stay || prisma5.unit_stays;
-      const invDelegate = prisma5.invoice || prisma5.invoices;
+      const stayDelegate = prisma4.unit_stay || prisma4.unit_stays;
+      const invDelegate = prisma4.invoice || prisma4.invoices;
       const [dbStays, dbInvoices] = await Promise.all([
         stayDelegate.findMany({
           where: {
@@ -22586,14 +23268,14 @@ var PortalController = class {
   };
   bookAppointment = async (req, res) => {
     const body = req.body;
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const vtDelegate = prisma5.m_visit_type || prisma5.visit_types;
-      const partyDelegate = prisma5.m_party || prisma5.parties;
-      const apptDelegate = prisma5.appointment || prisma5.appointments;
+      const vtDelegate = prisma4.m_visit_type || prisma4.visit_types;
+      const partyDelegate = prisma4.m_party || prisma4.parties;
+      const apptDelegate = prisma4.appointment || prisma4.appointments;
       const visitTypeCode = body.visitTypeCode || "IMPORT_PICKUP";
       const visitType = await vtDelegate.findFirst({
         where: {
@@ -22648,12 +23330,12 @@ var PortalController = class {
   };
   submitRequest = async (req, res) => {
     const body = req.body;
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const srDelegate = prisma5.service_request || prisma5.service_requests;
+      const srDelegate = prisma4.service_request || prisma4.service_requests;
       const k = body.requestKind || body.kind || "DELIVERY";
       const partyId = body.partyId || DEFAULT_PORTAL_PARTY;
       const reqCount = await srDelegate.count();
@@ -22683,12 +23365,12 @@ var PortalController = class {
           party_id: partyId,
           request_no: requestNo,
           request_kind: k,
-          request_type: k,
           status: "SUBMITTED",
           subject: body.subject || "Customer Service Request",
           details: body.details || "",
           payload_json: JSON.stringify(requestPayload),
-          details_json: JSON.stringify(requestPayload),
+          unit_stay_id: body.unitStayId ? BigInt(body.unitStayId) : void 0,
+          consignment_id: body.consignmentId ? BigInt(body.consignmentId) : void 0,
           createdby: "portal"
         }
       });
@@ -22708,12 +23390,12 @@ var PortalController = class {
   };
   respondToRequest = async (req, res) => {
     const id = parseInt(req.params.serviceRequestId, 10);
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const srDelegate = prisma5.service_request || prisma5.service_requests;
+      const srDelegate = prisma4.service_request || prisma4.service_requests;
       const existing = await srDelegate.findFirst({
         where: { service_request_id: id }
       });
@@ -22741,8 +23423,10 @@ var PortalController = class {
         where: { service_request_id: id },
         data: {
           status: nextStatus,
-          details_json: JSON.stringify(detailsObj),
-          payload_json: JSON.stringify(detailsObj)
+          payload_json: JSON.stringify(detailsObj),
+          responded_at: /* @__PURE__ */ new Date(),
+          updatedate: /* @__PURE__ */ new Date(),
+          updatedby: req.body.userName || req.body.who || "staff"
         }
       });
       return sendSuccess(res, {
@@ -22757,12 +23441,12 @@ var PortalController = class {
   payInvoice = async (req, res) => {
     const invoiceId = parseInt(req.params.invoiceId, 10);
     const body = req.body;
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const invDelegate = prisma5.invoice || prisma5.invoices;
+      const invDelegate = prisma4.invoice || prisma4.invoices;
       const dbInv = await invDelegate.findUnique({
         where: { invoice_id: invoiceId }
       });
@@ -22791,12 +23475,12 @@ var PortalController = class {
     }
   };
   getInvitations = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const piDelegate = prisma5.portal_invitation || prisma5.portal_invitations;
+      const piDelegate = prisma4.portal_invitation || prisma4.portal_invitations;
       const dbInvs = await piDelegate.findMany({
         include: { m_party_portal_invitation: true },
         orderBy: { portal_invitation_id: "desc" }
@@ -22819,12 +23503,12 @@ var PortalController = class {
     }
   };
   createInvitation = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const piDelegate = prisma5.portal_invitation || prisma5.portal_invitations;
+      const piDelegate = prisma4.portal_invitation || prisma4.portal_invitations;
       const partyId = Number(req.body.partyId) || DEFAULT_PORTAL_PARTY;
       const email = req.body.email || "user@example.com";
       const role = req.body.role || "CLEARING_AGENT";
@@ -22855,12 +23539,12 @@ var PortalController = class {
     }
   };
   revokeInvitation = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const piDelegate = prisma5.portal_invitation || prisma5.portal_invitations;
+      const piDelegate = prisma4.portal_invitation || prisma4.portal_invitations;
       const id = parseInt(req.params.invitationId, 10);
       const updated = await piDelegate.update({
         where: { portal_invitation_id: id },
@@ -23073,10 +23757,10 @@ function generateRollingAppointments() {
         const isPast = slotStart.getTime() < Date.now();
         let status = "BOOKED";
         if (isPast) {
-          const r = (id + h) % 10;
-          if (r < 2) status = "CANCELLED";
-          else if (r < 4) status = "MISSED";
-          else if (r < 7) status = "COMPLETED";
+          const r3 = (id + h) % 10;
+          if (r3 < 2) status = "CANCELLED";
+          else if (r3 < 4) status = "MISSED";
+          else if (r3 < 7) status = "COMPLETED";
           else status = "ARRIVED";
         }
         items.push({
@@ -23107,25 +23791,25 @@ function generateRollingAppointments() {
 }
 var AppointmentsController = class {
   getSlotRules = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const dbRules = await prisma5.m_appointment_slot_rule.findMany({
+        const dbRules = await prisma4.m_appointment_slot_rule.findMany({
           include: { m_visit_type: true },
           orderBy: { appointment_slot_rule_id: "asc" }
         });
         if (dbRules && dbRules.length > 0) {
-          const items = dbRules.map((r) => ({
-            appointmentSlotRuleId: r.appointment_slot_rule_id,
-            ruleId: r.appointment_slot_rule_id,
-            flow: r.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
-            visitTypeCode: r.m_visit_type?.visit_type_code,
-            visitTypeName: r.m_visit_type?.visit_type_name,
+          const items = dbRules.map((r3) => ({
+            appointmentSlotRuleId: r3.appointment_slot_rule_id,
+            ruleId: r3.appointment_slot_rule_id,
+            flow: r3.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
+            visitTypeCode: r3.m_visit_type?.visit_type_code,
+            visitTypeName: r3.m_visit_type?.visit_type_name,
             startHour: 6,
             endHour: 18,
             slotDurationMin: 60,
-            maxSlotsPerHour: r.capacity_trucks || 20,
-            isActive: r.is_active ?? true,
+            maxSlotsPerHour: r3.capacity_trucks || 20,
+            isActive: r3.is_active ?? true,
             logInst: 1
           }));
           return sendSuccess(res, { items, total: items.length, nextCursor: null });
@@ -23144,18 +23828,18 @@ var AppointmentsController = class {
     return sendSuccess(res, { items: fallbackRules, total: fallbackRules.length, nextCursor: null });
   };
   createSlotRule = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const flow = req.body.flow || req.body.visitTypeCode || "IMPORT_PICKUP";
-      const visitType = await prisma5.m_visit_type.findFirst({
+      const visitType = await prisma4.m_visit_type.findFirst({
         where: { visit_type_code: flow }
       });
       const vtId = visitType?.visit_type_id || 1;
-      const created = await prisma5.m_appointment_slot_rule.create({
+      const created = await prisma4.m_appointment_slot_rule.create({
         data: {
           site_id: siteId,
           visit_type_id: vtId,
@@ -23182,26 +23866,26 @@ var AppointmentsController = class {
     }
   };
   getSlotRuleById = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const id = parseInt(req.params.appointmentSlotRuleId, 10);
-      const r = await prisma5.m_appointment_slot_rule.findUnique({
+      const r3 = await prisma4.m_appointment_slot_rule.findUnique({
         where: { appointment_slot_rule_id: id },
         include: { m_visit_type: true }
       });
-      if (!r) return sendError(res, "Slot rule not found", 404);
+      if (!r3) return sendError(res, "Slot rule not found", 404);
       return sendSuccess(res, {
-        appointmentSlotRuleId: r.appointment_slot_rule_id,
-        ruleId: r.appointment_slot_rule_id,
-        flow: r.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
+        appointmentSlotRuleId: r3.appointment_slot_rule_id,
+        ruleId: r3.appointment_slot_rule_id,
+        flow: r3.m_visit_type?.visit_type_code || "IMPORT_PICKUP",
         startHour: 6,
         endHour: 18,
         slotDurationMin: 60,
-        maxSlotsPerHour: r.capacity_trucks || 20,
-        isActive: r.is_active ?? true,
+        maxSlotsPerHour: r3.capacity_trucks || 20,
+        isActive: r3.is_active ?? true,
         logInst: 1
       });
     } catch (err) {
@@ -23209,13 +23893,13 @@ var AppointmentsController = class {
     }
   };
   updateSlotRule = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const id = parseInt(req.params.appointmentSlotRuleId, 10);
-      const updated = await prisma5.m_appointment_slot_rule.update({
+      const updated = await prisma4.m_appointment_slot_rule.update({
         where: { appointment_slot_rule_id: id },
         data: {
           capacity_trucks: req.body.maxSlotsPerHour,
@@ -23236,15 +23920,15 @@ var AppointmentsController = class {
     }
   };
   getAvailability = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const date = String(req.query.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
       const startOfDay = /* @__PURE__ */ new Date(`${date}T00:00:00.000Z`);
       const endOfDay = /* @__PURE__ */ new Date(`${date}T23:59:59.999Z`);
-      const bookedAppts = await prisma5.appointment.findMany({
+      const bookedAppts = await prisma4.appointment.findMany({
         where: {
           slot_start: { gte: startOfDay, lte: endOfDay },
           status: { not: "CANCELLED" }
@@ -23271,10 +23955,10 @@ var AppointmentsController = class {
     }
   };
   getAppointments = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (prisma5) {
+    const prisma4 = getPrisma();
+    if (prisma4) {
       try {
-        const dbAppts = await prisma5.appointment.findMany({
+        const dbAppts = await prisma4.appointment.findMany({
           include: {
             appointments_visit_types: true,
             m_party_appointment: true,
@@ -23319,27 +24003,27 @@ var AppointmentsController = class {
     return sendSuccess(res, { items: fallbackItems, total: fallbackItems.length, nextCursor: null });
   };
   createAppointment = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const visitTypeCode = req.body.visitTypeCode || "IMPORT_PICKUP";
-      const visitType = await prisma5.m_visit_type.findFirst({
+      const visitType = await prisma4.m_visit_type.findFirst({
         where: { visit_type_code: visitTypeCode }
       });
       const vtId = visitType?.visit_type_id || 1;
       let truckId = req.body.truckId ? Number(req.body.truckId) : void 0;
       const plateNo = req.body.plateNo || req.body.truckPlate || req.body.plate;
       if (!truckId && plateNo) {
-        const foundTruck = await prisma5.m_truck.findFirst({
+        const foundTruck = await prisma4.m_truck.findFirst({
           where: { plate_no: plateNo }
         });
         if (foundTruck) {
           truckId = foundTruck.truck_id;
         } else {
-          const newTruck = await prisma5.m_truck.create({
+          const newTruck = await prisma4.m_truck.create({
             data: {
               plate_no: plateNo,
               truck_type: "SEMI_TRAILER",
@@ -23351,13 +24035,13 @@ var AppointmentsController = class {
       }
       let driverId = req.body.driverId ? Number(req.body.driverId) : void 0;
       if (!driverId && req.body.driverName) {
-        const foundDriver = await prisma5.m_driver.findFirst({
+        const foundDriver = await prisma4.m_driver.findFirst({
           where: { driver_name: req.body.driverName }
         });
         if (foundDriver) {
           driverId = foundDriver.driver_id;
         } else {
-          const newDriver = await prisma5.m_driver.create({
+          const newDriver = await prisma4.m_driver.create({
             data: {
               driver_name: req.body.driverName,
               license_no: `LIC-${Date.now().toString().slice(-6)}`,
@@ -23369,11 +24053,11 @@ var AppointmentsController = class {
         }
       }
       const transporterPartyId = Number(req.body.partyId || req.body.transporterPartyId) || 1;
-      const apptCount = await prisma5.appointment.count();
+      const apptCount = await prisma4.appointment.count();
       const apptNo = req.body.apptNo || req.body.appointmentNo || `APT-26-0${apptCount + 4130}`;
       const slotStart = new Date(req.body.slotStart || req.body.slotTime || Date.now() + 36e5);
       const slotEnd = new Date(req.body.slotEnd || slotStart.getTime() + 36e5);
-      const created = await prisma5.appointment.create({
+      const created = await prisma4.appointment.create({
         data: {
           site_id: siteId,
           visit_type_id: vtId,
@@ -23407,14 +24091,14 @@ var AppointmentsController = class {
     }
   };
   getAppointmentById = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const idStr = String(req.params.appointmentId);
       const isNum = !isNaN(Number(idStr));
-      const a = await prisma5.appointment.findFirst({
+      const a = await prisma4.appointment.findFirst({
         where: isNum ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] } : { appointment_no: idStr },
         include: {
           appointments_visit_types: true,
@@ -23448,18 +24132,18 @@ var AppointmentsController = class {
     }
   };
   cancelAppointment = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const idStr = String(req.params.appointmentId);
       const isNum = !isNaN(Number(idStr));
-      const existing = await prisma5.appointment.findFirst({
+      const existing = await prisma4.appointment.findFirst({
         where: isNum ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] } : { appointment_no: idStr }
       });
       if (!existing) return sendError(res, "Appointment not found", 404);
-      const updated = await prisma5.appointment.update({
+      const updated = await prisma4.appointment.update({
         where: { appointment_id: existing.appointment_id },
         data: { status: "CANCELLED" }
       });
@@ -23469,20 +24153,20 @@ var AppointmentsController = class {
     }
   };
   rescheduleAppointment = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const idStr = String(req.params.appointmentId);
       const isNum = !isNaN(Number(idStr));
-      const existing = await prisma5.appointment.findFirst({
+      const existing = await prisma4.appointment.findFirst({
         where: isNum ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] } : { appointment_no: idStr }
       });
       if (!existing) return sendError(res, "Appointment not found", 404);
       const slotStart = req.body.slotStart ? new Date(req.body.slotStart) : existing.slot_start;
       const slotEnd = req.body.slotEnd ? new Date(req.body.slotEnd) : existing.slot_end;
-      const updated = await prisma5.appointment.update({
+      const updated = await prisma4.appointment.update({
         where: { appointment_id: existing.appointment_id },
         data: {
           slot_start: slotStart,
@@ -23496,17 +24180,17 @@ var AppointmentsController = class {
     }
   };
   updateAppointmentStatus = async (req, res) => {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const idStr = String(req.params.appointmentId);
     const status = req.body.status || "BOOKED";
-    if (prisma5) {
+    if (prisma4) {
       try {
         const isNum = !isNaN(Number(idStr));
-        const existing = await prisma5.appointment.findFirst({
+        const existing = await prisma4.appointment.findFirst({
           where: isNum ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] } : { appointment_no: idStr }
         });
         if (existing) {
-          const updated = await prisma5.appointment.update({
+          const updated = await prisma4.appointment.update({
             where: { appointment_id: existing.appointment_id },
             data: { status, updatedate: /* @__PURE__ */ new Date() }
           });
@@ -23601,11 +24285,11 @@ var inMemoryLotBalances = JSON.parse(JSON.stringify(lotBalances));
 var CfsController = class {
   getContractors = async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
-            const queryPromise = prisma5.labour_contractor.findMany({
+            const queryPromise = prisma4.labour_contractor.findMany({
               where: { is_active: true },
               orderBy: { labour_contractor_id: "asc" }
             });
@@ -23666,10 +24350,10 @@ var CfsController = class {
         isActive: req.body.isActive ?? true
       };
       inMemoryContractors.push(newContractor);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.labour_contractor.create({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          prisma4.labour_contractor.create({
             data: {
               site_id: siteId,
               contractor_name: newContractor.contractorName,
@@ -23726,11 +24410,11 @@ var CfsController = class {
   getJobs = async (req, res) => {
     try {
       let items = [];
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
-            const queryPromise = prisma5.handling_job.findMany({
+            const queryPromise = prisma4.handling_job.findMany({
               include: {
                 handling_job_unit_stays: {
                   include: {
@@ -23879,10 +24563,10 @@ var CfsController = class {
         lines
       };
       inMemoryJobs.unshift(newJob);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.handling_job.create({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          prisma4.handling_job.create({
             data: {
               site_id: siteId,
               job_no: jobNo,
@@ -24167,11 +24851,11 @@ var ReefersController = class {
   getSessions = async (req, res) => {
     try {
       let items = [];
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
-            const queryPromise = prisma5.reefer_session.findMany({
+            const queryPromise = prisma4.reefer_session.findMany({
               include: {
                 reefer_session_unit_stays: {
                   include: {
@@ -24190,14 +24874,14 @@ var ReefersController = class {
             );
             const dbReefers = await Promise.race([queryPromise, timeoutPromise]);
             if (dbReefers && dbReefers.length > 0) {
-              const mapped = dbReefers.map((r) => {
-                const u = r.reefer_session_unit_stays?.unit_stay_cargo_units;
-                const readings = (r.reefer_session_readings || []).map((rd) => ({
+              const mapped = dbReefers.map((r3) => {
+                const u = r3.reefer_session_unit_stays?.unit_stay_cargo_units;
+                const readings = (r3.reefer_session_readings || []).map((rd) => ({
                   reeferReadingId: Number(rd.reefer_reading_id),
                   readAt: rd.read_at?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
                   supplyTempC: String(rd.supply_temp_c ?? -18),
                   returnTempC: String(rd.return_temp_c ?? -16.8),
-                  setTempC: String(rd.set_temp_c ?? r.set_temp_c),
+                  setTempC: String(rd.set_temp_c ?? r3.set_temp_c),
                   powerOn: rd.power_on ?? true,
                   alarmCode: rd.alarm_code || void 0,
                   source: rd.source || "IOT",
@@ -24212,18 +24896,18 @@ var ReefersController = class {
                     alarm = "POWER_OFF";
                   }
                 }
-                const kwh = r.meter_end_kwh && r.meter_start_kwh ? (Number(r.meter_end_kwh) - Number(r.meter_start_kwh)).toFixed(1) : void 0;
+                const kwh = r3.meter_end_kwh && r3.meter_start_kwh ? (Number(r3.meter_end_kwh) - Number(r3.meter_start_kwh)).toFixed(1) : void 0;
                 return {
-                  reeferSessionId: Number(r.reefer_session_id),
-                  unitStayId: Number(r.unit_stay_id),
+                  reeferSessionId: Number(r3.reefer_session_id),
+                  unitStayId: Number(r3.unit_stay_id),
                   unitNo: u?.unit_no || "MSKU 882014 9",
                   unitType: u?.cargo_unit_unit_types?.type_code || "40HR",
-                  cargo: r.reefer_session_unit_stays?.cargo_description || "Frozen Merchandise",
-                  plugNo: r.reefer_session_yard_locations?.full_code || (r.plug_location_id ? `R-0${r.plug_location_id}` : void 0),
-                  pluggedAt: r.plugged_at?.toISOString(),
-                  unpluggedAt: r.unplugged_at?.toISOString() || void 0,
-                  setTempC: String(r.set_temp_c),
-                  meterStartKwh: r.meter_start_kwh ? String(r.meter_start_kwh) : void 0,
+                  cargo: r3.reefer_session_unit_stays?.cargo_description || "Frozen Merchandise",
+                  plugNo: r3.reefer_session_yard_locations?.full_code || (r3.plug_location_id ? `R-0${r3.plug_location_id}` : void 0),
+                  pluggedAt: r3.plugged_at?.toISOString(),
+                  unpluggedAt: r3.unplugged_at?.toISOString() || void 0,
+                  setTempC: String(r3.set_temp_c),
+                  meterStartKwh: r3.meter_start_kwh ? String(r3.meter_start_kwh) : void 0,
                   kwhUsed: kwh,
                   alarm,
                   readings
@@ -24266,10 +24950,10 @@ var ReefersController = class {
         readings: []
       };
       inMemoryReefers.unshift(newSession);
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.reefer_session.create({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          prisma4.reefer_session.create({
             data: {
               unit_stay_id: unitStayId,
               plug_location_id: Number(req.body.plugLocationId) || 1,
@@ -24290,7 +24974,7 @@ var ReefersController = class {
   getSessionById = async (req, res) => {
     try {
       const id = parseInt(req.params.reeferSessionId || req.params.id, 10);
-      const local = inMemoryReefers.find((r) => r.reeferSessionId === id);
+      const local = inMemoryReefers.find((r3) => r3.reeferSessionId === id);
       if (local) {
         return res.json(local);
       }
@@ -24304,7 +24988,7 @@ var ReefersController = class {
       const id = parseInt(req.params.reeferSessionId || req.params.id, 10);
       const plugNo = req.body.plugNo || "R1-01U";
       const setTempC = req.body.setTempC ? parseFloat(req.body.setTempC) : -18;
-      const local = inMemoryReefers.find((r) => r.reeferSessionId === id);
+      const local = inMemoryReefers.find((r3) => r3.reeferSessionId === id);
       if (local) {
         local.plugNo = plugNo;
         local.setTempC = String(setTempC);
@@ -24312,10 +24996,10 @@ var ReefersController = class {
         local.unpluggedAt = void 0;
         local.kwhUsed = "0.0";
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.reefer_session.update({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          prisma4.reefer_session.update({
             where: { reefer_session_id: id },
             data: {
               set_temp_c: setTempC,
@@ -24336,16 +25020,16 @@ var ReefersController = class {
     try {
       const id = parseInt(req.params.reeferSessionId || req.params.id, 10);
       const meterEnd = req.body.meterEndKwh ? parseFloat(req.body.meterEndKwh) : 12550;
-      const local = inMemoryReefers.find((r) => r.reeferSessionId === id);
+      const local = inMemoryReefers.find((r3) => r3.reeferSessionId === id);
       if (local) {
         local.unpluggedAt = (/* @__PURE__ */ new Date()).toISOString();
         local.kwhUsed = String((meterEnd - Number(local.meterStartKwh || 12400)).toFixed(1));
         local.alarm = void 0;
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.reefer_session.update({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          prisma4.reefer_session.update({
             where: { reefer_session_id: id },
             data: {
               unplugged_at: /* @__PURE__ */ new Date(),
@@ -24363,7 +25047,7 @@ var ReefersController = class {
   getReadings = async (req, res) => {
     try {
       const id = parseInt(req.params.reeferSessionId || req.params.id, 10);
-      const local = inMemoryReefers.find((r) => r.reeferSessionId === id);
+      const local = inMemoryReefers.find((r3) => r3.reeferSessionId === id);
       return res.json(local?.readings || []);
     } catch (err) {
       return sendError(res, err.message, 500);
@@ -24387,7 +25071,7 @@ var ReefersController = class {
         source: req.body.source || "MANUAL",
         isOutOfRange: isOor
       };
-      const local = inMemoryReefers.find((r) => r.reeferSessionId === id);
+      const local = inMemoryReefers.find((r3) => r3.reeferSessionId === id);
       if (local) {
         local.readings = local.readings || [];
         local.readings.push(newReading);
@@ -24399,10 +25083,10 @@ var ReefersController = class {
           local.alarm = void 0;
         }
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          prisma5.reefer_reading.create({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          prisma4.reefer_reading.create({
             data: {
               reefer_session_id: id,
               read_at: new Date(newReading.readAt),
@@ -24496,11 +25180,11 @@ var RepairsController = class {
   // Repair Codes
   getCodes = async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
-            const queryPromise = prisma5.m_repair_code.findMany({
+            const queryPromise = prisma4.m_repair_code.findMany({
               where: { is_active: true },
               orderBy: { repair_code: "asc" }
             });
@@ -24537,11 +25221,11 @@ var RepairsController = class {
         defaultLabourHours: hours,
         isActive: true
       };
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
-            await prisma5.m_repair_code.create({
+            await prisma4.m_repair_code.create({
               data: {
                 repair_code: code,
                 repair_name: name,
@@ -24591,11 +25275,11 @@ var RepairsController = class {
   // Repair Estimates
   getEstimates = async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           try {
-            const queryPromise = prisma5.repair_estimate.findMany({
+            const queryPromise = prisma4.repair_estimate.findMany({
               include: {
                 repair_estimate_unit_stays: {
                   include: {
@@ -24904,12 +25588,12 @@ var import_express16 = require("express");
 var DevicesController = class {
   // Device Integrations
   getIntegrations = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const dbInts = await prisma5.device_integrations.findMany({
+      const dbInts = await prisma4.device_integrations.findMany({
         orderBy: { device_integration_id: "asc" }
       });
       const items = (dbInts || []).map((i) => ({
@@ -24929,14 +25613,14 @@ var DevicesController = class {
     }
   };
   createIntegration = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const deviceType = req.body.integrationKind || req.body.deviceType || "ANPR";
-      const created = await prisma5.device_integrations.create({
+      const created = await prisma4.device_integrations.create({
         data: {
           site_id: siteId,
           integration_kind: deviceType,
@@ -24963,13 +25647,13 @@ var DevicesController = class {
     }
   };
   getIntegrationById = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const id = parseInt(req.params.deviceIntegrationId, 10);
-      const item2 = await prisma5.device_integrations.findUnique({
+      const item2 = await prisma4.device_integrations.findUnique({
         where: { device_integration_id: id }
       });
       if (!item2) return sendError(res, "Device integration not found", 404);
@@ -24989,13 +25673,13 @@ var DevicesController = class {
     }
   };
   updateIntegration = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const id = parseInt(req.params.deviceIntegrationId, 10);
-      const updated = await prisma5.device_integrations.update({
+      const updated = await prisma4.device_integrations.update({
         where: { device_integration_id: id },
         data: {
           is_active: req.body.isActive
@@ -25012,7 +25696,7 @@ var DevicesController = class {
   };
   // Device Reads (ANPR / OCR Gate Feeds)
   ingestRead = async (req, res) => {
-    const prisma5 = getPrisma();
+    const prisma4 = getPrisma();
     const payload = req.body.payload || req.body;
     const kind = req.body.integrationKind || "ANPR";
     return sendCreated(res, {
@@ -25024,12 +25708,12 @@ var DevicesController = class {
     });
   };
   getReads = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const visits2 = await prisma5.truck_visits.findMany({
+      const visits2 = await prisma4.truck_visits.findMany({
         take: 10,
         orderBy: { truck_visit_id: "desc" },
         include: { m_truck_truck_visit_truck_idTom_truck: true }
@@ -25112,50 +25796,52 @@ var devicesRouter = router8;
 var import_express17 = require("express");
 
 // src/v1/controllers/parties.controller.ts
-var inMemoryParties = JSON.parse(JSON.stringify(parties)).map((p2) => ({
-  partyId: p2.partyId,
-  partyCode: p2.partyCode,
-  partyName: p2.partyName,
-  shortName: p2.shortName || null,
-  roles: Array.isArray(p2.roles) && p2.roles.length > 0 ? p2.roles : ["CUSTOMER"],
-  countryCode: p2.countryCode || "TZ",
-  city: p2.city || "Dar es Salaam",
-  phone: p2.phone || "+255 22 211 0401",
-  email: p2.email || `${p2.partyCode.toLowerCase()}@icd.example`,
-  creditStatus: p2.creditStatus || "CASH",
-  creditLimit: p2.creditLimit || "0.00",
-  creditCurrency: p2.creditCurrency || "USD",
-  defaultCurrency: p2.defaultCurrency || "USD",
-  vatNo: p2.vatNo || null,
-  taxId: p2.taxId || null,
-  disbursementService: Boolean(p2.disbursementService),
-  source: p2.source || "NG",
-  syncStatus: p2.syncStatus || "SYNCED",
-  ngRefId: p2.ngRefId || null,
-  isActive: p2.isActive !== false,
-  logInst: 1,
-  openUnits: p2.openUnits || 0,
-  contacts: (p2.contacts || []).map((c, idx) => ({
-    contactId: c.contactId || idx + 1,
-    fullName: c.fullName || "Operations Contact",
-    role: c.role || "OPERATIONS",
-    email: c.email || "",
-    phone: c.phone || "",
-    isPrimary: c.isPrimary ?? true
-  }))
-}));
+var inMemoryParties = JSON.parse(JSON.stringify(parties)).map(
+  (p2) => ({
+    partyId: p2.partyId,
+    partyCode: p2.partyCode,
+    partyName: p2.partyName,
+    shortName: p2.shortName || null,
+    roles: Array.isArray(p2.roles) && p2.roles.length > 0 ? p2.roles : ["CUSTOMER"],
+    countryCode: p2.countryCode || "TZ",
+    city: p2.city || "Dar es Salaam",
+    phone: p2.phone || "+255 22 211 0401",
+    email: p2.email || `${p2.partyCode.toLowerCase()}@icd.example`,
+    creditStatus: p2.creditStatus || "CASH",
+    creditLimit: p2.creditLimit || "0.00",
+    creditCurrency: p2.creditCurrency || "USD",
+    defaultCurrency: p2.defaultCurrency || "USD",
+    vatNo: p2.vatNo || null,
+    taxId: p2.taxId || null,
+    disbursementService: Boolean(p2.disbursementService),
+    source: p2.source || "NG",
+    syncStatus: p2.syncStatus || "SYNCED",
+    ngRefId: p2.ngRefId || null,
+    isActive: p2.isActive !== false,
+    logInst: 1,
+    openUnits: p2.openUnits || 0,
+    contacts: (p2.contacts || []).map((c, idx) => ({
+      contactId: c.contactId || idx + 1,
+      fullName: c.fullName || "Operations Contact",
+      role: c.role || "OPERATIONS",
+      email: c.email || "",
+      phone: c.phone || "",
+      isPrimary: c.isPrimary ?? true
+    }))
+  })
+);
 var PartiesController = class {
   getParties = async (req, res) => {
     try {
       const { role, q, source, syncStatus, creditStatus, isActive } = req.query;
       let items = [];
-      const prisma5 = getPrisma();
-      if (isDbLive() && prisma5) {
+      const prisma4 = getPrisma();
+      if (prisma4) {
         try {
           const timeoutPromise = new Promise(
             (_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 1200)
           );
-          const queryPromise = prisma5.m_party.findMany({
+          const queryPromise = prisma4.m_party.findMany({
             where: {
               ...isActive !== void 0 ? { is_active: isActive === "true" } : {},
               ...source ? { source: String(source).toUpperCase() } : {},
@@ -25168,10 +25854,15 @@ var PartiesController = class {
             },
             orderBy: { party_id: "asc" }
           });
-          const dbParties = await Promise.race([queryPromise, timeoutPromise]);
+          const dbParties = await Promise.race([
+            queryPromise,
+            timeoutPromise
+          ]);
           if (dbParties && dbParties.length > 0) {
             items = dbParties.map((p2) => {
-              const roles = (p2.m_party_m_party_role || []).map((r) => r.role_code);
+              const roles = (p2.m_party_m_party_role || []).map(
+                (r3) => r3.role_code
+              );
               return {
                 partyId: Number(p2.party_id),
                 partyCode: p2.party_code,
@@ -25210,17 +25901,20 @@ var PartiesController = class {
         }
       }
       if (items.length === 0) {
-        console.log("[DEBUG getParties] Falling back to inMemoryParties, count:", inMemoryParties.length);
+        console.log(
+          "[DEBUG getParties] Falling back to inMemoryParties, count:",
+          inMemoryParties.length
+        );
         items = inMemoryParties;
       }
       if (role) {
         const roleUpper = String(role).toUpperCase();
-        items = items.filter((p2) => p2.roles.includes(roleUpper));
+        items = items.filter((p2) => p2.roles?.includes(roleUpper));
       }
       if (q) {
         const query = String(q).toLowerCase();
         items = items.filter(
-          (p2) => p2.partyName.toLowerCase().includes(query) || p2.partyCode.toLowerCase().includes(query) || Boolean(p2.taxId && p2.taxId.toLowerCase().includes(query))
+          (p2) => p2.partyName?.toLowerCase().includes(query) || p2.partyCode?.toLowerCase().includes(query) || Boolean(p2.taxId && p2.taxId.toLowerCase().includes(query))
         );
       }
       if (req.query.format === "array") {
@@ -25236,19 +25930,15 @@ var PartiesController = class {
       return sendError(res, err.message, 500);
     }
   };
-  /**
-   * GET /parties/:partyId
-   * Get party details by ID or code
-   */
   getPartyDetail = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
-      const p2 = await prisma5.m_party.findFirst({
+      const p2 = await prisma4.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { OR: [{ party_id: numId }, { party_code: partyIdParam }] },
         include: {
           m_party_m_party_role: true,
@@ -25258,7 +25948,7 @@ var PartiesController = class {
       if (!p2) {
         return res.status(404).json({ error: "Party not found" });
       }
-      const roles = (p2.m_party_m_party_role || []).map((r) => r.role_code);
+      const roles = (p2.m_party_m_party_role || []).map((r3) => r3.role_code);
       const detail = {
         partyId: Number(p2.party_id),
         partyCode: p2.party_code,
@@ -25296,20 +25986,16 @@ var PartiesController = class {
       return sendError(res, err.message, 500);
     }
   };
-  /**
-   * POST /parties
-   * Create a new party
-   */
   createParty = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const b = req.body;
       const partyCode = b.partyCode || `C-LOCAL${Date.now()}`;
       const roles = Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER"];
-      const created = await prisma5.m_party.create({
+      const created = await prisma4.m_party.create({
         data: {
           party_code: partyCode,
           party_name: b.partyName || "New Party",
@@ -25332,11 +26018,11 @@ var PartiesController = class {
           createdby: req.userSub || "system"
         }
       });
-      for (const r of roles) {
-        await prisma5.m_party_role.create({
+      for (const r3 of roles) {
+        await prisma4.m_party_role.create({
           data: {
             party_id: created.party_id,
-            role_code: r.toUpperCase(),
+            role_code: r3.toUpperCase(),
             createdby: req.userSub || "system"
           }
         });
@@ -25380,26 +26066,22 @@ var PartiesController = class {
       return sendError(res, err.message, 500);
     }
   };
-  /**
-   * PATCH /parties/:partyId
-   * Update party
-   */
   updateParty = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
       const b = req.body;
-      const existing = await prisma5.m_party.findFirst({
+      const existing = await prisma4.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { party_id: numId }
       });
       if (!existing) {
         return res.status(404).json({ error: "Party not found" });
       }
-      const updated = await prisma5.m_party.update({
+      const updated = await prisma4.m_party.update({
         where: { party_id: existing.party_id },
         data: {
           ...b.partyName ? { party_name: b.partyName } : {},
@@ -25426,37 +26108,26 @@ var PartiesController = class {
       return sendError(res, err.message, 500);
     }
   };
-  /**
-   * POST /parties:provisional
-   * Create provisional party
-   */
   createProvisional = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5 || !isDbLive()) {
-      const b = req.body;
-      const partyId = Date.now();
-      const partyCode = b.partyCode || `PROV-${Date.now().toString().slice(-6)}`;
-      const provParty = {
-        partyId,
-        partyCode,
-        partyName: b.partyName || "Provisional Party",
-        roles: Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER", "CONSIGNEE"],
-        source: "LOCAL",
-        syncStatus: "PROVISIONAL",
-        isActive: true
-      };
-      return sendCreated(res, provParty);
+    const prisma4 = getPrisma();
+    if (!prisma4) {
+      return sendError(res, "Database connection not available", 500);
     }
     try {
       const b = req.body;
-      const partyCode = b.partyCode || `PROV-${Date.now()}`;
+      const partyCode = b.partyCode?.trim() || `PROV-${Math.floor(1e5 + Math.random() * 9e5)}`;
+      const partyName2 = b.partyName?.trim() || "Provisional Party";
       const roles = Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER"];
-      const created = await prisma5.m_party.create({
+      const created = await prisma4.m_party.create({
         data: {
           party_code: partyCode,
-          party_name: b.partyName || "Provisional Party",
-          country_code: b.countryCode || "TZ",
-          city: b.city || "Dar es Salaam",
+          party_name: partyName2,
+          short_name: b.shortName?.trim() || null,
+          tax_id: b.taxId?.trim() || b.taxPin?.trim() || null,
+          country_code: b.countryCode?.trim() || "TZ",
+          city: b.city?.trim() || "Dar es Salaam",
+          phone: b.phone?.trim() || null,
+          email: b.email?.trim() || null,
           source: "LOCAL",
           sync_status: "PROVISIONAL",
           credit_status: "CASH",
@@ -25464,11 +26135,11 @@ var PartiesController = class {
           createdby: req.userSub || "system"
         }
       });
-      for (const r of roles) {
-        await prisma5.m_party_role.create({
+      for (const r3 of roles) {
+        await prisma4.m_party_role.create({
           data: {
             party_id: created.party_id,
-            role_code: r.toUpperCase(),
+            role_code: r3.toUpperCase(),
             createdby: req.userSub || "system"
           }
         });
@@ -25477,36 +26148,46 @@ var PartiesController = class {
         partyId: Number(created.party_id),
         partyCode: created.party_code,
         partyName: created.party_name,
+        shortName: created.short_name,
         roles,
+        countryCode: created.country_code,
+        city: created.city,
+        phone: created.phone,
+        email: created.email,
+        creditStatus: created.credit_status,
+        creditLimit: "0.00",
+        creditCurrency: "USD",
+        defaultCurrency: created.default_currency || "USD",
+        vatNo: created.vat_no,
+        taxId: created.tax_id,
+        disbursementService: false,
         source: "LOCAL",
         syncStatus: "PROVISIONAL",
-        isActive: true
+        isActive: true,
+        openUnits: 0,
+        contacts: []
       });
     } catch (err) {
       console.error("[PartiesController.createProvisional] Error:", err);
       return sendError(res, err.message, 500);
     }
   };
-  /**
-   * POST /parties/:partyId/match & /parties/:partyId:match
-   * Match provisional party with master NG record
-   */
   matchParty = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
       const ngRefId = req.body.ngRefId || req.body.matchedMasterPartyId || "NG-MATCHED";
-      const existing = await prisma5.m_party.findFirst({
+      const existing = await prisma4.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { party_id: numId }
       });
       if (!existing) {
         return res.status(404).json({ error: "Party not found" });
       }
-      const updated = await prisma5.m_party.update({
+      const updated = await prisma4.m_party.update({
         where: { party_id: existing.party_id },
         data: {
           sync_status: "SYNCED",
@@ -25531,25 +26212,21 @@ var PartiesController = class {
       return sendError(res, err.message, 500);
     }
   };
-  /**
-   * GET /parties/:partyId/contacts
-   * Get party contacts
-   */
   getContacts = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
-      const party2 = await prisma5.m_party.findFirst({
+      const party2 = await prisma4.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { party_id: numId }
       });
       if (!party2) {
         return res.status(404).json({ error: "Party not found" });
       }
-      const contacts = await prisma5.m_party_contact.findMany({
+      const contacts = await prisma4.m_party_contact.findMany({
         where: { party_id: party2.party_id },
         orderBy: { is_primary: "desc" }
       });
@@ -25567,20 +26244,16 @@ var PartiesController = class {
       return sendError(res, err.message, 500);
     }
   };
-  /**
-   * PUT /parties/:partyId/contacts
-   * Replace or add contacts for party
-   */
   updateContacts = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
       const incomingList = Array.isArray(req.body) ? req.body : [req.body];
-      const party2 = await prisma5.m_party.findFirst({
+      const party2 = await prisma4.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { party_id: numId }
       });
       if (!party2) {
@@ -25588,7 +26261,7 @@ var PartiesController = class {
       }
       for (const c of incomingList) {
         if (c.contactId) {
-          await prisma5.m_party_contact.update({
+          await prisma4.m_party_contact.update({
             where: { party_contact_id: Number(c.contactId) },
             data: {
               contact_name: c.fullName || c.contactName,
@@ -25600,7 +26273,7 @@ var PartiesController = class {
             }
           });
         } else {
-          await prisma5.m_party_contact.create({
+          await prisma4.m_party_contact.create({
             data: {
               party_id: party2.party_id,
               contact_name: c.fullName || c.contactName || "New Contact",
@@ -25613,7 +26286,7 @@ var PartiesController = class {
           });
         }
       }
-      const updated = await prisma5.m_party_contact.findMany({
+      const updated = await prisma4.m_party_contact.findMany({
         where: { party_id: party2.party_id }
       });
       const items = updated.map((c) => ({
@@ -25635,14 +26308,14 @@ var PartiesController = class {
    * Patch single contact
    */
   patchContact = async (req, res) => {
-    const prisma5 = getPrisma();
-    if (!prisma5) {
+    const prisma4 = getPrisma();
+    if (!prisma4) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const contactId = parseInt(req.params.contactId, 10);
       const b = req.body;
-      const updated = await prisma5.m_party_contact.update({
+      const updated = await prisma4.m_party_contact.update({
         where: { party_contact_id: contactId },
         data: {
           ...b.fullName || b.contactName ? { contact_name: b.fullName || b.contactName } : {},
@@ -25684,7 +26357,7 @@ router9.post(
   asyncHandler(partiesController.createParty)
 );
 router9.post(
-  "/parties:provisional",
+  ["/parties:provisional", "/parties/provisional"],
   requireSite(true),
   requirePermission("masters.local.edit", "DO"),
   asyncHandler(partiesController.createProvisional)
@@ -25892,13 +26565,13 @@ var searchController = {
       if (!q || q.length < 2) {
         return res.json({ query: q, groups: [], results: [], total: 0 });
       }
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
           const normQ = q.replace(/[\s-]/g, "");
-          const [units, visits2, consignments2, parties2, appointments2, invoices2] = await Promise.all([
+          const [units, visits2, consignments2, parties2, appointments3, invoices3] = await Promise.all([
             // 1. Cargo Units & Stays
-            prisma5.cargo_unit.findMany({
+            prisma4.cargo_unit.findMany({
               where: {
                 OR: [
                   { unit_no: { contains: q } },
@@ -25917,7 +26590,7 @@ var searchController = {
               take: 6
             }),
             // 2. Truck Visits
-            prisma5.truck_visit.findMany({
+            prisma4.truck_visit.findMany({
               where: {
                 OR: [
                   { visit_no: { contains: q } },
@@ -25936,7 +26609,7 @@ var searchController = {
               take: 5
             }),
             // 3. Consignments / BLs
-            prisma5.consignment.findMany({
+            prisma4.consignment.findMany({
               where: {
                 OR: [
                   { ref_no: { contains: q } },
@@ -25946,7 +26619,7 @@ var searchController = {
               take: 5
             }),
             // 4. Customers & Parties
-            prisma5.m_party.findMany({
+            prisma4.m_party.findMany({
               where: {
                 OR: [
                   { party_name: { contains: q } },
@@ -25957,7 +26630,7 @@ var searchController = {
               take: 5
             }),
             // 5. Appointments
-            prisma5.appointment.findMany({
+            prisma4.appointment.findMany({
               where: {
                 OR: [
                   { appointment_no: { contains: q } }
@@ -25966,7 +26639,7 @@ var searchController = {
               take: 5
             }),
             // 6. Invoices
-            prisma5.invoice.findMany({
+            prisma4.invoice.findMany({
               where: {
                 invoice_no: { contains: q }
               },
@@ -26037,11 +26710,11 @@ var searchController = {
               }))
             });
           }
-          if (appointments2 && appointments2.length > 0) {
+          if (appointments3 && appointments3.length > 0) {
             groups.push({
               entity: "APPOINTMENT",
               label: "Appointments",
-              hits: appointments2.map((a) => ({
+              hits: appointments3.map((a) => ({
                 id: Number(a.appointment_id),
                 title: a.appointment_no,
                 subtitle: `Slot: ${a.slot_start?.toLocaleTimeString?.() || ""}`,
@@ -26051,11 +26724,11 @@ var searchController = {
               }))
             });
           }
-          if (invoices2 && invoices2.length > 0) {
+          if (invoices3 && invoices3.length > 0) {
             groups.push({
               entity: "INVOICE",
               label: "Invoices",
-              hits: invoices2.map((inv) => ({
+              hits: invoices3.map((inv) => ({
                 id: Number(inv.invoice_id),
                 title: inv.invoice_no,
                 subtitle: `Amount: ${inv.total_amount ? `$${inv.total_amount}` : "\u2014"}`,
@@ -26100,10 +26773,10 @@ var import_express22 = require("express");
 var notificationsController = {
   getInbox: async (req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const dbNotifs = await prisma5.notification.findMany({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const dbNotifs = await prisma4.notification.findMany({
             orderBy: { notification_id: "desc" },
             take: 50
           });
@@ -26169,10 +26842,10 @@ var notificationsController = {
   markRead: async (req, res) => {
     try {
       const notificationId = req.params.notificationId || req.params.id;
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5 && notificationId) {
-          const updated = await prisma5.notification.update({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4 && notificationId) {
+          const updated = await prisma4.notification.update({
             where: { notification_id: BigInt(notificationId) },
             data: {
               read_at: /* @__PURE__ */ new Date(),
@@ -26194,10 +26867,10 @@ var notificationsController = {
   },
   markAllRead: async (_req, res) => {
     try {
-      if (isDbLive()) {
-        const prisma5 = getPrisma();
-        if (prisma5) {
-          const result = await prisma5.notification.updateMany({
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const result = await prisma4.notification.updateMany({
             where: { read_at: null },
             data: {
               read_at: /* @__PURE__ */ new Date(),

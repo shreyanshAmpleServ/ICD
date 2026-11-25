@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../../db/prisma';
+import { getPrisma} from '../../../db/prisma';
 
 export const customerPortalController = {
   getOverview: async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const totalConsignments = await prisma.consignments.count();

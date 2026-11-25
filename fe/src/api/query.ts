@@ -105,9 +105,9 @@ function resolveEndpoint(key: QueryKey): string | null {
     case 'kpis':
       return '/kpis/tiles';
     case 'forecast-occ':
-      return '/forecasts/occupancy';
+      return param ? `/forecasts/occupancy?siteId=${param}${key[2] ? `&block=${key[2]}` : ''}` : '/forecasts/occupancy';
     case 'forecast-dwell':
-      return '/predictions/dwell';
+      return param ? `/predictions/dwell?siteId=${param}` : '/predictions/dwell';
     case 'inbox':
       return '/notifications/inbox';
     case 'service-requests':
@@ -212,9 +212,17 @@ export function useQ<T>(key: QueryKey, fn: () => Promise<T>) {
         try {
           const res = await api.get<any>(endpoint);
           
-          // Unpack paginated collection: { items: [...] }
-          if (res && typeof res === 'object' && Array.isArray(res.items)) {
-            return res.items as T;
+          // Unpack paginated collection: { items: [...] } or { reports: [...] }
+          if (res && typeof res === 'object') {
+            if (Array.isArray(res.items)) {
+              return res.items as T;
+            }
+            if (Array.isArray(res.reports)) {
+              return res.reports as T;
+            }
+            if (Array.isArray(res.data)) {
+              return res.data as T;
+            }
           }
 
           // Plain array response

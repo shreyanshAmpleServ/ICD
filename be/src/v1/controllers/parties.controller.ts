@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getPrisma, isDbLive } from "../../db/prisma";
+import { getPrisma } from "../../db/prisma";
 import { parties as seedParties } from "../../data/core";
 import {
   parsePaginationParams,
@@ -11,38 +11,41 @@ import {
 } from "../../utils";
 
 // Resilient in-memory store initialized with seed parties
-const inMemoryParties: any[] = JSON.parse(JSON.stringify(seedParties)).map((p: any) => ({
-  partyId: p.partyId,
-  partyCode: p.partyCode,
-  partyName: p.partyName,
-  shortName: p.shortName || null,
-  roles: Array.isArray(p.roles) && p.roles.length > 0 ? p.roles : ["CUSTOMER"],
-  countryCode: p.countryCode || "TZ",
-  city: p.city || "Dar es Salaam",
-  phone: p.phone || "+255 22 211 0401",
-  email: p.email || `${p.partyCode.toLowerCase()}@icd.example`,
-  creditStatus: p.creditStatus || "CASH",
-  creditLimit: p.creditLimit || "0.00",
-  creditCurrency: p.creditCurrency || "USD",
-  defaultCurrency: p.defaultCurrency || "USD",
-  vatNo: p.vatNo || null,
-  taxId: p.taxId || null,
-  disbursementService: Boolean(p.disbursementService),
-  source: p.source || "NG",
-  syncStatus: p.syncStatus || "SYNCED",
-  ngRefId: p.ngRefId || null,
-  isActive: p.isActive !== false,
-  logInst: 1,
-  openUnits: p.openUnits || 0,
-  contacts: (p.contacts || []).map((c: any, idx: number) => ({
-    contactId: c.contactId || idx + 1,
-    fullName: c.fullName || "Operations Contact",
-    role: c.role || "OPERATIONS",
-    email: c.email || "",
-    phone: c.phone || "",
-    isPrimary: c.isPrimary ?? true,
-  })),
-}));
+const inMemoryParties: any[] = JSON.parse(JSON.stringify(seedParties)).map(
+  (p: any) => ({
+    partyId: p.partyId,
+    partyCode: p.partyCode,
+    partyName: p.partyName,
+    shortName: p.shortName || null,
+    roles:
+      Array.isArray(p.roles) && p.roles.length > 0 ? p.roles : ["CUSTOMER"],
+    countryCode: p.countryCode || "TZ",
+    city: p.city || "Dar es Salaam",
+    phone: p.phone || "+255 22 211 0401",
+    email: p.email || `${p.partyCode.toLowerCase()}@icd.example`,
+    creditStatus: p.creditStatus || "CASH",
+    creditLimit: p.creditLimit || "0.00",
+    creditCurrency: p.creditCurrency || "USD",
+    defaultCurrency: p.defaultCurrency || "USD",
+    vatNo: p.vatNo || null,
+    taxId: p.taxId || null,
+    disbursementService: Boolean(p.disbursementService),
+    source: p.source || "NG",
+    syncStatus: p.syncStatus || "SYNCED",
+    ngRefId: p.ngRefId || null,
+    isActive: p.isActive !== false,
+    logInst: 1,
+    openUnits: p.openUnits || 0,
+    contacts: (p.contacts || []).map((c: any, idx: number) => ({
+      contactId: c.contactId || idx + 1,
+      fullName: c.fullName || "Operations Contact",
+      role: c.role || "OPERATIONS",
+      email: c.email || "",
+      phone: c.phone || "",
+      isPrimary: c.isPrimary ?? true,
+    })),
+  }),
+);
 
 export class PartiesController {
   public getParties = async (req: Request, res: Response) => {
@@ -52,18 +55,24 @@ export class PartiesController {
       let items: any[] = [];
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         try {
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Connection timeout")), 1200)
+            setTimeout(() => reject(new Error("Connection timeout")), 1200),
           );
 
           const queryPromise = prisma.m_party.findMany({
             where: {
-              ...(isActive !== undefined ? { is_active: isActive === "true" } : {}),
+              ...(isActive !== undefined
+                ? { is_active: isActive === "true" }
+                : {}),
               ...(source ? { source: String(source).toUpperCase() } : {}),
-              ...(syncStatus ? { sync_status: String(syncStatus).toUpperCase() } : {}),
-              ...(creditStatus ? { credit_status: String(creditStatus).toUpperCase() } : {}),
+              ...(syncStatus
+                ? { sync_status: String(syncStatus).toUpperCase() }
+                : {}),
+              ...(creditStatus
+                ? { credit_status: String(creditStatus).toUpperCase() }
+                : {}),
             },
             include: {
               m_party_m_party_role: true,
@@ -72,11 +81,16 @@ export class PartiesController {
             orderBy: { party_id: "asc" },
           });
 
-          const dbParties = (await Promise.race([queryPromise, timeoutPromise])) as any[];
+          const dbParties = (await Promise.race([
+            queryPromise,
+            timeoutPromise,
+          ])) as any[];
 
           if (dbParties && dbParties.length > 0) {
             items = dbParties.map((p: any) => {
-              const roles = (p.m_party_m_party_role || []).map((r: any) => r.role_code);
+              const roles = (p.m_party_m_party_role || []).map(
+                (r: any) => r.role_code,
+              );
               return {
                 partyId: Number(p.party_id),
                 partyCode: p.party_code,
@@ -117,22 +131,24 @@ export class PartiesController {
       }
 
       if (items.length === 0) {
-        console.log('[DEBUG getParties] Falling back to inMemoryParties, count:', inMemoryParties.length);
+        console.log(
+          "[DEBUG getParties] Falling back to inMemoryParties, count:",
+          inMemoryParties.length,
+        );
         items = inMemoryParties;
       }
 
-      // 4. In-memory filters for role and q
       if (role) {
         const roleUpper = String(role).toUpperCase();
-        items = items.filter((p: PartyListItem) => p.roles.includes(roleUpper));
+        items = items.filter((p: any) => p.roles?.includes(roleUpper));
       }
 
       if (q) {
         const query = String(q).toLowerCase();
         items = items.filter(
-          (p: PartyListItem) =>
-            p.partyName.toLowerCase().includes(query) ||
-            p.partyCode.toLowerCase().includes(query) ||
+          (p: any) =>
+            p.partyName?.toLowerCase().includes(query) ||
+            p.partyCode?.toLowerCase().includes(query) ||
             Boolean(p.taxId && p.taxId.toLowerCase().includes(query)),
         );
       }
@@ -142,7 +158,6 @@ export class PartiesController {
         return res.json(items);
       }
 
-      // Standard OpenAPI payload
       return res.json({
         items,
         total: items.length,
@@ -154,10 +169,6 @@ export class PartiesController {
     }
   };
 
-  /**
-   * GET /parties/:partyId
-   * Get party details by ID or code
-   */
   public getPartyDetail = async (req: Request, res: Response) => {
     const prisma = getPrisma();
     if (!prisma) {
@@ -223,10 +234,6 @@ export class PartiesController {
     }
   };
 
-  /**
-   * POST /parties
-   * Create a new party
-   */
   public createParty = async (req: Request, res: Response) => {
     const prisma = getPrisma();
     if (!prisma) {
@@ -263,7 +270,6 @@ export class PartiesController {
         },
       });
 
-      // Add roles
       for (const r of roles) {
         await prisma.m_party_role.create({
           data: {
@@ -315,10 +321,6 @@ export class PartiesController {
     }
   };
 
-  /**
-   * PATCH /parties/:partyId
-   * Update party
-   */
   public updateParty = async (req: Request, res: Response) => {
     const prisma = getPrisma();
     if (!prisma) {
@@ -373,77 +375,76 @@ export class PartiesController {
     }
   };
 
-  /**
-   * POST /parties:provisional
-   * Create provisional party
-   */
   public createProvisional = async (req: Request, res: Response) => {
     const prisma = getPrisma();
-      if (!prisma || !isDbLive()) {
-        const b = req.body;
-        const partyId = Date.now();
-        const partyCode = b.partyCode || `PROV-${Date.now().toString().slice(-6)}`;
-        const provParty = {
-          partyId,
-          partyCode,
-          partyName: b.partyName || "Provisional Party",
-          roles: Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER", "CONSIGNEE"],
+    if (!prisma) {
+      return sendError(res, "Database connection not available", 500);
+    }
+
+    try {
+      const b = req.body;
+      const partyCode = b.partyCode?.trim() || `PROV-${Math.floor(100000 + Math.random() * 900000)}`;
+      const partyName = b.partyName?.trim() || "Provisional Party";
+      const roles: string[] =
+        Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER"];
+
+      const created = await prisma.m_party.create({
+        data: {
+          party_code: partyCode,
+          party_name: partyName,
+          short_name: b.shortName?.trim() || null,
+          tax_id: b.taxId?.trim() || b.taxPin?.trim() || null,
+          country_code: b.countryCode?.trim() || "TZ",
+          city: b.city?.trim() || "Dar es Salaam",
+          phone: b.phone?.trim() || null,
+          email: b.email?.trim() || null,
           source: "LOCAL",
-          syncStatus: "PROVISIONAL",
-          isActive: true,
-        };
-        return sendCreated(res, provParty);
-      }
+          sync_status: "PROVISIONAL",
+          credit_status: "CASH",
+          is_active: true,
+          createdby: (req as any).userSub || "system",
+        },
+      });
 
-      try {
-        const b = req.body;
-        const partyCode = b.partyCode || `PROV-${Date.now()}`;
-        const roles: string[] =
-          Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER"];
-
-        const created = await prisma.m_party.create({
+      for (const r of roles) {
+        await prisma.m_party_role.create({
           data: {
-            party_code: partyCode,
-            party_name: b.partyName || "Provisional Party",
-            country_code: b.countryCode || "TZ",
-            city: b.city || "Dar es Salaam",
-            source: "LOCAL",
-            sync_status: "PROVISIONAL",
-            credit_status: "CASH",
-            is_active: true,
+            party_id: created.party_id,
+            role_code: r.toUpperCase(),
             createdby: (req as any).userSub || "system",
           },
         });
-
-        for (const r of roles) {
-          await prisma.m_party_role.create({
-            data: {
-              party_id: created.party_id,
-              role_code: r.toUpperCase(),
-              createdby: (req as any).userSub || "system",
-            },
-          });
-        }
-
-        return sendCreated(res, {
-          partyId: Number(created.party_id),
-          partyCode: created.party_code,
-          partyName: created.party_name,
-          roles,
-          source: "LOCAL",
-          syncStatus: "PROVISIONAL",
-          isActive: true,
-        });
-      } catch (err: any) {
-        console.error("[PartiesController.createProvisional] Error:", err);
-        return sendError(res, err.message, 500);
       }
-    };
 
-  /**
-   * POST /parties/:partyId/match & /parties/:partyId:match
-   * Match provisional party with master NG record
-   */
+      return sendCreated(res, {
+        partyId: Number(created.party_id),
+        partyCode: created.party_code,
+        partyName: created.party_name,
+        shortName: created.short_name,
+        roles,
+        countryCode: created.country_code,
+        city: created.city,
+        phone: created.phone,
+        email: created.email,
+        creditStatus: created.credit_status,
+        creditLimit: "0.00",
+        creditCurrency: "USD",
+        defaultCurrency: created.default_currency || "USD",
+        vatNo: created.vat_no,
+        taxId: created.tax_id,
+        disbursementService: false,
+        source: "LOCAL",
+        syncStatus: "PROVISIONAL",
+        isActive: true,
+        openUnits: 0,
+        contacts: [],
+      });
+    } catch (err: any) {
+      console.error("[PartiesController.createProvisional] Error:", err);
+      return sendError(res, err.message, 500);
+    }
+  };
+
   public matchParty = async (req: Request, res: Response) => {
     const prisma = getPrisma();
     if (!prisma) {
@@ -493,10 +494,6 @@ export class PartiesController {
     }
   };
 
-  /**
-   * GET /parties/:partyId/contacts
-   * Get party contacts
-   */
   public getContacts = async (req: Request, res: Response) => {
     const prisma = getPrisma();
     if (!prisma) {
@@ -538,10 +535,6 @@ export class PartiesController {
     }
   };
 
-  /**
-   * PUT /parties/:partyId/contacts
-   * Replace or add contacts for party
-   */
   public updateContacts = async (req: Request, res: Response) => {
     const prisma = getPrisma();
     if (!prisma) {

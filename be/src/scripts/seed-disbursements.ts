@@ -101,7 +101,7 @@ export async function seedDisbursements() {
     14: partyCodeToId['KBS'],
   };
 
-  const resolvePayeeId = (payeeName: string, payeePartyId?: number): number => {
+  const resolvePayeeId = (payeeName: string, payeePartyId?: number | null): number => {
     if (payeePartyId && mockPartyIdMap[payeePartyId]) return mockPartyIdMap[payeePartyId];
     if (payeeName.toLowerCase().includes('port authority')) return partyCodeToId['PA_DSM'];
     if (payeeName.toLowerCase().includes('tra customs')) return partyCodeToId['TRA_CUST'];
@@ -239,6 +239,10 @@ export async function seedDisbursements() {
           });
           const nextLineNo = (maxLine?.line_no ?? 0) + 1;
 
+          const baseAmount = parseFloat(d.amountPaid) + parseFloat(d.handlingFee || '0');
+          const taxAmt = baseAmount * 0.18;
+          const totalAmt = baseAmount + taxAmt;
+
           await prisma.invoice_line.create({
             data: {
               invoice_id: invId,
@@ -247,15 +251,13 @@ export async function seedDisbursements() {
               disbursement_id: actualDisbId,
               charge_code_id: chargeCodeId,
               description: `${d.description} (Rebill)`,
-              currency: d.currency,
-              unit_price: parseFloat(d.amountPaid) + parseFloat(d.handlingFee || '0'),
               quantity: 1,
-              tax_code: 'VAT18',
+              uom: 'ACT',
+              unit_rate: baseAmount,
+              amount: baseAmount,
               tax_rate_pct: 18.0,
-              amount_ex_tax: parseFloat(d.amountPaid) + parseFloat(d.handlingFee || '0'),
-              tax_amount: (parseFloat(d.amountPaid) + parseFloat(d.handlingFee || '0')) * 0.18,
-              total_amount: (parseFloat(d.amountPaid) + parseFloat(d.handlingFee || '0')) * 1.18,
-              is_rebill: true,
+              tax_amount: taxAmt,
+              line_total: totalAmt,
               createdby: 'system',
             },
           });

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { moveOrders as fallbackMoveOrders, equipmentForMoves as fallbackEquipment } from '../../../data/ops';
-import { getPrisma, isDbLive } from '../../../db/prisma';
+import { getPrisma } from '../../../db/prisma';
 
 // Valid check constraints on ICD_New database
 const VALID_MOVE_KINDS = ['PICK_FOR_VISIT', 'FROM_ACTIVITY', 'TO_ACTIVITY', 'RESHUFFLE', 'RELOCATE', 'PLACE'] as const;
@@ -44,12 +44,18 @@ export const yardMovesController = {
       const siteId = parseSiteId(req.query.siteId || req.headers['x-site-id'] || (req as any).siteId);
       const { status, equipmentCode } = req.query;
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const whereClause: any = {};
           if (siteId) whereClause.site_id = siteId;
-          if (status && typeof status === 'string') whereClause.status = status;
+          if (status && typeof status === 'string') {
+            if (status.toUpperCase() === 'COMPLETED' || status.toUpperCase() === 'DONE') {
+              whereClause.status = { in: ['DONE', 'COMPLETED'] };
+            } else {
+              whereClause.status = status;
+            }
+          }
 
           const dbMoves = await prisma.move_order.findMany({
             where: whereClause,
@@ -165,7 +171,7 @@ export const yardMovesController = {
 
       const normalizedKind = normalizeMoveKind(moveKind || moveType);
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const newOrder = await prisma.move_order.create({
@@ -252,7 +258,7 @@ export const yardMovesController = {
         return res.status(400).json({ success: false, message: 'moveOrderId is required' });
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const updated = await prisma.move_order.update({
@@ -291,7 +297,7 @@ export const yardMovesController = {
         return res.status(400).json({ success: false, message: 'moveOrderId is required' });
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const existing = await prisma.move_order.findUnique({
@@ -307,7 +313,7 @@ export const yardMovesController = {
           const updated = await prisma.move_order.update({
             where: { move_order_id: BigInt(moveOrderId) },
             data: {
-              status: 'COMPLETED',
+              status: 'DONE',
               completed_at: new Date(),
               to_location_id: targetLocationId,
               updatedby: (req as any).user?.sub || 'system',
@@ -363,7 +369,7 @@ export const yardMovesController = {
         return res.status(400).json({ success: false, message: 'moveOrderId is required' });
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           let resolvedEquipmentId = equipmentId ? Number(equipmentId) : undefined;
@@ -426,7 +432,7 @@ export const yardMovesController = {
         return res.status(400).json({ success: false, message: 'moveId is required' });
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const updated = await prisma.move_order.update({
@@ -462,7 +468,7 @@ export const yardMovesController = {
     try {
       const siteId = parseSiteId(req.query.siteId || req.headers['x-site-id'] || (req as any).siteId);
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const whereClause: any = { is_active: true };
@@ -510,7 +516,7 @@ export const yardMovesController = {
     try {
       const siteId = parseSiteId(req.query.siteId || req.headers['x-site-id'] || (req as any).siteId);
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const whereClause: any = { is_active: true };
@@ -576,7 +582,7 @@ export const yardMovesController = {
    */
   getOperators: async (_req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const users = await prisma.app_user.findMany({

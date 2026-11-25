@@ -1,13 +1,12 @@
 import { Router } from "express";
-import { getPrisma, isDbLive } from "../../db/prisma";
+import { getPrisma} from "../../db/prisma";
 import { cargoService } from "../cargo/cargo.service";
 import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
 import {
   occupancyForecast,
   dwellPredictions,
-  suggestionLog,
-} from "../../data/insight";
+  suggestionLog } from "../../data/insight";
 import { dgLines, segregationWarnings, IMO_CLASSES } from "../../data/cargo";
 import { integrationMessages, models } from "../../data/admin";
 
@@ -152,7 +151,7 @@ router.get(
   requirePermission("appointment.book"),
   async (req, res) => {
     let items: any[] = appointments;
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -338,7 +337,7 @@ router.get(
   requirePermission("cfs.job.manage"),
   async (req, res) => {
     let items: any[] = jobs;
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -652,7 +651,7 @@ router.get(
   requirePermission("reefer.manage"),
   async (req, res) => {
     let items: any[] = reefers;
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {

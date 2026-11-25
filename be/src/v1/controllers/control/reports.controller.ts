@@ -1,19 +1,19 @@
 import { Request, Response } from 'express';
+import { reports } from '../../../data/insight';
 
 export const controlReportsController = {
   getOperationalReports: async (_req: Request, res: Response) => {
     try {
       res.json({
-        reports: [
-          { reportId: 'REP-001', title: 'Daily Gate Throughput', category: 'GATE', generatedAt: new Date().toISOString() },
-          { reportId: 'REP-002', title: 'Yard Dwell Time by Shipping Line', category: 'YARD', generatedAt: new Date().toISOString() },
-          { reportId: 'REP-003', title: 'Customs Examination Turnaround', category: 'CARGO', generatedAt: new Date().toISOString() },
-          { reportId: 'REP-004', title: 'Daily Revenue & Cashier Closeout', category: 'BILLING', generatedAt: new Date().toISOString() },
-        ],
+        items: reports,
+        reports,
+        total: reports.length,
+        nextCursor: null,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   },
 };
+
 

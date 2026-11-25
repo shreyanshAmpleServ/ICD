@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { occupancyForecast, dwellPredictions } from '../../../data/insight';
 
 export const controlForecastsController = {
   getForecasts: async (_req: Request, res: Response) => {
@@ -19,5 +20,27 @@ export const controlForecastsController = {
       res.status(500).json({ error: err.message });
     }
   },
+
+  getOccupancyForecast: async (req: Request, res: Response) => {
+    try {
+      const siteId = Number(req.query.siteId || (req as any).siteId) || 1;
+      const block = String(req.query.block || 'ALL');
+      const items = occupancyForecast(siteId, block);
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  getDwellPredictions: async (req: Request, res: Response) => {
+    try {
+      const siteId = Number(req.query.siteId || (req as any).siteId) || 1;
+      const items = dwellPredictions(siteId);
+      res.json({ items, total: items.length, nextCursor: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
 };
+
 

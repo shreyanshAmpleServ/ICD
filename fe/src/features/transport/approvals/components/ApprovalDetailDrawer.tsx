@@ -7,6 +7,7 @@ import {
 import { at } from '@/mock/gen';
 import { APPROVAL_LIMITS, entityLink, hoursUntil, type Apr } from '@/mock/cargo';
 import { Countdown } from '@/features/container-management/shared';
+import { approvalsApi } from '../api';
 
 const permLabel = (p: string) => APPROVAL_LIMITS[p]?.label ?? p;
 
@@ -23,7 +24,7 @@ export function ApprovalDetailDrawer({
 }) {
   const toast = useToast();
   const [note, setNote] = useState('');
-  const [tried, setTried] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const pending = a.status === 'PENDING';
   const [label, to] = entityLink(a.entityName, a.entityId);
   const lim = APPROVAL_LIMITS[a.permissionCode];
@@ -46,20 +47,37 @@ export function ApprovalDetailDrawer({
     })),
   ];
 
-  const decide = (d: 'APPROVE' | 'REJECT') => {
-    setTried(true);
-    if (d === 'REJECT' && !note.trim()) return;
-    const step = { levelNo: lvl, decision: d, decidedBy: 'You', note: note || undefined, decidedAt: at(0) };
-    const done = d === 'REJECT' || lvl >= (a.levelsRequired ?? 1);
-    onDecide({
-      steps: [...(a.steps ?? []), step],
-      currentLevel: lvl,
-      status: done ? (d === 'APPROVE' ? 'APPROVED' : 'REJECTED') : 'PENDING',
-      canDecide: false,
-      decidedAt: done ? at(0) : undefined,
-    });
-    toast(d === 'REJECT' ? 'Request rejected' : done ? 'Request approved' : `Level ${lvl} approved: sent to level ${lvl + 1}`);
-    onClose();
+  const decide = async (d: 'APPROVE' | 'REJECT') => {
+    const decisionNote = note.trim() || (d === 'REJECT' ? 'Rejected by approver' : undefined);
+    try {
+      setSubmitting(true);
+      const step = { levelNo: lvl, decision: d, decidedBy: 'You', note: decisionNote, decidedAt: at(0) };
+      const done = d === 'REJECT' || lvl >= (a.levelsRequired ?? 1);
+
+      const targetId = a.approvalRequestId || (a as any).approvalId || a.requestNo;
+      if (targetId) {
+        await approvalsApi.actOnApproval(targetId, {
+          action: d,
+          comments: decisionNote,
+          reason: decisionNote,
+        });
+      }
+
+      onDecide({
+        steps: [...(a.steps ?? []), step],
+        currentLevel: lvl,
+        status: done ? (d === 'APPROVE' ? 'APPROVED' : 'REJECTED') : 'PENDING',
+        canDecide: false,
+        decidedAt: done ? at(0) : undefined,
+      });
+      toast(d === 'REJECT' ? 'Request rejected and saved to database' : done ? 'Request approved and saved to database' : `Level ${lvl} approved: sent to level ${lvl + 1}`);
+      onClose();
+    } catch (err: any) {
+      console.error('Failed to act on approval:', err);
+      toast('Failed to save decision: ' + (err.message || 'Error'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -77,7 +95,7 @@ export function ApprovalDetailDrawer({
               icon={<X />}
               perm={a.permissionCode}
               level="APPR"
-              disabled={!!why}
+              disabled={!!why || submitting}
               title={why ?? undefined}
               onClick={() => decide('REJECT')}
             >
@@ -88,7 +106,8 @@ export function ApprovalDetailDrawer({
               icon={<Check />}
               perm={a.permissionCode}
               level="APPR"
-              disabled={!!why}
+              disabled={!!why || submitting}
+              loading={submitting}
               title={why ?? undefined}
               onClick={() => decide('APPROVE')}
             >
@@ -156,11 +175,15 @@ export function ApprovalDetailDrawer({
         </Panel>
         {pending && !why && (
           <Field
-            label="Note"
-            hint="Required when rejecting; the requester sees it"
-            error={tried && !note.trim() && 'Say why you reject, so they can fix it'}
+            label="Decision note"
+            hint="Optional: the requester will see this note on their request history"
           >
-            <Textarea value={note} onChange={(e) => setNote(e.target.value)} />
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Add an approval or rejection reason..."
+              rows={2}
+            />
           </Field>
         )}
         {pending && a.mine && (

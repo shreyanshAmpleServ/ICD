@@ -19,16 +19,14 @@ import {
   rates,
   fx,
   rateStay,
-  TODAY,
-} from "../../data/money";
+  TODAY } from "../../data/money";
 import {
   glSettings,
   taxCodes,
   chargeCodes,
-  paymentChannels,
-} from "../../data/admin";
+  paymentChannels } from "../../data/admin";
 import { allStays } from "../../data/core";
-import { getPrisma, isDbLive } from "../../db/prisma";
+import { getPrisma} from "../../db/prisma";
 
 const router = Router();
 

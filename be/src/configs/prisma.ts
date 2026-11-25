@@ -70,16 +70,13 @@ export async function initPrisma(): Promise<{
     );
     return { prisma, isConnected: true };
   } catch (err: any) {
-    console.warn(
+    console.error(
       "[MSSQL / Prisma] Unable to reach SQL Server (" +
         (err.message || "Connection refused") +
         ").",
     );
-    console.warn(
-      "[MSSQL / Prisma] Dynamic fallback in-memory store is active for development & UI testing.",
-    );
     isMssqlConnected = false;
-    return { prisma: null, isConnected: false };
+    throw err;
   }
 }
 

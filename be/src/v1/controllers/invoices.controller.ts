@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../db/prisma';
+import { getPrisma} from '../../db/prisma';
 import { invoices as mockInvoices, invoice as getMockInvoice } from '../../data/money';
 import { party as getMockParty, consignment as getMockConsignment } from '../../data/core';
 
@@ -76,7 +76,7 @@ export class InvoicesController {
 
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         const whereClause: any = {};
         if (siteId) whereClause.site_id = siteId;
         if (kind && kind !== 'ALL') whereClause.doc_kind = kind;
@@ -208,7 +208,7 @@ export class InvoicesController {
       const numId = parseInt(invoiceId, 10);
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         const inv = await prisma.invoice.findFirst({
           where: {
             OR: [
@@ -327,7 +327,7 @@ export class InvoicesController {
 
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         const created = await prisma.invoice.create({
           data: {
             company_id: 1,
@@ -432,7 +432,7 @@ export class InvoicesController {
       const proformaId = Number(req.params.invoiceId || req.body.proformaId);
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         const prof = await prisma.invoice.findUnique({
           where: { invoice_id: BigInt(proformaId) },
           include: { invoice_invoice_line: true },
@@ -555,7 +555,7 @@ export class InvoicesController {
       const numId = parseInt(invoiceId, 10);
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         const updated = await prisma.invoice.update({
           where: { invoice_id: BigInt(numId) },
           data: {
@@ -592,7 +592,7 @@ export class InvoicesController {
       const numId = parseInt(invoiceId, 10);
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         const receipt = await prisma.fiscal_receipt.upsert({
           where: { invoice_id: BigInt(numId) },
           create: {
@@ -653,7 +653,7 @@ export class InvoicesController {
 
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         const orig = await prisma.invoice.findUnique({
           where: { invoice_id: BigInt(origId) },
         });
@@ -756,7 +756,7 @@ export class InvoicesController {
       const numId = parseInt(invoiceId, 10);
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         const cancelled = await prisma.invoice.update({
           where: { invoice_id: BigInt(numId) },
           data: {

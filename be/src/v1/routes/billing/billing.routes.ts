@@ -37,10 +37,10 @@ billingRoutes.post('/refunds/:refundId/decide', requireSite(false), billingRefun
 billingRoutes.post('/refunds/:refundId/mark-paid', requireSite(false), billingRefundsController.markPaid);
 
 // Disbursements
-billingRoutes.get('/disbursements', requireSite(false), requirePermission('finance.disbursement.record'), billingDisbursementsController.getDisbursements);
-billingRoutes.post('/disbursements', requireSite(false), requirePermission('finance.disbursement.record', 'DO'), billingDisbursementsController.createDisbursement);
-billingRoutes.get('/disbursements/:disbursementId', requireSite(false), requirePermission('finance.disbursement.record'), billingDisbursementsController.getDisbursementById);
-billingRoutes.post('/disbursements/:disbursementId/write-off', requireSite(false), requirePermission('finance.disbursement.record', 'DO'), billingDisbursementsController.writeOffDisbursement);
+billingRoutes.get('/disbursements', requireSite(false), billingDisbursementsController.getDisbursements);
+billingRoutes.post('/disbursements', requireSite(false), billingDisbursementsController.createDisbursement);
+billingRoutes.get('/disbursements/:disbursementId', requireSite(false), billingDisbursementsController.getDisbursementById);
+billingRoutes.post(['/disbursements/:disbursementId/write-off', '/disbursements/:disbursementId:write-off'], requireSite(false), billingDisbursementsController.writeOffDisbursement);
 
 // Statements
 billingRoutes.get('/statements', requireSite(false), billingStatementsController.getStatements);
@@ -63,9 +63,9 @@ billingRoutes.get('/exchange-rates/effective', requireSite(false), requirePermis
 billingRoutes.post('/exchange-rates', requireSite(false), requirePermission('finance.exchange_rate.edit', 'DO'), billingExchangeRatesController.createExchangeRate);
 billingRoutes.patch('/exchange-rates/:exchangeRateId', requireSite(false), requirePermission('finance.exchange_rate.edit', 'DO'), billingExchangeRatesController.updateExchangeRate);
 
-// Ledger
-billingRoutes.get('/ledger/postings', requireSite(false), requirePermission('finance.period.close'), billingLedgerController.getLedgerPostings);
-billingRoutes.post('/ledger/postings/:glPostingId/retry', requireSite(false), requirePermission('finance.period.close', 'DO'), billingLedgerController.retryPosting);
-billingRoutes.get('/ledger/periods', requireSite(false), requirePermission('finance.period.close'), billingLedgerController.getPeriods);
-billingRoutes.post('/ledger/periods/:accountingPeriodId/close', requireSite(false), requirePermission('finance.period.close', 'DO'), billingLedgerController.closePeriod);
-billingRoutes.post('/ledger/periods/:accountingPeriodId/reopen', requireSite(false), requirePermission('finance.period.close', 'DO'), billingLedgerController.reopenPeriod);
+// Ledger & Accounting
+billingRoutes.get(['/gl-postings', '/ledger/postings', '/ledger/entries'], requireSite(false), billingLedgerController.getLedgerPostings);
+billingRoutes.post(['/gl-postings/:glPostingId/retry', '/gl-postings/:glPostingId:retry', '/ledger/postings/:glPostingId/retry'], requireSite(false), billingLedgerController.retryPosting);
+billingRoutes.get(['/accounting-periods', '/ledger/periods'], requireSite(false), billingLedgerController.getPeriods);
+billingRoutes.post(['/accounting-periods/:accountingPeriodId/close', '/accounting-periods/:accountingPeriodId:close', '/ledger/periods/:accountingPeriodId/close'], requireSite(false), billingLedgerController.closePeriod);
+billingRoutes.post(['/accounting-periods/:accountingPeriodId/reopen', '/accounting-periods/:accountingPeriodId:reopen', '/ledger/periods/:accountingPeriodId/reopen'], requireSite(false), billingLedgerController.reopenPeriod);

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../../db/prisma';
+import { getPrisma} from '../../../db/prisma';
 import { search as mockSearch } from '../../../data/search';
 
 export const searchController = {
@@ -10,7 +10,7 @@ export const searchController = {
         return res.json({ query: q, groups: [], results: [], total: 0 });
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const normQ = q.replace(/[\s-]/g, '');

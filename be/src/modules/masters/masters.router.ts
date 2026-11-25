@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
 import { parties, vessels, equipment } from "../../data/core";
-import { getPrisma, isDbLive } from "../../db/prisma";
+import { getPrisma} from "../../db/prisma";
 
 const router = Router();
 
@@ -147,7 +147,7 @@ router.get(
     const { plateNo, q } = req.query;
     let items: any[] = [];
 
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -208,7 +208,7 @@ router.post(
     const cleanPlate = (plateNo || `T ${Math.floor(100 + Math.random() * 900)} ABC`).replace(/\s/g, '').toUpperCase();
     const displayPlate = plateDisplay || plateNo || cleanPlate;
 
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -275,7 +275,7 @@ router.get(
   requirePermission("masters.view"),
   async (req, res) => {
     const id = Number(req.params.truckId);
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -321,7 +321,7 @@ router.patch(
   requirePermission("masters.local.edit", "DO"),
   async (req, res) => {
     const id = Number(req.params.truckId);
-    if (isDbLive() && Number.isFinite(id)) {
+    if (Number.isFinite(id)) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -373,7 +373,7 @@ router.get(
     const { licenceNo, name, q } = req.query;
     let items: any[] = [];
 
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -434,7 +434,7 @@ router.post(
     const lic = licenceNo || `DL-${Date.now().toString().slice(-6)}`;
     const effPartyId = transporterPartyId || carrierPartyId || null;
 
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -500,7 +500,7 @@ router.get(
   requirePermission("masters.view"),
   async (req, res) => {
     const id = Number(req.params.driverId);
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -546,7 +546,7 @@ router.patch(
   requirePermission("masters.local.edit", "DO"),
   async (req, res) => {
     const id = Number(req.params.driverId);
-    if (isDbLive() && Number.isFinite(id)) {
+    if (Number.isFinite(id)) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -591,7 +591,7 @@ router.get(
   requirePermission("masters.view"),
   async (req, res) => {
     let items: any[] = [];
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -629,7 +629,7 @@ router.post(
   requireSite(true),
   requirePermission("masters.local.edit", "DO"),
   async (req, res) => {
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -684,7 +684,7 @@ router.get(
   requirePermission("masters.view"),
   async (req, res) => {
     const id = Number(req.params.vesselId);
-    if (isDbLive() && Number.isFinite(id)) {
+    if (Number.isFinite(id)) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -725,7 +725,7 @@ router.patch(
   requirePermission("masters.local.edit", "DO"),
   async (req, res) => {
     const id = Number(req.params.vesselId);
-    if (isDbLive() && Number.isFinite(id)) {
+    if (Number.isFinite(id)) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -759,7 +759,7 @@ router.get(
   requirePermission("masters.view"),
   async (req, res) => {
     let items: any[] = [];
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -793,7 +793,7 @@ router.post(
   requireSite(true),
   requirePermission("admin.config.manage", "DO"),
   async (req, res) => {
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -870,7 +870,7 @@ router.get(
   requirePermission("masters.view"),
   async (req, res) => {
     let items: any[] = [];
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -904,7 +904,7 @@ router.post(
   requireSite(true),
   requirePermission("admin.config.manage", "DO"),
   async (req, res) => {
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -986,7 +986,7 @@ router.get(
   requirePermission("masters.view"),
   async (req, res) => {
     let items: any[] = [];
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -1022,7 +1022,7 @@ router.post(
   requireSite(false),
   requirePermission("admin.config.manage", "DO"),
   async (req, res) => {
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {

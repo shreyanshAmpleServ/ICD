@@ -22,7 +22,7 @@ router.post(
 );
 
 router.post(
-  '/parties:provisional',
+  ['/parties:provisional', '/parties/provisional'],
   requireSite(true),
   requirePermission('masters.local.edit', 'DO'),
   asyncHandler(partiesController.createProvisional)

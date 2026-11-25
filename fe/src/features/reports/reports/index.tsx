@@ -27,12 +27,21 @@ export function ReportsView() {
   const [log, setLog] = useState<ExportLog[]>(seedLog);
   const { data: all = [] } = useQ(['reports'], () => delay(reports));
 
-  const allowed = all.filter((r) => can(r.permissionCode));
-  const hidden = all.length - allowed.length;
+  const rawList = Array.isArray(all)
+    ? all
+    : Array.isArray((all as any)?.items)
+    ? (all as any).items
+    : Array.isArray((all as any)?.reports)
+    ? (all as any).reports
+    : reports;
+  const reportsList: Report[] = Array.isArray(rawList) ? rawList : reports;
+
+  const allowed = reportsList.filter((r) => can(r?.permissionCode || 'reports.operational'));
+  const hidden = reportsList.length - allowed.length;
   const list = allowed.filter(
     (r) =>
       (group === 'all' || r.group === group) &&
-      (!q || (r.reportName + r.description).toLowerCase().includes(q.toLowerCase()))
+      (!q || ((r.reportName || '') + (r.description || '')).toLowerCase().includes(q.toLowerCase()))
   );
   const groups = REPORT_GROUPS.filter(([g]) => list.some((r) => r.group === g));
 

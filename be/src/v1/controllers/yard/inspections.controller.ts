@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../../configs/prisma';
+import { getPrisma } from '../../../configs/prisma';
 import { sendSuccess, sendCreated, sendError } from '../../../utils';
 import { inspections as seedInspections, Insp } from '../../../data/ops';
 
@@ -17,7 +17,7 @@ export const yardInspectionsController = {
       let items: any[] = [];
 
       // If DB is reported live, attempt query with a 1.2s timeout so pool issues never hang or error
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {
@@ -154,7 +154,7 @@ export const yardInspectionsController = {
       const id = parseInt(req.params.inspectionId || (req.params as any).id, 10);
 
       // Try database if live
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {
@@ -293,7 +293,7 @@ export const yardInspectionsController = {
       inMemoryInspections.unshift(newInsp);
 
       // Async create in DB if live
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           prisma.inspection
@@ -336,7 +336,7 @@ export const yardInspectionsController = {
       }
 
       // Update DB if live
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {
@@ -426,7 +426,7 @@ export const yardInspectionsController = {
       }
 
       // Update DB if live
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           prisma.inspection
@@ -462,7 +462,7 @@ export const yardInspectionsController = {
       }
 
       // Update DB if live
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           prisma.inspection

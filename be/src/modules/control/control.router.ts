@@ -9,20 +9,17 @@ import {
   exceptions,
   holdTypes,
   CONDITIONS,
-  evaluate,
-} from "../../data/control";
+  evaluate } from "../../data/control";
 import {
   exams,
   REF_TYPES,
   exceptionComments,
-  delegations,
-} from "../../data/cargo";
+  delegations } from "../../data/cargo";
 import {
   releaseConditions,
   releaseRules,
   approvalPolicies,
-  exceptionTypes,
-} from "../../data/admin";
+  exceptionTypes } from "../../data/admin";
 import { allStays } from "../../data/core";
 
 const router = Router();
@@ -64,7 +61,7 @@ const commentsStore: Record<string, any[]> = {
   ...exceptionComments,
 };
 
-import { getPrisma, isDbLive } from "../../db/prisma";
+import { getPrisma} from "../../db/prisma";
 import { cargoService } from "../cargo/cargo.service";
 
 // ------------------------------------------------------------------ 1. Customs (Site-scoped)

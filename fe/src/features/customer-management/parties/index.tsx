@@ -9,6 +9,7 @@ import { useQ } from '@/api/query';
 import { allStays, consignments } from '@/mock/core';
 import { balanceOf } from '@/mock/insight';
 import { PartyDetailView } from './components/PartyDetailView';
+import { AddProvisionalPartyDrawer } from './components/AddProvisionalPartyDrawer';
 import { partiesApi } from './api';
 
 export { partiesApi } from './api';
@@ -39,7 +40,8 @@ export function PartiesView() {
   const nav = useNavigate();
   const [q, setQ] = useState('');
   const [role, setRole] = useState<Role>('all');
-  const { data = [], isLoading: partiesLoading } = useQ(['parties'], () => partiesApi.getParties());
+  const [showAddDrawer, setShowAddDrawer] = useState(false);
+  const { data = [], isLoading: partiesLoading, refetch } = useQ(['parties'], () => partiesApi.getParties());
   const counts = useMemo(
     () => new Map(data.map((p: any) => [p.partyId!, p.openUnits ?? openUnits(p.partyId!)])),
     [data]
@@ -58,7 +60,12 @@ export function PartiesView() {
         ms="M0"
         sub="Customers, agents, lines and transporters. Most come from NG; local ones need matching."
         actions={
-          <Button variant="primary" icon={<Plus />} perm="masters.local.edit">
+          <Button
+            variant="primary"
+            icon={<Plus />}
+            perm="masters.local.edit"
+            onClick={() => setShowAddDrawer(true)}
+          >
             Add provisional party
           </Button>
         }
@@ -165,6 +172,13 @@ export function PartiesView() {
           ]}
         />
       </Panel>
+      <AddProvisionalPartyDrawer
+        open={showAddDrawer}
+        onClose={() => setShowAddDrawer(false)}
+        onCreated={() => {
+          refetch();
+        }}
+      />
     </Page>
   );
 }

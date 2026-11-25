@@ -1,9 +1,13 @@
 import { Request, Response } from 'express';
+import { kpiTiles, kpiSeries } from '../../../data/insight';
 
 export const controlKpisController = {
   getKpis: async (_req: Request, res: Response) => {
     try {
       res.json({
+        items: kpiTiles,
+        series: kpiSeries,
+        total: kpiTiles.length,
         gateTurnaroundMinutes: 28.5,
         yardOccupancyPercent: 68.2,
         dwellTimeAvgDays: 4.8,
@@ -23,5 +27,18 @@ export const controlKpisController = {
       res.status(500).json({ error: err.message });
     }
   },
+
+  getKpiSeries: async (_req: Request, res: Response) => {
+    try {
+      res.json({
+        items: kpiSeries,
+        series: kpiSeries,
+        total: Object.keys(kpiSeries).length,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
 };
+
 

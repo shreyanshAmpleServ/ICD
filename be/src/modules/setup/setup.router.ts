@@ -547,8 +547,9 @@ router.get("/visit-types", requireSite(false), requirePermission("masters.view")
     res.json({ items, total: items.length, nextCursor: null });
   });
 
-  router.post("/models/:id:activate", requireSite(false), requirePermission("admin.config.manage", "DO"), async (req, res) => {
-    res.json({ modelVersionId: req.params.id, isActive: true, activatedAt: new Date().toISOString() });
+  router.post(["/models/:id:activate", "/models/:id([0-9a-zA-Z_.-]+):activate", "/models/:id/activate"], requireSite(false), requirePermission("admin.config.manage", "DO"), async (req, res) => {
+    const result = await setupService.activateModel(req.params.id, req.body?.reason, (req as any).userSub || 'system');
+    res.json(result);
   });
 
   // =========================================================================

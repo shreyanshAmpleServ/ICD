@@ -1,15 +1,13 @@
 import { Request, Response } from "express";
-import { getPrisma, isDbLive } from "../../db/prisma";
+import { getPrisma} from "../../db/prisma";
 import {
   charges as mockCharges,
   openCharges as mockOpenCharges,
-  CHARGE_NAMES,
-} from "../../data/money";
+  CHARGE_NAMES } from "../../data/money";
 import {
   allStays,
   consignment as getMockConsignment,
-  party as getMockParty,
-} from "../../data/core";
+  party as getMockParty } from "../../data/core";
 
 const sendError = (res: Response, message: string, code = 400) =>
   res.status(code).json({
@@ -77,7 +75,7 @@ export class ChargesController {
 
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         const whereClause: any = {};
         if (statusParam) {
           whereClause.status = statusParam;
@@ -287,7 +285,7 @@ export class ChargesController {
       const { reason, percentage } = req.body;
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma && !isNaN(chargeIdParam)) {
+      if (prisma && !isNaN(chargeIdParam)) {
         const existing = await prisma.charge.findUnique({
           where: { charge_id: BigInt(chargeIdParam) },
         });
@@ -339,7 +337,7 @@ export class ChargesController {
 
       const prisma = getPrisma();
 
-      if (isDbLive() && prisma) {
+      if (prisma) {
         let codeRec = await prisma.m_charge_code.findFirst({
           where: { charge_code: chargeCode || "OTHER" },
         });

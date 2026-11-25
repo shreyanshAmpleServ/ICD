@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../configs/prisma';
+import { getPrisma} from '../../configs/prisma';
 import { sendSuccess, sendCreated, sendError } from '../../utils';
 import { reefers as seedReefers } from '../../data/ops';
 
@@ -11,7 +11,7 @@ export class ReefersController {
     try {
       let items: any[] = [];
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {
@@ -128,7 +128,7 @@ export class ReefersController {
 
       inMemoryReefers.unshift(newSession);
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           prisma.reefer_session
@@ -181,7 +181,7 @@ export class ReefersController {
         local.kwhUsed = '0.0';
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           prisma.reefer_session
@@ -217,7 +217,7 @@ export class ReefersController {
         local.alarm = undefined;
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           prisma.reefer_session
@@ -282,7 +282,7 @@ export class ReefersController {
         }
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           prisma.reefer_reading

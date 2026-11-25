@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { FileText, MessageSquarePlus } from 'lucide-react';
 import { Button, Drawer, Field, Select, Textarea, useToast } from '@/ds/components';
 import { party as partyOf, type Stay } from '@/mock/core';
 import { SR_KINDS, invoicesOf, type SR } from '@/mock/insight';
+import { portalApi } from '../api';
 
 type ReqKind = 'DELIVERY' | 'DOCUMENT_SUBMISSION' | 'FREE_DAY_EXTENSION' | 'INVOICE_QUERY' | 'DAMAGE_CLAIM';
 
@@ -37,18 +38,21 @@ export function RequestDrawer({
   const [days, setDays] = useState('3');
   const [inv, setInv] = useState('');
   const [text, setText] = useState('');
-  if (!open) return null;
-  const cur = k ?? kind ?? 'DELIVERY';
-  const uid = u || (unit ? String(unit.unitStayId) : '');
-  const st = units.find((x) => String(x.unitStayId) === uid);
-  const ok = text.trim().length >= 10 && (cur === 'INVOICE_QUERY' ? !!inv : !!uid);
-  const close = () => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const close = useCallback(() => {
     setK(null);
     setU('');
     setText('');
     setInv('');
     onClose();
-  };
+  }, [onClose]);
+
+  if (!open) return null;
+  const cur = k ?? kind ?? 'DELIVERY';
+  const uid = u || (unit ? String(unit.unitStayId) : '');
+  const st = units.find((x) => String(x.unitStayId) === uid);
+  const ok = text.trim().length >= 10 && (cur === 'INVOICE_QUERY' ? !!inv : !!uid);
   const invs = invoicesOf(partyId);
 
   return (
@@ -58,45 +62,65 @@ export function RequestDrawer({
       title="Request a service"
       footer={
         <>
-          <Button variant="ghost" onClick={close}>
+          <Button variant="ghost" onClick={close} disabled={submitting}>
             Cancel
           </Button>
           <Button
             variant="primary"
             icon={<MessageSquarePlus />}
-            disabled={!ok}
+            disabled={!ok || submitting}
             perm="portal.request.submit"
-            onClick={() => {
-              const sr: SR = {
-                serviceRequestId: 7120,
-                requestNo: 'SR-26-07120',
-                requestKind: cur,
-                partyId,
-                partyName: partyOf(partyId)?.partyName ?? '',
-                unitStayId: st?.unitStayId,
-                unitNo: st?.cargoUnit.unitNo,
-                consignmentId: st?.consignmentId,
-                subject: `${KINDS.find((x) => x[0] === cur)![1]}${st ? ` · ${st.cargoUnit.unitNo}` : inv ? ` · ${inv}` : ''}`,
-                details: text,
-                status: 'SUBMITTED',
-                createdAt: '2026-10-07T07:30:00Z',
-                slaDueAt: new Date(Date.parse('2026-10-07T07:30:00Z') + SR_KINDS[cur].slaHours * 3600_000).toISOString(),
-                payload:
+            onClick={async () => {
+              setSubmitting(true);
+              try {
+                const subject = `${KINDS.find((x) => x[0] === cur)![1]}${st ? ` · ${st.cargoUnit.unitNo}` : inv ? ` · ${inv}` : ''}`;
+                const payload =
                   cur === 'FREE_DAY_EXTENSION'
                     ? { days: Number(days) }
                     : cur === 'INVOICE_QUERY'
                     ? { invoiceNo: inv }
-                    : null,
-                messages: [{ from: 'customer', who: 'You', at: '2026-10-07T07:30:00Z', text }],
-              };
-              toast(`Request sent · ${sr.requestNo}`);
-              setK(null);
-              setU('');
-              setText('');
-              onSent(sr);
+                    : null;
+
+                const apiRes = await portalApi.submitRequest({
+                  partyId,
+                  requestKind: cur,
+                  subject,
+                  details: text,
+                  unitStayId: st?.unitStayId,
+                  consignmentId: st?.consignmentId,
+                  payload,
+                });
+
+                const sr: SR = {
+                  serviceRequestId: apiRes?.serviceRequestId || Date.now(),
+                  requestNo: apiRes?.requestNo || `SR-26-0${Date.now() % 100000}`,
+                  requestKind: cur,
+                  partyId,
+                  partyName: partyOf(partyId)?.partyName ?? '',
+                  unitStayId: st?.unitStayId,
+                  unitNo: st?.cargoUnit.unitNo,
+                  consignmentId: st?.consignmentId,
+                  subject,
+                  details: text,
+                  status: 'SUBMITTED',
+                  createdAt: new Date().toISOString(),
+                  slaDueAt: new Date(Date.now() + SR_KINDS[cur].slaHours * 3600_000).toISOString(),
+                  payload,
+                  messages: [{ from: 'customer', who: 'You', at: new Date().toISOString(), text }],
+                };
+                toast(`Request sent · ${sr.requestNo}`);
+                setK(null);
+                setU('');
+                setText('');
+                onSent(sr);
+              } catch (err: any) {
+                toast(`Failed to submit request: ${err.message || 'Error'}`);
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            Send request
+            {submitting ? 'Sending...' : 'Send request'}
           </Button>
         </>
       }

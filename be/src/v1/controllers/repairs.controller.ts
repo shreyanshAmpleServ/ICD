@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../configs/prisma';
+import { getPrisma} from '../../configs/prisma';
 import { sendSuccess, sendCreated, sendError } from '../../utils';
 import { estimates as seedEstimates, repairCodes as seedRepairCodes } from '../../data/ops';
 
@@ -11,7 +11,7 @@ export class RepairsController {
   // Repair Codes
   public getCodes = async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {
@@ -57,7 +57,7 @@ export class RepairsController {
         isActive: true,
       };
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {
@@ -119,7 +119,7 @@ export class RepairsController {
   // Repair Estimates
   public getEstimates = async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {

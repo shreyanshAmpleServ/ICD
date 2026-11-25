@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../db/prisma';
+import { getPrisma} from '../../db/prisma';
 import { seedStatements } from '../../scripts/seed-statements';
 import { customers as mockCustomers, statement as mockStatement } from '../../data/money';
 
@@ -45,7 +45,7 @@ export class StatementsController {
    */
   public getStatements = async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           await this.ensureDatabaseSeeded();
@@ -179,7 +179,7 @@ export class StatementsController {
       const from = (req.query.from as string) || new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
       const to = (req.query.to as string) || new Date().toISOString().slice(0, 10);
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const party = await prisma.m_party.findUnique({

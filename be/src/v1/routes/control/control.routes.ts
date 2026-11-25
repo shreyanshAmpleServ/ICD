@@ -27,13 +27,17 @@ controlRoutes.post('/exceptions/:exceptionId/resolve', requireSite(false), requi
 controlRoutes.get('/reports', requireSite(false), requirePermission('reports.operational'), controlReportsController.getOperationalReports);
 
 // KPIs
-controlRoutes.get('/kpis', requireSite(false), requirePermission('dashboard.executive'), controlKpisController.getKpis);
+controlRoutes.get(['/kpis', '/kpis/tiles'], requireSite(false), requirePermission('dashboard.executive'), controlKpisController.getKpis);
+controlRoutes.get('/kpis/series', requireSite(false), requirePermission('dashboard.executive'), controlKpisController.getKpiSeries);
 
 // Forecasts
 controlRoutes.get('/forecasts', requireSite(false), requirePermission('yard.map.view'), controlForecastsController.getForecasts);
+controlRoutes.get(['/forecasts/occupancy', '/forecast/occupancy'], requireSite(false), requirePermission('yard.map.view'), controlForecastsController.getOccupancyForecast);
+controlRoutes.get(['/forecasts/dwell', '/predictions/dwell'], requireSite(false), requirePermission('yard.map.view'), controlForecastsController.getDwellPredictions);
 
 // Audit Trail
-controlRoutes.get('/audit', requireSite(false), requirePermission('admin.audit.view'), controlAuditController.getAuditTrail);
+controlRoutes.get(['/audit', '/audit-log'], requireSite(false), requirePermission('admin.audit.view'), controlAuditController.getAuditTrail);
+controlRoutes.get(['/audit/:entityName/:entityId', '/audit-log/:entityName/:entityId'], requireSite(false), requirePermission('admin.audit.view'), controlAuditController.getAuditTrail);
 
 // Control Tower
 controlRoutes.get(['/dashboards/control-tower', '/control-tower'], requireSite(false), requirePermission('dashboard.control_tower'), controlTowerController.getControlTower);

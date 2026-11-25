@@ -1,11 +1,10 @@
 import { Request, Response } from "express";
-import { getPrisma, isDbLive } from "../../configs/prisma";
+import { getPrisma} from "../../configs/prisma";
 import { sendSuccess, sendCreated, sendError } from "../../utils";
 import {
   contractors as seedContractors,
   jobs as seedJobs,
-  lotBalances as seedLotBalances,
-} from "../../data/ops";
+  lotBalances as seedLotBalances } from "../../data/ops";
 
 const inMemoryContractors: any[] = JSON.parse(JSON.stringify(seedContractors));
 const inMemoryJobs: any[] = JSON.parse(JSON.stringify(seedJobs));
@@ -14,7 +13,7 @@ const inMemoryLotBalances: any[] = JSON.parse(JSON.stringify(seedLotBalances));
 export class CfsController {
   public getContractors = async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {
@@ -83,7 +82,7 @@ export class CfsController {
 
       inMemoryContractors.push(newContractor);
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           prisma.labour_contractor
@@ -150,7 +149,7 @@ export class CfsController {
     try {
       let items: any[] = [];
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {
@@ -322,7 +321,7 @@ export class CfsController {
 
       inMemoryJobs.unshift(newJob);
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           prisma.handling_job

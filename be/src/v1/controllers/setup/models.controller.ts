@@ -28,5 +28,17 @@ export const setupModelsController = {
       res.status(500).json({ error: err.message });
     }
   },
+
+  activateModel: async (req: Request, res: Response) => {
+    try {
+      const modelId = req.params.modelId || req.params.id || req.params.mlModelVersionId;
+      const { reason } = req.body || {};
+      const userSub = (req as any).userSub || (req.user as any)?.sub || 'system';
+      const result = await setupService.activateModel(modelId, reason, userSub);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
 };
 

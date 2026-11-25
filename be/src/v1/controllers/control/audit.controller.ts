@@ -1,41 +1,59 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../../db/prisma';
+import { getPrisma } from '../../../db/prisma';
+import { auditLog } from '../../../data/insight';
 
 export const controlAuditController = {
   getAuditTrail: async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
-        const prisma = getPrisma();
-        if (prisma) {
-          const audit = await prisma.audit_log.findMany({
-            include: { users: true },
-            orderBy: { audit_id: 'desc' },
-            take: 50,
-          });
-          if (audit && audit.length > 0) {
-            const items = audit.map((a: any) => ({
-              auditId: a.audit_id,
+      const prisma = getPrisma();
+      if (prisma) {
+        const { entityName, entityId } = req.params;
+        const where: any = {};
+        if (entityName) where.entity_name = entityName;
+        if (entityId) where.entity_id = entityId;
+
+        const dbLogs = await prisma.audit_log.findMany({
+          where,
+          orderBy: { occurred_at: 'desc' },
+          take: 200,
+        });
+
+        if (dbLogs && dbLogs.length > 0) {
+          const items = dbLogs.map((a: any) => {
+            let changes: any = [];
+            if (a.changes_json) {
+              try {
+                changes = JSON.parse(a.changes_json);
+              } catch {}
+            }
+            return {
+              auditLogId: Number(a.audit_log_id),
+              occurredAt: a.occurred_at ? new Date(a.occurred_at).toISOString() : new Date().toISOString(),
+              userSub: a.user_sub,
+              userName: a.user_name || a.user_sub || 'System',
+              deviceId: a.device_id,
+              ipAddress: a.ip_address,
+              siteId: a.site_id,
               entityName: a.entity_name,
               entityId: a.entity_id,
               action: a.action,
-              changedBy: a.users?.display_name || a.users?.username || 'System',
-              changedAt: a.changed_at,
-              details: a.diff_json,
-            }));
-            return res.json({ items, total: items.length });
-          }
+              reason: a.reason,
+              changes,
+              summary: a.reason || `${a.action} on ${a.entity_name} ${a.entity_id}`,
+              source: a.source || 'UI',
+            };
+          });
+          return res.json({ items, total: items.length });
         }
       }
-      res.json({
-        items: [
-          { auditId: 1, entityName: 'TruckVisit', entityId: '101', action: 'STATUS_UPDATE', changedBy: 'Gate Officer', changedAt: new Date().toISOString() },
-          { auditId: 2, entityName: 'Hold', entityId: '5', action: 'RELEASE', changedBy: 'Customs Officer', changedAt: new Date(Date.now() - 3600000).toISOString() },
-        ],
-        total: 2,
-      });
+
+      // If DB has no audit logs yet, provide the standard catalog audit entries
+      res.json({ items: auditLog, total: auditLog.length });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.warn('[controlAuditController.getAuditTrail] Fallback to auditLog:', err.message);
+      res.json({ items: auditLog, total: auditLog.length });
     }
   },
 };
+
 

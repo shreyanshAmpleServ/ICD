@@ -38,7 +38,7 @@ const usd = (d: Disb) => (d.currency === 'USD' ? num(d.amountPaid) : num(d.amoun
 
 export function DisbursementsView() {
   const toast = useToast();
-  const { data } = useQ(['disbursements'], () => disbursementsApi.getDisbursements());
+  const { data, refetch } = useQ(['disbursements'], () => disbursementsApi.getDisbursements());
   const [local, setLocal] = useState<DisbRow[] | null>(null);
   const rows: DisbRow[] = local ?? data ?? [];
   const [q, setQ] = useState('');
@@ -191,6 +191,7 @@ export function DisbursementsView() {
         onClose={() => setRec(false)}
         onDone={(d) => {
           setLocal([d, ...rows]);
+          refetch();
           toast('Disbursement recorded');
         }}
       />

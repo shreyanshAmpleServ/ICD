@@ -325,16 +325,23 @@ export const ROLE_NAME: Record<string, string> = {
 };
 export const SLA_MIN: Record<string, number> = { SEAL_MISMATCH: 120, GATE_OUT_BLOCKED: 120, DAMAGE_MAJOR: 48 * 60, OFFLINE_CONFLICT: 60, WEIGHT_VARIANCE: 24 * 60, FISCAL_FAILED: 24 * 60, NO_SHOW: 24 * 60 };
 export const allExceptions = exceptions;
-export const entityLink = (name: string, id: number, unitStayId?: number | null): [string, string | undefined] => {
-  if (unitStayId) { const s = allStays.find((x) => x.unitStayId === unitStayId); return [s ? `Unit ${s.cargoUnit.unitNo}` : `Unit ${unitStayId}`, `/units/${unitStayId}`]; }
+export const entityLink = (name?: string | null, id?: number | null, unitStayId?: number | null): [string, string | undefined] => {
+  if (unitStayId) {
+    const s = allStays.find((x) => x.unitStayId === unitStayId);
+    return [s ? `Unit ${s.cargoUnit.unitNo}` : `Unit ${unitStayId}`, `/units/${unitStayId}`];
+  }
+  if (!name && !id) return ['—', undefined];
   switch (name) {
-    case 'truck_visit': return [`Truck visit ${id}`, `/gate/visits/${id}`];
-    case 'invoice': return [`Invoice INV-DAR1-26-00${id}`, `/invoices/${id}`];
-    case 'unit_stay': return [`Unit ${id}`, `/units/${id}`];
-    case 'release_order': return [releaseOrder(id)?.releaseNo ?? `Release ${id}`, `/releases/${id}`];
-    case 'consignment': return [consignment(id)?.refNo ?? `Consignment ${id}`, `/consignments/${id}`];
-    case 'hold': return [`Hold ${id}`, '/holds'];
-    default: return [`${name.replace(/_/g, ' ')} ${id}`, undefined];
+    case 'truck_visit': return [`Truck visit ${id ?? ''}`, id ? `/gate/visits/${id}` : undefined];
+    case 'invoice': return [`Invoice INV-DAR1-26-00${id ?? ''}`, id ? `/invoices/${id}` : undefined];
+    case 'unit_stay': return [`Unit ${id ?? ''}`, id ? `/units/${id}` : undefined];
+    case 'release_order': return [(id ? releaseOrder(id)?.releaseNo : undefined) ?? `Release ${id ?? ''}`, id ? `/releases/${id}` : undefined];
+    case 'consignment': return [(id ? consignment(id)?.refNo : undefined) ?? `Consignment ${id ?? ''}`, id ? `/consignments/${id}` : undefined];
+    case 'hold': return [`Hold ${id ?? ''}`, '/holds'];
+    default: {
+      const cleanName = (name || 'Item').replace(/_/g, ' ');
+      return [`${cleanName} ${id ?? ''}`.trim(), undefined];
+    }
   }
 };
 

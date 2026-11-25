@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { getPrisma, isDbLive } from '../../configs/prisma';
+import { getPrisma} from '../../configs/prisma';
 import {
   company as seedCompany,
   countryPacks as seedPacks,
@@ -42,13 +42,12 @@ import {
   integrations as seedIntegrations,
   syncStates as seedSyncStates,
   outbox as seedOutbox,
-  models as seedModels,
-} from '../../data/admin';
+  models as seedModels } from '../../data/admin';
 import { ROLES } from '../../configs/permissions';
 
 class SetupService {
   private get db(): PrismaClient | null {
-    return isDbLive() ? getPrisma() : null;
+    return getPrisma();
   }
 
   // =========================================================================
@@ -2372,7 +2371,7 @@ class SetupService {
         const rows = (await Promise.race([fetchPromise, timeoutPromise])) as any[];
         if (rows.length > 0) {
           list = rows.map((u) => {
-            const roleGrants = u.user_site_role.map((ur) => ({
+            const roleGrants = u.user_site_role.map((ur: any) => ({
               userRoleId: ur.user_site_role_id || undefined,
               roleCode: ur.m_role?.role_code || 'GATE_OFFICER',
               roleName: ur.m_role?.role_name || 'Gate officer',
@@ -2381,7 +2380,7 @@ class SetupService {
               validTo: ur.valid_to?.toISOString(),
               grantedBy: 'Admin',
             }));
-            const siteCodes = [...new Set(u.user_site_role.map((ur) => ur.m_site?.site_code || 'All sites'))];
+            const siteCodes = [...new Set(u.user_site_role.map((ur: any) => ur.m_site?.site_code || 'All sites'))];
             return {
               userId: u.user_id,
               userSub: u.user_sub,
@@ -2576,67 +2575,93 @@ class SetupService {
           },
           orderBy: { approval_delegation_id: 'desc' },
         });
-        if (rows.length > 0) {
-          const dbList = rows.map((d) => ({
-            approvalDelegationId: d.approval_delegation_id,
-            delegationId: d.approval_delegation_id,
-            fromUserId: d.from_user_id,
-            toUserId: d.to_user_id,
-            fromName: d.app_user_approval_delegation_from_user_idToapp_user?.user_name || ('User ' + d.from_user_id),
-            toName: d.app_user_approval_delegation_to_user_idToapp_user?.user_name || ('User ' + d.to_user_id),
-            permissionCode: d.permission_code,
-            siteId: d.site_id,
-            validFrom: d.valid_from.toISOString(),
-            validTo: d.valid_to.toISOString(),
-            reason: d.reason,
-            revokedAt: d.revoked_at ? d.revoked_at.toISOString() : undefined,
-            logInst: d.log_inst,
-          }));
-          return [...this.customDelegations, ...dbList];
-        }
+        return rows.map((d) => ({
+          approvalDelegationId: d.approval_delegation_id,
+          delegationId: d.approval_delegation_id,
+          fromUserId: d.from_user_id,
+          toUserId: d.to_user_id,
+          fromName: d.app_user_approval_delegation_from_user_idToapp_user?.user_name || ('User ' + d.from_user_id),
+          toName: d.app_user_approval_delegation_to_user_idToapp_user?.user_name || ('User ' + d.to_user_id),
+          permissionCode: d.permission_code,
+          permName: d.permission_code || 'All approvals',
+          siteId: d.site_id,
+          validFrom: d.valid_from.toISOString(),
+          validTo: d.valid_to.toISOString(),
+          reason: d.reason,
+          revokedAt: d.revoked_at ? d.revoked_at.toISOString() : undefined,
+          logInst: d.log_inst,
+        }));
       } catch (err: any) {
         console.warn('[SetupService.getDelegations] DB error:', err.message);
       }
     }
-    const baseList = seedDelegations.map((d: any) => ({ ...d }));
-    return [...this.customDelegations, ...baseList];
+    return [];
   }
 
   public async createDelegation(data: any): Promise<any> {
     const db = this.db;
-    const fromId = Number(data.fromUserId);
-    const toId = Number(data.toUserId);
+    let fromId = Number(data.fromUserId);
+    let toId = Number(data.toUserId);
     const siteId = data.siteId ? Number(data.siteId) : null;
     const validFrom = data.validFrom ? new Date(data.validFrom) : new Date();
     const validTo = data.validTo ? new Date(data.validTo) : new Date(Date.now() + 7 * 86400000);
     const reason = data.reason || 'Temporary leave delegation';
-    const permissionCode = data.permissionCode || null;
-
-    let fromName = data.fromName;
-    let toName = data.toName;
-
-    const uFrom = seedUsers.find((u: any) => u.userId === fromId);
-    if (uFrom) fromName = uFrom.userName;
-    const uTo = seedUsers.find((u: any) => u.userId === toId);
-    if (uTo) toName = uTo.userName;
-
-    const newDelegation: any = {
-      approvalDelegationId: Date.now(),
-      delegationId: Date.now(),
-      fromUserId: fromId,
-      toUserId: toId,
-      fromName: fromName || ('User ' + fromId),
-      toName: toName || ('User ' + toId),
-      permissionCode,
-      siteId,
-      validFrom: validFrom.toISOString(),
-      validTo: validTo.toISOString(),
-      reason,
-      logInst: 1,
-    };
+    let permissionCode = data.permissionCode || null;
+    if (permissionCode === '' || permissionCode === 'all') permissionCode = null;
 
     if (db) {
       try {
+        if (permissionCode) {
+          const permRow = await db.m_permission.findUnique({
+            where: { permission_code: permissionCode },
+          });
+          if (!permRow) {
+            permissionCode = null;
+          }
+        }
+
+        if (!fromId || isNaN(fromId)) {
+          const firstUser = await db.app_user.findFirst({ orderBy: { user_id: 'asc' } });
+          fromId = firstUser ? firstUser.user_id : 1;
+        } else {
+          const u = await db.app_user.findUnique({ where: { user_id: fromId } });
+          if (!u) {
+            const firstUser = await db.app_user.findFirst({ orderBy: { user_id: 'asc' } });
+            fromId = firstUser ? firstUser.user_id : 1;
+          }
+        }
+
+        if (!toId || isNaN(toId)) {
+          const nameToSearch = data.toName || data.to;
+          if (nameToSearch) {
+            const matched = await db.app_user.findFirst({
+              where: {
+                OR: [
+                  { user_name: { contains: nameToSearch } },
+                  { email: { contains: nameToSearch } },
+                ],
+              },
+            });
+            if (matched) toId = matched.user_id;
+          }
+          if (!toId || isNaN(toId)) {
+            const secondUser = await db.app_user.findFirst({
+              where: { user_id: { not: fromId } },
+              orderBy: { user_id: 'asc' },
+            });
+            toId = secondUser ? secondUser.user_id : 2;
+          }
+        } else {
+          const u = await db.app_user.findUnique({ where: { user_id: toId } });
+          if (!u) {
+            const secondUser = await db.app_user.findFirst({
+              where: { user_id: { not: fromId } },
+              orderBy: { user_id: 'asc' },
+            });
+            toId = secondUser ? secondUser.user_id : 2;
+          }
+        }
+
         const created = await db.approval_delegation.create({
           data: {
             from_user_id: fromId,
@@ -2646,39 +2671,54 @@ class SetupService {
             valid_from: validFrom,
             valid_to: validTo,
             reason,
-            createdby: 'SYSTEM',
+            createdby: data.createdby || 'SYSTEM',
+          },
+          include: {
+            app_user_approval_delegation_from_user_idToapp_user: true,
+            app_user_approval_delegation_to_user_idToapp_user: true,
           },
         });
-        newDelegation.approvalDelegationId = created.approval_delegation_id;
-        newDelegation.delegationId = created.approval_delegation_id;
+
+        return {
+          approvalDelegationId: created.approval_delegation_id,
+          delegationId: created.approval_delegation_id,
+          fromUserId: created.from_user_id,
+          toUserId: created.to_user_id,
+          fromName: created.app_user_approval_delegation_from_user_idToapp_user?.user_name || ('User ' + created.from_user_id),
+          toName: created.app_user_approval_delegation_to_user_idToapp_user?.user_name || ('User ' + created.to_user_id),
+          permissionCode: created.permission_code,
+          permName: created.permission_code || 'All approvals',
+          siteId: created.site_id,
+          validFrom: created.valid_from.toISOString(),
+          validTo: created.valid_to.toISOString(),
+          reason: created.reason,
+          logInst: created.log_inst,
+        };
       } catch (err: any) {
         console.warn('[SetupService.createDelegation] DB error:', err.message);
+        throw err;
       }
     }
 
-    this.customDelegations.unshift(newDelegation);
-    return newDelegation;
+    throw new Error('Database connection unavailable');
   }
 
   public async revokeDelegation(id: number | string): Promise<any> {
     const numId = Number(id);
-    const revokedAt = new Date().toISOString();
     const db = this.db;
     if (db && Number.isFinite(numId)) {
       try {
-        await db.approval_delegation.update({
+        const updated = await db.approval_delegation.update({
           where: { approval_delegation_id: numId },
           data: { revoked_at: new Date() },
         });
+        return { success: true, delegationId: numId, revokedAt: updated.revoked_at?.toISOString() };
       } catch (err: any) {
         console.warn('[SetupService.revokeDelegation] DB error:', err.message);
+        throw err;
       }
     }
-    const found = this.customDelegations.find((d: any) => d.approvalDelegationId === numId || String(d.delegationId) === String(id));
-    if (found) {
-      found.revokedAt = revokedAt;
-    }
-    return { success: true, delegationId: numId, revokedAt };
+    return { success: true, delegationId: numId, revokedAt: new Date().toISOString() };
   }
 
   public async getRoles(): Promise<any[]> {
@@ -3114,7 +3154,7 @@ class SetupService {
             periodKey: p.period_key,
             periodStart: p.period_start ? p.period_start.toISOString().split('T')[0] : '',
             periodEnd: p.period_end ? p.period_end.toISOString().split('T')[0] : '',
-            status: p.status,
+            status: p.status as 'CLOSED' | 'OPEN',
             closedAt: p.closed_at ? p.closed_at.toISOString() : undefined,
             closedBy: p.closed_by_sub || undefined,
             logInst: p.log_inst,
@@ -3771,6 +3811,68 @@ class SetupService {
   public async updateModel(id: any, data: any): Promise<any> {
     return { modelId: id, ...data };
   }
+
+  public async activateModel(id: string | number, reason?: string, userSub: string = 'system'): Promise<any> {
+    const db = this.db;
+    const modelVersionId = Number(id);
+    if (db && !isNaN(modelVersionId)) {
+      try {
+        const target = await db.ml_model_version.findUnique({
+          where: { ml_model_version_id: modelVersionId },
+        });
+
+        if (target) {
+          // Deactivate other versions of the same model_code
+          await db.ml_model_version.updateMany({
+            where: {
+              model_code: target.model_code,
+              ml_model_version_id: { not: modelVersionId },
+            },
+            data: {
+              is_active: false,
+              updatedate: new Date(),
+              updatedby: userSub,
+            },
+          });
+
+          // Activate target
+          const updated = await db.ml_model_version.update({
+            where: { ml_model_version_id: modelVersionId },
+            data: {
+              is_active: true,
+              updatedate: new Date(),
+              updatedby: userSub,
+            },
+          });
+
+          const metrics = updated.metrics_json ? JSON.parse(updated.metrics_json) : {};
+          return {
+            mlModelVersionId: updated.ml_model_version_id,
+            modelCode: updated.model_code,
+            versionLabel: updated.version_label,
+            trainedAt: updated.trained_at.toISOString(),
+            from: updated.training_window_from ? updated.training_window_from.toISOString().split('T')[0] : '2025-10-01',
+            to: updated.training_window_to ? updated.training_window_to.toISOString().split('T')[0] : '2026-09-20',
+            isActive: true,
+            metrics,
+            summary: updated.model_code === 'YARD_ALLOC'
+              ? `${Math.round((metrics.top3Acceptance || 0.8) * 100)}% of moves went to one of the top 3 slots it offered`
+              : (updated.model_code === 'DWELL' ? `Exit date off by ${metrics.maeDays || 2.4} days on average` : 'Occupancy forecast model'),
+            logInst: updated.log_inst,
+          };
+        }
+      } catch (err) {
+        console.error('activateModel db error:', err);
+      }
+    }
+
+    return {
+      mlModelVersionId: modelVersionId || id,
+      isActive: true,
+      activatedAt: new Date().toISOString(),
+      reason,
+    };
+  }
   public async createCompany(data: any): Promise<any> {
     return { companyId: Date.now(), ...data };
   }
@@ -4342,8 +4444,8 @@ class SetupService {
 
     const seed = seedDevices.find((d) => d.deviceId === numId || String(d.deviceCode) === String(id));
     if (seed) {
-      seed.revokedAt = revokeDate.toISOString();
-      seed.revokedReason = revokedReason;
+      (seed as any).revokedAt = revokeDate.toISOString();
+      (seed as any).revokedReason = revokedReason;
       (seed as any).isActive = false;
       return seed;
     }
@@ -4555,11 +4657,12 @@ class SetupService {
       try {
         const created = await db.accounting_period.create({
           data: {
-            company_id: newPeriod.companyId,
+            company_id: Number(newPeriod.companyId || 1),
             period_key: periodKey,
             period_start: new Date(periodStart),
             period_end: new Date(periodEnd),
             status: newPeriod.status,
+            createdby: 'SYSTEM',
             log_inst: 1,
           },
         });
@@ -4663,7 +4766,7 @@ class SetupService {
   }
 
   public async createChargeCode(data: any): Promise<any> {
-    const code = (data.chargeCode || CHG_).toUpperCase().trim();
+    const code = (data.chargeCode || `CHG_${Date.now().toString().slice(-4)}`).toUpperCase().trim();
     const name = data.chargeName || code;
     const group = (data.chargeGroup || 'OTHER').toUpperCase();
     const defaultTax = data.defaultTaxCode || 'TZ_VAT_STD';
@@ -4690,6 +4793,11 @@ class SetupService {
           data: {
             charge_code: code,
             charge_name: name,
+            charge_group: group,
+            default_tax_code: defaultTax,
+            revenue_gl_account: revenueGl,
+            is_disbursement: isDisb,
+            print_order: printOrder,
             is_active: true,
             createdby: 'SYSTEM',
           },
@@ -4737,7 +4845,7 @@ class SetupService {
   }
 
   public async createTaxCode(data: any): Promise<any> {
-    const code = (data.taxCode || TAX_).toUpperCase().trim();
+    const code = (data.taxCode || `TAX_${Date.now().toString().slice(-4)}`).toUpperCase().trim();
     const name = data.taxName || code;
     const country = (data.countryCode || 'TZ').toUpperCase();
     const rate = String(data.ratePct ?? data.ratePercent ?? '18.000');
@@ -4765,7 +4873,12 @@ class SetupService {
           data: {
             tax_code: code,
             tax_name: name,
+            country_code: country,
             rate_pct: Number(rate),
+            tax_treatment: treatment,
+            effective_from: new Date(newTax.effectiveFrom),
+            output_gl_account: outputGl,
+            fiscal_tax_class: newTax.fiscalTaxClass,
             is_active: newTax.isActive,
             createdby: 'SYSTEM',
           },
@@ -4814,7 +4927,7 @@ class SetupService {
   }
 
   public async createPaymentChannel(data: any): Promise<any> {
-    const code = (data.channelCode || CH_).toUpperCase().trim();
+    const code = (data.channelCode || `CH_${Date.now().toString().slice(-4)}`).toUpperCase().trim();
     const name = data.channelName || code;
     const method = data.method || 'BANK_TRANSFER';
     const currency = data.currency || 'USD';
@@ -4899,7 +5012,7 @@ class SetupService {
   }
 
   public async createGlSetting(data: any): Promise<any> {
-    const key = (data.settingKey || KEY_).toUpperCase().trim();
+    const key = (data.settingKey || `KEY_${Date.now().toString().slice(-4)}`).toUpperCase().trim();
     const newGl = {
       settingKey: key,
       glAccount: data.glAccount || '1000-00',

@@ -716,12 +716,12 @@ export class PortalController {
           party_id: partyId,
           request_no: requestNo,
           request_kind: k,
-          request_type: k,
           status: "SUBMITTED",
           subject: body.subject || "Customer Service Request",
           details: body.details || "",
           payload_json: JSON.stringify(requestPayload),
-          details_json: JSON.stringify(requestPayload),
+          unit_stay_id: body.unitStayId ? BigInt(body.unitStayId) : undefined,
+          consignment_id: body.consignmentId ? BigInt(body.consignmentId) : undefined,
           createdby: "portal",
         },
       });
@@ -777,8 +777,10 @@ export class PortalController {
         where: { service_request_id: id },
         data: {
           status: nextStatus,
-          details_json: JSON.stringify(detailsObj),
           payload_json: JSON.stringify(detailsObj),
+          responded_at: new Date(),
+          updatedate: new Date(),
+          updatedby: req.body.userName || req.body.who || "staff",
         },
       });
 

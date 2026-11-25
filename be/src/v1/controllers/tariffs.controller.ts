@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../db/prisma';
+import { getPrisma} from '../../db/prisma';
 import { tariffs as mockTariffs, rates as mockRates } from '../../data/money';
 
 export function mapDbTariffToFrontend(t: any) {
@@ -68,7 +68,7 @@ export function mapDbTariffToFrontend(t: any) {
 export const tariffsController = {
   getTariffs: async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           try {
@@ -111,7 +111,7 @@ export const tariffsController = {
   getTariffById: async (req: Request, res: Response) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
@@ -156,7 +156,7 @@ export const tariffsController = {
   getTariffRules: async (req: Request, res: Response) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
@@ -204,7 +204,7 @@ export const tariffsController = {
 
   createTariff: async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const b = req.body;
@@ -261,7 +261,7 @@ export const tariffsController = {
   updateTariff: async (req: Request, res: Response) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
@@ -317,7 +317,7 @@ export const tariffsController = {
   submitTariff: async (req: Request, res: Response) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
@@ -363,7 +363,7 @@ export const tariffsController = {
   newVersion: async (req: Request, res: Response) => {
     const tariffIdParam = req.params.tariffId;
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
@@ -483,7 +483,7 @@ export const tariffsController = {
 
   getTariffRates: async (_req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const rules = await prisma.tariff_rule.findMany({

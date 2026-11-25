@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../db/prisma';
+import { getPrisma} from '../../db/prisma';
 import { notifications as mockNotifications } from '../../data/cargo';
 
 export const notificationsController = {
   getInbox: async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const dbNotifs = await prisma.notification.findMany({
@@ -82,7 +82,7 @@ export const notificationsController = {
   markRead: async (req: Request, res: Response) => {
     try {
       const notificationId = req.params.notificationId || req.params.id;
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma && notificationId) {
           const updated = await prisma.notification.update({
@@ -109,7 +109,7 @@ export const notificationsController = {
 
   markAllRead: async (_req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const result = await prisma.notification.updateMany({

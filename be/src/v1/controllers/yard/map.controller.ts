@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { blocks } from '../../../data/core';
 import { yardNodes, blockedSlots } from '../../../data/admin';
-import { getPrisma, isDbLive } from '../../../db/prisma';
+import { getPrisma } from '../../../db/prisma';
 import { setupService } from '../../../modules/setup/setup.service';
 
 export const yardMapController = {
@@ -18,7 +18,7 @@ export const yardMapController = {
         return true;
       };
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const dbLocations = await prisma.m_yard_location.findMany({
@@ -174,7 +174,7 @@ export const yardMapController = {
         return true;
       };
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const dbLocations = await prisma.m_yard_location.findMany({
@@ -228,7 +228,7 @@ export const yardMapController = {
 
   getLocations: async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const dbLocs = await prisma.m_yard_location.findMany({
@@ -296,7 +296,7 @@ export const yardMapController = {
 
   getOccupancy: async (_req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const totalUnitsInYard = await prisma.unit_stay.count({
@@ -349,7 +349,7 @@ export const yardMapController = {
   getBlockSlots: async (req: Request, res: Response) => {
     try {
       const blockIdOrCode = req.params.blockId;
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const id = Number(blockIdOrCode);

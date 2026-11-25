@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { sites as fallbackSites, users as fallbackUsers } from '../../../data/admin';
 import { ALL_PERMISSIONS, ROLES } from '../../../configs/permissions';
-import { getPrisma, isDbLive } from '../../../db/prisma';
+import { getPrisma} from '../../../db/prisma';
 
 export const authSessionController = {
   getMe: async (req: Request, res: Response) => {
@@ -9,7 +9,7 @@ export const authSessionController = {
       const activeSiteId = (req.headers['x-site-id'] as string)?.toUpperCase() || 'DAR1';
       const roleCode = (req.headers['x-role-code'] as string) || 'ALL_PERMISSIONS';
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const [dbUser, dbSites, dbRoles] = await Promise.all([
@@ -179,7 +179,7 @@ export const authSessionController = {
         newLang = 'en';
       }
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const updateData: any = {
@@ -244,7 +244,7 @@ export const authSessionController = {
       const { siteCode } = req.body;
       const targetCode = (siteCode || 'DAR1').toUpperCase();
 
-      if (isDbLive()) {
+      if (true) {
         const prisma = getPrisma();
         if (prisma) {
           const matched = await prisma.m_site.findFirst({

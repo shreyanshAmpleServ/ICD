@@ -3,15 +3,13 @@ import { requireSite } from "../../middlewares/siteScope";
 import { requirePermission } from "../../middlewares/permission";
 import {
   inspectionTemplates,
-  damageCodes as adminDamageCodes,
-} from "../../data/admin";
+  damageCodes as adminDamageCodes } from "../../data/admin";
 import {
   inspections,
   tickets,
   keys,
-  damageCodes as opsDamageCodes,
-} from "../../data/ops";
-import { getPrisma, isDbLive } from "../../db/prisma";
+  damageCodes as opsDamageCodes } from "../../data/ops";
+import { getPrisma} from "../../db/prisma";
 
 const router = Router();
 
@@ -193,7 +191,7 @@ router.get(
     const { unitNo, status } = req.query;
     let items = inspections as any[];
 
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -385,7 +383,7 @@ router.get(
   async (req, res) => {
     let items: any[] = tickets;
 
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {

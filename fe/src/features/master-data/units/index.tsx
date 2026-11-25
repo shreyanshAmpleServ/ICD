@@ -122,8 +122,8 @@ export function UnitTypesView() {
             rowKey={(r) => r.regimeCode}
             cols={[
               { key: 'c', header: 'Regime', render: (r) => <><strong>{r.regimeName}</strong><div className="xs faint">{r.regimeCode}</div></> },
-              { key: 'cu', header: 'Needs customs', render: (r) => <YesNo v={r.requiresCustoms} /> },
-              { key: 'r', header: 'References required for release', render: (r) => r.refs.length ? <span className="row-wrap">{r.refs.map((x: any) => <span key={x} className="tag">{CUSTOMS_REF_NAME[x]}</span>)}</span> : <span className="faint">None</span> },
+              { key: 'cu', header: 'Needs customs', render: (r) => <YesNo v={r.requiresCustoms ?? false} /> },
+              { key: 'r', header: 'References required for release', render: (r) => (r.refs && r.refs.length > 0) ? <span className="row-wrap">{r.refs.map((x: any) => <span key={x} className="tag">{CUSTOMS_REF_NAME[x] || x}</span>)}</span> : <span className="faint">None</span> },
             ]}
           />
         </Panel>

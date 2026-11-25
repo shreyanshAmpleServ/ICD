@@ -558,13 +558,18 @@ export function DataTable<T>({ cols, rows, rowKey, onRow, selected, empty, foot,
   }) {
     const id = useId();
     const ref = useRef<HTMLDivElement>(null);
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+
     useEffect(() => {
       if (!open) return;
-      const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+      const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current(); };
       window.addEventListener('keydown', k);
-      ref.current?.focus();
+      if (ref.current && !ref.current.contains(document.activeElement)) {
+        ref.current.focus();
+      }
       return () => window.removeEventListener('keydown', k);
-    }, [open, onClose]);
+    }, [open]);
     if (!open) return null;
     return (
       <>
@@ -579,12 +584,15 @@ export function DataTable<T>({ cols, rows, rowKey, onRow, selected, empty, foot,
   }
   export function Modal({ open, onClose, title, children, footer }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode }) {
     const id = useId();
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+
     useEffect(() => {
       if (!open) return;
-      const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+      const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current(); };
       window.addEventListener('keydown', k);
       return () => window.removeEventListener('keydown', k);
-    }, [open, onClose]);
+    }, [open]);
     if (!open) return null;
     return (
       <>

@@ -1,42 +1,35 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../../db/prisma';
+import { getPrisma } from '../../../db/prisma';
 
 export const yardKeysController = {
   getKeys: async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
-        const prisma = getPrisma();
-        if (prisma) {
-          const keys = await prisma.vehicle_keys.findMany({
-            include: {
-              unit_stays: true,
-            },
-            orderBy: { key_id: 'asc' },
-          });
-          if (keys && keys.length > 0) {
-            const items = keys.map((k: any) => ({
-              keyId: k.key_id,
-              tagNumber: k.tag_number,
-              pegNumber: k.peg_number,
-              unitStayId: k.unit_stay_id,
-              vin: k.vin,
-              makeModel: k.make_model,
-              status: k.status,
-              currentHolder: k.current_holder,
-              checkedOutAt: k.checked_out_at,
-            }));
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma = getPrisma();
+      if (!prisma) {
+        return res.status(500).json({ error: 'Database connection unavailable' });
       }
-      res.json({
-        items: [
-          { keyId: 1, tagNumber: 'KEY-001', pegNumber: 'P-12', vin: 'JT111AB222', makeModel: 'Toyota Hilux', status: 'IN_BOARD', currentHolder: null },
-          { keyId: 2, tagNumber: 'KEY-002', pegNumber: 'P-13', vin: 'WBABF33421', makeModel: 'BMW 320d', status: 'CHECKED_OUT', currentHolder: 'Driver Ali' },
-        ],
-        total: 2,
-      });
+
+      const keys = await (prisma as any).vehicle_keys?.findMany({
+        include: {
+          unit_stays: true,
+        },
+        orderBy: { key_id: 'asc' },
+      }) || [];
+
+      const items = keys.map((k: any) => ({
+        keyId: k.key_id,
+        tagNumber: k.tag_number,
+        pegNumber: k.peg_number,
+        unitStayId: k.unit_stay_id,
+        vin: k.vin,
+        makeModel: k.make_model,
+        status: k.status,
+        currentHolder: k.current_holder,
+        checkedOutAt: k.checked_out_at,
+      }));
+      return res.json({ items, total: items.length });
     } catch (err: any) {
+      console.error('yardKeysController.getKeys error:', err);
       res.status(500).json({ error: err.message });
     }
   },
@@ -46,15 +39,17 @@ export const yardKeysController = {
       const { keyId } = req.params;
       const { holderName } = req.body;
       const prisma = getPrisma();
-      if (prisma) {
-        const updated = await prisma.vehicle_keys.update({
-          where: { key_id: Number(keyId) },
-          data: { status: 'CHECKED_OUT', current_holder: holderName || 'Driver', checked_out_at: new Date() },
-        });
-        return res.json(updated);
+      if (!prisma) {
+        return res.status(500).json({ error: 'Database connection unavailable' });
       }
-      res.json({ keyId, status: 'CHECKED_OUT', currentHolder: holderName, checkedOutAt: new Date().toISOString() });
+
+      const updated = await (prisma as any).vehicle_keys.update({
+        where: { key_id: Number(keyId) },
+        data: { status: 'CHECKED_OUT', current_holder: holderName || 'Driver', checked_out_at: new Date() },
+      });
+      return res.json(updated);
     } catch (err: any) {
+      console.error('yardKeysController.checkoutKey error:', err);
       res.status(500).json({ error: err.message });
     }
   },
@@ -63,17 +58,18 @@ export const yardKeysController = {
     try {
       const { keyId } = req.params;
       const prisma = getPrisma();
-      if (prisma) {
-        const updated = await prisma.vehicle_keys.update({
-          where: { key_id: Number(keyId) },
-          data: { status: 'IN_BOARD', current_holder: null, checked_out_at: null },
-        });
-        return res.json(updated);
+      if (!prisma) {
+        return res.status(500).json({ error: 'Database connection unavailable' });
       }
-      res.json({ keyId, status: 'IN_BOARD', currentHolder: null });
+
+      const updated = await (prisma as any).vehicle_keys.update({
+        where: { key_id: Number(keyId) },
+        data: { status: 'IN_BOARD', current_holder: null, checked_out_at: null },
+      });
+      return res.json(updated);
     } catch (err: any) {
+      console.error('yardKeysController.returnKey error:', err);
       res.status(500).json({ error: err.message });
     }
   },
 };
-

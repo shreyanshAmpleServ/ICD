@@ -1,49 +1,33 @@
 import { Request, Response } from 'express';
-import { getPrisma, isDbLive } from '../../../db/prisma';
+import { getPrisma } from '../../../db/prisma';
 
 export const yardRepairsController = {
   getWorkOrders: async (req: Request, res: Response) => {
     try {
-      if (isDbLive()) {
-        const prisma = getPrisma();
-        if (prisma && (prisma as any).repair_work_orders) {
-          const orders = await (prisma as any).repair_work_orders.findMany({
-            include: { unit_stays: true },
-            orderBy: { work_order_id: 'desc' },
-          });
-          if (orders && orders.length > 0) {
-            const items = orders.map((o: any) => ({
-              workOrderId: o.work_order_id,
-              orderNo: o.order_no,
-              unitStayId: o.unit_stay_id,
-              unitNumber: o.unit_stays?.unit_number,
-              estimateAmount: Number(o.estimate_amount),
-              currency: o.currency,
-              status: o.status,
-              approvalStatus: o.approval_status,
-              createdDate: o.createdate,
-            }));
-            return res.json({ items, total: items.length });
-          }
-        }
+      const prisma = getPrisma();
+      if (!prisma) {
+        return res.status(500).json({ error: 'Database connection unavailable' });
       }
-      res.json({
-        items: [
-          {
-            workOrderId: 1,
-            orderNo: 'WO-2026-001',
-            unitStayId: 103,
-            unitNumber: 'CMAU 450123 8',
-            estimateAmount: 450.0,
-            currency: 'USD',
-            status: 'ESTIMATED',
-            approvalStatus: 'PENDING_CUSTOMER',
-            createdDate: new Date().toISOString(),
-          },
-        ],
-        total: 1,
-      });
+
+      const orders = await (prisma as any).repair_work_orders?.findMany({
+        include: { unit_stays: true },
+        orderBy: { work_order_id: 'desc' },
+      }) || [];
+
+      const items = orders.map((o: any) => ({
+        workOrderId: o.work_order_id,
+        orderNo: o.order_no,
+        unitStayId: o.unit_stay_id,
+        unitNumber: o.unit_stays?.unit_number,
+        estimateAmount: Number(o.estimate_amount),
+        currency: o.currency,
+        status: o.status,
+        approvalStatus: o.approval_status,
+        createdDate: o.createdate,
+      }));
+      return res.json({ items, total: items.length });
     } catch (err: any) {
+      console.error('yardRepairsController.getWorkOrders error:', err);
       res.status(500).json({ error: err.message });
     }
   },
@@ -51,23 +35,25 @@ export const yardRepairsController = {
   createWorkOrder: async (req: Request, res: Response) => {
     try {
       const prisma = getPrisma();
-      if (prisma) {
-        const created = await prisma.repair_work_orders.create({
-          data: {
-            order_no: `WO-${Date.now()}`,
-            unit_stay_id: Number(req.body.unitStayId) || 1,
-            estimate_amount: Number(req.body.estimateAmount) || 250,
-            currency: req.body.currency || 'USD',
-            status: 'ESTIMATED',
-            approval_status: 'PENDING',
-          },
-        });
-        return res.status(201).json(created);
+      if (!prisma) {
+        return res.status(500).json({ error: 'Database connection unavailable' });
       }
-      res.status(201).json({ workOrderId: 2, orderNo: `WO-${Date.now()}`, ...req.body });
+
+      const created = await (prisma as any).repair_work_orders.create({
+        data: {
+          site_id: Number(req.body.siteId) || 1,
+          order_no: `WO-${Date.now()}`,
+          unit_stay_id: Number(req.body.unitStayId) || 1,
+          estimate_amount: parseFloat(req.body.estimateAmount) || 0,
+          currency: req.body.currency || 'USD',
+          status: 'ESTIMATED',
+          approval_status: 'PENDING_CUSTOMER',
+        },
+      });
+      return res.status(201).json(created);
     } catch (err: any) {
+      console.error('yardRepairsController.createWorkOrder error:', err);
       res.status(500).json({ error: err.message });
     }
   },
 };
-

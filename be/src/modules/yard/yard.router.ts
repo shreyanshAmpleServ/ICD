@@ -4,7 +4,7 @@ import { requirePermission } from "../../middlewares/permission";
 import { yardNodes, locationTags, blockedSlots } from "../../data/admin";
 import { moveOrders, equipmentForMoves } from "../../data/ops";
 import { blocks, allStays } from "../../data/core";
-import { getPrisma, isDbLive } from "../../db/prisma";
+import { getPrisma} from "../../db/prisma";
 import { yardMovesController } from "../../v1/controllers/yard/moves.controller";
 import { setupYardDesignerController } from "../../v1/controllers/setup/yard-designer.controller";
 import { yardMapController } from "../../v1/controllers/yard/map.controller";
@@ -164,7 +164,7 @@ router.get(
     const { block, fullCode } = req.query;
     let items = yardLocations;
 
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {
@@ -453,7 +453,7 @@ router.get(
     const { status, equipmentCode } = req.query;
     let items: any[] = moveOrders;
 
-    if (isDbLive()) {
+    if (true) {
       const prisma = getPrisma();
       if (prisma) {
         try {

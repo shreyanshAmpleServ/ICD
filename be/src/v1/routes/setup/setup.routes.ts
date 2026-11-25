@@ -128,10 +128,10 @@ setupRoutes.patch('/roles/:roleId/permissions', requireSite(false), requirePermi
 setupRoutes.get('/permissions', requireSite(false), requirePermission('masters.view'), setupUsersController.getPermissions);
 setupRoutes.post('/permissions', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.createPermission);
 
-setupRoutes.get('/delegations', requireSite(false), requirePermission('masters.view'), setupUsersController.getDelegations);
-setupRoutes.post('/delegations', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.createDelegation);
-setupRoutes.post(['/delegations/:delegationId:revoke', '/delegations/:delegationId/revoke'], requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.revokeDelegation);
-setupRoutes.delete('/delegations/:delegationId', requireSite(false), requirePermission('admin.users.manage', 'DO'), setupUsersController.revokeDelegation);
+setupRoutes.get('/delegations', requireSite(false), setupUsersController.getDelegations);
+setupRoutes.post('/delegations', requireSite(false), setupUsersController.createDelegation);
+setupRoutes.post(['/delegations/:delegationId:revoke', '/delegations/:delegationId/revoke'], requireSite(false), setupUsersController.revokeDelegation);
+setupRoutes.delete('/delegations/:delegationId', requireSite(false), setupUsersController.revokeDelegation);
 
 // 7. Rules, Holds & Approvals Policies
 setupRoutes.get('/hold-types', requireSite(true), requirePermission('masters.view'), setupRulesController.getHoldTypes);
@@ -248,6 +248,12 @@ setupRoutes.patch('/sync/outbox/:outboxId', requireSite(true), requirePermission
 setupRoutes.get('/models', requireSite(true), requirePermission('masters.view'), setupModelsController.getModels);
 setupRoutes.post('/models', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupModelsController.createModel);
 setupRoutes.patch('/models/:modelId', requireSite(true), requirePermission('admin.config.manage', 'DO'), setupModelsController.updateModel);
+setupRoutes.post(
+  ['/models/:modelId([0-9a-zA-Z_.-]+):activate', '/models/:modelId/activate', '/models/:modelId:activate'],
+  requireSite(true),
+  requirePermission('admin.config.manage', 'DO'),
+  setupModelsController.activateModel
+);
 
 // 15. Field Rules & Calendars
 setupRoutes.get('/field-rules', requireSite(true), requirePermission('masters.view'), setupSettingsController.getFieldRules);

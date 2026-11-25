@@ -17,12 +17,14 @@ type TabId = 'mine' | 'asked' | 'all' | 'delegations';
 const permLabel = (p: string) => APPROVAL_LIMITS[p]?.label ?? p;
 
 export function ApprovalsView() {
-  const { data = [] } = useQ<Apr[]>(['approvals'], () => approvalsApi.getApprovals());
+  const { data = [], refetch } = useQ<Apr[]>(['approvals'], () => approvalsApi.getApprovals());
   const [local, setLocal] = useState<Apr[] | null>(null);
   const list = local ?? data;
   const [tab, setTab] = useState<TabId>('mine');
   const [sel, setSel] = useState<number | null>(null);
-  const [dels, setDels] = useState<DelegationRow[]>(seedDelegations);
+  const { data: serverDels, refetch: refetchDels } = useQ<DelegationRow[]>(['delegations'], () => approvalsApi.getDelegations());
+  const [localDels, setLocalDels] = useState<DelegationRow[] | null>(null);
+  const dels = localDels ?? (serverDels && serverDels.length > 0 ? serverDels : seedDelegations);
   const [delOpen, setDelOpen] = useState(false);
   const waiting = list.filter((a) => a.status === 'PENDING' && a.canDecide && !a.mine);
   const asked = list.filter((a) => a.mine);
@@ -150,7 +152,15 @@ export function ApprovalsView() {
               />
             </Panel>
           ) : (
-            <Delegations rows={dels} setRows={setDels} open={delOpen} setOpen={setDelOpen} />
+            <Delegations
+              rows={dels}
+              setRows={(f) => {
+                setLocalDels((prev) => f(prev ?? dels));
+                refetchDels();
+              }}
+              open={delOpen}
+              setOpen={setDelOpen}
+            />
           )}
         </div>
       </div>
@@ -163,9 +173,10 @@ export function ApprovalsView() {
             setTab('delegations');
             setDelOpen(true);
           }}
-          onDecide={(p) =>
-            setLocal(list.map((x) => (x.approvalRequestId === a.approvalRequestId ? { ...x, ...p } : x)))
-          }
+          onDecide={(p) => {
+            setLocal(list.map((x) => (x.approvalRequestId === a.approvalRequestId ? { ...x, ...p } : x)));
+            refetch();
+          }}
         />
       )}
     </Page>

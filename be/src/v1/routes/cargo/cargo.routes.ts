@@ -55,7 +55,7 @@ cargoRoutes.patch('/manifests/:manifestId/lines/:manifestLineId', requireSite(tr
 cargoRoutes.post(['/manifests/:manifestId([0-9a-zA-Z_.-]+):apply', '/manifests/:manifestId/apply'], requireSite(true), requirePermission('manifest.import', 'DO'), cargoManifestsController.applyManifest);
 
 // Customs & Exams
-cargoRoutes.get('/customs/refs', requireSite(false), requirePermission('consignment.view'), cargoCustomsController.getCustomsRefs);
+cargoRoutes.get(['/customs/refs', '/customs-declarations'], requireSite(false), requirePermission('consignment.view'), cargoCustomsController.getCustomsRefs);
 cargoRoutes.post('/customs/refs', requireSite(false), requirePermission('consignment.edit', 'DO'), cargoCustomsController.createCustomsRef);
 cargoRoutes.get('/exams', requireSite(false), requirePermission('consignment.view'), cargoCustomsController.getExams);
 cargoRoutes.post('/exams', requireSite(false), requirePermission('consignment.edit', 'DO'), cargoCustomsController.createExam);
