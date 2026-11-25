@@ -12594,7 +12594,9 @@ var CargoService = class {
           include: {
             m_customs_ref_type: true,
             consignment: true,
-            unit_stay_disbursement: { include: { unit_stay_cargo_units: true } }
+            unit_stay_disbursement: {
+              include: { unit_stay_cargo_units: true }
+            }
           },
           orderBy: { customs_ref_id: "desc" }
         });
@@ -26560,17 +26562,28 @@ var import_express21 = require("express");
 // src/v1/controllers/search/search.controller.ts
 var searchController = {
   globalSearch: async (req, res) => {
-    try {
-      const q = String(req.query.q || "").trim();
-      if (!q || q.length < 2) {
-        return res.json({ query: q, groups: [], results: [], total: 0 });
-      }
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const normQ = q.replace(/[\s-]/g, "");
-          const [units, visits2, consignments2, parties2, appointments3, invoices3] = await Promise.all([
-            // 1. Cargo Units & Stays
+    const q = String(req.query.q || "").trim();
+    if (!q || q.length < 2) {
+      return res.json({ query: q, groups: [], results: [], total: 0 });
+    }
+    const normQ = q.replace(/[\s-]/g, "");
+    const prisma4 = getPrisma();
+    const groups = [];
+    if (prisma4) {
+      try {
+        const queryWithTimeout = async (promise, fallback) => {
+          try {
+            return await Promise.race([
+              promise,
+              new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2e3))
+            ]);
+          } catch (err) {
+            return fallback;
+          }
+        };
+        const [units, visits2, consignments2, parties2, regimes, appointments3, invoices3] = await Promise.all([
+          // 1. Cargo Units
+          queryWithTimeout(
             prisma4.cargo_unit.findMany({
               where: {
                 OR: [
@@ -26582,23 +26595,20 @@ var searchController = {
                 ]
               },
               include: {
-                cargo_unit_unit_stays: {
-                  take: 1,
-                  orderBy: { unit_stay_id: "desc" }
-                }
+                cargo_unit_unit_stays: true
               },
               take: 6
             }),
-            // 2. Truck Visits
+            []
+          ),
+          // 2. Truck Visits
+          queryWithTimeout(
             prisma4.truck_visit.findMany({
               where: {
                 OR: [
                   { visit_no: { contains: q } },
                   { gate_pass_no: { contains: q } },
-                  { nomination_ref: { contains: q } },
-                  { m_truck_truck_visit_truck_idTom_truck: { plate_no: { contains: q } } },
-                  { m_truck_truck_visit_truck_idTom_truck: { plate_no: { contains: normQ } } },
-                  { m_driver: { driver_name: { contains: q } } }
+                  { nomination_ref: { contains: q } }
                 ]
               },
               include: {
@@ -26608,7 +26618,10 @@ var searchController = {
               },
               take: 5
             }),
-            // 3. Consignments / BLs
+            []
+          ),
+          // 3. Consignments / BLs
+          queryWithTimeout(
             prisma4.consignment.findMany({
               where: {
                 OR: [
@@ -26618,7 +26631,10 @@ var searchController = {
               },
               take: 5
             }),
-            // 4. Customers & Parties
+            []
+          ),
+          // 4. Customers & Parties
+          queryWithTimeout(
             prisma4.m_party.findMany({
               where: {
                 OR: [
@@ -26629,115 +26645,148 @@ var searchController = {
               },
               take: 5
             }),
-            // 5. Appointments
-            prisma4.appointment.findMany({
+            []
+          ),
+          // 5. Cargo Regimes
+          queryWithTimeout(
+            prisma4.m_cargo_regime.findMany({
               where: {
                 OR: [
-                  { appointment_no: { contains: q } }
+                  { regime_code: { contains: q } },
+                  { regime_name: { contains: q } }
                 ]
               },
               take: 5
             }),
-            // 6. Invoices
+            []
+          ),
+          // 6. Appointments
+          queryWithTimeout(
+            prisma4.appointment.findMany({
+              where: {
+                appointment_no: { contains: q }
+              },
+              take: 5
+            }),
+            []
+          ),
+          // 7. Invoices
+          queryWithTimeout(
             prisma4.invoice.findMany({
               where: {
                 invoice_no: { contains: q }
               },
               take: 5
+            }),
+            []
+          )
+        ]);
+        if (units && units.length > 0) {
+          groups.push({
+            entity: "UNIT",
+            label: "Units & Containers",
+            hits: units.map((u) => {
+              const stay2 = u.cargo_unit_unit_stays?.[0];
+              return {
+                id: Number(u.cargo_unit_id),
+                title: u.unit_no,
+                subtitle: [u.unit_category, u.make && `${u.make} ${u.model || ""}`].filter(Boolean).join(" \xB7 "),
+                status: stay2?.physical_status || "IN_YARD",
+                link: { entityName: "cargo_unit", entityId: Number(u.cargo_unit_id) },
+                to: `/cargo/units`
+              };
             })
-          ]);
-          const groups = [];
-          if (units && units.length > 0) {
-            groups.push({
-              entity: "UNIT",
-              label: "Units & Containers",
-              hits: units.map((u) => {
-                const stay2 = u.cargo_unit_unit_stays?.[0];
-                return {
-                  id: Number(u.cargo_unit_id),
-                  title: u.unit_no,
-                  subtitle: [u.unit_category, u.make && `${u.make} ${u.model || ""}`].filter(Boolean).join(" \xB7 "),
-                  status: stay2?.status || "IN_YARD",
-                  link: { entityName: "cargo_unit", entityId: Number(u.cargo_unit_id) },
-                  to: "/cargo/units"
-                };
-              })
-            });
-          }
-          if (visits2 && visits2.length > 0) {
-            groups.push({
-              entity: "VISIT",
-              label: "Truck Visits & Gates",
-              hits: visits2.map((v) => {
-                const plate = v.m_truck_truck_visit_truck_idTom_truck?.plate_no;
-                const driver = v.m_driver?.driver_name;
-                return {
-                  id: Number(v.truck_visit_id),
-                  title: `${v.visit_no} ${plate ? `(${plate})` : ""}`,
-                  subtitle: [driver, v.m_party_truck_visit?.party_name].filter(Boolean).join(" \xB7 "),
-                  status: v.status,
-                  link: { entityName: "truck_visit", entityId: Number(v.truck_visit_id) },
-                  to: "/gate/queue"
-                };
-              })
-            });
-          }
-          if (consignments2 && consignments2.length > 0) {
-            groups.push({
-              entity: "CONSIGNMENT",
-              label: "Consignments & BLs",
-              hits: consignments2.map((c) => ({
-                id: Number(c.consignment_id),
-                title: c.ref_no,
-                subtitle: c.cargo_description || "Consignment Reference",
-                status: c.ref_type,
-                link: { entityName: "consignment", entityId: Number(c.consignment_id) },
-                to: "/cargo/consignments"
-              }))
-            });
-          }
-          if (parties2 && parties2.length > 0) {
-            groups.push({
-              entity: "PARTY",
-              label: "Customers & Parties",
-              hits: parties2.map((p2) => ({
-                id: p2.party_id,
-                title: p2.party_name,
-                subtitle: `Code: ${p2.party_code}`,
-                status: p2.is_active ? "ACTIVE" : "INACTIVE",
-                link: { entityName: "party", entityId: p2.party_id },
-                to: "/customers/parties"
-              }))
-            });
-          }
-          if (appointments3 && appointments3.length > 0) {
-            groups.push({
-              entity: "APPOINTMENT",
-              label: "Appointments",
-              hits: appointments3.map((a) => ({
-                id: Number(a.appointment_id),
-                title: a.appointment_no,
-                subtitle: `Slot: ${a.slot_start?.toLocaleTimeString?.() || ""}`,
-                status: a.status,
-                link: { entityName: "appointment", entityId: Number(a.appointment_id) },
-                to: "/gate/appointments"
-              }))
-            });
-          }
-          if (invoices3 && invoices3.length > 0) {
-            groups.push({
-              entity: "INVOICE",
-              label: "Invoices",
-              hits: invoices3.map((inv) => ({
-                id: Number(inv.invoice_id),
-                title: inv.invoice_no,
-                subtitle: `Amount: ${inv.total_amount ? `$${inv.total_amount}` : "\u2014"}`,
-                status: inv.status,
-                link: { entityName: "invoice", entityId: Number(inv.invoice_id) },
-                to: "/billing/invoices"
-              }))
-            });
-          }
+          });
+        }
+        if (visits2 && visits2.length > 0) {
+          groups.push({
+            entity: "VISIT",
+            label: "Truck Visits & Gates",
+            hits: visits2.map((v) => {
+              const plate = v.m_truck_truck_visit_truck_idTom_truck?.plate_no;
+              const driver = v.m_driver?.driver_name;
+              return {
+                id: Number(v.truck_visit_id),
+                title: `${v.visit_no} ${plate ? `(${plate})` : ""}`,
+                subtitle: [driver, v.m_party_truck_visit?.party_name].filter(Boolean).join(" \xB7 "),
+                status: v.status,
+                link: { entityName: "truck_visit", entityId: Number(v.truck_visit_id) },
+                to: "/gate/queue"
+              };
+            })
+          });
+        }
+        if (consignments2 && consignments2.length > 0) {
+          groups.push({
+            entity: "CONSIGNMENT",
+            label: "Consignments & BLs",
+            hits: consignments2.map((c) => ({
+              id: Number(c.consignment_id),
+              title: c.ref_no,
+              subtitle: c.cargo_description || "Consignment Reference",
+              status: c.ref_type,
+              link: { entityName: "consignment", entityId: Number(c.consignment_id) },
+              to: "/cargo/consignments"
+            }))
+          });
+        }
+        if (parties2 && parties2.length > 0) {
+          groups.push({
+            entity: "PARTY",
+            label: "Customers & Parties",
+            hits: parties2.map((p2) => ({
+              id: p2.party_id,
+              title: p2.party_name,
+              subtitle: `Code: ${p2.party_code}`,
+              status: p2.is_active ? "ACTIVE" : "INACTIVE",
+              link: { entityName: "party", entityId: p2.party_id },
+              to: "/customers/parties"
+            }))
+          });
+        }
+        if (regimes && regimes.length > 0) {
+          groups.push({
+            entity: "REGIME",
+            label: "Cargo Regimes",
+            hits: regimes.map((r3) => ({
+              id: r3.cargo_regime_id,
+              title: r3.regime_name,
+              subtitle: `Code: ${r3.regime_code}`,
+              status: r3.is_active ? "ACTIVE" : "INACTIVE",
+              link: { entityName: "cargo_regime", entityId: r3.cargo_regime_id },
+              to: "/setup/units"
+            }))
+          });
+        }
+        if (appointments3 && appointments3.length > 0) {
+          groups.push({
+            entity: "APPOINTMENT",
+            label: "Appointments",
+            hits: appointments3.map((a) => ({
+              id: Number(a.appointment_id),
+              title: a.appointment_no,
+              subtitle: `Slot: ${a.slot_start?.toLocaleTimeString?.() || ""}`,
+              status: a.status,
+              link: { entityName: "appointment", entityId: Number(a.appointment_id) },
+              to: "/gate/appointments"
+            }))
+          });
+        }
+        if (invoices3 && invoices3.length > 0) {
+          groups.push({
+            entity: "INVOICE",
+            label: "Invoices",
+            hits: invoices3.map((inv) => ({
+              id: Number(inv.invoice_id),
+              title: inv.invoice_no || "Invoice",
+              subtitle: `Currency: ${inv.currency || "USD"}`,
+              status: inv.status,
+              link: { entityName: "invoice", entityId: Number(inv.invoice_id) },
+              to: "/billing/invoices"
+            }))
+          });
+        }
+        if (groups.length > 0) {
           const totalHits = groups.reduce((acc, g2) => acc + (g2.hits?.length || 0), 0);
           return res.json({
             query: q,
@@ -26746,18 +26795,26 @@ var searchController = {
             total: totalHits
           });
         }
+      } catch (err) {
+        console.warn("[SearchController] DB search error:", err.message);
       }
-      const mockResults = search(q);
+    }
+    try {
+      const mockResults = search(q) || [];
       const total = mockResults.reduce((acc, g2) => acc + (g2.hits?.length || 0), 0);
-      res.json({
+      return res.json({
         query: q,
         groups: mockResults,
         results: mockResults,
         total
       });
-    } catch (err) {
-      console.error("[SearchController] Global search error:", err);
-      res.status(500).json({ error: err.message });
+    } catch {
+      return res.json({
+        query: q,
+        groups: [],
+        results: [],
+        total: 0
+      });
     }
   }
 };

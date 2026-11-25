@@ -1,4 +1,4 @@
-import { getPrisma} from "../../db/prisma";
+import { getPrisma } from "../../db/prisma";
 import { vesselCalls, consignments, allStays } from "../../data/core";
 import { manifests, sampleManifestLines } from "../../data/cargo";
 import { holds, customsRefs, releaseOrders } from "../../data/control";
@@ -1797,12 +1797,12 @@ export class CargoService {
         });
         if (regimes && regimes.length > 0) {
           const defaultRefs: Record<string, string[]> = {
-            LOCAL: ['TANSAD', 'CUSTOMS_RELEASE'],
-            TRANSIT: ['TRANSIT_DECL', 'TRANSIT_BOND', 'CUSTOMS_RELEASE'],
+            LOCAL: ["TANSAD", "CUSTOMS_RELEASE"],
+            TRANSIT: ["TRANSIT_DECL", "TRANSIT_BOND", "CUSTOMS_RELEASE"],
             EMPTY: [],
-            BONDED: ['TANSAD', 'CUSTOMS_RELEASE'],
-            EXPORT: ['EXPORT_DECL', 'EXPORT_RELEASE'],
-            TRANSHIP: ['TRANSIT_DECL', 'CUSTOMS_RELEASE'],
+            BONDED: ["TANSAD", "CUSTOMS_RELEASE"],
+            EXPORT: ["EXPORT_DECL", "EXPORT_RELEASE"],
+            TRANSHIP: ["TRANSIT_DECL", "CUSTOMS_RELEASE"],
           };
           return regimes.map((r: any) => ({
             cargoRegimeId: r.cargo_regime_id,
@@ -1812,7 +1812,8 @@ export class CargoService {
             direction: r.regime_code.startsWith("EX") ? "EXPORT" : "IMPORT",
             defaultFreeDays: 7,
             isActive: r.is_active,
-            requiresCustoms: (r as any).requires_customs ?? (r.regime_code !== "EMPTY"),
+            requiresCustoms:
+              (r as any).requires_customs ?? r.regime_code !== "EMPTY",
             refs: defaultRefs[r.regime_code] || [],
           }));
         }
@@ -1914,7 +1915,9 @@ export class CargoService {
           include: {
             m_customs_ref_type: true,
             consignment: true,
-            unit_stay_disbursement: { include: { unit_stay_cargo_units: true } },
+            unit_stay_disbursement: {
+              include: { unit_stay_cargo_units: true },
+            },
           },
           orderBy: { customs_ref_id: "desc" },
         });
@@ -2550,10 +2553,7 @@ export class CargoService {
     const prisma = getPrisma();
     const stayId = Number(unitStayId);
 
-    if (prisma &&
-      Number.isFinite(stayId) &&
-      Array.isArray(lines)
-    ) {
+    if (prisma && Number.isFinite(stayId) && Array.isArray(lines)) {
       try {
         for (const l of lines) {
           await prisma.unit_dg_line.create({
