@@ -164,6 +164,9 @@ function getPrisma() {
   }
   return prisma;
 }
+function isDbLive() {
+  return isMssqlConnected;
+}
 
 // src/server.ts
 var import_http = __toESM(require("http"));
@@ -1012,7 +1015,7 @@ registerSearch((q) => {
   return hits.length ? { entity: "PARTY", label: "Customers & parties", hits } : null;
 });
 function search(q) {
-  if (q.trim().length < 2) return [];
+  if (q.trim().length < 1) return [];
   return providers.map((p2) => p2(q.trim())).filter((g2) => !!g2);
 }
 
@@ -28238,13 +28241,13 @@ var import_express21 = require("express");
 var searchController = {
   globalSearch: async (req, res) => {
     const q = String(req.query.q || "").trim();
-    if (!q || q.length < 2) {
+    if (!q || q.length < 1) {
       return res.json({ query: q, groups: [], results: [], total: 0 });
     }
     const normQ = q.replace(/[\s-]/g, "");
     const prisma4 = getPrisma();
     const groups = [];
-    if (prisma4) {
+    if (isDbLive() && prisma4) {
       try {
         const queryWithTimeout = async (promise, fallback) => {
           try {
