@@ -1,36 +1,64 @@
-import { useState } from 'react';
-import { UserRoundCheck } from 'lucide-react';
+import { useState } from "react";
+import { UserRoundCheck } from "lucide-react";
 import {
-  Banner, Button, DataTable, Empty, Page, PageHeader, Panel, StatusPill, Tabs, ago, fmtDT,
-} from '@/ds/components';
-import { useQ } from '@/api/query';
-import { APPROVAL_LIMITS, delegations as seedDelegations, hoursUntil, type Apr, type DelegationRow } from '@/mock/cargo';
-import { Countdown } from '@/features/container-management/shared';
-import { AmountVsLimit } from './components/AmountVsLimit';
-import { ApprovalDetailDrawer } from './components/ApprovalDetailDrawer';
-import { Delegations } from './components/Delegations';
-import { approvalsApi } from './api';
+  Banner,
+  Button,
+  DataTable,
+  Empty,
+  Page,
+  PageHeader,
+  Panel,
+  StatusPill,
+  Tabs,
+  ago,
+  fmtDT,
+} from "@/ds/components";
+import { useQ } from "@/api/query";
+import {
+  APPROVAL_LIMITS,
+  delegations as seedDelegations,
+  hoursUntil,
+  type Apr,
+  type DelegationRow,
+} from "@/mock/cargo";
+import { Countdown } from "@/features/container-management/shared";
+import { AmountVsLimit } from "./components/AmountVsLimit";
+import { ApprovalDetailDrawer } from "./components/ApprovalDetailDrawer";
+import { Delegations } from "./components/Delegations";
+import { approvalsApi } from "./api";
 
-export { approvalsApi } from './api';
+export { approvalsApi } from "./api";
 
-type TabId = 'mine' | 'asked' | 'all' | 'delegations';
+type TabId = "mine" | "asked" | "all" | "delegations";
 const permLabel = (p: string) => APPROVAL_LIMITS[p]?.label ?? p;
 
 export function ApprovalsView() {
-  const { data = [], refetch } = useQ<Apr[]>(['approvals'], () => approvalsApi.getApprovals());
+  const { data = [], refetch } = useQ<Apr[]>(["approvals"], () =>
+    approvalsApi.getApprovals(),
+  );
   const [local, setLocal] = useState<Apr[] | null>(null);
   const list = local ?? data;
-  const [tab, setTab] = useState<TabId>('mine');
+  const [tab, setTab] = useState<TabId>("mine");
   const [sel, setSel] = useState<number | null>(null);
-  const { data: serverDels, refetch: refetchDels } = useQ<DelegationRow[]>(['delegations'], () => approvalsApi.getDelegations());
+  const { data: serverDels, refetch: refetchDels } = useQ<DelegationRow[]>(
+    ["delegations"],
+    () => approvalsApi.getDelegations(),
+  );
   const [localDels, setLocalDels] = useState<DelegationRow[] | null>(null);
-  const dels = localDels ?? (serverDels && serverDels.length > 0 ? serverDels : seedDelegations);
+  const dels =
+    localDels ??
+    (serverDels && serverDels.length > 0 ? serverDels : seedDelegations);
   const [delOpen, setDelOpen] = useState(false);
-  const waiting = list.filter((a) => a.status === 'PENDING' && a.canDecide && !a.mine);
+  const waiting = list.filter(
+    (a) => a.status === "PENDING" && a.canDecide && !a.mine,
+  );
   const asked = list.filter((a) => a.mine);
-  const rows = tab === 'mine' ? waiting : tab === 'asked' ? asked : list;
+  const rows = tab === "mine" ? waiting : tab === "asked" ? asked : list;
   const a = list.find((x) => x.approvalRequestId === sel);
-  const activeDel = dels.find((d) => !d.revokedAt && hoursUntil(d.validFrom) <= 0 && hoursUntil(d.validTo) > 0);
+  const activeDel = dels.find(
+    (d) =>
+      !d.revokedAt && hoursUntil(d.validFrom) <= 0 && hoursUntil(d.validTo) > 0,
+  );
 
   return (
     <Page>
@@ -42,7 +70,7 @@ export function ApprovalsView() {
           <Button
             icon={<UserRoundCheck />}
             onClick={() => {
-              setTab('delegations');
+              setTab("delegations");
               setDelOpen(true);
             }}
           >
@@ -56,7 +84,8 @@ export function ApprovalsView() {
             tone="customs"
             title={`${activeDel.toName} is covering ${activeDel.permName.toLowerCase()} for ${activeDel.fromName}`}
           >
-            Until {fmtDT(activeDel.validTo)}. Their decisions show "on behalf of".
+            Until {fmtDT(activeDel.validTo)}. Their decisions show "on behalf
+            of".
           </Banner>
         )}
         <div>
@@ -64,17 +93,19 @@ export function ApprovalsView() {
             value={tab}
             onChange={setTab}
             tabs={[
-              { id: 'mine', label: 'Waiting for me', count: waiting.length },
-              { id: 'asked', label: 'I asked', count: asked.length },
-              { id: 'all', label: 'All', count: list.length },
+              { id: "mine", label: "Waiting for me", count: waiting.length },
+              { id: "asked", label: "I asked", count: asked.length },
+              { id: "all", label: "All", count: list.length },
               {
-                id: 'delegations',
-                label: 'Delegations',
-                count: dels.filter((d) => !d.revokedAt && hoursUntil(d.validTo) > 0).length,
+                id: "delegations",
+                label: "Delegations",
+                count: dels.filter(
+                  (d) => !d.revokedAt && hoursUntil(d.validTo) > 0,
+                ).length,
               },
             ]}
           />
-          {tab !== 'delegations' ? (
+          {tab !== "delegations" ? (
             <Panel flush>
               <DataTable
                 rows={rows}
@@ -82,16 +113,20 @@ export function ApprovalsView() {
                 onRow={(x) => setSel(x.approvalRequestId!)}
                 selected={sel}
                 empty={
-                  <Empty title={tab === 'mine' ? 'Nothing waiting for you' : 'No requests'}>
-                    {tab === 'mine'
-                      ? 'New requests you can decide appear here and in your inbox.'
-                      : 'Requests you raise from holds, releases or billing show here.'}
+                  <Empty
+                    title={
+                      tab === "mine" ? "Nothing waiting for you" : "No requests"
+                    }
+                  >
+                    {tab === "mine"
+                      ? "New requests you can decide appear here and in your inbox."
+                      : "Requests you raise from holds, releases or billing show here."}
                   </Empty>
                 }
                 cols={[
                   {
-                    key: 'w',
-                    header: 'Request',
+                    key: "w",
+                    header: "Request",
                     render: (x) => (
                       <div style={{ minWidth: 220 }}>
                         <strong className="small">{x.summary}</strong>
@@ -102,52 +137,64 @@ export function ApprovalsView() {
                     ),
                   },
                   {
-                    key: 'y',
-                    header: 'Why',
+                    key: "y",
+                    header: "Why",
                     render: (x) => (
-                      <span className="xs muted" style={{ display: 'block', maxWidth: 280 }}>
+                      <span
+                        className="xs muted"
+                        style={{ display: "block", maxWidth: 280 }}
+                      >
                         {x.reason}
                       </span>
                     ),
                   },
                   {
-                    key: 'a',
-                    header: 'Amount',
+                    key: "a",
+                    header: "Amount",
                     num: true,
-                    render: (x) => (x.amount ? <AmountVsLimit a={x} /> : <span className="faint">—</span>),
+                    render: (x) =>
+                      x.amount ? (
+                        <AmountVsLimit a={x} />
+                      ) : (
+                        <span className="faint">—</span>
+                      ),
                   },
                   {
-                    key: 'l',
-                    header: 'Level',
+                    key: "l",
+                    header: "Level",
                     render: (x) => (
                       <span className="small nowrap">
-                        {x.status === 'PENDING'
+                        {x.status === "PENDING"
                           ? `Level ${(x.currentLevel ?? 0) + 1} of ${x.levelsRequired}`
-                          : `${x.levelsRequired} level${x.levelsRequired === 1 ? '' : 's'}`}
+                          : `${x.levelsRequired} level${x.levelsRequired === 1 ? "" : "s"}`}
                       </span>
                     ),
                   },
                   {
-                    key: 'b',
-                    header: 'Asked by',
+                    key: "b",
+                    header: "Asked by",
                     render: (x) => (
                       <span className="small">
-                        {x.mine ? 'You' : x.requestedBy?.split(' · ')[1]}
+                        {x.mine ? "You" : x.requestedBy?.split(" · ")[1]}
                         <div className="xs faint">{ago(x.requestedAt)}</div>
                       </span>
                     ),
                   },
                   {
-                    key: 'e',
-                    header: 'Expires',
+                    key: "e",
+                    header: "Expires",
                     render: (x) =>
-                      x.status === 'PENDING' ? (
+                      x.status === "PENDING" ? (
                         <Countdown hours={hoursUntil(x.expiresAt)} label="in" />
                       ) : (
                         <span className="xs faint">{fmtDT(x.decidedAt)}</span>
                       ),
                   },
-                  { key: 's', header: 'Status', render: (x) => <StatusPill value={x.status} /> },
+                  {
+                    key: "s",
+                    header: "Status",
+                    render: (x) => <StatusPill value={x.status} />,
+                  },
                 ]}
               />
             </Panel>
@@ -170,11 +217,17 @@ export function ApprovalsView() {
           onClose={() => setSel(null)}
           onDelegate={() => {
             setSel(null);
-            setTab('delegations');
+            setTab("delegations");
             setDelOpen(true);
           }}
           onDecide={(p) => {
-            setLocal(list.map((x) => (x.approvalRequestId === a.approvalRequestId ? { ...x, ...p } : x)));
+            setLocal(
+              list.map((x) =>
+                x.approvalRequestId === a.approvalRequestId
+                  ? { ...x, ...p }
+                  : x,
+              ),
+            );
             refetch();
           }}
         />

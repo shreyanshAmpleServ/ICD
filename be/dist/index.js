@@ -164,9 +164,6 @@ function getPrisma() {
   }
   return prisma;
 }
-function isDbLive() {
-  return isMssqlConnected;
-}
 
 // src/server.ts
 var import_http = __toESM(require("http"));
@@ -982,11 +979,17 @@ var registerSearch = (p2) => {
 var norm = (s) => s.replace(/[\s-]/g, "").toUpperCase();
 registerSearch((q) => {
   const n = norm(q);
-  const hits = allStays.filter((s) => norm(s.cargoUnit.unitNo).includes(n) || (s.cargoUnit.make ?? "").toUpperCase().includes(n)).slice(0, 6).map((s) => ({
+  const hits = allStays.filter(
+    (s) => norm(s.cargoUnit.unitNo).includes(n) || (s.cargoUnit.make ?? "").toUpperCase().includes(n)
+  ).slice(0, 6).map((s) => ({
     id: s.unitStayId,
     title: s.cargoUnit.unitNo,
     status: s.physicalStatus,
-    subtitle: [s.cargoUnit.unitTypeCode, s.cargoUnit.make && `${s.cargoUnit.make} ${s.cargoUnit.model}`, s.currentLocation?.fullCode].filter(Boolean).join(" \xB7 "),
+    subtitle: [
+      s.cargoUnit.unitTypeCode,
+      s.cargoUnit.make && `${s.cargoUnit.make} ${s.cargoUnit.model}`,
+      s.currentLocation?.fullCode
+    ].filter(Boolean).join(" \xB7 "),
     link: { entityName: "unit_stay", entityId: s.unitStayId },
     to: `/units/${s.unitStayId}`
   }));
@@ -1005,7 +1008,9 @@ registerSearch((q) => {
 });
 registerSearch((q) => {
   const n = q.toUpperCase();
-  const hits = parties.filter((p2) => p2.partyName.toUpperCase().includes(n) || p2.partyCode.includes(n)).slice(0, 5).map((p2) => ({
+  const hits = parties.filter(
+    (p2) => p2.partyName.toUpperCase().includes(n) || p2.partyCode.includes(n)
+  ).slice(0, 5).map((p2) => ({
     id: p2.partyId,
     title: p2.partyName,
     subtitle: p2.roles.map((r3) => r3.toLowerCase().replace(/_/g, " ")).join(", "),
@@ -1123,11 +1128,6 @@ var yardNodes = [
   kbh,
   ...[1, 2, 3, 4].map((a) => node(3, kbh.yardLocationId, 2, "AISLE", `A${a}`, `WH1-A${a}`, `Aisle ${a}`, { rows: 4, bays: 6, maxTier: 4, childCount: 4, allows20: false, allows40: false, maxWeightKg: 1500, tags: a === 4 ? ["QUARANTINE"] : [] }))
 ];
-var blockedSlots = {
-  "A-03-07": "Drainage repair, contractor on site until 15 Oct",
-  "B-01-01": "Light mast foundation; never stack here",
-  "C-04-08": "Too close to the fence for the empty handler"
-};
 var vtc = (...codes) => codes.map((c, i) => ({ seqNo: i + 1, checkpointCode: c.replace("?", ""), isMandatory: !c.endsWith("?") }));
 var visitTypes = [
   { visitTypeId: 1, visitTypeCode: "TRANSFER_IN", visitTypeName: "Transfer from port", requiresNomination: true, requiresAppointment: false, isActive: true, checkpoints: vtc("OUTER_IN", "WEIGH_IN?", "INNER_IN", "INNER_OUT", "OUTER_OUT") },
@@ -8336,15 +8336,17 @@ var yardMapController = {
               totalLocations: mappedLocations.length
             });
           }
+          return res.json({
+            blocks: [],
+            locations: [],
+            totalLocations: 0
+          });
         }
       }
-      const siteFallbackBlocks = blocks.filter((b) => b.siteId === siteId);
-      const defaultBlocks = siteId === 2 ? blocks.filter((b) => b.siteId === 2) : blocks.filter((b) => b.siteId === 1);
-      const effectiveBlocks = siteFallbackBlocks.length > 0 ? siteFallbackBlocks : defaultBlocks;
       res.json({
-        blocks: effectiveBlocks,
-        nodes: yardNodes.filter((n) => n.siteId === siteId).slice(0, 50),
-        totalLocations: 50
+        blocks: [],
+        nodes: [],
+        totalLocations: 0
       });
     } catch (err) {
       console.error("getYardMap error:", err);
@@ -8396,10 +8398,10 @@ var yardMapController = {
             const items = Array.from(blockMap.values());
             return res.json({ items, total: items.length });
           }
+          return res.json({ items: [], total: 0 });
         }
       }
-      const siteFallbackBlocks = blocks.filter((b) => !siteId || b.siteId === siteId);
-      res.json({ items: siteFallbackBlocks.length > 0 ? siteFallbackBlocks : blocks, total: siteFallbackBlocks.length });
+      res.json({ items: [], total: 0 });
     } catch (err) {
       console.error("getBlocks error:", err);
       res.status(500).json({ error: err.message });
@@ -8407,108 +8409,96 @@ var yardMapController = {
   },
   getLocations: async (req, res) => {
     try {
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const dbLocs = await prisma4.m_yard_location.findMany({
-            include: {
-              unit_stay: {
-                include: {
-                  unit_stay_cargo_units: true
-                }
+      const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : void 0;
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const dbLocs = await prisma4.m_yard_location.findMany({
+          where: siteId ? { site_id: siteId } : {},
+          include: {
+            unit_stay: {
+              include: {
+                unit_stay_cargo_units: true
               }
-            },
-            orderBy: { yard_location_id: "asc" }
-          });
-          if (dbLocs && dbLocs.length > 0) {
-            const items2 = dbLocs.map((l) => {
-              const codeParts = (l.location_code || l.full_code || "A-01-01-1").split("-");
-              const blockLetter = l.location_code.startsWith("BLOCK-") ? l.location_code.replace("BLOCK-", "") : codeParts[0] || "A";
-              const bay = parseInt(codeParts[1], 10) || 1;
-              const row = parseInt(codeParts[2], 10) || 1;
-              const tier = parseInt(codeParts[3], 10) || 1;
-              const stays2 = l.unit_stay;
-              const activeStay = stays2 && stays2.length > 0 ? stays2[0] : null;
-              return {
-                yardLocationId: l.yard_location_id,
-                siteId: l.site_id,
-                locationCode: l.location_code,
-                fullCode: l.full_code || l.location_code,
-                blockCode: blockLetter,
-                bay,
-                row,
-                tier,
-                isBlocked: l.is_blocked,
-                status: activeStay ? "OCCUPIED" : l.is_blocked ? "BLOCKED" : "AVAILABLE",
-                unitNumber: activeStay?.unit_stay_cargo_units?.unit_no || activeStay?.unit_stay_cargo_units?.unit_number,
-                logInst: l.log_inst || 1
-              };
-            });
-            return res.json({ items: items2, total: items2.length, nextCursor: null });
-          }
-        }
+            }
+          },
+          orderBy: { yard_location_id: "asc" }
+        });
+        const items = (dbLocs || []).map((l) => {
+          const codeParts = (l.location_code || l.full_code || "A-01-01-1").split("-");
+          const blockLetter = l.location_code.startsWith("BLOCK-") ? l.location_code.replace("BLOCK-", "") : codeParts[0] || "A";
+          const bay = parseInt(codeParts[1], 10) || 1;
+          const row = parseInt(codeParts[2], 10) || 1;
+          const tier = parseInt(codeParts[3], 10) || 1;
+          const stays2 = l.unit_stay;
+          const activeStay = stays2 && stays2.length > 0 ? stays2[0] : null;
+          return {
+            yardLocationId: l.yard_location_id,
+            siteId: l.site_id,
+            locationCode: l.location_code,
+            fullCode: l.full_code || l.location_code,
+            blockCode: blockLetter,
+            bay,
+            row,
+            tier,
+            isBlocked: l.is_blocked,
+            status: activeStay ? "OCCUPIED" : l.is_blocked ? "BLOCKED" : "AVAILABLE",
+            unitNumber: activeStay?.unit_stay_cargo_units?.unit_no || activeStay?.unit_stay_cargo_units?.unit_number,
+            logInst: l.log_inst || 1
+          };
+        });
+        return res.json({ items, total: items.length, nextCursor: null });
       }
-      const items = yardNodes.slice(0, 100).map((n, i) => ({
-        yardLocationId: i + 1,
-        siteId: 1,
-        locationCode: n.fullCode || `LOC-${i + 1}`,
-        fullCode: n.fullCode || `A-01-${String(i + 1).padStart(2, "0")}-1`,
-        blockCode: n.fullCode ? n.fullCode.slice(0, 1) : "A",
-        bay: 1,
-        row: 1,
-        tier: 1,
-        isBlocked: Boolean(blockedSlots[n.fullCode]),
-        status: "ACTIVE",
-        logInst: 1
-      }));
-      res.json({ items, total: items.length, nextCursor: null });
+      res.json({ items: [], total: 0, nextCursor: null });
     } catch (err) {
       console.error("getLocations error:", err);
       res.status(500).json({ error: err.message });
     }
   },
-  getOccupancy: async (_req, res) => {
+  getOccupancy: async (req, res) => {
     try {
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const totalUnitsInYard = await prisma4.unit_stay.count({
-            where: {
-              physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
-            }
-          });
-          const reeferUnits = await prisma4.unit_stay.count({
-            where: {
-              reefer_set_temp_c: { not: null },
-              physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
-            }
-          });
-          const dgUnits = await prisma4.unit_stay.count({
-            where: {
-              imo_class: { not: null },
-              physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
-            }
-          });
-          const totalCapacityTeu = 12500;
-          const occupiedTeu = Math.max(totalUnitsInYard * 1.5, 420);
-          const occupancyRate = Number((occupiedTeu / totalCapacityTeu * 100).toFixed(2));
-          return res.json({
-            totalCapacityTeu,
-            occupiedTeu: Math.round(occupiedTeu),
-            occupancyRate,
-            reeferOccupancyRate: reeferUnits > 0 ? Number((reeferUnits / 500 * 100).toFixed(1)) : 42.5,
-            dangerousGoodsRate: dgUnits > 0 ? Number((dgUnits / 200 * 100).toFixed(1)) : 14.2,
-            availableSlots: totalCapacityTeu - Math.round(occupiedTeu)
-          });
-        }
+      const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : void 0;
+      const prisma4 = getPrisma();
+      if (prisma4) {
+        const siteFilter = siteId ? { site_id: siteId } : {};
+        const totalUnitsInYard = await prisma4.unit_stay.count({
+          where: {
+            ...siteFilter,
+            physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
+          }
+        });
+        const reeferUnits = await prisma4.unit_stay.count({
+          where: {
+            ...siteFilter,
+            reefer_set_temp_c: { not: null },
+            physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
+          }
+        });
+        const dgUnits = await prisma4.unit_stay.count({
+          where: {
+            ...siteFilter,
+            imo_class: { not: null },
+            physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
+          }
+        });
+        const totalCapacityTeu = siteId === 2 ? 3e3 : 12500;
+        const occupiedTeu = totalUnitsInYard * 1.5;
+        const occupancyRate = totalCapacityTeu > 0 ? Number((occupiedTeu / totalCapacityTeu * 100).toFixed(2)) : 0;
+        return res.json({
+          totalCapacityTeu,
+          occupiedTeu: Math.round(occupiedTeu),
+          occupancyRate,
+          reeferOccupancyRate: Number((reeferUnits / Math.max(totalCapacityTeu * 0.1, 1) * 100).toFixed(1)),
+          dangerousGoodsRate: Number((dgUnits / Math.max(totalCapacityTeu * 0.05, 1) * 100).toFixed(1)),
+          availableSlots: Math.max(totalCapacityTeu - Math.round(occupiedTeu), 0)
+        });
       }
       res.json({
         totalCapacityTeu: 12500,
-        occupiedTeu: 8420,
-        occupancyRate: 67.36,
-        reeferOccupancyRate: 54.2,
-        dangerousGoodsRate: 18.4,
-        availableSlots: 4080
+        occupiedTeu: 0,
+        occupancyRate: 0,
+        reeferOccupancyRate: 0,
+        dangerousGoodsRate: 0,
+        availableSlots: 12500
       });
     } catch (err) {
       console.error("getOccupancy error:", err);
@@ -8584,6 +8574,629 @@ var yardMapController = {
       res.json(result);
     } catch (err) {
       res.status(500).json({ error: err.message });
+    }
+  }
+};
+
+// src/v1/controllers/yard/moves.controller.ts
+var VALID_MOVE_KINDS = [
+  "PICK_FOR_VISIT",
+  "FROM_ACTIVITY",
+  "TO_ACTIVITY",
+  "RESHUFFLE",
+  "RELOCATE",
+  "PLACE"
+];
+function normalizeMoveKind(kind) {
+  if (!kind) return "PLACE";
+  const upper = String(kind).trim().toUpperCase();
+  if (VALID_MOVE_KINDS.includes(upper)) {
+    return upper;
+  }
+  const aliases = {
+    REHANDLE: "RESHUFFLE",
+    YARD_TO_YARD: "RELOCATE",
+    LOAD: "PICK_FOR_VISIT",
+    DISCHARGE: "PLACE"
+  };
+  return aliases[upper] ?? "RELOCATE";
+}
+function parseSiteId(val) {
+  if (val === void 0 || val === null || val === "") return void 0;
+  const num2 = Number(val);
+  return Number.isSafeInteger(num2) && num2 > 0 ? num2 : void 0;
+}
+var yardMovesController = {
+  getMoveOrders: async (req, res) => {
+    try {
+      const siteId = parseSiteId(
+        req.query.siteId || req.headers["x-site-id"] || req.siteId
+      );
+      const { status, equipmentCode } = req.query;
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+      }
+      const whereClause = {};
+      if (siteId) whereClause.site_id = siteId;
+      if (status && typeof status === "string") {
+        if (status.toUpperCase() === "COMPLETED" || status.toUpperCase() === "DONE") {
+          whereClause.status = { in: ["DONE", "COMPLETED"] };
+        } else {
+          whereClause.status = status;
+        }
+      }
+      const dbMoves = await prisma4.move_order.findMany({
+        where: whereClause,
+        include: {
+          unit_stay: {
+            include: {
+              unit_stay_cargo_units: {
+                include: {
+                  cargo_unit_unit_types: true
+                }
+              }
+            }
+          },
+          m_equipment: true,
+          m_yard_location_move_order_from_location_idTom_yard_location: true,
+          m_yard_location_move_order_to_location_idTom_yard_location: true,
+          truck_visit_move_order: {
+            include: {
+              m_truck_truck_visit_truck_idTom_truck: true
+            }
+          }
+        },
+        orderBy: { move_order_id: "desc" },
+        take: 100
+      });
+      let items = (dbMoves || []).map((m) => ({
+        moveOrderId: Number(m.move_order_id),
+        moveId: Number(m.move_order_id),
+        siteId: m.site_id || 1,
+        unitStayId: Number(m.unit_stay_id),
+        unitNo: m.unit_stay?.unit_stay_cargo_units?.unit_no || "MSKU 123456 7",
+        isoCode: m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types?.iso_code || "42G1",
+        category: m.unit_stay?.unit_stay_cargo_units?.unit_category || "CONTAINER",
+        unitType: m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types?.type_name || "40ft Standard dry",
+        moveType: m.move_kind,
+        moveKind: m.move_kind,
+        sourceLocation: m.m_yard_location_move_order_from_location_idTom_yard_location?.location_code || "YARD",
+        fromLocationCode: m.m_yard_location_move_order_from_location_idTom_yard_location?.location_code || "YARD",
+        targetLocation: m.m_yard_location_move_order_to_location_idTom_yard_location?.location_code || "BUFFER",
+        toLocationCode: m.m_yard_location_move_order_to_location_idTom_yard_location?.location_code || "BUFFER",
+        priority: m.priority || 5,
+        status: m.status || "OPEN",
+        equipmentId: m.assigned_equipment_id,
+        equipmentCode: m.m_equipment?.equipment_code || void 0,
+        equipmentType: m.m_equipment?.equipment_type || void 0,
+        assignedTo: m.assigned_operator_sub || m.m_equipment?.equipment_code || void 0,
+        operatorName: m.assigned_operator_sub || void 0,
+        licensePlate: m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck?.plate_no || void 0,
+        truckPlate: m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck?.plate_no || void 0,
+        driverName: void 0,
+        requestedAt: m.requested_at ? m.requested_at.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
+        startedAt: void 0,
+        completedAt: m.completed_at ? m.completed_at.toISOString() : void 0,
+        reason: m.override_reason || void 0
+      }));
+      if (equipmentCode && typeof equipmentCode === "string") {
+        items = items.filter(
+          (x) => x.equipmentCode === equipmentCode
+        );
+      }
+      return res.json({
+        success: true,
+        items,
+        total: items.length
+      });
+    } catch (error) {
+      console.error("getMoveOrders error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  /**
+   * Create a move order.
+   */
+  createMoveOrder: async (req, res) => {
+    try {
+      const siteId = parseSiteId(
+        req.body.siteId || req.query.siteId || req.headers["x-site-id"] || 1
+      ) || 1;
+      const {
+        unitStayId,
+        unitNo,
+        moveKind,
+        moveType,
+        fromLocationId,
+        fromCode,
+        sourceLocation,
+        toLocationId,
+        toCode,
+        targetLocation,
+        priority = 5,
+        assignedEquipmentId,
+        assignedOperatorSub,
+        truckVisitId,
+        overrideReason
+      } = req.body;
+      if (!unitStayId && !unitNo) {
+        return res.status(400).json({
+          success: false,
+          message: "unitStayId or unitNo is required"
+        });
+      }
+      const normalizedKind = normalizeMoveKind(moveKind || moveType);
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+      }
+      let targetStay = null;
+      if (unitStayId) {
+        try {
+          targetStay = await prisma4.unit_stay.findUnique({
+            where: { unit_stay_id: BigInt(unitStayId) },
+            include: { unit_stay_cargo_units: true }
+          });
+        } catch {
+        }
+      }
+      const searchUnitNo = (unitNo || req.body.unit_no || "").trim().toUpperCase();
+      if (!targetStay && searchUnitNo) {
+        const cleanNo = searchUnitNo.replace(/[\s-]/g, "");
+        targetStay = await prisma4.unit_stay.findFirst({
+          where: {
+            site_id: siteId,
+            unit_stay_cargo_units: {
+              OR: [{ unit_no: searchUnitNo }, { unit_no: cleanNo }]
+            }
+          },
+          orderBy: { unit_stay_id: "desc" },
+          include: { unit_stay_cargo_units: true }
+        });
+      }
+      if (!targetStay) {
+        const finalUnitNo = searchUnitNo || `CONT-${Date.now().toString().slice(-6)}`;
+        let cu = await prisma4.cargo_unit.findFirst({
+          where: { unit_no: finalUnitNo }
+        });
+        if (!cu) {
+          const firstType = await prisma4.m_unit_type.findFirst({
+            select: { unit_type_id: true }
+          });
+          cu = await prisma4.cargo_unit.create({
+            data: {
+              unit_category: "CONTAINER",
+              unit_no: finalUnitNo,
+              unit_type_id: firstType?.unit_type_id || 1,
+              createdby: req.user?.sub || "system"
+            }
+          });
+        }
+        const firstRegime = await prisma4.m_cargo_regime.findFirst({
+          select: { cargo_regime_id: true }
+        });
+        targetStay = await prisma4.unit_stay.create({
+          data: {
+            cargo_unit_id: cu.cargo_unit_id,
+            site_id: siteId,
+            cargo_regime_id: firstRegime?.cargo_regime_id || 1,
+            flow: "IMPORT",
+            full_empty: "F",
+            physical_status: "IN_YARD",
+            createdby: req.user?.sub || "system"
+          },
+          include: { unit_stay_cargo_units: true }
+        });
+      }
+      let resolvedFromLocId = fromLocationId ? Number(fromLocationId) : null;
+      const rawFromCode = String(fromCode || sourceLocation || "").trim();
+      if (!resolvedFromLocId && rawFromCode) {
+        const loc = await prisma4.m_yard_location.findFirst({
+          where: {
+            site_id: siteId,
+            OR: [{ location_code: rawFromCode }, { full_code: rawFromCode }]
+          },
+          select: { yard_location_id: true }
+        });
+        if (loc) resolvedFromLocId = loc.yard_location_id;
+      }
+      if (resolvedFromLocId) {
+        const exists = await prisma4.m_yard_location.findUnique({
+          where: { yard_location_id: resolvedFromLocId },
+          select: { yard_location_id: true }
+        });
+        if (!exists) resolvedFromLocId = null;
+      }
+      let resolvedToLocId = toLocationId ? Number(toLocationId) : null;
+      const rawToCode = String(toCode || targetLocation || "").trim();
+      if (!resolvedToLocId && rawToCode) {
+        const loc = await prisma4.m_yard_location.findFirst({
+          where: {
+            site_id: siteId,
+            OR: [{ location_code: rawToCode }, { full_code: rawToCode }]
+          },
+          select: { yard_location_id: true }
+        });
+        if (loc) resolvedToLocId = loc.yard_location_id;
+      }
+      if (resolvedToLocId) {
+        const exists = await prisma4.m_yard_location.findUnique({
+          where: { yard_location_id: resolvedToLocId },
+          select: { yard_location_id: true }
+        });
+        if (!exists) resolvedToLocId = null;
+      }
+      let resolvedEquipId = assignedEquipmentId ? Number(assignedEquipmentId) : null;
+      if (resolvedEquipId) {
+        const exists = await prisma4.m_equipment.findUnique({
+          where: { equipment_id: resolvedEquipId },
+          select: { equipment_id: true }
+        });
+        if (!exists) resolvedEquipId = null;
+      }
+      let resolvedTruckVisitId = null;
+      if (truckVisitId) {
+        try {
+          const tv = await prisma4.truck_visit.findUnique({
+            where: { truck_visit_id: BigInt(truckVisitId) },
+            select: { truck_visit_id: true }
+          });
+          if (tv) resolvedTruckVisitId = tv.truck_visit_id;
+        } catch {
+        }
+      }
+      const newOrder = await prisma4.move_order.create({
+        data: {
+          site_id: siteId,
+          unit_stay_id: targetStay.unit_stay_id,
+          move_kind: normalizedKind,
+          from_location_id: resolvedFromLocId,
+          to_location_id: resolvedToLocId,
+          priority: Number(priority) || 5,
+          status: "OPEN",
+          assigned_equipment_id: resolvedEquipId,
+          assigned_operator_sub: assignedOperatorSub || null,
+          truck_visit_id: resolvedTruckVisitId,
+          override_reason: overrideReason || null,
+          createdby: req.user?.sub || "system"
+        },
+        include: {
+          unit_stay: {
+            include: {
+              unit_stay_cargo_units: true
+            }
+          },
+          m_equipment: true,
+          m_yard_location_move_order_from_location_idTom_yard_location: true,
+          m_yard_location_move_order_to_location_idTom_yard_location: true
+        }
+      });
+      return res.status(201).json({
+        success: true,
+        data: {
+          moveOrderId: Number(newOrder.move_order_id),
+          moveId: Number(newOrder.move_order_id),
+          siteId: newOrder.site_id,
+          unitStayId: Number(newOrder.unit_stay_id),
+          unitNo: newOrder.unit_stay?.unit_stay_cargo_units?.unit_no || searchUnitNo || "UNKNOWN",
+          moveType: newOrder.move_kind,
+          moveKind: newOrder.move_kind,
+          sourceLocation: newOrder.m_yard_location_move_order_from_location_idTom_yard_location?.full_code || rawFromCode || "YARD",
+          targetLocation: newOrder.m_yard_location_move_order_to_location_idTom_yard_location?.full_code || rawToCode || "BUFFER",
+          priority: newOrder.priority,
+          status: newOrder.status,
+          assignedEquipmentId: newOrder.assigned_equipment_id,
+          assignedOperatorSub: newOrder.assigned_operator_sub,
+          createdAt: newOrder.createdate.toISOString()
+        }
+      });
+    } catch (error) {
+      console.error("createMoveOrder error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  startMove: async (req, res) => {
+    try {
+      const moveOrderId = req.params.moveOrderId || req.params.moveId;
+      if (!moveOrderId) {
+        return res.status(400).json({ success: false, message: "moveOrderId is required" });
+      }
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const updated = await prisma4.move_order.update({
+            where: { move_order_id: BigInt(moveOrderId) },
+            data: {
+              status: "IN_PROGRESS",
+              updatedby: req.user?.sub || "system",
+              updatedate: /* @__PURE__ */ new Date()
+            }
+          });
+          return res.json({
+            success: true,
+            data: {
+              moveOrderId: Number(updated.move_order_id),
+              status: updated.status
+            }
+          });
+        }
+      }
+      return res.json({
+        success: true,
+        data: { moveOrderId: Number(moveOrderId), status: "IN_PROGRESS" }
+      });
+    } catch (error) {
+      console.error("startMove error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  completeMove: async (req, res) => {
+    try {
+      const moveOrderId = req.params.moveOrderId || req.params.moveId;
+      const { toLocationId } = req.body;
+      if (!moveOrderId) {
+        return res.status(400).json({ success: false, message: "moveOrderId is required" });
+      }
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const existing = await prisma4.move_order.findUnique({
+            where: { move_order_id: BigInt(moveOrderId) }
+          });
+          if (!existing) {
+            return res.status(404).json({ success: false, message: "Move order not found" });
+          }
+          const targetLocationId = toLocationId ? Number(toLocationId) : existing.to_location_id;
+          const updated = await prisma4.move_order.update({
+            where: { move_order_id: BigInt(moveOrderId) },
+            data: {
+              status: "DONE",
+              completed_at: /* @__PURE__ */ new Date(),
+              to_location_id: targetLocationId,
+              updatedby: req.user?.sub || "system",
+              updatedate: /* @__PURE__ */ new Date()
+            }
+          });
+          if (targetLocationId && existing.unit_stay_id) {
+            await prisma4.unit_stay.update({
+              where: { unit_stay_id: existing.unit_stay_id },
+              data: {
+                current_location_id: targetLocationId,
+                updatedby: req.user?.sub || "system",
+                updatedate: /* @__PURE__ */ new Date()
+              }
+            }).catch(
+              (e) => console.warn("Could not update unit_stay location:", e.message)
+            );
+          }
+          return res.json({
+            success: true,
+            data: {
+              moveOrderId: Number(updated.move_order_id),
+              status: updated.status,
+              completedAt: updated.completed_at?.toISOString()
+            }
+          });
+        }
+      }
+      return res.json({
+        success: true,
+        data: {
+          moveOrderId: Number(moveOrderId),
+          status: "COMPLETED",
+          completedAt: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      });
+    } catch (error) {
+      console.error("completeMove error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  assignMove: async (req, res) => {
+    try {
+      const moveOrderId = req.params.moveOrderId || req.params.moveId;
+      const { equipmentId, operatorSub, equipmentCode } = req.body;
+      if (!moveOrderId) {
+        return res.status(400).json({ success: false, message: "moveOrderId is required" });
+      }
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          let resolvedEquipmentId = equipmentId ? Number(equipmentId) : void 0;
+          if (!resolvedEquipmentId && equipmentCode) {
+            const eq = await prisma4.m_equipment.findFirst({
+              where: { equipment_code: String(equipmentCode) }
+            });
+            if (eq) resolvedEquipmentId = eq.equipment_id;
+          }
+          const updated = await prisma4.move_order.update({
+            where: { move_order_id: BigInt(moveOrderId) },
+            data: {
+              assigned_equipment_id: resolvedEquipmentId ?? null,
+              assigned_operator_sub: operatorSub || null,
+              status: "ASSIGNED",
+              updatedby: req.user?.sub || "system",
+              updatedate: /* @__PURE__ */ new Date()
+            },
+            include: {
+              m_equipment: true
+            }
+          });
+          return res.json({
+            success: true,
+            data: {
+              moveOrderId: Number(updated.move_order_id),
+              status: updated.status,
+              assignedEquipmentId: updated.assigned_equipment_id,
+              equipmentCode: updated.m_equipment?.equipment_code || void 0,
+              assignedOperatorSub: updated.assigned_operator_sub
+            }
+          });
+        }
+      }
+      return res.json({
+        success: true,
+        data: {
+          moveOrderId: Number(moveOrderId),
+          status: "ASSIGNED",
+          assignedEquipmentId: equipmentId,
+          assignedOperatorSub: operatorSub
+        }
+      });
+    } catch (error) {
+      console.error("assignMove error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  executeMove: async (req, res) => {
+    try {
+      const moveId = req.params.moveId || req.params.moveOrderId;
+      if (!moveId) {
+        return res.status(400).json({ success: false, message: "moveId is required" });
+      }
+      if (true) {
+        const prisma4 = getPrisma();
+        if (prisma4) {
+          const updated = await prisma4.move_order.update({
+            where: { move_order_id: BigInt(moveId) },
+            data: {
+              status: "IN_PROGRESS",
+              updatedby: req.user?.sub || "system",
+              updatedate: /* @__PURE__ */ new Date()
+            }
+          });
+          return res.json({
+            success: true,
+            data: {
+              moveOrderId: Number(updated.move_order_id),
+              status: updated.status
+            }
+          });
+        }
+      }
+      return res.json({
+        success: true,
+        data: { moveOrderId: Number(moveId), status: "IN_PROGRESS" }
+      });
+    } catch (error) {
+      console.error("executeMove error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  getEquipment: async (req, res) => {
+    try {
+      const siteId = parseSiteId(
+        req.query.siteId || req.headers["x-site-id"] || req.siteId
+      );
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+      }
+      const whereClause = { is_active: true };
+      if (siteId) whereClause.site_id = siteId;
+      let equipment3 = await prisma4.m_equipment.findMany({
+        where: whereClause,
+        orderBy: { equipment_code: "asc" }
+      });
+      if ((!equipment3 || equipment3.length === 0) && siteId) {
+        equipment3 = await prisma4.m_equipment.findMany({
+          where: { is_active: true },
+          orderBy: { equipment_code: "asc" }
+        });
+      }
+      const items = (equipment3 || []).map((e) => ({
+        equipmentId: e.equipment_id,
+        equipmentCode: e.equipment_code,
+        equipmentName: e.equipment_name,
+        equipmentType: e.equipment_type,
+        capacityKg: e.capacity_kg ? Number(e.capacity_kg) : void 0,
+        status: e.is_active ? "AVAILABLE" : "MAINTENANCE",
+        siteId: e.site_id
+      }));
+      return res.json({ success: true, items, total: items.length });
+    } catch (error) {
+      console.error("getEquipment error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  getLocations: async (req, res) => {
+    try {
+      const siteId = parseSiteId(
+        req.query.siteId || req.headers["x-site-id"] || req.siteId
+      );
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+      }
+      const whereClause = { is_active: true };
+      if (siteId) whereClause.site_id = siteId;
+      let locations = await prisma4.m_yard_location.findMany({
+        where: whereClause,
+        orderBy: { location_code: "asc" },
+        take: 300
+      });
+      if ((!locations || locations.length === 0) && siteId) {
+        locations = await prisma4.m_yard_location.findMany({
+          where: { is_active: true },
+          orderBy: { location_code: "asc" },
+          take: 300
+        });
+      }
+      const items = (locations || []).map((l) => ({
+        locationId: l.yard_location_id,
+        yardLocationId: l.yard_location_id,
+        parentId: l.parent_id,
+        levelNo: l.level_no,
+        locationCode: l.location_code,
+        fullCode: l.full_code,
+        name: l.location_code,
+        kind: l.location_kind,
+        locationKind: l.location_kind,
+        isSlot: Boolean(l.is_slot),
+        siteId: l.site_id,
+        allows20: Boolean(l.allows_20),
+        allows40: Boolean(l.allows_40),
+        allows45: Boolean(l.allows_45),
+        maxTier: l.max_tier,
+        maxWeightKg: l.max_weight_kg,
+        isBlocked: Boolean(l.is_blocked),
+        blockedReason: l.blocked_reason
+      }));
+      return res.json({ success: true, items, total: items.length });
+    } catch (error) {
+      console.error("getLocations error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  },
+  getOperators: async (_req, res) => {
+    try {
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+      }
+      const users2 = await prisma4.app_user.findMany({
+        where: { is_active: true },
+        select: {
+          user_id: true,
+          user_sub: true,
+          user_name: true,
+          email: true,
+          phone: true
+        },
+        orderBy: { user_id: "asc" }
+      });
+      const items = (users2 || []).map((u) => ({
+        userId: u.user_id,
+        userSub: u.user_sub,
+        name: u.user_name,
+        email: u.email,
+        phone: u.phone
+      }));
+      return res.json({ success: true, items, total: items.length });
+    } catch (error) {
+      console.error("getOperators error:", error);
+      return res.status(500).json({ success: false, message: error.message });
     }
   }
 };
@@ -8854,7 +9467,6 @@ var moveOrders = [
   mv(9124, vehiclesIn[6], { moveKind: "RELOCATE", status: "OPEN", priority: 4, requestedAt: at(3), note: "Move to wash bay before pre-delivery inspection." })
 ];
 for (const m of moveOrders) if (!m.toCode && !m.toLabel) m.toCode = candidatesFor(m)[0]?.fullCode;
-var equipmentForMoves = ["RS-01", "RS-02", "EH-01", "TT-01"];
 var item = (id, itemCode, itemName, area) => ({
   inspectionItemId: id,
   itemCode,
@@ -9266,782 +9878,6 @@ var estimates = ESTIMATE_STATES.map((status, i) => {
   };
 });
 
-// src/v1/controllers/yard/moves.controller.ts
-var VALID_MOVE_KINDS = [
-  "PICK_FOR_VISIT",
-  "FROM_ACTIVITY",
-  "TO_ACTIVITY",
-  "RESHUFFLE",
-  "RELOCATE",
-  "PLACE"
-];
-function normalizeMoveKind(kind) {
-  if (!kind) return "PLACE";
-  const upper = String(kind).trim().toUpperCase();
-  if (VALID_MOVE_KINDS.includes(upper)) {
-    return upper;
-  }
-  const aliases = {
-    REHANDLE: "RESHUFFLE",
-    YARD_TO_YARD: "RELOCATE",
-    LOAD: "PICK_FOR_VISIT",
-    DISCHARGE: "PLACE"
-  };
-  return aliases[upper] ?? "RELOCATE";
-}
-function parseSiteId(val) {
-  if (val === void 0 || val === null || val === "") return void 0;
-  const num2 = Number(val);
-  return Number.isSafeInteger(num2) && num2 > 0 ? num2 : void 0;
-}
-var FALLBACK_OPERATORS = [
-  {
-    userId: 1,
-    userSub: "ibrahim.n",
-    name: "Ibrahim N.",
-    email: "ibrahim.n@icd.tz",
-    phone: "+255 712 345 678"
-  },
-  {
-    userId: 2,
-    userSub: "kassim.o",
-    name: "Kassim O.",
-    email: "kassim.o@icd.tz",
-    phone: "+255 713 456 789"
-  },
-  {
-    userId: 3,
-    userSub: "daudi.m",
-    name: "Daudi M.",
-    email: "daudi.m@icd.tz",
-    phone: "+255 714 567 890"
-  },
-  {
-    userId: 4,
-    userSub: "juma.k",
-    name: "Juma K.",
-    email: "juma.k@icd.tz",
-    phone: "+255 715 678 901"
-  },
-  {
-    userId: 5,
-    userSub: "ashok.k",
-    name: "Ashok K.",
-    email: "ashok.k@icd.tz",
-    phone: "+255 716 789 012"
-  }
-];
-var yardMovesController = {
-  /**
-   * GET move orders for the yard.
-   */
-  getMoveOrders: async (req, res) => {
-    try {
-      const siteId = parseSiteId(
-        req.query.siteId || req.headers["x-site-id"] || req.siteId
-      );
-      const { status, equipmentCode } = req.query;
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const whereClause = {};
-          if (siteId) whereClause.site_id = siteId;
-          if (status && typeof status === "string") {
-            if (status.toUpperCase() === "COMPLETED" || status.toUpperCase() === "DONE") {
-              whereClause.status = { in: ["DONE", "COMPLETED"] };
-            } else {
-              whereClause.status = status;
-            }
-          }
-          const dbMoves = await prisma4.move_order.findMany({
-            where: whereClause,
-            include: {
-              unit_stay: {
-                include: {
-                  unit_stay_cargo_units: {
-                    include: {
-                      cargo_unit_unit_types: true
-                    }
-                  }
-                }
-              },
-              m_equipment: true,
-              m_yard_location_move_order_from_location_idTom_yard_location: true,
-              m_yard_location_move_order_to_location_idTom_yard_location: true,
-              truck_visit_move_order: {
-                include: {
-                  m_truck_truck_visit_truck_idTom_truck: true
-                }
-              }
-            },
-            orderBy: { move_order_id: "desc" },
-            take: 100
-          });
-          if (dbMoves && dbMoves.length > 0) {
-            let items = dbMoves.map((m) => ({
-              moveOrderId: Number(m.move_order_id),
-              moveId: Number(m.move_order_id),
-              siteId: m.site_id || 1,
-              unitStayId: Number(m.unit_stay_id),
-              unitNo: m.unit_stay?.unit_stay_cargo_units?.unit_no || "MSKU 123456 7",
-              isoCode: m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types?.iso_code || "42G1",
-              category: m.unit_stay?.unit_stay_cargo_units?.unit_category || "CONTAINER",
-              unitType: m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types?.type_name || "40ft Standard dry",
-              moveType: m.move_kind,
-              moveKind: m.move_kind,
-              sourceLocation: m.m_yard_location_move_order_from_location_idTom_yard_location?.location_code || "YARD",
-              fromLocationCode: m.m_yard_location_move_order_from_location_idTom_yard_location?.location_code || "YARD",
-              targetLocation: m.m_yard_location_move_order_to_location_idTom_yard_location?.location_code || "BUFFER",
-              toLocationCode: m.m_yard_location_move_order_to_location_idTom_yard_location?.location_code || "BUFFER",
-              priority: m.priority || 5,
-              status: m.status || "OPEN",
-              equipmentId: m.assigned_equipment_id,
-              equipmentCode: m.m_equipment?.equipment_code || void 0,
-              equipmentType: m.m_equipment?.equipment_type || void 0,
-              assignedTo: m.assigned_operator_sub || m.m_equipment?.equipment_code || void 0,
-              operatorName: m.assigned_operator_sub || void 0,
-              licensePlate: m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck?.plate_no || void 0,
-              truckPlate: m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck?.plate_no || void 0,
-              driverName: void 0,
-              requestedAt: m.requested_at ? m.requested_at.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
-              startedAt: void 0,
-              completedAt: m.completed_at ? m.completed_at.toISOString() : void 0,
-              reason: m.override_reason || void 0
-            }));
-            if (equipmentCode && typeof equipmentCode === "string") {
-              items = items.filter(
-                (x) => x.equipmentCode === equipmentCode
-              );
-            }
-            return res.json({
-              success: true,
-              items,
-              total: items.length
-            });
-          }
-        }
-      }
-      let filtered = [...moveOrders];
-      if (status && typeof status === "string") {
-        filtered = filtered.filter((m) => m.status === status);
-      }
-      if (equipmentCode && typeof equipmentCode === "string") {
-        filtered = filtered.filter(
-          (m) => m.equipmentCode === equipmentCode
-        );
-      }
-      return res.json({
-        success: true,
-        items: filtered,
-        total: filtered.length
-      });
-    } catch (error) {
-      console.error("getMoveOrders error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  },
-  /**
-   * Create a move order.
-   */
-  createMoveOrder: async (req, res) => {
-    try {
-      const siteId = parseSiteId(
-        req.body.siteId || req.query.siteId || req.headers["x-site-id"] || 1
-      ) || 1;
-      const {
-        unitStayId,
-        unitNo,
-        moveKind,
-        moveType,
-        fromLocationId,
-        fromCode,
-        sourceLocation,
-        toLocationId,
-        toCode,
-        targetLocation,
-        priority = 5,
-        assignedEquipmentId,
-        assignedOperatorSub,
-        truckVisitId,
-        overrideReason
-      } = req.body;
-      if (!unitStayId && !unitNo) {
-        return res.status(400).json({
-          success: false,
-          message: "unitStayId or unitNo is required"
-        });
-      }
-      const normalizedKind = normalizeMoveKind(moveKind || moveType);
-      const prisma4 = getPrisma();
-      if (!prisma4) {
-        return res.status(500).json({ success: false, message: "Database connection unavailable" });
-      }
-      let targetStay = null;
-      if (unitStayId) {
-        try {
-          targetStay = await prisma4.unit_stay.findUnique({
-            where: { unit_stay_id: BigInt(unitStayId) },
-            include: { unit_stay_cargo_units: true }
-          });
-        } catch {
-        }
-      }
-      const searchUnitNo = (unitNo || req.body.unit_no || "").trim().toUpperCase();
-      if (!targetStay && searchUnitNo) {
-        const cleanNo = searchUnitNo.replace(/[\s-]/g, "");
-        targetStay = await prisma4.unit_stay.findFirst({
-          where: {
-            site_id: siteId,
-            unit_stay_cargo_units: {
-              OR: [{ unit_no: searchUnitNo }, { unit_no: cleanNo }]
-            }
-          },
-          orderBy: { unit_stay_id: "desc" },
-          include: { unit_stay_cargo_units: true }
-        });
-      }
-      if (!targetStay) {
-        const finalUnitNo = searchUnitNo || `CONT-${Date.now().toString().slice(-6)}`;
-        let cu = await prisma4.cargo_unit.findFirst({
-          where: { unit_no: finalUnitNo }
-        });
-        if (!cu) {
-          const firstType = await prisma4.m_unit_type.findFirst({
-            select: { unit_type_id: true }
-          });
-          cu = await prisma4.cargo_unit.create({
-            data: {
-              unit_category: "CONTAINER",
-              unit_no: finalUnitNo,
-              unit_type_id: firstType?.unit_type_id || 1,
-              createdby: req.user?.sub || "system"
-            }
-          });
-        }
-        const firstRegime = await prisma4.m_cargo_regime.findFirst({
-          select: { cargo_regime_id: true }
-        });
-        targetStay = await prisma4.unit_stay.create({
-          data: {
-            cargo_unit_id: cu.cargo_unit_id,
-            site_id: siteId,
-            cargo_regime_id: firstRegime?.cargo_regime_id || 1,
-            flow: "IMPORT",
-            full_empty: "F",
-            physical_status: "IN_YARD",
-            createdby: req.user?.sub || "system"
-          },
-          include: { unit_stay_cargo_units: true }
-        });
-      }
-      let resolvedFromLocId = fromLocationId ? Number(fromLocationId) : null;
-      const rawFromCode = String(fromCode || sourceLocation || "").trim();
-      if (!resolvedFromLocId && rawFromCode) {
-        const loc = await prisma4.m_yard_location.findFirst({
-          where: {
-            site_id: siteId,
-            OR: [{ location_code: rawFromCode }, { full_code: rawFromCode }]
-          },
-          select: { yard_location_id: true }
-        });
-        if (loc) resolvedFromLocId = loc.yard_location_id;
-      }
-      if (resolvedFromLocId) {
-        const exists = await prisma4.m_yard_location.findUnique({
-          where: { yard_location_id: resolvedFromLocId },
-          select: { yard_location_id: true }
-        });
-        if (!exists) resolvedFromLocId = null;
-      }
-      let resolvedToLocId = toLocationId ? Number(toLocationId) : null;
-      const rawToCode = String(toCode || targetLocation || "").trim();
-      if (!resolvedToLocId && rawToCode) {
-        const loc = await prisma4.m_yard_location.findFirst({
-          where: {
-            site_id: siteId,
-            OR: [{ location_code: rawToCode }, { full_code: rawToCode }]
-          },
-          select: { yard_location_id: true }
-        });
-        if (loc) resolvedToLocId = loc.yard_location_id;
-      }
-      if (resolvedToLocId) {
-        const exists = await prisma4.m_yard_location.findUnique({
-          where: { yard_location_id: resolvedToLocId },
-          select: { yard_location_id: true }
-        });
-        if (!exists) resolvedToLocId = null;
-      }
-      let resolvedEquipId = assignedEquipmentId ? Number(assignedEquipmentId) : null;
-      if (resolvedEquipId) {
-        const exists = await prisma4.m_equipment.findUnique({
-          where: { equipment_id: resolvedEquipId },
-          select: { equipment_id: true }
-        });
-        if (!exists) resolvedEquipId = null;
-      }
-      let resolvedTruckVisitId = null;
-      if (truckVisitId) {
-        try {
-          const tv = await prisma4.truck_visit.findUnique({
-            where: { truck_visit_id: BigInt(truckVisitId) },
-            select: { truck_visit_id: true }
-          });
-          if (tv) resolvedTruckVisitId = tv.truck_visit_id;
-        } catch {
-        }
-      }
-      const newOrder = await prisma4.move_order.create({
-        data: {
-          site_id: siteId,
-          unit_stay_id: targetStay.unit_stay_id,
-          move_kind: normalizedKind,
-          from_location_id: resolvedFromLocId,
-          to_location_id: resolvedToLocId,
-          priority: Number(priority) || 5,
-          status: "OPEN",
-          assigned_equipment_id: resolvedEquipId,
-          assigned_operator_sub: assignedOperatorSub || null,
-          truck_visit_id: resolvedTruckVisitId,
-          override_reason: overrideReason || null,
-          createdby: req.user?.sub || "system"
-        },
-        include: {
-          unit_stay: {
-            include: {
-              unit_stay_cargo_units: true
-            }
-          },
-          m_equipment: true,
-          m_yard_location_move_order_from_location_idTom_yard_location: true,
-          m_yard_location_move_order_to_location_idTom_yard_location: true
-        }
-      });
-      return res.status(201).json({
-        success: true,
-        data: {
-          moveOrderId: Number(newOrder.move_order_id),
-          moveId: Number(newOrder.move_order_id),
-          siteId: newOrder.site_id,
-          unitStayId: Number(newOrder.unit_stay_id),
-          unitNo: newOrder.unit_stay?.unit_stay_cargo_units?.unit_no || searchUnitNo || "UNKNOWN",
-          moveType: newOrder.move_kind,
-          moveKind: newOrder.move_kind,
-          sourceLocation: newOrder.m_yard_location_move_order_from_location_idTom_yard_location?.full_code || rawFromCode || "YARD",
-          targetLocation: newOrder.m_yard_location_move_order_to_location_idTom_yard_location?.full_code || rawToCode || "BUFFER",
-          priority: newOrder.priority,
-          status: newOrder.status,
-          assignedEquipmentId: newOrder.assigned_equipment_id,
-          assignedOperatorSub: newOrder.assigned_operator_sub,
-          createdAt: newOrder.createdate.toISOString()
-        }
-      });
-    } catch (error) {
-      console.error("createMoveOrder error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  },
-  startMove: async (req, res) => {
-    try {
-      const moveOrderId = req.params.moveOrderId || req.params.moveId;
-      if (!moveOrderId) {
-        return res.status(400).json({ success: false, message: "moveOrderId is required" });
-      }
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const updated = await prisma4.move_order.update({
-            where: { move_order_id: BigInt(moveOrderId) },
-            data: {
-              status: "IN_PROGRESS",
-              updatedby: req.user?.sub || "system",
-              updatedate: /* @__PURE__ */ new Date()
-            }
-          });
-          return res.json({
-            success: true,
-            data: {
-              moveOrderId: Number(updated.move_order_id),
-              status: updated.status
-            }
-          });
-        }
-      }
-      return res.json({
-        success: true,
-        data: { moveOrderId: Number(moveOrderId), status: "IN_PROGRESS" }
-      });
-    } catch (error) {
-      console.error("startMove error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  },
-  completeMove: async (req, res) => {
-    try {
-      const moveOrderId = req.params.moveOrderId || req.params.moveId;
-      const { toLocationId } = req.body;
-      if (!moveOrderId) {
-        return res.status(400).json({ success: false, message: "moveOrderId is required" });
-      }
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const existing = await prisma4.move_order.findUnique({
-            where: { move_order_id: BigInt(moveOrderId) }
-          });
-          if (!existing) {
-            return res.status(404).json({ success: false, message: "Move order not found" });
-          }
-          const targetLocationId = toLocationId ? Number(toLocationId) : existing.to_location_id;
-          const updated = await prisma4.move_order.update({
-            where: { move_order_id: BigInt(moveOrderId) },
-            data: {
-              status: "DONE",
-              completed_at: /* @__PURE__ */ new Date(),
-              to_location_id: targetLocationId,
-              updatedby: req.user?.sub || "system",
-              updatedate: /* @__PURE__ */ new Date()
-            }
-          });
-          if (targetLocationId && existing.unit_stay_id) {
-            await prisma4.unit_stay.update({
-              where: { unit_stay_id: existing.unit_stay_id },
-              data: {
-                current_location_id: targetLocationId,
-                updatedby: req.user?.sub || "system",
-                updatedate: /* @__PURE__ */ new Date()
-              }
-            }).catch(
-              (e) => console.warn("Could not update unit_stay location:", e.message)
-            );
-          }
-          return res.json({
-            success: true,
-            data: {
-              moveOrderId: Number(updated.move_order_id),
-              status: updated.status,
-              completedAt: updated.completed_at?.toISOString()
-            }
-          });
-        }
-      }
-      return res.json({
-        success: true,
-        data: {
-          moveOrderId: Number(moveOrderId),
-          status: "COMPLETED",
-          completedAt: (/* @__PURE__ */ new Date()).toISOString()
-        }
-      });
-    } catch (error) {
-      console.error("completeMove error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  },
-  /**
-   * Assign equipment and/or operator to a move order.
-   */
-  assignMove: async (req, res) => {
-    try {
-      const moveOrderId = req.params.moveOrderId || req.params.moveId;
-      const { equipmentId, operatorSub, equipmentCode } = req.body;
-      if (!moveOrderId) {
-        return res.status(400).json({ success: false, message: "moveOrderId is required" });
-      }
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          let resolvedEquipmentId = equipmentId ? Number(equipmentId) : void 0;
-          if (!resolvedEquipmentId && equipmentCode) {
-            const eq = await prisma4.m_equipment.findFirst({
-              where: { equipment_code: String(equipmentCode) }
-            });
-            if (eq) resolvedEquipmentId = eq.equipment_id;
-          }
-          const updated = await prisma4.move_order.update({
-            where: { move_order_id: BigInt(moveOrderId) },
-            data: {
-              assigned_equipment_id: resolvedEquipmentId ?? null,
-              assigned_operator_sub: operatorSub || null,
-              status: "ASSIGNED",
-              updatedby: req.user?.sub || "system",
-              updatedate: /* @__PURE__ */ new Date()
-            },
-            include: {
-              m_equipment: true
-            }
-          });
-          return res.json({
-            success: true,
-            data: {
-              moveOrderId: Number(updated.move_order_id),
-              status: updated.status,
-              assignedEquipmentId: updated.assigned_equipment_id,
-              equipmentCode: updated.m_equipment?.equipment_code || void 0,
-              assignedOperatorSub: updated.assigned_operator_sub
-            }
-          });
-        }
-      }
-      return res.json({
-        success: true,
-        data: {
-          moveOrderId: Number(moveOrderId),
-          status: "ASSIGNED",
-          assignedEquipmentId: equipmentId,
-          assignedOperatorSub: operatorSub
-        }
-      });
-    } catch (error) {
-      console.error("assignMove error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  },
-  /**
-   * Execute move order (start/run directly).
-   */
-  executeMove: async (req, res) => {
-    try {
-      const moveId = req.params.moveId || req.params.moveOrderId;
-      if (!moveId) {
-        return res.status(400).json({ success: false, message: "moveId is required" });
-      }
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const updated = await prisma4.move_order.update({
-            where: { move_order_id: BigInt(moveId) },
-            data: {
-              status: "IN_PROGRESS",
-              updatedby: req.user?.sub || "system",
-              updatedate: /* @__PURE__ */ new Date()
-            }
-          });
-          return res.json({
-            success: true,
-            data: {
-              moveOrderId: Number(updated.move_order_id),
-              status: updated.status
-            }
-          });
-        }
-      }
-      return res.json({
-        success: true,
-        data: { moveOrderId: Number(moveId), status: "IN_PROGRESS" }
-      });
-    } catch (error) {
-      console.error("executeMove error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  },
-  /**
-   * GET equipment list for yard.
-   */
-  getEquipment: async (req, res) => {
-    try {
-      const siteId = parseSiteId(
-        req.query.siteId || req.headers["x-site-id"] || req.siteId
-      );
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const whereClause = { is_active: true };
-          if (siteId) whereClause.site_id = siteId;
-          let equipment3 = await prisma4.m_equipment.findMany({
-            where: whereClause,
-            orderBy: { equipment_code: "asc" }
-          });
-          if ((!equipment3 || equipment3.length === 0) && siteId) {
-            equipment3 = await prisma4.m_equipment.findMany({
-              where: { is_active: true },
-              orderBy: { equipment_code: "asc" }
-            });
-          }
-          if (equipment3 && equipment3.length > 0) {
-            const items = equipment3.map((e) => ({
-              equipmentId: e.equipment_id,
-              equipmentCode: e.equipment_code,
-              equipmentName: e.equipment_name,
-              equipmentType: e.equipment_type,
-              capacityKg: e.capacity_kg ? Number(e.capacity_kg) : void 0,
-              status: e.is_active ? "AVAILABLE" : "MAINTENANCE",
-              siteId: e.site_id
-            }));
-            return res.json({ success: true, items, total: items.length });
-          }
-        }
-      }
-      return res.json({
-        success: true,
-        items: equipmentForMoves,
-        total: equipmentForMoves.length
-      });
-    } catch (error) {
-      console.error("getEquipment error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  },
-  /**
-   * GET yard locations/slots.
-   */
-  getLocations: async (req, res) => {
-    try {
-      const siteId = parseSiteId(
-        req.query.siteId || req.headers["x-site-id"] || req.siteId
-      );
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const whereClause = { is_active: true };
-          if (siteId) whereClause.site_id = siteId;
-          let locations = await prisma4.m_yard_location.findMany({
-            where: whereClause,
-            orderBy: { location_code: "asc" },
-            take: 300
-          });
-          if ((!locations || locations.length === 0) && siteId) {
-            locations = await prisma4.m_yard_location.findMany({
-              where: { is_active: true },
-              orderBy: { location_code: "asc" },
-              take: 300
-            });
-          }
-          if (locations && locations.length > 0) {
-            const items = locations.map((l) => ({
-              locationId: l.yard_location_id,
-              yardLocationId: l.yard_location_id,
-              parentId: l.parent_id,
-              levelNo: l.level_no,
-              locationCode: l.location_code,
-              fullCode: l.full_code,
-              name: l.location_code,
-              kind: l.location_kind,
-              locationKind: l.location_kind,
-              isSlot: Boolean(l.is_slot),
-              siteId: l.site_id,
-              allows20: Boolean(l.allows_20),
-              allows40: Boolean(l.allows_40),
-              allows45: Boolean(l.allows_45),
-              maxTier: l.max_tier,
-              maxWeightKg: l.max_weight_kg,
-              isBlocked: Boolean(l.is_blocked),
-              blockedReason: l.blocked_reason
-            }));
-            return res.json({ success: true, items, total: items.length });
-          }
-        }
-      }
-      const fallback = [
-        {
-          locationId: 1,
-          yardLocationId: 1,
-          locationCode: "A-01-01-1",
-          fullCode: "A-01-01-1",
-          name: "A-01-01-1",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1
-        },
-        {
-          locationId: 2,
-          yardLocationId: 2,
-          locationCode: "A-01-01-2",
-          fullCode: "A-01-01-2",
-          name: "A-01-01-2",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1
-        },
-        {
-          locationId: 3,
-          yardLocationId: 3,
-          locationCode: "B-02-02-1",
-          fullCode: "B-02-02-1",
-          name: "B-02-02-1",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1
-        },
-        {
-          locationId: 4,
-          yardLocationId: 4,
-          locationCode: "B-02-02-2",
-          fullCode: "B-02-02-2",
-          name: "B-02-02-2",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1
-        },
-        {
-          locationId: 5,
-          yardLocationId: 5,
-          locationCode: "C-01-01-1",
-          fullCode: "C-01-01-1",
-          name: "C-01-01-1",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1
-        }
-      ];
-      return res.json({
-        success: true,
-        items: fallback,
-        total: fallback.length
-      });
-    } catch (error) {
-      console.error("getLocations error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  },
-  /**
-   * GET operators / users for yard moves.
-   */
-  getOperators: async (_req, res) => {
-    try {
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const users2 = await prisma4.app_user.findMany({
-            where: { is_active: true },
-            select: {
-              user_id: true,
-              user_sub: true,
-              user_name: true,
-              email: true,
-              phone: true
-            },
-            orderBy: { user_id: "asc" }
-          });
-          if (users2 && users2.length > 0) {
-            const items = users2.map((u) => ({
-              userId: u.user_id,
-              userSub: u.user_sub,
-              name: u.user_name,
-              email: u.email,
-              phone: u.phone
-            }));
-            return res.json({ success: true, items, total: items.length });
-          }
-        }
-      }
-      return res.json({
-        success: true,
-        items: FALLBACK_OPERATORS,
-        total: FALLBACK_OPERATORS.length
-      });
-    } catch (error) {
-      console.error("getOperators error:", error);
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  }
-};
-
 // src/v1/controllers/yard/inspections.controller.ts
 var inMemoryInspections = JSON.parse(JSON.stringify(inspections));
 var yardInspectionsController = {
@@ -10051,213 +9887,189 @@ var yardInspectionsController = {
       const statusParam = req.query.status;
       const kindParam = req.query.inspectionKind || req.query.kind;
       const unitNoParam = req.query.unitNo;
-      let items = [];
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          try {
-            const queryPromise = prisma4.inspection.findMany({
-              include: {
-                unit_stay: {
-                  include: {
-                    unit_stay_cargo_units: {
-                      include: { cargo_unit_unit_types: true }
-                    }
-                  }
-                },
-                m_inspection_template: true,
-                truck_visit: {
-                  include: { m_truck_truck_visit_truck_idTom_truck: true }
-                },
-                inspection_finding: {
-                  include: { m_damage_code: true }
-                },
-                inspection_result: true
-              },
-              orderBy: { inspection_id: "desc" }
-            });
-            const timeoutPromise = new Promise(
-              (_, reject) => setTimeout(() => reject(new Error("Connection pool timeout")), 1200)
-            );
-            const dbInspections = await Promise.race([queryPromise, timeoutPromise]);
-            if (dbInspections && dbInspections.length > 0) {
-              const mapped = dbInspections.map((i) => {
-                const u = i.unit_stay?.unit_stay_cargo_units;
-                const findings = (i.inspection_finding || []).map((f) => ({
-                  inspectionFindingId: Number(f.inspection_finding_id),
-                  area: f.area,
-                  locationDetail: f.location_detail || "",
-                  damageCode: f.m_damage_code?.damage_code || "DT",
-                  severity: f.severity,
-                  sizeCm: f.size_cm || void 0,
-                  description: f.description || void 0,
-                  needsRepair: f.needs_repair ?? true,
-                  isPreexisting: f.is_preexisting ?? false,
-                  photoDocumentIds: [Number(f.inspection_finding_id) * 10, Number(f.inspection_finding_id) * 10 + 1]
-                }));
-                const results = (i.inspection_result || []).map((r3) => ({
-                  inspectionItemId: r3.inspection_item_id,
-                  isOk: r3.is_ok,
-                  resultValue: r3.result_value || (r3.is_ok ? "OK" : "DAMAGED")
-                }));
-                const isMajor = i.overall_condition === "MAJOR_DAMAGE" || i.overall_condition === "REJECTED";
-                const approvalNeeded = i.status === "COMPLETED" && isMajor;
-                return {
-                  inspectionId: Number(i.inspection_id),
-                  unitStayId: Number(i.unit_stay_id),
-                  siteId: i.unit_stay?.site_id || 1,
-                  unitNo: u?.unit_no || "MSKU 882014 9",
-                  category: u?.unit_category === "VEHICLE" ? "VEHICLE" : "CONTAINER",
-                  unitType: u?.cargo_unit_unit_types?.type_code || "40HR",
-                  templateCode: i.m_inspection_template?.template_code || "CTR-STD-v4",
-                  inspectionKind: i.inspection_kind,
-                  status: i.status,
-                  overallCondition: i.overall_condition,
-                  odometerKm: i.odometer_km || void 0,
-                  fuelLevel: i.fuel_level || void 0,
-                  batteryOk: i.battery_ok ?? void 0,
-                  personalEffects: i.personal_effects || void 0,
-                  remarks: i.remarks || void 0,
-                  startedAt: i.started_at?.toISOString() || i.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
-                  completedAt: i.completed_at?.toISOString() || void 0,
-                  inspector: i.inspector_sub || "Juma M.",
-                  plateNo: i.truck_visit?.m_truck_truck_visit_truck_idTom_truck?.plate_no || void 0,
-                  truckVisitId: i.truck_visit_id ? Number(i.truck_visit_id) : void 0,
-                  approvalNeeded,
-                  approvedBy: i.approved_by || void 0,
-                  signatureMode: "SCREEN",
-                  signedBy: i.status === "COMPLETED" ? "Driver" : void 0,
-                  findings,
-                  results,
-                  photoCount: findings.length > 0 ? 6 : 4
-                };
-              });
-              const dbIds = new Set(mapped.map((m) => m.inspectionId));
-              items = [...mapped, ...inMemoryInspections.filter((x) => !dbIds.has(x.inspectionId))];
-            }
-          } catch (err) {
-            console.warn("[yardInspectionsController] DB query error or timeout, falling back:", err.message);
-          }
-        }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
-      if (!items || items.length === 0) {
-        items = [...inMemoryInspections];
-      }
+      const whereClause = {};
       if (siteIdParam && siteIdParam.toLowerCase() !== "all") {
         const sid = Number(siteIdParam);
         if (!isNaN(sid) && sid > 0) {
-          items = items.filter((i) => i.siteId === sid);
+          whereClause.unit_stay = { site_id: sid };
         }
       }
       if (statusParam && statusParam.toLowerCase() !== "all") {
-        items = items.filter((i) => i.status === statusParam);
+        whereClause.status = statusParam;
       }
       if (kindParam && kindParam.toLowerCase() !== "all") {
-        items = items.filter((i) => i.inspectionKind === kindParam);
+        whereClause.inspection_kind = kindParam;
       }
       if (unitNoParam) {
-        const uLower = unitNoParam.toLowerCase();
-        items = items.filter((i) => i.unitNo && i.unitNo.toLowerCase().includes(uLower));
+        whereClause.unit_stay = {
+          ...whereClause.unit_stay || {},
+          unit_stay_cargo_units: {
+            unit_no: { contains: unitNoParam.trim().toUpperCase() }
+          }
+        };
       }
+      const dbInspections = await prisma4.inspection.findMany({
+        where: whereClause,
+        include: {
+          unit_stay: {
+            include: {
+              unit_stay_cargo_units: {
+                include: { cargo_unit_unit_types: true }
+              }
+            }
+          },
+          m_inspection_template: true,
+          truck_visit: {
+            include: { m_truck_truck_visit_truck_idTom_truck: true }
+          },
+          inspection_finding: {
+            include: { m_damage_code: true }
+          },
+          inspection_result: true
+        },
+        orderBy: { inspection_id: "desc" }
+      });
+      const items = (dbInspections || []).map((i) => {
+        const u = i.unit_stay?.unit_stay_cargo_units;
+        const findings = (i.inspection_finding || []).map((f) => ({
+          inspectionFindingId: Number(f.inspection_finding_id),
+          area: f.area,
+          locationDetail: f.location_detail || "",
+          damageCode: f.m_damage_code?.damage_code || "DT",
+          severity: f.severity,
+          sizeCm: f.size_cm || void 0,
+          description: f.description || void 0,
+          needsRepair: f.needs_repair ?? true,
+          isPreexisting: f.is_preexisting ?? false,
+          photoDocumentIds: [Number(f.inspection_finding_id) * 10, Number(f.inspection_finding_id) * 10 + 1]
+        }));
+        const results = (i.inspection_result || []).map((r3) => ({
+          inspectionItemId: r3.inspection_item_id,
+          isOk: r3.is_ok,
+          resultValue: r3.result_value || (r3.is_ok ? "OK" : "DAMAGED")
+        }));
+        const isMajor = i.overall_condition === "MAJOR_DAMAGE" || i.overall_condition === "REJECTED";
+        const approvalNeeded = i.status === "COMPLETED" && isMajor;
+        return {
+          inspectionId: Number(i.inspection_id),
+          unitStayId: Number(i.unit_stay_id),
+          siteId: i.unit_stay?.site_id || 1,
+          unitNo: u?.unit_no || "MSKU 882014 9",
+          category: u?.unit_category === "VEHICLE" ? "VEHICLE" : "CONTAINER",
+          unitType: u?.cargo_unit_unit_types?.type_code || "40HR",
+          templateCode: i.m_inspection_template?.template_code || "CTR-STD-v4",
+          inspectionKind: i.inspection_kind,
+          status: i.status,
+          overallCondition: i.overall_condition,
+          odometerKm: i.odometer_km || void 0,
+          fuelLevel: i.fuel_level || void 0,
+          batteryOk: i.battery_ok ?? void 0,
+          personalEffects: i.personal_effects || void 0,
+          remarks: i.remarks || void 0,
+          startedAt: i.started_at?.toISOString() || i.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
+          completedAt: i.completed_at?.toISOString() || void 0,
+          inspector: i.inspector_sub || "Juma M.",
+          plateNo: i.truck_visit?.m_truck_truck_visit_truck_idTom_truck?.plate_no || void 0,
+          truckVisitId: i.truck_visit_id ? Number(i.truck_visit_id) : void 0,
+          approvalNeeded,
+          approvedBy: i.approved_by || void 0,
+          signatureMode: "SCREEN",
+          signedBy: i.status === "COMPLETED" ? "Driver" : void 0,
+          findings,
+          results,
+          photoCount: findings.length > 0 ? 6 : 4
+        };
+      });
       return res.json(items);
     } catch (err) {
-      console.warn("[yardInspectionsController.getInspections] Unexpected error, returning fallback:", err.message);
-      return res.json(inMemoryInspections);
+      console.error("[yardInspectionsController.getInspections] Error:", err.message);
+      return res.status(500).json({ success: false, message: err.message });
     }
   },
   getInspectionById: async (req, res) => {
     try {
       const id = parseInt(req.params.inspectionId || req.params.id, 10);
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          try {
-            const queryPromise = prisma4.inspection.findUnique({
-              where: { inspection_id: id },
-              include: {
-                unit_stay: {
-                  include: {
-                    unit_stay_cargo_units: {
-                      include: { cargo_unit_unit_types: true }
-                    },
-                    unit_stay_yard_locations: true
-                  }
-                },
-                m_inspection_template: true,
-                truck_visit: {
-                  include: { m_truck_truck_visit_truck_idTom_truck: true }
-                },
-                inspection_finding: {
-                  include: { m_damage_code: true }
-                },
-                inspection_result: true
-              }
-            });
-            const timeoutPromise = new Promise(
-              (_, reject) => setTimeout(() => reject(new Error("Connection pool timeout")), 1200)
-            );
-            const i = await Promise.race([queryPromise, timeoutPromise]);
-            if (i) {
-              const u = i.unit_stay?.unit_stay_cargo_units;
-              const findings = (i.inspection_finding || []).map((f) => ({
-                inspectionFindingId: Number(f.inspection_finding_id),
-                area: f.area,
-                locationDetail: f.location_detail || "",
-                damageCode: f.m_damage_code?.damage_code || "DT",
-                severity: f.severity,
-                sizeCm: f.size_cm || void 0,
-                description: f.description || void 0,
-                needsRepair: f.needs_repair ?? true,
-                isPreexisting: f.is_preexisting ?? false,
-                photoDocumentIds: [Number(f.inspection_finding_id) * 10, Number(f.inspection_finding_id) * 10 + 1]
-              }));
-              const results = (i.inspection_result || []).map((r3) => ({
-                inspectionItemId: r3.inspection_item_id,
-                isOk: r3.is_ok,
-                resultValue: r3.result_value || (r3.is_ok ? "OK" : "DAMAGED")
-              }));
-              const isMajor = i.overall_condition === "MAJOR_DAMAGE" || i.overall_condition === "REJECTED";
-              const approvalNeeded = i.status === "COMPLETED" && isMajor;
-              return res.json({
-                inspectionId: Number(i.inspection_id),
-                unitStayId: Number(i.unit_stay_id),
-                siteId: i.unit_stay?.site_id || 1,
-                unitNo: u?.unit_no || "MSKU 882014 9",
-                category: u?.unit_category === "VEHICLE" ? "VEHICLE" : "CONTAINER",
-                unitType: u?.cargo_unit_unit_types?.type_code || "40HR",
-                templateCode: i.m_inspection_template?.template_code || "CTR-STD-v4",
-                inspectionKind: i.inspection_kind,
-                status: i.status,
-                overallCondition: i.overall_condition,
-                odometerKm: i.odometer_km || void 0,
-                fuelLevel: i.fuel_level || void 0,
-                batteryOk: i.battery_ok ?? void 0,
-                personalEffects: i.personal_effects || void 0,
-                remarks: i.remarks || void 0,
-                startedAt: i.started_at?.toISOString() || i.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
-                completedAt: i.completed_at?.toISOString() || void 0,
-                inspector: i.inspector_sub || "Juma M.",
-                plateNo: i.truck_visit?.m_truck_truck_visit_truck_idTom_truck?.plate_no || void 0,
-                truckVisitId: i.truck_visit_id ? Number(i.truck_visit_id) : void 0,
-                approvalNeeded,
-                approvedBy: i.approved_by || void 0,
-                signatureMode: "SCREEN",
-                signedBy: i.status === "COMPLETED" ? "Driver" : void 0,
-                findings,
-                results,
-                photoCount: findings.length > 0 ? 6 : 4
-              });
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return sendError(res, "Database connection unavailable", 500);
+      }
+      const i = await prisma4.inspection.findUnique({
+        where: { inspection_id: id },
+        include: {
+          unit_stay: {
+            include: {
+              unit_stay_cargo_units: {
+                include: { cargo_unit_unit_types: true }
+              },
+              unit_stay_yard_locations: true
             }
-          } catch (err) {
-            console.warn("[yardInspectionsController.getInspectionById] DB error, trying fallback:", err.message);
-          }
+          },
+          m_inspection_template: true,
+          truck_visit: {
+            include: { m_truck_truck_visit_truck_idTom_truck: true }
+          },
+          inspection_finding: {
+            include: { m_damage_code: true }
+          },
+          inspection_result: true
         }
+      });
+      if (!i) {
+        return sendError(res, "Inspection not found", 404);
       }
-      const local = inMemoryInspections.find((x) => x.inspectionId === id);
-      if (local) {
-        return res.json(local);
-      }
-      return sendError(res, "Inspection not found", 404);
+      const u = i.unit_stay?.unit_stay_cargo_units;
+      const findings = (i.inspection_finding || []).map((f) => ({
+        inspectionFindingId: Number(f.inspection_finding_id),
+        area: f.area,
+        locationDetail: f.location_detail || "",
+        damageCode: f.m_damage_code?.damage_code || "DT",
+        severity: f.severity,
+        sizeCm: f.size_cm || void 0,
+        description: f.description || void 0,
+        needsRepair: f.needs_repair ?? true,
+        isPreexisting: f.is_preexisting ?? false,
+        photoDocumentIds: [Number(f.inspection_finding_id) * 10, Number(f.inspection_finding_id) * 10 + 1]
+      }));
+      const results = (i.inspection_result || []).map((r3) => ({
+        inspectionItemId: r3.inspection_item_id,
+        isOk: r3.is_ok,
+        resultValue: r3.result_value || (r3.is_ok ? "OK" : "DAMAGED")
+      }));
+      const isMajor = i.overall_condition === "MAJOR_DAMAGE" || i.overall_condition === "REJECTED";
+      const approvalNeeded = i.status === "COMPLETED" && isMajor;
+      return res.json({
+        inspectionId: Number(i.inspection_id),
+        unitStayId: Number(i.unit_stay_id),
+        siteId: i.unit_stay?.site_id || 1,
+        unitNo: u?.unit_no || "MSKU 882014 9",
+        category: u?.unit_category === "VEHICLE" ? "VEHICLE" : "CONTAINER",
+        unitType: u?.cargo_unit_unit_types?.type_code || "40HR",
+        templateCode: i.m_inspection_template?.template_code || "CTR-STD-v4",
+        inspectionKind: i.inspection_kind,
+        status: i.status,
+        overallCondition: i.overall_condition,
+        odometerKm: i.odometer_km || void 0,
+        fuelLevel: i.fuel_level || void 0,
+        batteryOk: i.battery_ok ?? void 0,
+        personalEffects: i.personal_effects || void 0,
+        remarks: i.remarks || void 0,
+        startedAt: i.started_at?.toISOString() || i.createdate?.toISOString() || (/* @__PURE__ */ new Date()).toISOString(),
+        completedAt: i.completed_at?.toISOString() || void 0,
+        inspector: i.inspector_sub || "Juma M.",
+        plateNo: i.truck_visit?.m_truck_truck_visit_truck_idTom_truck?.plate_no || void 0,
+        truckVisitId: i.truck_visit_id ? Number(i.truck_visit_id) : void 0,
+        approvalNeeded,
+        approvedBy: i.approved_by || void 0,
+        signatureMode: "SCREEN",
+        signedBy: i.status === "COMPLETED" ? "Driver" : void 0,
+        findings,
+        results,
+        photoCount: findings.length > 0 ? 6 : 4
+      });
     } catch (err) {
       return sendError(res, err.message, 500);
     }
@@ -11246,97 +11058,95 @@ var CargoService = class {
           },
           orderBy: { unit_stay_id: "desc" }
         });
-        if (dbStays && dbStays.length > 0) {
-          return dbStays.map((u) => {
-            const activeHolds = (u.unit_stay_holds || []).filter(
-              (h) => h.status === "ACTIVE"
-            ).length;
-            const dwell = u.gated_in_at ? Math.max(
-              1,
-              Math.floor(
-                (Date.now() - new Date(u.gated_in_at).getTime()) / 864e5
-              )
-            ) : 3;
-            const unitNo = u.unit_stay_cargo_units?.unit_no || `UNIT-${u.unit_stay_id}`;
-            const category2 = u.unit_stay_cargo_units?.cargo_unit_unit_types?.unit_category || u.unit_stay_cargo_units?.unit_category || "CONTAINER";
-            const typeCode = u.unit_stay_cargo_units?.cargo_unit_unit_types?.type_code || "40HC";
-            return {
-              unitStayId: toNum(u.unit_stay_id),
-              siteId: u.site_id,
-              consignmentId: u.consignment_id ? toNum(u.consignment_id) : void 0,
-              cargoUnit: {
-                cargoUnitId: toNum(u.cargo_unit_id),
-                category: category2,
-                unitNo,
-                unitTypeCode: typeCode,
-                isoType: typeCode,
-                tareWeightKg: u.unit_stay_cargo_units?.tare_kg || 3800
-              },
-              physicalStatus: u.physical_status,
-              flow: u.flow || "IMPORT",
-              fullEmpty: u.full_empty || "F",
-              customsStatus: u.customs_status || "CLEARED",
-              releaseStatus: u.release_status || "APPROVED",
-              billingStatus: u.billing_status || "PAID",
-              sealNo: u.seal_no || "SEAL-001",
-              grossWeightKg: Number(u.gross_weight_kg || 0),
-              cargoDescription: u.cargo_description || "General Merchandise",
-              conditionStatus: u.condition_status || "SOUND",
-              reeferTempC: u.reefer_set_temp_c ? Number(u.reefer_set_temp_c) : void 0,
-              dischargeAt: u.discharge_at?.toISOString(),
-              gatedInAt: u.gated_in_at?.toISOString(),
-              departedAt: u.departed_at?.toISOString(),
-              freeUntil: u.storage_start_at ? new Date(
-                new Date(u.storage_start_at).getTime() + 7 * 864e5
-              ).toISOString() : void 0,
+        return (dbStays || []).map((u) => {
+          const activeHolds = (u.unit_stay_holds || []).filter(
+            (h) => h.status === "ACTIVE"
+          ).length;
+          const dwell = u.gated_in_at ? Math.max(
+            1,
+            Math.floor(
+              (Date.now() - new Date(u.gated_in_at).getTime()) / 864e5
+            )
+          ) : 3;
+          const unitNo = u.unit_stay_cargo_units?.unit_no || `UNIT-${u.unit_stay_id}`;
+          const category2 = u.unit_stay_cargo_units?.cargo_unit_unit_types?.unit_category || u.unit_stay_cargo_units?.unit_category || "CONTAINER";
+          const typeCode = u.unit_stay_cargo_units?.cargo_unit_unit_types?.type_code || "40HC";
+          return {
+            unitStayId: toNum(u.unit_stay_id),
+            siteId: u.site_id,
+            consignmentId: u.consignment_id ? toNum(u.consignment_id) : void 0,
+            cargoUnit: {
+              cargoUnitId: toNum(u.cargo_unit_id),
+              category: category2,
+              unitNo,
+              unitTypeCode: typeCode,
+              isoType: typeCode,
+              tareWeightKg: u.unit_stay_cargo_units?.tare_kg || 3800
+            },
+            physicalStatus: u.physical_status,
+            flow: u.flow || "IMPORT",
+            fullEmpty: u.full_empty || "F",
+            customsStatus: u.customs_status || "CLEARED",
+            releaseStatus: u.release_status || "APPROVED",
+            billingStatus: u.billing_status || "PAID",
+            sealNo: u.seal_no || "SEAL-001",
+            grossWeightKg: Number(u.gross_weight_kg || 0),
+            cargoDescription: u.cargo_description || "General Merchandise",
+            conditionStatus: u.condition_status || "SOUND",
+            reeferTempC: u.reefer_set_temp_c ? Number(u.reefer_set_temp_c) : void 0,
+            dischargeAt: u.discharge_at?.toISOString(),
+            gatedInAt: u.gated_in_at?.toISOString(),
+            departedAt: u.departed_at?.toISOString(),
+            freeUntil: u.storage_start_at ? new Date(
+              new Date(u.storage_start_at).getTime() + 7 * 864e5
+            ).toISOString() : void 0,
+            activeHoldCount: activeHolds,
+            currentLocation: u.unit_stay_yard_locations ? {
+              locationId: u.unit_stay_yard_locations.yard_location_id,
+              fullCode: u.unit_stay_yard_locations.full_code,
+              block: u.unit_stay_yard_locations.location_code
+            } : void 0,
+            unitSummary: {
+              unitNo,
+              category: category2,
+              unitTypeCode: typeCode,
               activeHoldCount: activeHolds,
-              currentLocation: u.unit_stay_yard_locations ? {
-                locationId: u.unit_stay_yard_locations.yard_location_id,
-                fullCode: u.unit_stay_yard_locations.full_code,
-                block: u.unit_stay_yard_locations.location_code
-              } : void 0,
-              unitSummary: {
-                unitNo,
-                category: category2,
-                unitTypeCode: typeCode,
-                activeHoldCount: activeHolds,
-                releaseStatus: u.release_status || "APPROVED",
-                physicalStatus: u.physical_status,
-                dwellDays: dwell,
-                consignmentRef: u.unit_stay_consignments?.ref_no
-              },
-              consignments: u.unit_stay_consignments ? {
-                consignmentId: toNum(
-                  u.unit_stay_consignments.consignment_id
-                ),
-                refNo: u.unit_stay_consignments.ref_no,
-                refType: u.unit_stay_consignments.ref_type,
-                vesselName: u.unit_stay_consignments.vessel_call?.m_vessel?.vessel_name || "Vessel",
-                voyageNo: u.unit_stay_consignments.vessel_call?.voyage_no || "V.001",
-                consigneeName: u.unit_stay_consignments.m_party_consignment_consignee?.party_name
-              } : void 0,
-              holds: (u.unit_stay_holds || []).map((h) => ({
-                holdId: toNum(h.hold_id),
-                holdTypeCode: h.hold_types?.hold_code || "CUSTOMS",
-                status: h.status,
-                reason: h.reason,
-                placedAt: h.placed_at?.toISOString(),
-                placedBy: h.placed_by_sub || "Customs Officer"
-              })),
-              dgLines: (u.unit_stay_unit_dg_lines || []).map((dg) => ({
-                dgLineId: toNum(dg.unit_dg_line_id),
-                unNo: dg.un_no,
-                imoClass: dg.imo_class,
-                marinePollutant: dg.marine_pollutant
-              }))
-            };
-          });
-        }
+              releaseStatus: u.release_status || "APPROVED",
+              physicalStatus: u.physical_status,
+              dwellDays: dwell,
+              consignmentRef: u.unit_stay_consignments?.ref_no
+            },
+            consignments: u.unit_stay_consignments ? {
+              consignmentId: toNum(
+                u.unit_stay_consignments.consignment_id
+              ),
+              refNo: u.unit_stay_consignments.ref_no,
+              refType: u.unit_stay_consignments.ref_type,
+              vesselName: u.unit_stay_consignments.vessel_call?.m_vessel?.vessel_name || "Vessel",
+              voyageNo: u.unit_stay_consignments.vessel_call?.voyage_no || "V.001",
+              consigneeName: u.unit_stay_consignments.m_party_consignment_consignee?.party_name
+            } : void 0,
+            holds: (u.unit_stay_holds || []).map((h) => ({
+              holdId: toNum(h.hold_id),
+              holdTypeCode: h.hold_types?.hold_code || "CUSTOMS",
+              status: h.status,
+              reason: h.reason,
+              placedAt: h.placed_at?.toISOString(),
+              placedBy: h.placed_by_sub || "Customs Officer"
+            })),
+            dgLines: (u.unit_stay_unit_dg_lines || []).map((dg) => ({
+              dgLineId: toNum(dg.unit_dg_line_id),
+              unNo: dg.un_no,
+              imoClass: dg.imo_class,
+              marinePollutant: dg.marine_pollutant
+            }))
+          };
+        });
       } catch (err) {
         console.warn("[CargoService.getUnits] DB query error:", err.message);
       }
     }
-    return allStays;
+    return [];
   }
   async getUnit(unitStayId) {
     const prisma4 = getPrisma();
@@ -11600,78 +11410,76 @@ var CargoService = class {
           },
           orderBy: { consignment_id: "desc" }
         });
-        if (dbConsignments && dbConsignments.length > 0) {
-          return dbConsignments.map((c) => ({
-            consignmentId: toNum(c.consignment_id),
-            siteId: c.site_id,
-            refType: c.ref_type,
-            refNo: c.ref_no,
-            cargoRegimeId: c.cargo_regime_id,
-            cargoRegimeCode: c.m_cargo_regime?.regime_code || "LOCAL",
-            vesselCallId: c.vessel_call_id,
-            vesselName: c.vessel_call?.m_vessel?.vessel_name || "Vessel",
-            voyageNo: c.vessel_call?.voyage_no || "V.001",
-            shippingLinePartyId: c.shipping_line_party_id,
-            shippingLineName: c.m_party_consignment_shipping_line?.party_name,
-            consigneePartyId: c.consignee_party_id,
-            consigneeName: c.m_party_consignment_consignee?.party_name || "Consignee",
-            cargoDescription: c.cargo_description,
-            destinationCountry: c.destination_country || "TZ",
-            unitsExpected: c.units_expected,
-            unitsReceived: c.units_received,
-            unitsDelivered: c.units_delivered,
-            status: c.status,
-            declaredWeightKg: Number(c.declared_weight_kg || 0),
-            lines: (c.consignment_line || []).map((cl) => ({
-              consignmentLineId: toNum(cl.consignment_line_id),
-              consignmentId: toNum(cl.consignment_id),
-              lineNo: cl.line_no,
-              qtyExpected: Number(cl.qty_expected),
-              qtyReceived: Number(cl.qty_received),
-              weightKg: Number(cl.weight_kg || 0),
-              description: cl.description
-            })),
-            unitStays: (c.unit_stay_consignments || []).map((u) => ({
-              unitStayId: toNum(u.unit_stay_id),
-              unitNo: u.unit_stay_cargo_units?.unit_no,
-              physicalStatus: u.physical_status,
-              customsStatus: u.customs_status,
-              releaseStatus: u.release_status
-            })),
-            units: (c.unit_stay_consignments || []).map((u) => ({
-              unitStayId: toNum(u.unit_stay_id),
-              unitNo: u.unit_stay_cargo_units?.unit_no,
-              category: u.unit_stay_cargo_units?.cargo_unit_unit_types?.unit_category || u.unit_stay_cargo_units?.unit_category || "CONTAINER",
-              unitTypeCode: u.unit_stay_cargo_units?.cargo_unit_unit_types?.type_code || "40HC",
-              location: u.unit_stay_yard_locations?.full_code || "In yard",
-              physicalStatus: u.physical_status,
-              customsStatus: u.customs_status,
-              releaseStatus: u.release_status,
-              billingStatus: u.billing_status,
-              activeHoldCount: 0,
-              sealNo: u.seal_no,
-              freeUntil: u.storage_start_at ? new Date(
-                new Date(u.storage_start_at).getTime() + 7 * 864e5
-              ).toISOString() : void 0
-            })),
-            customsRefs: (c.customs_ref || []).map((cr) => ({
-              customsRefId: toNum(cr.customs_ref_id),
-              refNo: cr.ref_no,
-              status: cr.status,
-              refTypeCode: cr.m_customs_ref_type?.ref_type_code,
-              amount: cr.amount ? Number(cr.amount) : void 0,
-              currency: cr.amount_currency
-            })),
-            releases: (c.release_order || []).map((ro2) => ({
-              releaseOrderId: toNum(ro2.release_order_id),
-              releaseNo: ro2.release_no,
-              releaseKind: ro2.release_kind,
-              status: ro2.status,
-              unitsTotal: ro2.units_total,
-              unitsOut: ro2.units_out
-            }))
-          }));
-        }
+        return (dbConsignments || []).map((c) => ({
+          consignmentId: toNum(c.consignment_id),
+          siteId: c.site_id,
+          refType: c.ref_type,
+          refNo: c.ref_no,
+          cargoRegimeId: c.cargo_regime_id,
+          cargoRegimeCode: c.m_cargo_regime?.regime_code || "LOCAL",
+          vesselCallId: c.vessel_call_id,
+          vesselName: c.vessel_call?.m_vessel?.vessel_name || "Vessel",
+          voyageNo: c.vessel_call?.voyage_no || "V.001",
+          shippingLinePartyId: c.shipping_line_party_id,
+          shippingLineName: c.m_party_consignment_shipping_line?.party_name,
+          consigneePartyId: c.consignee_party_id,
+          consigneeName: c.m_party_consignment_consignee?.party_name || "Consignee",
+          cargoDescription: c.cargo_description,
+          destinationCountry: c.destination_country || "TZ",
+          unitsExpected: c.units_expected,
+          unitsReceived: c.units_received,
+          unitsDelivered: c.units_delivered,
+          status: c.status,
+          declaredWeightKg: Number(c.declared_weight_kg || 0),
+          lines: (c.consignment_line || []).map((cl) => ({
+            consignmentLineId: toNum(cl.consignment_line_id),
+            consignmentId: toNum(cl.consignment_id),
+            lineNo: cl.line_no,
+            qtyExpected: Number(cl.qty_expected),
+            qtyReceived: Number(cl.qty_received),
+            weightKg: Number(cl.weight_kg || 0),
+            description: cl.description
+          })),
+          unitStays: (c.unit_stay_consignments || []).map((u) => ({
+            unitStayId: toNum(u.unit_stay_id),
+            unitNo: u.unit_stay_cargo_units?.unit_no,
+            physicalStatus: u.physical_status,
+            customsStatus: u.customs_status,
+            releaseStatus: u.release_status
+          })),
+          units: (c.unit_stay_consignments || []).map((u) => ({
+            unitStayId: toNum(u.unit_stay_id),
+            unitNo: u.unit_stay_cargo_units?.unit_no,
+            category: u.unit_stay_cargo_units?.cargo_unit_unit_types?.unit_category || u.unit_stay_cargo_units?.unit_category || "CONTAINER",
+            unitTypeCode: u.unit_stay_cargo_units?.cargo_unit_unit_types?.type_code || "40HC",
+            location: u.unit_stay_yard_locations?.full_code || "In yard",
+            physicalStatus: u.physical_status,
+            customsStatus: u.customs_status,
+            releaseStatus: u.release_status,
+            billingStatus: u.billing_status,
+            activeHoldCount: 0,
+            sealNo: u.seal_no,
+            freeUntil: u.storage_start_at ? new Date(
+              new Date(u.storage_start_at).getTime() + 7 * 864e5
+            ).toISOString() : void 0
+          })),
+          customsRefs: (c.customs_ref || []).map((cr) => ({
+            customsRefId: toNum(cr.customs_ref_id),
+            refNo: cr.ref_no,
+            status: cr.status,
+            refTypeCode: cr.m_customs_ref_type?.ref_type_code,
+            amount: cr.amount ? Number(cr.amount) : void 0,
+            currency: cr.amount_currency
+          })),
+          releases: (c.release_order || []).map((ro2) => ({
+            releaseOrderId: toNum(ro2.release_order_id),
+            releaseNo: ro2.release_no,
+            releaseKind: ro2.release_kind,
+            status: ro2.status,
+            unitsTotal: ro2.units_total,
+            unitsOut: ro2.units_out
+          }))
+        }));
       } catch (err) {
         console.warn(
           "[CargoService.getConsignments] DB query error:",
@@ -11679,7 +11487,7 @@ var CargoService = class {
         );
       }
     }
-    return consignments;
+    return [];
   }
   async getConsignment(id) {
     const prisma4 = getPrisma();
@@ -12049,37 +11857,35 @@ var CargoService = class {
           },
           orderBy: { manifest_id: "desc" }
         });
-        if (dbManifests && dbManifests.length > 0) {
-          return dbManifests.map((m) => ({
-            manifestId: m.manifest_id,
-            siteId: m.site_id,
-            vesselCallId: m.vessel_call_id,
-            vesselName: m.vessel_call?.m_vessel?.vessel_name || "Maersk Mc-Kinney Moller",
-            voyageNo: m.vessel_call?.voyage_no || "V.2601",
-            manifestRef: m.manifest_ref,
-            source: m.source,
-            importedAt: m.imported_at?.toISOString(),
-            lineCount: m.line_count,
-            createdCount: m.created_count,
-            matchedCount: m.matched_count,
-            errorCount: m.error_count,
-            status: m.status,
-            lines: (m.manifest_line || []).map((ml) => ({
-              manifestLineId: toNum(ml.manifest_line_id),
-              manifestId: ml.manifest_id,
-              lineNo: ml.line_no,
-              unitNo: ml.unit_no || ml.unit_no_raw,
-              blNo: ml.bl_no,
-              consigneeRaw: ml.consignee_raw,
-              agentRaw: ml.agent_raw,
-              fullEmpty: ml.full_empty,
-              sealNo: ml.seal_no,
-              grossWeightKg: Number(ml.gross_weight_kg || 0),
-              matchStatus: ml.match_status,
-              unitStayId: ml.unit_stay_id ? toNum(ml.unit_stay_id) : void 0
-            }))
-          }));
-        }
+        return (dbManifests || []).map((m) => ({
+          manifestId: m.manifest_id,
+          siteId: m.site_id,
+          vesselCallId: m.vessel_call_id,
+          vesselName: m.vessel_call?.m_vessel?.vessel_name || "Maersk Mc-Kinney Moller",
+          voyageNo: m.vessel_call?.voyage_no || "V.2601",
+          manifestRef: m.manifest_ref,
+          source: m.source,
+          importedAt: m.imported_at?.toISOString(),
+          lineCount: m.line_count,
+          createdCount: m.created_count,
+          matchedCount: m.matched_count,
+          errorCount: m.error_count,
+          status: m.status,
+          lines: (m.manifest_line || []).map((ml) => ({
+            manifestLineId: toNum(ml.manifest_line_id),
+            manifestId: ml.manifest_id,
+            lineNo: ml.line_no,
+            unitNo: ml.unit_no || ml.unit_no_raw,
+            blNo: ml.bl_no,
+            consigneeRaw: ml.consignee_raw,
+            agentRaw: ml.agent_raw,
+            fullEmpty: ml.full_empty,
+            sealNo: ml.seal_no,
+            grossWeightKg: Number(ml.gross_weight_kg || 0),
+            matchStatus: ml.match_status,
+            unitStayId: ml.unit_stay_id ? toNum(ml.unit_stay_id) : void 0
+          }))
+        }));
       } catch (err) {
         console.warn(
           "[CargoService.getManifests] DB query error:",
@@ -12087,7 +11893,7 @@ var CargoService = class {
         );
       }
     }
-    return manifests;
+    return [];
   }
   async getManifest(manifestId) {
     const list = await this.getManifests();
@@ -18381,6 +18187,9 @@ var InvoicesController = class {
           select: { charge_code_id: true }
         });
         const defaultChargeCodeId = defaultChargeCode?.charge_code_id || 1;
+        const defaultCharge = await prisma4.charge.findFirst({
+          select: { charge_id: true }
+        });
         const resolvedLines = await Promise.all(
           lines.map(async (l, idx) => {
             let chargeCodeId = Number(l.chargeCodeId);
@@ -18401,9 +18210,24 @@ var InvoicesController = class {
               });
               if (!exists) chargeCodeId = defaultChargeCodeId;
             }
+            let resolvedChargeId = null;
+            if (l.chargeId) {
+              try {
+                const c = await prisma4.charge.findUnique({
+                  where: { charge_id: BigInt(l.chargeId) },
+                  select: { charge_id: true }
+                });
+                if (c) resolvedChargeId = c.charge_id;
+              } catch {
+              }
+            }
+            if (!resolvedChargeId && defaultCharge) {
+              resolvedChargeId = defaultCharge.charge_id;
+            }
             return {
               line_no: idx + 1,
               line_doc_kind: docKind,
+              charge_id: resolvedChargeId,
               charge_code_id: chargeCodeId,
               description: l.description || "Logistics service charge",
               service_from: l.serviceFrom ? new Date(l.serviceFrom) : null,
@@ -18414,7 +18238,6 @@ var InvoicesController = class {
               amount: Number(l.amount) || 0,
               tax_rate_pct: Number(l.taxRatePct || l.taxPct) || 18,
               tax_amount: Number(l.taxAmount) || 0,
-              line_total: (Number(l.amount) || 0) + (Number(l.taxAmount) || 0),
               createdby: "Neema Mushi"
             };
           })
@@ -18545,6 +18368,8 @@ var InvoicesController = class {
               create: prof.invoice_invoice_line.map((l) => ({
                 line_no: l.line_no,
                 line_doc_kind: "TAX_INVOICE",
+                charge_id: l.charge_id || void 0,
+                disbursement_id: l.disbursement_id || void 0,
                 charge_code_id: l.charge_code_id,
                 description: l.description,
                 service_from: l.service_from,
@@ -18555,7 +18380,6 @@ var InvoicesController = class {
                 amount: l.amount,
                 tax_rate_pct: l.tax_rate_pct,
                 tax_amount: l.tax_amount,
-                line_total: l.line_total,
                 createdby: "Neema Mushi"
               }))
             }
@@ -22057,7 +21881,11 @@ var controlApprovalsController = {
       const siteIdParam = req.query.siteId ? Number(req.query.siteId) : void 0;
       const prisma4 = getPrisma();
       if (!prisma4) {
-        return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
+        return res.status(500).json({
+          error: "Database connection unavailable",
+          items: [],
+          total: 0
+        });
       }
       const whereClause = {};
       if (statusParam) {
@@ -22078,15 +21906,17 @@ var controlApprovalsController = {
         orderBy: { approval_request_id: "desc" }
       });
       const items = dbApprovals.map((a) => {
-        const steps = (a.approval_request_approval_step || []).map((s) => ({
-          stepId: Number(s.approval_step_id),
-          levelNo: s.level_no,
-          decision: s.decision,
-          decidedBy: s.createdby || s.decided_by_sub || "Approver",
-          onBehalfOf: s.on_behalf_of_sub || void 0,
-          note: s.decision_note || void 0,
-          decidedAt: s.decided_at instanceof Date ? s.decided_at.toISOString() : String(s.decided_at)
-        }));
+        const steps = (a.approval_request_approval_step || []).map(
+          (s) => ({
+            stepId: Number(s.approval_step_id),
+            levelNo: s.level_no,
+            decision: s.decision,
+            decidedBy: s.createdby || s.decided_by_sub || "Approver",
+            onBehalfOf: s.on_behalf_of_sub || void 0,
+            note: s.decision_note || void 0,
+            decidedAt: s.decided_at instanceof Date ? s.decided_at.toISOString() : String(s.decided_at)
+          })
+        );
         return {
           approvalRequestId: Number(a.approval_request_id),
           approvalId: Number(a.approval_request_id),
@@ -22172,7 +22002,10 @@ var controlApprovalsController = {
           }
         });
       } catch (stepErr) {
-        console.warn("[ApprovalsController] Notice recording step:", stepErr.message);
+        console.warn(
+          "[ApprovalsController] Notice recording step:",
+          stepErr.message
+        );
       }
       const updated = await prisma4.approval_request.update({
         where: { approval_request_id: existing.approval_request_id },
@@ -22196,7 +22029,9 @@ var controlApprovalsController = {
           });
         } else if (existing.entity_name === "disbursement") {
           await prisma4.disbursement.updateMany({
-            where: { write_off_approval_request_id: existing.approval_request_id },
+            where: {
+              write_off_approval_request_id: existing.approval_request_id
+            },
             data: {
               status: newStatus === "APPROVED" ? "WRITTEN_OFF" : "RECORDED",
               updatedate: /* @__PURE__ */ new Date(),
@@ -23492,7 +23327,7 @@ var authSessionController = {
               site_code: "DAR1",
               site_name: "Dar es Salaam main yard",
               facilities: ["ICD", "CFS", "EMPTY_DEPOT"],
-              timezone: "Africa/Dar_es_Salaam"
+              time_zone: "Africa/Dar_es_Salaam"
             };
             const permissionsGrants2 = ALL_PERMISSIONS.map((p2) => ({
               permissionCode: p2,
@@ -23524,7 +23359,7 @@ var authSessionController = {
                 siteId: s.site_id,
                 siteCode: s.site_code,
                 siteName: s.site_name,
-                timeZone: s.timezone || "Africa/Dar_es_Salaam",
+                timeZone: s.time_zone || "Africa/Dar_es_Salaam",
                 facilities: ["ICD", "CFS", "EMPTY_DEPOT"],
                 roles: [primaryRole],
                 permissions: permissionsGrants2
@@ -23547,14 +23382,14 @@ var authSessionController = {
                 siteId: currentSite2.site_id,
                 siteCode: currentSite2.site_code,
                 siteName: currentSite2.site_name,
-                timeZone: currentSite2.timezone || "Africa/Dar_es_Salaam",
+                timeZone: currentSite2.time_zone || "Africa/Dar_es_Salaam",
                 facilities: ["ICD", "CFS", "EMPTY_DEPOT"]
               },
               permissions: ALL_PERMISSIONS,
               roles: dbRoles.map((r3) => ({
                 code: r3.role_code,
                 name: r3.role_name,
-                external: !r3.is_internal,
+                external: Boolean(r3.is_external),
                 grants: ROLES[r3.role_code]?.grants || {}
               }))
             });
@@ -23691,7 +23526,7 @@ var authSessionController = {
                 siteId: matched.site_id,
                 siteCode: matched.site_code,
                 siteName: matched.site_name,
-                timeZone: matched.timezone || "Africa/Dar_es_Salaam",
+                timeZone: matched.time_zone || "Africa/Dar_es_Salaam",
                 facilities: ["ICD", "CFS", "EMPTY_DEPOT"]
               },
               switchedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -25706,7 +25541,8 @@ var AppointmentsController = class {
           const newTruck = await prisma4.m_truck.create({
             data: {
               plate_no: plateNo,
-              truck_type: "SEMI_TRAILER",
+              plate_display: plateNo,
+              vehicle_kind: "TRUCK",
               createdby: "portal"
             }
           });
@@ -25724,7 +25560,8 @@ var AppointmentsController = class {
           const newDriver = await prisma4.m_driver.create({
             data: {
               driver_name: req.body.driverName,
-              license_no: `LIC-${Date.now().toString().slice(-6)}`,
+              licence_no: `LIC-${Date.now().toString().slice(-6)}`,
+              licence_country: "TZ",
               phone: req.body.driverPhone,
               createdby: "portal"
             }
@@ -28247,258 +28084,6 @@ var searchController = {
     const normQ = q.replace(/[\s-]/g, "");
     const prisma4 = getPrisma();
     const groups = [];
-    if (isDbLive() && prisma4) {
-      try {
-        const queryWithTimeout = async (promise, fallback) => {
-          try {
-            return await Promise.race([
-              promise,
-              new Promise(
-                (_, reject) => setTimeout(() => reject(new Error("timeout")), 2e3)
-              )
-            ]);
-          } catch (err) {
-            return fallback;
-          }
-        };
-        const [
-          units,
-          visits2,
-          consignments2,
-          parties2,
-          regimes,
-          appointments3,
-          invoices3
-        ] = await Promise.all([
-          queryWithTimeout(
-            prisma4.cargo_unit.findMany({
-              where: {
-                OR: [
-                  { unit_no: { contains: q } },
-                  { unit_no: { contains: normQ } },
-                  { engine_no: { contains: q } },
-                  { make: { contains: q } },
-                  { model: { contains: q } }
-                ]
-              },
-              include: {
-                cargo_unit_unit_stays: true
-              },
-              take: 6
-            }),
-            []
-          ),
-          queryWithTimeout(
-            prisma4.truck_visit.findMany({
-              where: {
-                OR: [
-                  { visit_no: { contains: q } },
-                  { gate_pass_no: { contains: q } },
-                  { nomination_ref: { contains: q } }
-                ]
-              },
-              include: {
-                m_truck_truck_visit_truck_idTom_truck: true,
-                m_driver: true,
-                m_party_truck_visit: true
-              },
-              take: 5
-            }),
-            []
-          ),
-          queryWithTimeout(
-            prisma4.consignment.findMany({
-              where: {
-                OR: [
-                  { ref_no: { contains: q } },
-                  { cargo_description: { contains: q } }
-                ]
-              },
-              take: 5
-            }),
-            []
-          ),
-          queryWithTimeout(
-            prisma4.m_party.findMany({
-              where: {
-                OR: [
-                  { party_name: { contains: q } },
-                  { party_code: { contains: q } },
-                  { tax_id: { contains: q } }
-                ]
-              },
-              take: 5
-            }),
-            []
-          ),
-          // 5. Cargo Regimes
-          queryWithTimeout(
-            prisma4.m_cargo_regime.findMany({
-              where: {
-                OR: [
-                  { regime_code: { contains: q } },
-                  { regime_name: { contains: q } }
-                ]
-              },
-              take: 5
-            }),
-            []
-          ),
-          queryWithTimeout(
-            prisma4.appointment.findMany({
-              where: {
-                appointment_no: { contains: q }
-              },
-              take: 5
-            }),
-            []
-          ),
-          queryWithTimeout(
-            prisma4.invoice.findMany({
-              where: {
-                invoice_no: { contains: q }
-              },
-              take: 5
-            }),
-            []
-          )
-        ]);
-        if (units && units.length > 0) {
-          groups.push({
-            entity: "UNIT",
-            label: "Units & Containers",
-            hits: units.map((u) => {
-              const stay2 = u.cargo_unit_unit_stays?.[0];
-              return {
-                id: Number(u.cargo_unit_id),
-                title: u.unit_no,
-                subtitle: [
-                  u.unit_category,
-                  u.make && `${u.make} ${u.model || ""}`
-                ].filter(Boolean).join(" \xB7 "),
-                status: stay2?.physical_status || "IN_YARD",
-                link: {
-                  entityName: "cargo_unit",
-                  entityId: Number(u.cargo_unit_id)
-                },
-                to: `/cargo/units`
-              };
-            })
-          });
-        }
-        if (visits2 && visits2.length > 0) {
-          groups.push({
-            entity: "VISIT",
-            label: "Truck Visits & Gates",
-            hits: visits2.map((v) => {
-              const plate = v.m_truck_truck_visit_truck_idTom_truck?.plate_no;
-              const driver = v.m_driver?.driver_name;
-              return {
-                id: Number(v.truck_visit_id),
-                title: `${v.visit_no} ${plate ? `(${plate})` : ""}`,
-                subtitle: [driver, v.m_party_truck_visit?.party_name].filter(Boolean).join(" \xB7 "),
-                status: v.status,
-                link: {
-                  entityName: "truck_visit",
-                  entityId: Number(v.truck_visit_id)
-                },
-                to: "/gate/queue"
-              };
-            })
-          });
-        }
-        if (consignments2 && consignments2.length > 0) {
-          groups.push({
-            entity: "CONSIGNMENT",
-            label: "Consignments & BLs",
-            hits: consignments2.map((c) => ({
-              id: Number(c.consignment_id),
-              title: c.ref_no,
-              subtitle: c.cargo_description || "Consignment Reference",
-              status: c.ref_type,
-              link: {
-                entityName: "consignment",
-                entityId: Number(c.consignment_id)
-              },
-              to: "/cargo/consignments"
-            }))
-          });
-        }
-        if (parties2 && parties2.length > 0) {
-          groups.push({
-            entity: "PARTY",
-            label: "Customers & Parties",
-            hits: parties2.map((p2) => ({
-              id: p2.party_id,
-              title: p2.party_name,
-              subtitle: `Code: ${p2.party_code}`,
-              status: p2.is_active ? "ACTIVE" : "INACTIVE",
-              link: { entityName: "party", entityId: p2.party_id },
-              to: "/customers/parties"
-            }))
-          });
-        }
-        if (regimes && regimes.length > 0) {
-          groups.push({
-            entity: "REGIME",
-            label: "Cargo Regimes",
-            hits: regimes.map((r3) => ({
-              id: r3.cargo_regime_id,
-              title: r3.regime_name,
-              subtitle: `Code: ${r3.regime_code}`,
-              status: r3.is_active ? "ACTIVE" : "INACTIVE",
-              link: { entityName: "cargo_regime", entityId: r3.cargo_regime_id },
-              to: "/setup/units"
-            }))
-          });
-        }
-        if (appointments3 && appointments3.length > 0) {
-          groups.push({
-            entity: "APPOINTMENT",
-            label: "Appointments",
-            hits: appointments3.map((a) => ({
-              id: Number(a.appointment_id),
-              title: a.appointment_no,
-              subtitle: `Slot: ${a.slot_start?.toLocaleTimeString?.() || ""}`,
-              status: a.status,
-              link: {
-                entityName: "appointment",
-                entityId: Number(a.appointment_id)
-              },
-              to: "/gate/appointments"
-            }))
-          });
-        }
-        if (invoices3 && invoices3.length > 0) {
-          groups.push({
-            entity: "INVOICE",
-            label: "Invoices",
-            hits: invoices3.map((inv) => ({
-              id: Number(inv.invoice_id),
-              title: inv.invoice_no || "Invoice",
-              subtitle: `Currency: ${inv.currency || "USD"}`,
-              status: inv.status,
-              link: { entityName: "invoice", entityId: Number(inv.invoice_id) },
-              to: "/billing/invoices"
-            }))
-          });
-        }
-        if (groups.length > 0) {
-          const totalHits = groups.reduce(
-            (acc, g2) => acc + (g2.hits?.length || 0),
-            0
-          );
-          return res.json({
-            query: q,
-            groups,
-            results: groups,
-            total: totalHits
-          });
-        }
-      } catch (err) {
-        console.warn("[SearchController] DB search error:", err.message);
-      }
-    }
     try {
       const mockResults = search(q) || [];
       const total = mockResults.reduce(

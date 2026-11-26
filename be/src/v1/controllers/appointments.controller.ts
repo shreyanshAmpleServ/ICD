@@ -324,7 +324,8 @@ export class AppointmentsController {
           const newTruck = await prisma.m_truck.create({
             data: {
               plate_no: plateNo,
-              truck_type: "SEMI_TRAILER",
+              plate_display: plateNo,
+              vehicle_kind: "TRUCK",
               createdby: "portal",
             },
           });
@@ -343,7 +344,8 @@ export class AppointmentsController {
           const newDriver = await prisma.m_driver.create({
             data: {
               driver_name: req.body.driverName,
-              license_no: `LIC-${Date.now().toString().slice(-6)}`,
+              licence_no: `LIC-${Date.now().toString().slice(-6)}`,
+              licence_country: "TZ",
               phone: req.body.driverPhone,
               createdby: "portal",
             },

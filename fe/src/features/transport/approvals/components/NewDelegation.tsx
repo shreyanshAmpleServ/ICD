@@ -66,7 +66,9 @@ export function NewDelegation({
   const handleSave = async () => {
     try {
       setSubmitting(true);
-      const selectedUser: any = usersList.find((u) => String(u.userId) === activeTo);
+      const selectedUser: any = usersList.find(
+        (u) => String(u.userId) === activeTo,
+      );
       const matchedOpt = userOptions.find(([val]) => val === activeTo);
       const toName =
         selectedUser?.fullName ||

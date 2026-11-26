@@ -464,6 +464,10 @@ export class InvoicesController {
         });
         const defaultChargeCodeId = defaultChargeCode?.charge_code_id || 1;
 
+        const defaultCharge = await prisma.charge.findFirst({
+          select: { charge_id: true },
+        });
+
         const resolvedLines = await Promise.all(
           lines.map(async (l: any, idx: number) => {
             let chargeCodeId = Number(l.chargeCodeId);
@@ -485,9 +489,24 @@ export class InvoicesController {
               if (!exists) chargeCodeId = defaultChargeCodeId;
             }
 
+            let resolvedChargeId: bigint | null = null;
+            if (l.chargeId) {
+              try {
+                const c = await prisma.charge.findUnique({
+                  where: { charge_id: BigInt(l.chargeId) },
+                  select: { charge_id: true },
+                });
+                if (c) resolvedChargeId = c.charge_id;
+              } catch {}
+            }
+            if (!resolvedChargeId && defaultCharge) {
+              resolvedChargeId = defaultCharge.charge_id;
+            }
+
             return {
               line_no: idx + 1,
               line_doc_kind: docKind,
+              charge_id: resolvedChargeId,
               charge_code_id: chargeCodeId,
               description: l.description || "Logistics service charge",
               service_from: l.serviceFrom ? new Date(l.serviceFrom) : null,
@@ -498,7 +517,6 @@ export class InvoicesController {
               amount: Number(l.amount) || 0,
               tax_rate_pct: Number(l.taxRatePct || l.taxPct) || 18,
               tax_amount: Number(l.taxAmount) || 0,
-              line_total: (Number(l.amount) || 0) + (Number(l.taxAmount) || 0),
               createdby: "Neema Mushi",
             };
           }),
@@ -644,6 +662,8 @@ export class InvoicesController {
               create: prof.invoice_invoice_line.map((l: any) => ({
                 line_no: l.line_no,
                 line_doc_kind: "TAX_INVOICE",
+                charge_id: l.charge_id || undefined,
+                disbursement_id: l.disbursement_id || undefined,
                 charge_code_id: l.charge_code_id,
                 description: l.description,
                 service_from: l.service_from,
@@ -654,7 +674,6 @@ export class InvoicesController {
                 amount: l.amount,
                 tax_rate_pct: l.tax_rate_pct,
                 tax_amount: l.tax_amount,
-                line_total: l.line_total,
                 createdby: "Neema Mushi",
               })),
             },

@@ -1,6 +1,4 @@
 import { Request, Response } from 'express';
-import { blocks } from '../../../data/core';
-import { yardNodes, blockedSlots } from '../../../data/admin';
 import { getPrisma } from '../../../db/prisma';
 import { setupService } from '../../../modules/setup/setup.service';
 
@@ -144,18 +142,19 @@ export const yardMapController = {
               totalLocations: mappedLocations.length,
             });
           }
+
+          return res.json({
+            blocks: [],
+            locations: [],
+            totalLocations: 0,
+          });
         }
       }
 
-      const siteFallbackBlocks = blocks.filter((b) => b.siteId === siteId);
-      const defaultBlocks = siteId === 2
-        ? blocks.filter((b) => b.siteId === 2)
-        : blocks.filter((b) => b.siteId === 1);
-      const effectiveBlocks = siteFallbackBlocks.length > 0 ? siteFallbackBlocks : defaultBlocks;
       res.json({
-        blocks: effectiveBlocks,
-        nodes: yardNodes.filter((n) => n.siteId === siteId).slice(0, 50),
-        totalLocations: 50,
+        blocks: [],
+        nodes: [],
+        totalLocations: 0,
       });
     } catch (err: any) {
       console.error('getYardMap error:', err);
@@ -215,11 +214,12 @@ export const yardMapController = {
             const items = Array.from(blockMap.values());
             return res.json({ items, total: items.length });
           }
+
+          return res.json({ items: [], total: 0 });
         }
       }
 
-      const siteFallbackBlocks = blocks.filter((b) => !siteId || b.siteId === siteId);
-      res.json({ items: siteFallbackBlocks.length > 0 ? siteFallbackBlocks : blocks, total: siteFallbackBlocks.length });
+      res.json({ items: [], total: 0 });
     } catch (err: any) {
       console.error('getBlocks error:', err);
       res.status(500).json({ error: err.message });
@@ -228,117 +228,105 @@ export const yardMapController = {
 
   getLocations: async (req: Request, res: Response) => {
     try {
-      if (true) {
-        const prisma = getPrisma();
-        if (prisma) {
-          const dbLocs = await prisma.m_yard_location.findMany({
-            include: {
-              unit_stay: {
-                include: {
-                  unit_stay_cargo_units: true,
-                },
+      const siteId = req.query.siteId ? parseInt(req.query.siteId as string, 10) : undefined;
+      const prisma = getPrisma();
+      if (prisma) {
+        const dbLocs = await prisma.m_yard_location.findMany({
+          where: siteId ? { site_id: siteId } : {},
+          include: {
+            unit_stay: {
+              include: {
+                unit_stay_cargo_units: true,
               },
             },
-            orderBy: { yard_location_id: 'asc' },
-          });
+          },
+          orderBy: { yard_location_id: 'asc' },
+        });
 
-          if (dbLocs && dbLocs.length > 0) {
-            const items = dbLocs.map((l: any) => {
-              const codeParts = (l.location_code || l.full_code || 'A-01-01-1').split('-');
-              const blockLetter = l.location_code.startsWith('BLOCK-')
-                ? l.location_code.replace('BLOCK-', '')
-                : codeParts[0] || 'A';
-              const bay = parseInt(codeParts[1], 10) || 1;
-              const row = parseInt(codeParts[2], 10) || 1;
-              const tier = parseInt(codeParts[3], 10) || 1;
-              const stays = l.unit_stay;
-              const activeStay = stays && stays.length > 0 ? stays[0] : null;
+        const items = (dbLocs || []).map((l: any) => {
+          const codeParts = (l.location_code || l.full_code || 'A-01-01-1').split('-');
+          const blockLetter = l.location_code.startsWith('BLOCK-')
+            ? l.location_code.replace('BLOCK-', '')
+            : codeParts[0] || 'A';
+          const bay = parseInt(codeParts[1], 10) || 1;
+          const row = parseInt(codeParts[2], 10) || 1;
+          const tier = parseInt(codeParts[3], 10) || 1;
+          const stays = l.unit_stay;
+          const activeStay = stays && stays.length > 0 ? stays[0] : null;
 
-              return {
-                yardLocationId: l.yard_location_id,
-                siteId: l.site_id,
-                locationCode: l.location_code,
-                fullCode: l.full_code || l.location_code,
-                blockCode: blockLetter,
-                bay,
-                row,
-                tier,
-                isBlocked: l.is_blocked,
-                status: activeStay ? 'OCCUPIED' : (l.is_blocked ? 'BLOCKED' : 'AVAILABLE'),
-                unitNumber: activeStay?.unit_stay_cargo_units?.unit_no || activeStay?.unit_stay_cargo_units?.unit_number,
-                logInst: l.log_inst || 1,
-              };
-            });
-            return res.json({ items, total: items.length, nextCursor: null });
-          }
-        }
+          return {
+            yardLocationId: l.yard_location_id,
+            siteId: l.site_id,
+            locationCode: l.location_code,
+            fullCode: l.full_code || l.location_code,
+            blockCode: blockLetter,
+            bay,
+            row,
+            tier,
+            isBlocked: l.is_blocked,
+            status: activeStay ? 'OCCUPIED' : (l.is_blocked ? 'BLOCKED' : 'AVAILABLE'),
+            unitNumber: activeStay?.unit_stay_cargo_units?.unit_no || activeStay?.unit_stay_cargo_units?.unit_number,
+            logInst: l.log_inst || 1,
+          };
+        });
+        return res.json({ items, total: items.length, nextCursor: null });
       }
 
-      const items = yardNodes.slice(0, 100).map((n: any, i: number) => ({
-        yardLocationId: i + 1,
-        siteId: 1,
-        locationCode: n.fullCode || `LOC-${i + 1}`,
-        fullCode: n.fullCode || `A-01-${String(i + 1).padStart(2, '0')}-1`,
-        blockCode: n.fullCode ? n.fullCode.slice(0, 1) : 'A',
-        bay: 1,
-        row: 1,
-        tier: 1,
-        isBlocked: Boolean(blockedSlots[n.fullCode]),
-        status: 'ACTIVE',
-        logInst: 1,
-      }));
-      res.json({ items, total: items.length, nextCursor: null });
+      res.json({ items: [], total: 0, nextCursor: null });
     } catch (err: any) {
       console.error('getLocations error:', err);
       res.status(500).json({ error: err.message });
     }
   },
 
-  getOccupancy: async (_req: Request, res: Response) => {
+  getOccupancy: async (req: Request, res: Response) => {
     try {
-      if (true) {
-        const prisma = getPrisma();
-        if (prisma) {
-          const totalUnitsInYard = await prisma.unit_stay.count({
-            where: {
-              physical_status: { in: ['IN_YARD', 'GATED_IN', 'INSPECTION'] },
-            },
-          });
-          const reeferUnits = await prisma.unit_stay.count({
-            where: {
-              reefer_set_temp_c: { not: null },
-              physical_status: { in: ['IN_YARD', 'GATED_IN', 'INSPECTION'] },
-            },
-          });
-          const dgUnits = await prisma.unit_stay.count({
-            where: {
-              imo_class: { not: null },
-              physical_status: { in: ['IN_YARD', 'GATED_IN', 'INSPECTION'] },
-            },
-          });
+      const siteId = req.query.siteId ? parseInt(req.query.siteId as string, 10) : undefined;
+      const prisma = getPrisma();
+      if (prisma) {
+        const siteFilter = siteId ? { site_id: siteId } : {};
+        const totalUnitsInYard = await prisma.unit_stay.count({
+          where: {
+            ...siteFilter,
+            physical_status: { in: ['IN_YARD', 'GATED_IN', 'INSPECTION'] },
+          },
+        });
+        const reeferUnits = await prisma.unit_stay.count({
+          where: {
+            ...siteFilter,
+            reefer_set_temp_c: { not: null },
+            physical_status: { in: ['IN_YARD', 'GATED_IN', 'INSPECTION'] },
+          },
+        });
+        const dgUnits = await prisma.unit_stay.count({
+          where: {
+            ...siteFilter,
+            imo_class: { not: null },
+            physical_status: { in: ['IN_YARD', 'GATED_IN', 'INSPECTION'] },
+          },
+        });
 
-          const totalCapacityTeu = 12500;
-          const occupiedTeu = Math.max(totalUnitsInYard * 1.5, 420);
-          const occupancyRate = Number(((occupiedTeu / totalCapacityTeu) * 100).toFixed(2));
+        const totalCapacityTeu = siteId === 2 ? 3000 : 12500;
+        const occupiedTeu = totalUnitsInYard * 1.5;
+        const occupancyRate = totalCapacityTeu > 0 ? Number(((occupiedTeu / totalCapacityTeu) * 100).toFixed(2)) : 0;
 
-          return res.json({
-            totalCapacityTeu,
-            occupiedTeu: Math.round(occupiedTeu),
-            occupancyRate,
-            reeferOccupancyRate: reeferUnits > 0 ? Number(((reeferUnits / 500) * 100).toFixed(1)) : 42.5,
-            dangerousGoodsRate: dgUnits > 0 ? Number(((dgUnits / 200) * 100).toFixed(1)) : 14.2,
-            availableSlots: totalCapacityTeu - Math.round(occupiedTeu),
-          });
-        }
+        return res.json({
+          totalCapacityTeu,
+          occupiedTeu: Math.round(occupiedTeu),
+          occupancyRate,
+          reeferOccupancyRate: Number(((reeferUnits / Math.max(totalCapacityTeu * 0.1, 1)) * 100).toFixed(1)),
+          dangerousGoodsRate: Number(((dgUnits / Math.max(totalCapacityTeu * 0.05, 1)) * 100).toFixed(1)),
+          availableSlots: Math.max(totalCapacityTeu - Math.round(occupiedTeu), 0),
+        });
       }
 
       res.json({
         totalCapacityTeu: 12500,
-        occupiedTeu: 8420,
-        occupancyRate: 67.36,
-        reeferOccupancyRate: 54.2,
-        dangerousGoodsRate: 18.4,
-        availableSlots: 4080,
+        occupiedTeu: 0,
+        occupancyRate: 0,
+        reeferOccupancyRate: 0,
+        dangerousGoodsRate: 0,
+        availableSlots: 12500,
       });
     } catch (err: any) {
       console.error('getOccupancy error:', err);

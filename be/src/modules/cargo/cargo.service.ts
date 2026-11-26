@@ -72,8 +72,7 @@ export class CargoService {
           orderBy: { unit_stay_id: "desc" },
         });
 
-        if (dbStays && dbStays.length > 0) {
-          return dbStays.map((u) => {
+        return (dbStays || []).map((u) => {
             const activeHolds = (u.unit_stay_holds || []).filter(
               (h: any) => h.status === "ACTIVE",
             ).length;
@@ -183,13 +182,12 @@ export class CargoService {
               })),
             };
           });
-        }
       } catch (err: any) {
         console.warn("[CargoService.getUnits] DB query error:", err.message);
       }
     }
 
-    return allStays;
+    return [];
   }
 
   async getUnit(unitStayId: string | number) {
@@ -500,8 +498,7 @@ export class CargoService {
           orderBy: { consignment_id: "desc" },
         });
 
-        if (dbConsignments && dbConsignments.length > 0) {
-          return dbConsignments.map((c) => ({
+        return (dbConsignments || []).map((c) => ({
             consignmentId: toNum(c.consignment_id),
             siteId: c.site_id,
             refType: c.ref_type,
@@ -579,7 +576,6 @@ export class CargoService {
               unitsOut: ro.units_out,
             })),
           }));
-        }
       } catch (err: any) {
         console.warn(
           "[CargoService.getConsignments] DB query error:",
@@ -588,7 +584,7 @@ export class CargoService {
       }
     }
 
-    return consignments;
+    return [];
   }
 
   async getConsignment(id: string | number) {
@@ -1012,8 +1008,7 @@ export class CargoService {
           orderBy: { manifest_id: "desc" },
         });
 
-        if (dbManifests && dbManifests.length > 0) {
-          return dbManifests.map((m) => ({
+        return (dbManifests || []).map((m) => ({
             manifestId: m.manifest_id,
             siteId: m.site_id,
             vesselCallId: m.vessel_call_id,
@@ -1043,7 +1038,6 @@ export class CargoService {
               unitStayId: ml.unit_stay_id ? toNum(ml.unit_stay_id) : undefined,
             })),
           }));
-        }
       } catch (err: any) {
         console.warn(
           "[CargoService.getManifests] DB query error:",
@@ -1052,7 +1046,7 @@ export class CargoService {
       }
     }
 
-    return manifests;
+    return [];
   }
 
   async getManifest(manifestId: string | number) {

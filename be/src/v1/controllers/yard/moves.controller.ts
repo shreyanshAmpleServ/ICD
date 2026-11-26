@@ -1,8 +1,4 @@
 import { Request, Response } from "express";
-import {
-  moveOrders as fallbackMoveOrders,
-  equipmentForMoves as fallbackEquipment,
-} from "../../../data/ops";
 import { getPrisma } from "../../../db/prisma";
 
 // Valid check constraints on ICD_New database
@@ -37,48 +33,7 @@ function parseSiteId(val: unknown): number | undefined {
   return Number.isSafeInteger(num) && num > 0 ? num : undefined;
 }
 
-const FALLBACK_OPERATORS = [
-  {
-    userId: 1,
-    userSub: "ibrahim.n",
-    name: "Ibrahim N.",
-    email: "ibrahim.n@icd.tz",
-    phone: "+255 712 345 678",
-  },
-  {
-    userId: 2,
-    userSub: "kassim.o",
-    name: "Kassim O.",
-    email: "kassim.o@icd.tz",
-    phone: "+255 713 456 789",
-  },
-  {
-    userId: 3,
-    userSub: "daudi.m",
-    name: "Daudi M.",
-    email: "daudi.m@icd.tz",
-    phone: "+255 714 567 890",
-  },
-  {
-    userId: 4,
-    userSub: "juma.k",
-    name: "Juma K.",
-    email: "juma.k@icd.tz",
-    phone: "+255 715 678 901",
-  },
-  {
-    userId: 5,
-    userSub: "ashok.k",
-    name: "Ashok K.",
-    email: "ashok.k@icd.tz",
-    phone: "+255 716 789 012",
-  },
-];
-
 export const yardMovesController = {
-  /**
-   * GET move orders for the yard.
-   */
   getMoveOrders: async (req: Request, res: Response) => {
     try {
       const siteId = parseSiteId(
@@ -86,134 +41,116 @@ export const yardMovesController = {
       );
       const { status, equipmentCode } = req.query;
 
-      if (true) {
-        const prisma = getPrisma();
-        if (prisma) {
-          const whereClause: any = {};
-          if (siteId) whereClause.site_id = siteId;
-          if (status && typeof status === "string") {
-            if (
-              status.toUpperCase() === "COMPLETED" ||
-              status.toUpperCase() === "DONE"
-            ) {
-              whereClause.status = { in: ["DONE", "COMPLETED"] };
-            } else {
-              whereClause.status = status;
-            }
-          }
+      const prisma = getPrisma();
+      if (!prisma) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+      }
 
-          const dbMoves = await prisma.move_order.findMany({
-            where: whereClause,
-            include: {
-              unit_stay: {
-                include: {
-                  unit_stay_cargo_units: {
-                    include: {
-                      cargo_unit_unit_types: true,
-                    },
-                  },
-                },
-              },
-              m_equipment: true,
-              m_yard_location_move_order_from_location_idTom_yard_location: true,
-              m_yard_location_move_order_to_location_idTom_yard_location: true,
-              truck_visit_move_order: {
-                include: {
-                  m_truck_truck_visit_truck_idTom_truck: true,
-                },
-              },
-            },
-            orderBy: { move_order_id: "desc" },
-            take: 100,
-          });
-
-          if (dbMoves && dbMoves.length > 0) {
-            let items = dbMoves.map((m: any) => ({
-              moveOrderId: Number(m.move_order_id),
-              moveId: Number(m.move_order_id),
-              siteId: m.site_id || 1,
-              unitStayId: Number(m.unit_stay_id),
-              unitNo:
-                m.unit_stay?.unit_stay_cargo_units?.unit_no || "MSKU 123456 7",
-              isoCode:
-                m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types
-                  ?.iso_code || "42G1",
-              category:
-                m.unit_stay?.unit_stay_cargo_units?.unit_category ||
-                "CONTAINER",
-              unitType:
-                m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types
-                  ?.type_name || "40ft Standard dry",
-              moveType: m.move_kind,
-              moveKind: m.move_kind,
-              sourceLocation:
-                m.m_yard_location_move_order_from_location_idTom_yard_location
-                  ?.location_code || "YARD",
-              fromLocationCode:
-                m.m_yard_location_move_order_from_location_idTom_yard_location
-                  ?.location_code || "YARD",
-              targetLocation:
-                m.m_yard_location_move_order_to_location_idTom_yard_location
-                  ?.location_code || "BUFFER",
-              toLocationCode:
-                m.m_yard_location_move_order_to_location_idTom_yard_location
-                  ?.location_code || "BUFFER",
-              priority: m.priority || 5,
-              status: m.status || "OPEN",
-              equipmentId: m.assigned_equipment_id,
-              equipmentCode: m.m_equipment?.equipment_code || undefined,
-              equipmentType: m.m_equipment?.equipment_type || undefined,
-              assignedTo:
-                m.assigned_operator_sub ||
-                m.m_equipment?.equipment_code ||
-                undefined,
-              operatorName: m.assigned_operator_sub || undefined,
-              licensePlate:
-                m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck
-                  ?.plate_no || undefined,
-              truckPlate:
-                m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck
-                  ?.plate_no || undefined,
-              driverName: undefined,
-              requestedAt: m.requested_at
-                ? m.requested_at.toISOString()
-                : new Date().toISOString(),
-              startedAt: undefined,
-              completedAt: m.completed_at
-                ? m.completed_at.toISOString()
-                : undefined,
-              reason: m.override_reason || undefined,
-            }));
-
-            if (equipmentCode && typeof equipmentCode === "string") {
-              items = items.filter(
-                (x: any) => x.equipmentCode === equipmentCode,
-              );
-            }
-
-            return res.json({
-              success: true,
-              items,
-              total: items.length,
-            });
-          }
+      const whereClause: any = {};
+      if (siteId) whereClause.site_id = siteId;
+      if (status && typeof status === "string") {
+        if (
+          status.toUpperCase() === "COMPLETED" ||
+          status.toUpperCase() === "DONE"
+        ) {
+          whereClause.status = { in: ["DONE", "COMPLETED"] };
+        } else {
+          whereClause.status = status;
         }
       }
 
-      // Fallback
-      let filtered = [...fallbackMoveOrders];
-      if (status && typeof status === "string") {
-        filtered = filtered.filter((m: any) => m.status === status);
-      }
+      const dbMoves = await prisma.move_order.findMany({
+        where: whereClause,
+        include: {
+          unit_stay: {
+            include: {
+              unit_stay_cargo_units: {
+                include: {
+                  cargo_unit_unit_types: true,
+                },
+              },
+            },
+          },
+          m_equipment: true,
+          m_yard_location_move_order_from_location_idTom_yard_location: true,
+          m_yard_location_move_order_to_location_idTom_yard_location: true,
+          truck_visit_move_order: {
+            include: {
+              m_truck_truck_visit_truck_idTom_truck: true,
+            },
+          },
+        },
+        orderBy: { move_order_id: "desc" },
+        take: 100,
+      });
+
+      let items = (dbMoves || []).map((m: any) => ({
+        moveOrderId: Number(m.move_order_id),
+        moveId: Number(m.move_order_id),
+        siteId: m.site_id || 1,
+        unitStayId: Number(m.unit_stay_id),
+        unitNo:
+          m.unit_stay?.unit_stay_cargo_units?.unit_no || "MSKU 123456 7",
+        isoCode:
+          m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types
+            ?.iso_code || "42G1",
+        category:
+          m.unit_stay?.unit_stay_cargo_units?.unit_category ||
+          "CONTAINER",
+        unitType:
+          m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types
+            ?.type_name || "40ft Standard dry",
+        moveType: m.move_kind,
+        moveKind: m.move_kind,
+        sourceLocation:
+          m.m_yard_location_move_order_from_location_idTom_yard_location
+            ?.location_code || "YARD",
+        fromLocationCode:
+          m.m_yard_location_move_order_from_location_idTom_yard_location
+            ?.location_code || "YARD",
+        targetLocation:
+          m.m_yard_location_move_order_to_location_idTom_yard_location
+            ?.location_code || "BUFFER",
+        toLocationCode:
+          m.m_yard_location_move_order_to_location_idTom_yard_location
+            ?.location_code || "BUFFER",
+        priority: m.priority || 5,
+        status: m.status || "OPEN",
+        equipmentId: m.assigned_equipment_id,
+        equipmentCode: m.m_equipment?.equipment_code || undefined,
+        equipmentType: m.m_equipment?.equipment_type || undefined,
+        assignedTo:
+          m.assigned_operator_sub ||
+          m.m_equipment?.equipment_code ||
+          undefined,
+        operatorName: m.assigned_operator_sub || undefined,
+        licensePlate:
+          m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck
+            ?.plate_no || undefined,
+        truckPlate:
+          m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck
+            ?.plate_no || undefined,
+        driverName: undefined,
+        requestedAt: m.requested_at
+          ? m.requested_at.toISOString()
+          : new Date().toISOString(),
+        startedAt: undefined,
+        completedAt: m.completed_at
+          ? m.completed_at.toISOString()
+          : undefined,
+        reason: m.override_reason || undefined,
+      }));
+
       if (equipmentCode && typeof equipmentCode === "string") {
-        filtered = filtered.filter(
-          (m: any) => m.equipmentCode === equipmentCode,
+        items = items.filter(
+          (x: any) => x.equipmentCode === equipmentCode,
         );
       }
+
       return res.json({
         success: true,
-        items: filtered,
-        total: filtered.length,
+        items,
+        total: items.length,
       });
     } catch (error: any) {
       console.error("getMoveOrders error:", error);
@@ -263,7 +200,6 @@ export const yardMovesController = {
           .json({ success: false, message: "Database connection unavailable" });
       }
 
-      // 1. Resolve valid unit_stay
       let targetStay: any = null;
       if (unitStayId) {
         try {
@@ -327,7 +263,6 @@ export const yardMovesController = {
         });
       }
 
-      // 2. Resolve Locations
       let resolvedFromLocId: number | null = fromLocationId
         ? Number(fromLocationId)
         : null;
@@ -576,9 +511,6 @@ export const yardMovesController = {
     }
   },
 
-  /**
-   * Assign equipment and/or operator to a move order.
-   */
   assignMove: async (req: Request, res: Response) => {
     try {
       const moveOrderId = req.params.moveOrderId || req.params.moveId;
@@ -644,9 +576,6 @@ export const yardMovesController = {
     }
   },
 
-  /**
-   * Execute move order (start/run directly).
-   */
   executeMove: async (req: Request, res: Response) => {
     try {
       const moveId = req.params.moveId || req.params.moveOrderId;
@@ -688,222 +617,130 @@ export const yardMovesController = {
     }
   },
 
-  /**
-   * GET equipment list for yard.
-   */
   getEquipment: async (req: Request, res: Response) => {
     try {
       const siteId = parseSiteId(
         req.query.siteId || req.headers["x-site-id"] || (req as any).siteId,
       );
 
-      if (true) {
-        const prisma = getPrisma();
-        if (prisma) {
-          const whereClause: any = { is_active: true };
-          if (siteId) whereClause.site_id = siteId;
-
-          let equipment = await prisma.m_equipment.findMany({
-            where: whereClause,
-            orderBy: { equipment_code: "asc" },
-          });
-
-          if ((!equipment || equipment.length === 0) && siteId) {
-            // fallback across all sites
-            equipment = await prisma.m_equipment.findMany({
-              where: { is_active: true },
-              orderBy: { equipment_code: "asc" },
-            });
-          }
-
-          if (equipment && equipment.length > 0) {
-            const items = equipment.map((e: any) => ({
-              equipmentId: e.equipment_id,
-              equipmentCode: e.equipment_code,
-              equipmentName: e.equipment_name,
-              equipmentType: e.equipment_type,
-              capacityKg: e.capacity_kg ? Number(e.capacity_kg) : undefined,
-              status: e.is_active ? "AVAILABLE" : "MAINTENANCE",
-              siteId: e.site_id,
-            }));
-            return res.json({ success: true, items, total: items.length });
-          }
-        }
+      const prisma = getPrisma();
+      if (!prisma) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
 
-      return res.json({
-        success: true,
-        items: fallbackEquipment,
-        total: fallbackEquipment.length,
+      const whereClause: any = { is_active: true };
+      if (siteId) whereClause.site_id = siteId;
+
+      let equipment = await prisma.m_equipment.findMany({
+        where: whereClause,
+        orderBy: { equipment_code: "asc" },
       });
+
+      if ((!equipment || equipment.length === 0) && siteId) {
+        equipment = await prisma.m_equipment.findMany({
+          where: { is_active: true },
+          orderBy: { equipment_code: "asc" },
+        });
+      }
+
+      const items = (equipment || []).map((e: any) => ({
+        equipmentId: e.equipment_id,
+        equipmentCode: e.equipment_code,
+        equipmentName: e.equipment_name,
+        equipmentType: e.equipment_type,
+        capacityKg: e.capacity_kg ? Number(e.capacity_kg) : undefined,
+        status: e.is_active ? "AVAILABLE" : "MAINTENANCE",
+        siteId: e.site_id,
+      }));
+      return res.json({ success: true, items, total: items.length });
     } catch (error: any) {
       console.error("getEquipment error:", error);
       return res.status(500).json({ success: false, message: error.message });
     }
   },
 
-  /**
-   * GET yard locations/slots.
-   */
   getLocations: async (req: Request, res: Response) => {
     try {
       const siteId = parseSiteId(
         req.query.siteId || req.headers["x-site-id"] || (req as any).siteId,
       );
 
-      if (true) {
-        const prisma = getPrisma();
-        if (prisma) {
-          const whereClause: any = { is_active: true };
-          if (siteId) whereClause.site_id = siteId;
-
-          let locations = await prisma.m_yard_location.findMany({
-            where: whereClause,
-            orderBy: { location_code: "asc" },
-            take: 300,
-          });
-
-          if ((!locations || locations.length === 0) && siteId) {
-            locations = await prisma.m_yard_location.findMany({
-              where: { is_active: true },
-              orderBy: { location_code: "asc" },
-              take: 300,
-            });
-          }
-
-          if (locations && locations.length > 0) {
-            const items = locations.map((l: any) => ({
-              locationId: l.yard_location_id,
-              yardLocationId: l.yard_location_id,
-              parentId: l.parent_id,
-              levelNo: l.level_no,
-              locationCode: l.location_code,
-              fullCode: l.full_code,
-              name: l.location_code,
-              kind: l.location_kind,
-              locationKind: l.location_kind,
-              isSlot: Boolean(l.is_slot),
-              siteId: l.site_id,
-              allows20: Boolean(l.allows_20),
-              allows40: Boolean(l.allows_40),
-              allows45: Boolean(l.allows_45),
-              maxTier: l.max_tier,
-              maxWeightKg: l.max_weight_kg,
-              isBlocked: Boolean(l.is_blocked),
-              blockedReason: l.blocked_reason,
-            }));
-            return res.json({ success: true, items, total: items.length });
-          }
-        }
+      const prisma = getPrisma();
+      if (!prisma) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
 
-      // Fallback
-      const fallback = [
-        {
-          locationId: 1,
-          yardLocationId: 1,
-          locationCode: "A-01-01-1",
-          fullCode: "A-01-01-1",
-          name: "A-01-01-1",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1,
-        },
-        {
-          locationId: 2,
-          yardLocationId: 2,
-          locationCode: "A-01-01-2",
-          fullCode: "A-01-01-2",
-          name: "A-01-01-2",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1,
-        },
-        {
-          locationId: 3,
-          yardLocationId: 3,
-          locationCode: "B-02-02-1",
-          fullCode: "B-02-02-1",
-          name: "B-02-02-1",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1,
-        },
-        {
-          locationId: 4,
-          yardLocationId: 4,
-          locationCode: "B-02-02-2",
-          fullCode: "B-02-02-2",
-          name: "B-02-02-2",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1,
-        },
-        {
-          locationId: 5,
-          yardLocationId: 5,
-          locationCode: "C-01-01-1",
-          fullCode: "C-01-01-1",
-          name: "C-01-01-1",
-          kind: "SLOT",
-          locationKind: "SLOT",
-          isSlot: true,
-          siteId: 1,
-        },
-      ];
-      return res.json({
-        success: true,
-        items: fallback,
-        total: fallback.length,
+      const whereClause: any = { is_active: true };
+      if (siteId) whereClause.site_id = siteId;
+
+      let locations = await prisma.m_yard_location.findMany({
+        where: whereClause,
+        orderBy: { location_code: "asc" },
+        take: 300,
       });
+
+      if ((!locations || locations.length === 0) && siteId) {
+        locations = await prisma.m_yard_location.findMany({
+          where: { is_active: true },
+          orderBy: { location_code: "asc" },
+          take: 300,
+        });
+      }
+
+      const items = (locations || []).map((l: any) => ({
+        locationId: l.yard_location_id,
+        yardLocationId: l.yard_location_id,
+        parentId: l.parent_id,
+        levelNo: l.level_no,
+        locationCode: l.location_code,
+        fullCode: l.full_code,
+        name: l.location_code,
+        kind: l.location_kind,
+        locationKind: l.location_kind,
+        isSlot: Boolean(l.is_slot),
+        siteId: l.site_id,
+        allows20: Boolean(l.allows_20),
+        allows40: Boolean(l.allows_40),
+        allows45: Boolean(l.allows_45),
+        maxTier: l.max_tier,
+        maxWeightKg: l.max_weight_kg,
+        isBlocked: Boolean(l.is_blocked),
+        blockedReason: l.blocked_reason,
+      }));
+      return res.json({ success: true, items, total: items.length });
     } catch (error: any) {
       console.error("getLocations error:", error);
       return res.status(500).json({ success: false, message: error.message });
     }
   },
 
-  /**
-   * GET operators / users for yard moves.
-   */
   getOperators: async (_req: Request, res: Response) => {
     try {
-      if (true) {
-        const prisma = getPrisma();
-        if (prisma) {
-          const users = await prisma.app_user.findMany({
-            where: { is_active: true },
-            select: {
-              user_id: true,
-              user_sub: true,
-              user_name: true,
-              email: true,
-              phone: true,
-            },
-            orderBy: { user_id: "asc" },
-          });
-
-          if (users && users.length > 0) {
-            const items = users.map((u: any) => ({
-              userId: u.user_id,
-              userSub: u.user_sub,
-              name: u.user_name,
-              email: u.email,
-              phone: u.phone,
-            }));
-            return res.json({ success: true, items, total: items.length });
-          }
-        }
+      const prisma = getPrisma();
+      if (!prisma) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
 
-      return res.json({
-        success: true,
-        items: FALLBACK_OPERATORS,
-        total: FALLBACK_OPERATORS.length,
+      const users = await prisma.app_user.findMany({
+        where: { is_active: true },
+        select: {
+          user_id: true,
+          user_sub: true,
+          user_name: true,
+          email: true,
+          phone: true,
+        },
+        orderBy: { user_id: "asc" },
       });
+
+      const items = (users || []).map((u: any) => ({
+        userId: u.user_id,
+        userSub: u.user_sub,
+        name: u.user_name,
+        email: u.email,
+        phone: u.phone,
+      }));
+      return res.json({ success: true, items, total: items.length });
     } catch (error: any) {
       console.error("getOperators error:", error);
       return res.status(500).json({ success: false, message: error.message });
