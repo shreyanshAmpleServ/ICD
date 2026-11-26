@@ -43,6 +43,6 @@ registerSearch((q) => {
 });
 
 export function search(q: string): Group[] {
-  if (q.trim().length < 2) return [];
+  if (q.trim().length < 1) return [];
   return providers.map((p) => p(q.trim())).filter((g): g is Group => !!g);
 }

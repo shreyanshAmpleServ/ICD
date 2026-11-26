@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, LogOut, Menu, Search, ShieldCheck, Sparkles, User, WifiOff, X } from 'lucide-react';
+import { Bell, LayoutGrid, LogOut, Menu, Search, ShieldCheck, Sparkles, User, WifiOff, X } from 'lucide-react';
 import { ALL_ROLE, SITES, useSession } from '@/app/session';
 import { ROLES } from '@/app/roles';
 import { useT } from '@/app/i18n';
@@ -12,6 +12,7 @@ import { useAuth } from '@/features/auth';
 import { api } from '@/api/client';
 import { useQ } from '@/api/query';
 import { ProfileDrawer } from './components/ProfileDrawer';
+import { ModuleSearchModal, useVisibleNavGroups } from './components/ModuleSearchModal';
 
 export interface HeaderProps {
   onMenu: () => void;
@@ -62,12 +63,34 @@ export function Header({ onMenu, onAiva, aivaOpen }: HeaderProps) {
 
   const siteList = s.sites && s.sites.length > 0 ? s.sites : SITES;
   const isFetching = useIsFetching();
+  const [moduleSearchOpen, setModuleSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setModuleSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
       <header className="topbar" style={{ position: 'relative' }}>
         <TopLoadingBar />
         <Button variant="ghost" className="menu-toggle" aria-label="Open menu" icon={<Menu />} onClick={onMenu} />
         {!s.isExternal ? <OneSearch /> : <div className="spacer" />}
+        <Button
+          variant="secondary"
+          className="mod-search-trigger"
+          aria-label="Search modules (Ctrl+K)"
+          icon={<LayoutGrid size={16} />}
+          onClick={() => setModuleSearchOpen(true)}
+        >
+          <span className="mod-search-label">Modules</span>
+          <span className="kbd">Ctrl K</span>
+        </Button>
         <div className="site-switch">
           <span className="site-name xs faint">Site</span>
           <select
@@ -127,6 +150,7 @@ export function Header({ onMenu, onAiva, aivaOpen }: HeaderProps) {
           </Button>
         )}
         <MeMenu />
+        <ModuleSearchModal open={moduleSearchOpen} onClose={() => setModuleSearchOpen(false)} />
       </header>
       );
 }
@@ -141,22 +165,23 @@ export function Header({ onMenu, onAiva, aivaOpen }: HeaderProps) {
       const ref = useRef<HTMLInputElement>(null);
         const nav = useNavigate();
         const t = useT();
+        const trimmedQ = q.trim();
+        const navGroups = useVisibleNavGroups(trimmedQ);
 
-  // Dynamic search calling backend /api/search
+  // Dynamic search calling backend /api/search (works from 1+ character)
   useEffect(() => {
-    const trimmed = q.trim();
-        if (trimmed.length < 2) {
-          setResults([]);
-        setLoading(false);
-        setSearched(false);
-        return;
+    if (trimmedQ.length < 1) {
+      setResults([]);
+      setLoading(false);
+      setSearched(false);
+      return;
     }
 
-        setLoading(true);
+    setLoading(true);
     const timeout = setTimeout(async () => {
       try {
         const res = await api.get<{ groups ?: Group[]; query?: string; total?: number }>(
-        `/search?q=${encodeURIComponent(trimmed)}`
+        `/search?q=${encodeURIComponent(trimmedQ)}`
         );
         if (res && Array.isArray(res.groups)) {
           setResults(res.groups);
@@ -169,12 +194,27 @@ export function Header({ onMenu, onAiva, aivaOpen }: HeaderProps) {
           setLoading(false);
         setSearched(true);
       }
-    }, 200);
+    }, 180);
 
     return () => clearTimeout(timeout);
-  }, [q]);
+  }, [trimmedQ]);
 
-        const groups: Group[] = results;
+  const moduleGroups: Group[] = useMemo(() => {
+    if (trimmedQ.length < 1) return [];
+    const hits = navGroups.flatMap((g) =>
+      g.items.map((item) => ({
+        id: item.path as any,
+        title: t(item.label),
+        subtitle: `${g.displayLabel} · ${item.path}`,
+        status: undefined,
+        link: { entityName: 'module', entityId: 0 } as any,
+        to: item.path,
+      }))
+    );
+    return hits.length ? [{ entity: 'UNIT' as any, label: 'Modules & screens', hits }] : [];
+  }, [navGroups, trimmedQ, t]);
+
+  const groups: Group[] = useMemo(() => [...moduleGroups, ...results], [moduleGroups, results]);
   const flat = groups.flatMap((g) => g.hits);
 
   useEffect(() => {
@@ -204,7 +244,7 @@ export function Header({ onMenu, onAiva, aivaOpen }: HeaderProps) {
               ref={ref}
               className="input"
               value={q}
-              placeholder={t('Search container, VIN, plate, BL, invoice or customer')}
+              placeholder={t('Search modules, container, VIN, plate, BL, invoice or customer')}
               aria-label="Search"
               onFocus={() => setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 200)}
@@ -231,20 +271,19 @@ export function Header({ onMenu, onAiva, aivaOpen }: HeaderProps) {
             />
           </div>
           {!q && <span className="kbd">/</span>}
-          {open && q.length >= 2 && (
+          {open && trimmedQ.length >= 1 && (
             <div className="pop sr" role="listbox">
-              {loading && (
+              {loading && groups.length === 0 && (
                 <div className="small muted" style={{ padding: '8px 16px' }}>
                   Searching live system...
                 </div>
               )}
               {!loading && searched && groups.length === 0 && (
                 <div className="small muted" style={{ padding: '8px 16px' }}>
-                  No match for “{q}”. Try the last 4 digits of a container or the end of a VIN.
+                  No match for “{q}”. Try a module name, container, VIN, plate, invoice or customer.
                 </div>
               )}
-              {!loading &&
-                groups.map((g) => (
+              {groups.map((g) => (
                   <div key={g.label}>
                     <h4>{g.label}</h4>
                     {g.hits.map((h) => {
@@ -252,7 +291,7 @@ export function Header({ onMenu, onAiva, aivaOpen }: HeaderProps) {
                       const i = idx;
                       return (
                         <a
-                          key={h.to}
+                          key={`${g.label}-${h.to}-${h.title}`}
                           href={'#' + h.to}
                           role="option"
                           aria-selected={i === sel}

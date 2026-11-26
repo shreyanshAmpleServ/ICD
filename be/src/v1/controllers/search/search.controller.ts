@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { getPrisma } from '../../../db/prisma';
+import { getPrisma, isDbLive } from '../../../db/prisma';
 import { search as mockSearch } from '../../../data/search';
 
 export const searchController = {
   globalSearch: async (req: Request, res: Response) => {
     const q = String(req.query.q || '').trim();
-    if (!q || q.length < 2) {
+    if (!q || q.length < 1) {
       return res.json({ query: q, groups: [], results: [], total: 0 });
     }
 
@@ -13,7 +13,7 @@ export const searchController = {
     const prisma = getPrisma();
     const groups: any[] = [];
 
-    if (prisma) {
+    if (isDbLive() && prisma) {
       try {
         const queryWithTimeout = async <T>(promise: Promise<T>, fallback: T): Promise<T> => {
           try {
