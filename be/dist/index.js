@@ -28,6 +28,17 @@ var import_client = require("@prisma/client");
 var import_dotenv = __toESM(require("dotenv"));
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
+var envCandidates = [
+  import_path.default.resolve(__dirname, "../../.env"),
+  import_path.default.resolve(__dirname, "../../../.env"),
+  import_path.default.resolve(process.cwd(), ".env"),
+  import_path.default.resolve(process.cwd(), "be/.env")
+];
+for (const envPath of envCandidates) {
+  if (import_fs.default.existsSync(envPath)) {
+    import_dotenv.default.config({ path: envPath });
+  }
+}
 import_dotenv.default.config();
 function resolveOpenApiSpecPath() {
   if (process.env.OPENAPI_SPEC_PATH && import_fs.default.existsSync(process.env.OPENAPI_SPEC_PATH)) {
@@ -66,6 +77,45 @@ var ENV = {
 // src/configs/prisma.ts
 var prisma = null;
 var isMssqlConnected = false;
+function attachAliases(client) {
+  const p2 = client;
+  p2.unit_stays = p2.unit_stay;
+  p2.appointments = p2.appointment;
+  p2.invoices = p2.invoice;
+  p2.invoice_lines = p2.invoice_line;
+  p2.documents = p2.document;
+  p2.service_requests = p2.service_request;
+  p2.portal_invitations = p2.portal_invitation;
+  p2.visit_types = p2.m_visit_type;
+  p2.parties = p2.m_party;
+  p2.unit_types = p2.m_unit_type;
+  p2.yard_locations = p2.m_yard_location;
+  p2.holds = p2.hold;
+  p2.yard_moves = p2.yard_move;
+  p2.reefer_sessions = p2.reefer_session;
+  p2.reefer_readings = p2.reefer_reading;
+  p2.repair_codes = p2.m_repair_code;
+  p2.repair_estimates = p2.repair_estimate;
+  p2.labour_contractors = p2.labour_contractor;
+  p2.handling_jobs = p2.handling_job;
+  p2.handling_job_lines = p2.handling_job_line;
+  p2.appointment_slot_rules = p2.m_appointment_slot_rule;
+  p2.device_integrations = p2.m_device_integration;
+  p2.device_reads = p2.device_read;
+  p2.devices = p2.m_device;
+  p2.cargo_units = p2.cargo_unit;
+  p2.truck_visits = p2.truck_visit;
+  p2.sites = p2.m_site;
+  p2.roles = p2.m_role;
+  p2.permissions = p2.m_permission;
+  p2.companies = p2.m_company;
+  p2.users = p2.app_user;
+  p2.cargo_regimes = p2.m_cargo_regime;
+  p2.drivers = p2.m_driver;
+  p2.trucks = p2.m_truck;
+  p2.equipment = p2.m_equipment;
+  p2.consignments = p2.consignment;
+}
 async function initPrisma() {
   if (!ENV.DATABASE_URL || ENV.DATABASE_URL.includes("YourStrong@Passw0rd")) {
     console.log(
@@ -82,43 +132,7 @@ async function initPrisma() {
     });
     await prisma.$connect();
     isMssqlConnected = true;
-    const p2 = prisma;
-    p2.unit_stays = p2.unit_stay;
-    p2.appointments = p2.appointment;
-    p2.invoices = p2.invoice;
-    p2.invoice_lines = p2.invoice_line;
-    p2.documents = p2.document;
-    p2.service_requests = p2.service_request;
-    p2.portal_invitations = p2.portal_invitation;
-    p2.visit_types = p2.m_visit_type;
-    p2.parties = p2.m_party;
-    p2.unit_types = p2.m_unit_type;
-    p2.yard_locations = p2.m_yard_location;
-    p2.holds = p2.hold;
-    p2.yard_moves = p2.yard_move;
-    p2.reefer_sessions = p2.reefer_session;
-    p2.reefer_readings = p2.reefer_reading;
-    p2.repair_codes = p2.m_repair_code;
-    p2.repair_estimates = p2.repair_estimate;
-    p2.labour_contractors = p2.labour_contractor;
-    p2.handling_jobs = p2.handling_job;
-    p2.handling_job_lines = p2.handling_job_line;
-    p2.appointment_slot_rules = p2.m_appointment_slot_rule;
-    p2.device_integrations = p2.m_device_integration;
-    p2.device_reads = p2.device_read;
-    p2.devices = p2.m_device;
-    p2.cargo_units = p2.cargo_unit;
-    p2.truck_visits = p2.truck_visit;
-    p2.sites = p2.m_site;
-    p2.roles = p2.m_role;
-    p2.permissions = p2.m_permission;
-    p2.companies = p2.m_company;
-    p2.users = p2.app_user;
-    p2.cargo_regimes = p2.m_cargo_regime;
-    p2.drivers = p2.m_driver;
-    p2.trucks = p2.m_truck;
-    p2.equipment = p2.m_equipment;
-    p2.consignments = p2.consignment;
+    attachAliases(prisma);
     console.log(
       "[MSSQL / Prisma] Connected successfully to Microsoft SQL Server."
     );
@@ -132,6 +146,22 @@ async function initPrisma() {
   }
 }
 function getPrisma() {
+  if (!prisma) {
+    const url = ENV.DATABASE_URL || process.env.DATABASE_URL;
+    if (url && !url.includes("YourStrong@Passw0rd")) {
+      try {
+        prisma = new import_client.PrismaClient({
+          datasources: {
+            db: { url }
+          },
+          log: ENV.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"]
+        });
+        attachAliases(prisma);
+      } catch (err) {
+        console.error("[MSSQL / Prisma] Lazy initialization error:", err.message);
+      }
+    }
+  }
   return prisma;
 }
 
@@ -9234,7 +9264,14 @@ var estimates = ESTIMATE_STATES.map((status, i) => {
 });
 
 // src/v1/controllers/yard/moves.controller.ts
-var VALID_MOVE_KINDS = ["PICK_FOR_VISIT", "FROM_ACTIVITY", "TO_ACTIVITY", "RESHUFFLE", "RELOCATE", "PLACE"];
+var VALID_MOVE_KINDS = [
+  "PICK_FOR_VISIT",
+  "FROM_ACTIVITY",
+  "TO_ACTIVITY",
+  "RESHUFFLE",
+  "RELOCATE",
+  "PLACE"
+];
 function normalizeMoveKind(kind) {
   if (!kind) return "PLACE";
   const upper = String(kind).trim().toUpperCase();
@@ -9255,11 +9292,41 @@ function parseSiteId(val) {
   return Number.isSafeInteger(num2) && num2 > 0 ? num2 : void 0;
 }
 var FALLBACK_OPERATORS = [
-  { userId: 1, userSub: "ibrahim.n", name: "Ibrahim N.", email: "ibrahim.n@icd.tz", phone: "+255 712 345 678" },
-  { userId: 2, userSub: "kassim.o", name: "Kassim O.", email: "kassim.o@icd.tz", phone: "+255 713 456 789" },
-  { userId: 3, userSub: "daudi.m", name: "Daudi M.", email: "daudi.m@icd.tz", phone: "+255 714 567 890" },
-  { userId: 4, userSub: "juma.k", name: "Juma K.", email: "juma.k@icd.tz", phone: "+255 715 678 901" },
-  { userId: 5, userSub: "ashok.k", name: "Ashok K.", email: "ashok.k@icd.tz", phone: "+255 716 789 012" }
+  {
+    userId: 1,
+    userSub: "ibrahim.n",
+    name: "Ibrahim N.",
+    email: "ibrahim.n@icd.tz",
+    phone: "+255 712 345 678"
+  },
+  {
+    userId: 2,
+    userSub: "kassim.o",
+    name: "Kassim O.",
+    email: "kassim.o@icd.tz",
+    phone: "+255 713 456 789"
+  },
+  {
+    userId: 3,
+    userSub: "daudi.m",
+    name: "Daudi M.",
+    email: "daudi.m@icd.tz",
+    phone: "+255 714 567 890"
+  },
+  {
+    userId: 4,
+    userSub: "juma.k",
+    name: "Juma K.",
+    email: "juma.k@icd.tz",
+    phone: "+255 715 678 901"
+  },
+  {
+    userId: 5,
+    userSub: "ashok.k",
+    name: "Ashok K.",
+    email: "ashok.k@icd.tz",
+    phone: "+255 716 789 012"
+  }
 ];
 var yardMovesController = {
   /**
@@ -9267,7 +9334,9 @@ var yardMovesController = {
    */
   getMoveOrders: async (req, res) => {
     try {
-      const siteId = parseSiteId(req.query.siteId || req.headers["x-site-id"] || req.siteId);
+      const siteId = parseSiteId(
+        req.query.siteId || req.headers["x-site-id"] || req.siteId
+      );
       const { status, equipmentCode } = req.query;
       if (true) {
         const prisma4 = getPrisma();
@@ -9337,7 +9406,9 @@ var yardMovesController = {
               reason: m.override_reason || void 0
             }));
             if (equipmentCode && typeof equipmentCode === "string") {
-              items = items.filter((x) => x.equipmentCode === equipmentCode);
+              items = items.filter(
+                (x) => x.equipmentCode === equipmentCode
+              );
             }
             return res.json({
               success: true,
@@ -9352,7 +9423,9 @@ var yardMovesController = {
         filtered = filtered.filter((m) => m.status === status);
       }
       if (equipmentCode && typeof equipmentCode === "string") {
-        filtered = filtered.filter((m) => m.equipmentCode === equipmentCode);
+        filtered = filtered.filter(
+          (m) => m.equipmentCode === equipmentCode
+        );
       }
       return res.json({
         success: true,
@@ -9369,99 +9442,202 @@ var yardMovesController = {
    */
   createMoveOrder: async (req, res) => {
     try {
-      const siteId = parseSiteId(req.body.siteId || req.query.siteId || req.headers["x-site-id"] || 1) || 1;
+      const siteId = parseSiteId(
+        req.body.siteId || req.query.siteId || req.headers["x-site-id"] || 1
+      ) || 1;
       const {
         unitStayId,
+        unitNo,
         moveKind,
         moveType,
         fromLocationId,
+        fromCode,
+        sourceLocation,
         toLocationId,
+        toCode,
+        targetLocation,
         priority = 5,
         assignedEquipmentId,
         assignedOperatorSub,
         truckVisitId,
         overrideReason
       } = req.body;
-      if (!unitStayId) {
-        return res.status(400).json({ success: false, message: "unitStayId is required" });
+      if (!unitStayId && !unitNo) {
+        return res.status(400).json({
+          success: false,
+          message: "unitStayId or unitNo is required"
+        });
       }
       const normalizedKind = normalizeMoveKind(moveKind || moveType);
-      if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const newOrder = await prisma4.move_order.create({
-            data: {
-              site_id: siteId,
-              unit_stay_id: BigInt(unitStayId),
-              move_kind: normalizedKind,
-              from_location_id: fromLocationId ? Number(fromLocationId) : null,
-              to_location_id: toLocationId ? Number(toLocationId) : null,
-              priority: Number(priority) || 5,
-              status: "OPEN",
-              assigned_equipment_id: assignedEquipmentId ? Number(assignedEquipmentId) : null,
-              assigned_operator_sub: assignedOperatorSub || null,
-              truck_visit_id: truckVisitId ? BigInt(truckVisitId) : null,
-              override_reason: overrideReason || null,
-              createdby: req.user?.sub || "system"
-            },
-            include: {
-              unit_stay: {
-                include: {
-                  unit_stay_cargo_units: true
-                }
-              },
-              m_equipment: true,
-              m_yard_location_move_order_from_location_idTom_yard_location: true,
-              m_yard_location_move_order_to_location_idTom_yard_location: true
-            }
+      const prisma4 = getPrisma();
+      if (!prisma4) {
+        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+      }
+      let targetStay = null;
+      if (unitStayId) {
+        try {
+          targetStay = await prisma4.unit_stay.findUnique({
+            where: { unit_stay_id: BigInt(unitStayId) },
+            include: { unit_stay_cargo_units: true }
           });
-          return res.status(201).json({
-            success: true,
+        } catch {
+        }
+      }
+      const searchUnitNo = (unitNo || req.body.unit_no || "").trim().toUpperCase();
+      if (!targetStay && searchUnitNo) {
+        const cleanNo = searchUnitNo.replace(/[\s-]/g, "");
+        targetStay = await prisma4.unit_stay.findFirst({
+          where: {
+            site_id: siteId,
+            unit_stay_cargo_units: {
+              OR: [{ unit_no: searchUnitNo }, { unit_no: cleanNo }]
+            }
+          },
+          orderBy: { unit_stay_id: "desc" },
+          include: { unit_stay_cargo_units: true }
+        });
+      }
+      if (!targetStay) {
+        const finalUnitNo = searchUnitNo || `CONT-${Date.now().toString().slice(-6)}`;
+        let cu = await prisma4.cargo_unit.findFirst({
+          where: { unit_no: finalUnitNo }
+        });
+        if (!cu) {
+          const firstType = await prisma4.m_unit_type.findFirst({
+            select: { unit_type_id: true }
+          });
+          cu = await prisma4.cargo_unit.create({
             data: {
-              moveOrderId: Number(newOrder.move_order_id),
-              moveId: Number(newOrder.move_order_id),
-              siteId: newOrder.site_id,
-              unitStayId: Number(newOrder.unit_stay_id),
-              unitNo: newOrder.unit_stay?.unit_stay_cargo_units?.unit_no || "UNKNOWN",
-              moveType: newOrder.move_kind,
-              moveKind: newOrder.move_kind,
-              sourceLocation: newOrder.m_yard_location_move_order_from_location_idTom_yard_location?.location_code || "YARD",
-              targetLocation: newOrder.m_yard_location_move_order_to_location_idTom_yard_location?.location_code || "BUFFER",
-              priority: newOrder.priority,
-              status: newOrder.status,
-              assignedEquipmentId: newOrder.assigned_equipment_id,
-              assignedOperatorSub: newOrder.assigned_operator_sub,
-              createdAt: newOrder.createdate.toISOString()
+              unit_category: "CONTAINER",
+              unit_no: finalUnitNo,
+              unit_type_id: firstType?.unit_type_id || 1,
+              createdby: req.user?.sub || "system"
             }
           });
         }
+        const firstRegime = await prisma4.m_cargo_regime.findFirst({
+          select: { cargo_regime_id: true }
+        });
+        targetStay = await prisma4.unit_stay.create({
+          data: {
+            cargo_unit_id: cu.cargo_unit_id,
+            site_id: siteId,
+            cargo_regime_id: firstRegime?.cargo_regime_id || 1,
+            flow: "IMPORT",
+            full_empty: "F",
+            physical_status: "IN_YARD",
+            createdby: req.user?.sub || "system"
+          },
+          include: { unit_stay_cargo_units: true }
+        });
       }
-      const fakeId = Date.now();
-      const mockOrder = {
-        moveOrderId: fakeId,
-        moveId: fakeId,
-        siteId,
-        unitStayId: Number(unitStayId),
-        unitNo: "MSKU 999999 9",
-        moveType: normalizedKind,
-        moveKind: normalizedKind,
-        sourceLocation: "YARD-01",
-        targetLocation: "BUFFER-01",
-        priority: Number(priority) || 5,
-        status: "OPEN",
-        assignedEquipmentId,
-        assignedOperatorSub,
-        requestedAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      return res.status(201).json({ success: true, data: mockOrder });
+      let resolvedFromLocId = fromLocationId ? Number(fromLocationId) : null;
+      const rawFromCode = String(fromCode || sourceLocation || "").trim();
+      if (!resolvedFromLocId && rawFromCode) {
+        const loc = await prisma4.m_yard_location.findFirst({
+          where: {
+            site_id: siteId,
+            OR: [{ location_code: rawFromCode }, { full_code: rawFromCode }]
+          },
+          select: { yard_location_id: true }
+        });
+        if (loc) resolvedFromLocId = loc.yard_location_id;
+      }
+      if (resolvedFromLocId) {
+        const exists = await prisma4.m_yard_location.findUnique({
+          where: { yard_location_id: resolvedFromLocId },
+          select: { yard_location_id: true }
+        });
+        if (!exists) resolvedFromLocId = null;
+      }
+      let resolvedToLocId = toLocationId ? Number(toLocationId) : null;
+      const rawToCode = String(toCode || targetLocation || "").trim();
+      if (!resolvedToLocId && rawToCode) {
+        const loc = await prisma4.m_yard_location.findFirst({
+          where: {
+            site_id: siteId,
+            OR: [{ location_code: rawToCode }, { full_code: rawToCode }]
+          },
+          select: { yard_location_id: true }
+        });
+        if (loc) resolvedToLocId = loc.yard_location_id;
+      }
+      if (resolvedToLocId) {
+        const exists = await prisma4.m_yard_location.findUnique({
+          where: { yard_location_id: resolvedToLocId },
+          select: { yard_location_id: true }
+        });
+        if (!exists) resolvedToLocId = null;
+      }
+      let resolvedEquipId = assignedEquipmentId ? Number(assignedEquipmentId) : null;
+      if (resolvedEquipId) {
+        const exists = await prisma4.m_equipment.findUnique({
+          where: { equipment_id: resolvedEquipId },
+          select: { equipment_id: true }
+        });
+        if (!exists) resolvedEquipId = null;
+      }
+      let resolvedTruckVisitId = null;
+      if (truckVisitId) {
+        try {
+          const tv = await prisma4.truck_visit.findUnique({
+            where: { truck_visit_id: BigInt(truckVisitId) },
+            select: { truck_visit_id: true }
+          });
+          if (tv) resolvedTruckVisitId = tv.truck_visit_id;
+        } catch {
+        }
+      }
+      const newOrder = await prisma4.move_order.create({
+        data: {
+          site_id: siteId,
+          unit_stay_id: targetStay.unit_stay_id,
+          move_kind: normalizedKind,
+          from_location_id: resolvedFromLocId,
+          to_location_id: resolvedToLocId,
+          priority: Number(priority) || 5,
+          status: "OPEN",
+          assigned_equipment_id: resolvedEquipId,
+          assigned_operator_sub: assignedOperatorSub || null,
+          truck_visit_id: resolvedTruckVisitId,
+          override_reason: overrideReason || null,
+          createdby: req.user?.sub || "system"
+        },
+        include: {
+          unit_stay: {
+            include: {
+              unit_stay_cargo_units: true
+            }
+          },
+          m_equipment: true,
+          m_yard_location_move_order_from_location_idTom_yard_location: true,
+          m_yard_location_move_order_to_location_idTom_yard_location: true
+        }
+      });
+      return res.status(201).json({
+        success: true,
+        data: {
+          moveOrderId: Number(newOrder.move_order_id),
+          moveId: Number(newOrder.move_order_id),
+          siteId: newOrder.site_id,
+          unitStayId: Number(newOrder.unit_stay_id),
+          unitNo: newOrder.unit_stay?.unit_stay_cargo_units?.unit_no || searchUnitNo || "UNKNOWN",
+          moveType: newOrder.move_kind,
+          moveKind: newOrder.move_kind,
+          sourceLocation: newOrder.m_yard_location_move_order_from_location_idTom_yard_location?.full_code || rawFromCode || "YARD",
+          targetLocation: newOrder.m_yard_location_move_order_to_location_idTom_yard_location?.full_code || rawToCode || "BUFFER",
+          priority: newOrder.priority,
+          status: newOrder.status,
+          assignedEquipmentId: newOrder.assigned_equipment_id,
+          assignedOperatorSub: newOrder.assigned_operator_sub,
+          createdAt: newOrder.createdate.toISOString()
+        }
+      });
     } catch (error) {
       console.error("createMoveOrder error:", error);
       return res.status(500).json({ success: false, message: error.message });
     }
   },
-  /**
-   * Start a move order.
-   */
   startMove: async (req, res) => {
     try {
       const moveOrderId = req.params.moveOrderId || req.params.moveId;
@@ -9488,15 +9664,15 @@ var yardMovesController = {
           });
         }
       }
-      return res.json({ success: true, data: { moveOrderId: Number(moveOrderId), status: "IN_PROGRESS" } });
+      return res.json({
+        success: true,
+        data: { moveOrderId: Number(moveOrderId), status: "IN_PROGRESS" }
+      });
     } catch (error) {
       console.error("startMove error:", error);
       return res.status(500).json({ success: false, message: error.message });
     }
   },
-  /**
-   * Complete a move order.
-   */
   completeMove: async (req, res) => {
     try {
       const moveOrderId = req.params.moveOrderId || req.params.moveId;
@@ -9532,7 +9708,9 @@ var yardMovesController = {
                 updatedby: req.user?.sub || "system",
                 updatedate: /* @__PURE__ */ new Date()
               }
-            }).catch((e) => console.warn("Could not update unit_stay location:", e.message));
+            }).catch(
+              (e) => console.warn("Could not update unit_stay location:", e.message)
+            );
           }
           return res.json({
             success: true,
@@ -9645,7 +9823,10 @@ var yardMovesController = {
           });
         }
       }
-      return res.json({ success: true, data: { moveOrderId: Number(moveId), status: "IN_PROGRESS" } });
+      return res.json({
+        success: true,
+        data: { moveOrderId: Number(moveId), status: "IN_PROGRESS" }
+      });
     } catch (error) {
       console.error("executeMove error:", error);
       return res.status(500).json({ success: false, message: error.message });
@@ -9656,7 +9837,9 @@ var yardMovesController = {
    */
   getEquipment: async (req, res) => {
     try {
-      const siteId = parseSiteId(req.query.siteId || req.headers["x-site-id"] || req.siteId);
+      const siteId = parseSiteId(
+        req.query.siteId || req.headers["x-site-id"] || req.siteId
+      );
       if (true) {
         const prisma4 = getPrisma();
         if (prisma4) {
@@ -9686,7 +9869,11 @@ var yardMovesController = {
           }
         }
       }
-      return res.json({ success: true, items: equipmentForMoves, total: equipmentForMoves.length });
+      return res.json({
+        success: true,
+        items: equipmentForMoves,
+        total: equipmentForMoves.length
+      });
     } catch (error) {
       console.error("getEquipment error:", error);
       return res.status(500).json({ success: false, message: error.message });
@@ -9697,7 +9884,9 @@ var yardMovesController = {
    */
   getLocations: async (req, res) => {
     try {
-      const siteId = parseSiteId(req.query.siteId || req.headers["x-site-id"] || req.siteId);
+      const siteId = parseSiteId(
+        req.query.siteId || req.headers["x-site-id"] || req.siteId
+      );
       if (true) {
         const prisma4 = getPrisma();
         if (prisma4) {
@@ -9741,13 +9930,67 @@ var yardMovesController = {
         }
       }
       const fallback = [
-        { locationId: 1, yardLocationId: 1, locationCode: "A-01-01-1", fullCode: "A-01-01-1", name: "A-01-01-1", kind: "SLOT", locationKind: "SLOT", isSlot: true, siteId: 1 },
-        { locationId: 2, yardLocationId: 2, locationCode: "A-01-01-2", fullCode: "A-01-01-2", name: "A-01-01-2", kind: "SLOT", locationKind: "SLOT", isSlot: true, siteId: 1 },
-        { locationId: 3, yardLocationId: 3, locationCode: "B-02-02-1", fullCode: "B-02-02-1", name: "B-02-02-1", kind: "SLOT", locationKind: "SLOT", isSlot: true, siteId: 1 },
-        { locationId: 4, yardLocationId: 4, locationCode: "B-02-02-2", fullCode: "B-02-02-2", name: "B-02-02-2", kind: "SLOT", locationKind: "SLOT", isSlot: true, siteId: 1 },
-        { locationId: 5, yardLocationId: 5, locationCode: "C-01-01-1", fullCode: "C-01-01-1", name: "C-01-01-1", kind: "SLOT", locationKind: "SLOT", isSlot: true, siteId: 1 }
+        {
+          locationId: 1,
+          yardLocationId: 1,
+          locationCode: "A-01-01-1",
+          fullCode: "A-01-01-1",
+          name: "A-01-01-1",
+          kind: "SLOT",
+          locationKind: "SLOT",
+          isSlot: true,
+          siteId: 1
+        },
+        {
+          locationId: 2,
+          yardLocationId: 2,
+          locationCode: "A-01-01-2",
+          fullCode: "A-01-01-2",
+          name: "A-01-01-2",
+          kind: "SLOT",
+          locationKind: "SLOT",
+          isSlot: true,
+          siteId: 1
+        },
+        {
+          locationId: 3,
+          yardLocationId: 3,
+          locationCode: "B-02-02-1",
+          fullCode: "B-02-02-1",
+          name: "B-02-02-1",
+          kind: "SLOT",
+          locationKind: "SLOT",
+          isSlot: true,
+          siteId: 1
+        },
+        {
+          locationId: 4,
+          yardLocationId: 4,
+          locationCode: "B-02-02-2",
+          fullCode: "B-02-02-2",
+          name: "B-02-02-2",
+          kind: "SLOT",
+          locationKind: "SLOT",
+          isSlot: true,
+          siteId: 1
+        },
+        {
+          locationId: 5,
+          yardLocationId: 5,
+          locationCode: "C-01-01-1",
+          fullCode: "C-01-01-1",
+          name: "C-01-01-1",
+          kind: "SLOT",
+          locationKind: "SLOT",
+          isSlot: true,
+          siteId: 1
+        }
       ];
-      return res.json({ success: true, items: fallback, total: fallback.length });
+      return res.json({
+        success: true,
+        items: fallback,
+        total: fallback.length
+      });
     } catch (error) {
       console.error("getLocations error:", error);
       return res.status(500).json({ success: false, message: error.message });
@@ -9784,7 +10027,11 @@ var yardMovesController = {
           }
         }
       }
-      return res.json({ success: true, items: FALLBACK_OPERATORS, total: FALLBACK_OPERATORS.length });
+      return res.json({
+        success: true,
+        items: FALLBACK_OPERATORS,
+        total: FALLBACK_OPERATORS.length
+      });
     } catch (error) {
       console.error("getOperators error:", error);
       return res.status(500).json({ success: false, message: error.message });
@@ -15082,10 +15329,16 @@ var import_express6 = require("express");
 var EAT = 3 * 36e5;
 var eatDate = (iso) => new Date(Date.parse(iso) + EAT).toISOString().slice(0, 10);
 var addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
-var daysBetween = (a, b) => Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 864e5);
+var daysBetween = (a, b) => Math.round(
+  (Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 864e5
+);
 var isSunday = (d) => (/* @__PURE__ */ new Date(d + "T00:00:00Z")).getUTCDay() === 0;
 var TODAY = day(0);
-var dShort = (d) => (/* @__PURE__ */ new Date(d + "T00:00:00Z")).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+var dShort = (d) => (/* @__PURE__ */ new Date(d + "T00:00:00Z")).toLocaleDateString("en-GB", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC"
+});
 var HOLIDAYS = {
   "2026-07-07": "Saba Saba",
   "2026-08-08": "Nane Nane",
@@ -15111,28 +15364,72 @@ var COMPANY = {
   bank: "CRDB USD 0250-4471-8800 \xB7 NMB TZS 2071-0033-412",
   vfdSerial: "10TZ100877"
 };
-var APPROVERS = { l1: "Grace Mrema \xB7 Finance manager", l2: "Peter Lyimo \xB7 General manager" };
+var APPROVERS = {
+  l1: "Grace Mrema \xB7 Finance manager",
+  l2: "Peter Lyimo \xB7 General manager"
+};
 var ME2 = "Neema Mushi";
 var rates = [];
 {
   let id = 400;
-  for (const [d, r3] of [["2026-07-01", "2618.40"], ["2026-08-01", "2641.75"], ["2026-09-01", "2652.10"], ["2026-10-01", "2661.30"]]) {
-    rates.push({ exchangeRateId: ++id, companyId: 1, fromCurrency: "USD", toCurrency: "TZS", rateDate: d, rate: r3, rateKind: "MONTHLY", sourceNote: "Bank of Tanzania month-opening mean rate", usedBy: 0, enteredAt: at(daysBetween(d, TODAY) * 24 + 1.5), enteredBy: "Grace Mrema" });
+  for (const [d, r3] of [
+    ["2026-07-01", "2618.40"],
+    ["2026-08-01", "2641.75"],
+    ["2026-09-01", "2652.10"],
+    ["2026-10-01", "2661.30"]
+  ]) {
+    rates.push({
+      exchangeRateId: ++id,
+      companyId: 1,
+      fromCurrency: "USD",
+      toCurrency: "TZS",
+      rateDate: d,
+      rate: r3,
+      rateKind: "MONTHLY",
+      sourceNote: "Bank of Tanzania month-opening mean rate",
+      usedBy: 0,
+      enteredAt: at(daysBetween(d, TODAY) * 24 + 1.5),
+      enteredBy: "Grace Mrema"
+    });
   }
   for (let i = 59; i >= 0; i--) {
     const d = day(-i);
     if (isSunday(d) || HOLIDAYS[d]) continue;
     const t = 59 - i;
     const v = 2646 + t * 0.32 + 6.5 * Math.sin(t / 7) + (rnd() - 0.5) * 3;
-    rates.push({ exchangeRateId: ++id, companyId: 1, fromCurrency: "USD", toCurrency: "TZS", rateDate: d, rate: v.toFixed(2), rateKind: "DAILY", sourceNote: pick(["BoT mean rate 09:00", "BoT mean rate 09:00", "CRDB treasury buying rate"]), usedBy: 0, enteredAt: at(i * 24 + 2.4), enteredBy: i === 0 ? "Grace Mrema" : pick(["Grace Mrema", "Halima Said"]) });
+    rates.push({
+      exchangeRateId: ++id,
+      companyId: 1,
+      fromCurrency: "USD",
+      toCurrency: "TZS",
+      rateDate: d,
+      rate: v.toFixed(2),
+      rateKind: "DAILY",
+      sourceNote: pick([
+        "BoT mean rate 09:00",
+        "BoT mean rate 09:00",
+        "CRDB treasury buying rate"
+      ]),
+      usedBy: 0,
+      enteredAt: at(i * 24 + 2.4),
+      enteredBy: i === 0 ? "Grace Mrema" : pick(["Grace Mrema", "Halima Said"])
+    });
   }
 }
 function rateOn(date) {
   const daily = rates.filter((r3) => r3.rateKind === "DAILY" && r3.rateDate <= date).sort((a, b) => b.rateDate.localeCompare(a.rateDate))[0];
-  if (daily && daily.rateDate === date) return { rate: daily, note: "Daily rate for this date" };
-  if (daily && daily.rateDate.slice(0, 7) === date.slice(0, 7)) return { rate: daily, note: `No rate on ${dShort(date)}${isSunday(date) ? " (Sunday)" : HOLIDAYS[date] ? ` (${HOLIDAYS[date]})` : ""}; last daily rate carries forward` };
+  if (daily && daily.rateDate === date)
+    return { rate: daily, note: "Daily rate for this date" };
+  if (daily && daily.rateDate.slice(0, 7) === date.slice(0, 7))
+    return {
+      rate: daily,
+      note: `No rate on ${dShort(date)}${isSunday(date) ? " (Sunday)" : HOLIDAYS[date] ? ` (${HOLIDAYS[date]})` : ""}; last daily rate carries forward`
+    };
   const monthly = rates.filter((r3) => r3.rateKind === "MONTHLY" && r3.rateDate <= date).sort((a, b) => b.rateDate.localeCompare(a.rateDate))[0];
-  return { rate: monthly ?? rates[0], note: "No daily rate; monthly rate used" };
+  return {
+    rate: monthly ?? rates[0],
+    note: "No daily rate; monthly rate used"
+  };
 }
 var fx = (date) => num(rateOn(date).rate.rate);
 var CHARGE_NAMES = {
@@ -15217,7 +15514,11 @@ var BASIS_LABEL = {
   FLAT: "Flat"
 };
 var ruleId2 = 6e3;
-var sl = (...rows) => rows.map(([f, t, r3]) => ({ fromQty: String(f), toQty: t === null ? null : String(t), rate: m2(r3) }));
+var sl = (...rows) => rows.map(([f, t, r3]) => ({
+  fromQty: String(f),
+  toQty: t === null ? null : String(t),
+  rate: m2(r3)
+}));
 var R = (chargeCode, basis, o = {}) => ({
   tariffRuleId: ++ruleId2,
   chargeCode,
@@ -15232,64 +15533,348 @@ var R = (chargeCode, basis, o = {}) => ({
 function siteRules(storageUp = 1, vat = "VAT18") {
   const s = (v) => r2(v * storageUp);
   return [
-    R("LIFT_ON_OFF", "PER_MOVE", { unitCategory: "CONTAINER", lengthFt: 20, flatRate: "60.00", taxCode: vat }),
-    R("LIFT_ON_OFF", "PER_MOVE", { unitCategory: "CONTAINER", lengthFt: 40, flatRate: "90.00", taxCode: vat }),
-    R("STORAGE_IMPORT", "PER_UNIT_DAY", { unitCategory: "CONTAINER", lengthFt: 20, fullEmpty: "F", clockStart: "DISCHARGE", freeDays: 7, taxCode: vat, slabs: sl([1, 7, 0], [8, 14, s(8)], [15, 30, s(12)], [31, null, s(20)]) }),
-    R("STORAGE_IMPORT", "PER_UNIT_DAY", { unitCategory: "CONTAINER", lengthFt: 40, fullEmpty: "F", clockStart: "DISCHARGE", freeDays: 7, taxCode: vat, slabs: sl([1, 7, 0], [8, 14, s(16)], [15, 30, s(24)], [31, null, s(40)]) }),
-    R("STORAGE_EMPTY", "PER_TEU_DAY", { unitCategory: "CONTAINER", fullEmpty: "E", clockStart: "GATE_IN", freeDays: 5, taxCode: vat, slabs: sl([1, 5, 0], [6, null, s(3)]) }),
-    R("REEFER_POWER", "PER_KWH", { unitCategory: "CONTAINER", isReefer: true, flatRate: "0.42", minCharge: "15.00", taxCode: vat }),
-    R("EXAM_HANDLING", "PER_UNIT", { unitCategory: "CONTAINER", lengthFt: 20, flatRate: "80.00", taxCode: vat }),
-    R("EXAM_HANDLING", "PER_UNIT", { unitCategory: "CONTAINER", lengthFt: 40, flatRate: "120.00", taxCode: vat }),
-    R("HAZ_SURCHARGE", "PER_UNIT", { isHazardous: true, flatRate: "75.00", taxCode: vat }),
-    R("CFS_HANDLING", "PER_TONNE", { unitCategory: "LOT", flatRate: "12.00", minCharge: "25.00", taxCode: vat }),
+    R("LIFT_ON_OFF", "PER_MOVE", {
+      unitCategory: "CONTAINER",
+      lengthFt: 20,
+      flatRate: "60.00",
+      taxCode: vat
+    }),
+    R("LIFT_ON_OFF", "PER_MOVE", {
+      unitCategory: "CONTAINER",
+      lengthFt: 40,
+      flatRate: "90.00",
+      taxCode: vat
+    }),
+    R("STORAGE_IMPORT", "PER_UNIT_DAY", {
+      unitCategory: "CONTAINER",
+      lengthFt: 20,
+      fullEmpty: "F",
+      clockStart: "DISCHARGE",
+      freeDays: 7,
+      taxCode: vat,
+      slabs: sl([1, 7, 0], [8, 14, s(8)], [15, 30, s(12)], [31, null, s(20)])
+    }),
+    R("STORAGE_IMPORT", "PER_UNIT_DAY", {
+      unitCategory: "CONTAINER",
+      lengthFt: 40,
+      fullEmpty: "F",
+      clockStart: "DISCHARGE",
+      freeDays: 7,
+      taxCode: vat,
+      slabs: sl([1, 7, 0], [8, 14, s(16)], [15, 30, s(24)], [31, null, s(40)])
+    }),
+    R("STORAGE_EMPTY", "PER_TEU_DAY", {
+      unitCategory: "CONTAINER",
+      fullEmpty: "E",
+      clockStart: "GATE_IN",
+      freeDays: 5,
+      taxCode: vat,
+      slabs: sl([1, 5, 0], [6, null, s(3)])
+    }),
+    R("REEFER_POWER", "PER_KWH", {
+      unitCategory: "CONTAINER",
+      isReefer: true,
+      flatRate: "0.42",
+      minCharge: "15.00",
+      taxCode: vat
+    }),
+    R("EXAM_HANDLING", "PER_UNIT", {
+      unitCategory: "CONTAINER",
+      lengthFt: 20,
+      flatRate: "80.00",
+      taxCode: vat
+    }),
+    R("EXAM_HANDLING", "PER_UNIT", {
+      unitCategory: "CONTAINER",
+      lengthFt: 40,
+      flatRate: "120.00",
+      taxCode: vat
+    }),
+    R("HAZ_SURCHARGE", "PER_UNIT", {
+      isHazardous: true,
+      flatRate: "75.00",
+      taxCode: vat
+    }),
+    R("CFS_HANDLING", "PER_TONNE", {
+      unitCategory: "LOT",
+      flatRate: "12.00",
+      minCharge: "25.00",
+      taxCode: vat
+    }),
     R("DOC_FEE", "FLAT", { flatRate: "50.00", taxCode: vat })
   ];
 }
 function vehicleRules(vat = "VAT18", free = 7) {
   return [
-    R("VEH_HANDLING", "PER_UNIT", { unitCategory: "VEHICLE", flatRate: "45.00", taxCode: vat }),
-    R("STORAGE_VEHICLE", "PER_UNIT_DAY", { unitCategory: "VEHICLE", vehicleClass: "CAR_SUV", clockStart: "DISCHARGE", freeDays: free, taxCode: vat, slabs: sl([1, free, 0], [free + 1, 14 + free - 7, 10], [15 + free - 7, null, 15]) }),
-    R("STORAGE_VEHICLE", "PER_UNIT_DAY", { unitCategory: "VEHICLE", vehicleClass: "TRUCK_LIGHT", clockStart: "DISCHARGE", freeDays: free, taxCode: vat, slabs: sl([1, free, 0], [free + 1, 14 + free - 7, 15], [15 + free - 7, null, 25]) }),
-    R("STORAGE_VEHICLE", "PER_UNIT_DAY", { unitCategory: "VEHICLE", vehicleClass: "TRACTOR", clockStart: "DISCHARGE", freeDays: free, taxCode: vat, slabs: sl([1, free, 0], [free + 1, 14 + free - 7, 15], [15 + free - 7, null, 25]) }),
+    R("VEH_HANDLING", "PER_UNIT", {
+      unitCategory: "VEHICLE",
+      flatRate: "45.00",
+      taxCode: vat
+    }),
+    R("STORAGE_VEHICLE", "PER_UNIT_DAY", {
+      unitCategory: "VEHICLE",
+      vehicleClass: "CAR_SUV",
+      clockStart: "DISCHARGE",
+      freeDays: free,
+      taxCode: vat,
+      slabs: sl(
+        [1, free, 0],
+        [free + 1, 14 + free - 7, 10],
+        [15 + free - 7, null, 15]
+      )
+    }),
+    R("STORAGE_VEHICLE", "PER_UNIT_DAY", {
+      unitCategory: "VEHICLE",
+      vehicleClass: "TRUCK_LIGHT",
+      clockStart: "DISCHARGE",
+      freeDays: free,
+      taxCode: vat,
+      slabs: sl(
+        [1, free, 0],
+        [free + 1, 14 + free - 7, 15],
+        [15 + free - 7, null, 25]
+      )
+    }),
+    R("STORAGE_VEHICLE", "PER_UNIT_DAY", {
+      unitCategory: "VEHICLE",
+      vehicleClass: "TRACTOR",
+      clockStart: "DISCHARGE",
+      freeDays: free,
+      taxCode: vat,
+      slabs: sl(
+        [1, free, 0],
+        [free + 1, 14 + free - 7, 15],
+        [15 + free - 7, null, 25]
+      )
+    }),
     R("DOC_FEE", "FLAT", { flatRate: "35.00", taxCode: vat })
   ];
 }
 var transitRules = () => [
-  R("LIFT_ON_OFF", "PER_MOVE", { unitCategory: "CONTAINER", lengthFt: 20, flatRate: "60.00", taxCode: "VAT0" }),
-  R("LIFT_ON_OFF", "PER_MOVE", { unitCategory: "CONTAINER", lengthFt: 40, flatRate: "90.00", taxCode: "VAT0" }),
-  R("STORAGE_TRANSIT", "PER_UNIT_DAY", { unitCategory: "CONTAINER", lengthFt: 20, clockStart: "DISCHARGE", freeDays: 14, taxCode: "VAT0", slabs: sl([1, 14, 0], [15, 30, 10], [31, null, 20]) }),
-  R("STORAGE_TRANSIT", "PER_UNIT_DAY", { unitCategory: "CONTAINER", lengthFt: 40, clockStart: "DISCHARGE", freeDays: 14, taxCode: "VAT0", slabs: sl([1, 14, 0], [15, 30, 20], [31, null, 40]) }),
-  R("EXAM_HANDLING", "PER_UNIT", { unitCategory: "CONTAINER", flatRate: "100.00", taxCode: "VAT0" }),
+  R("LIFT_ON_OFF", "PER_MOVE", {
+    unitCategory: "CONTAINER",
+    lengthFt: 20,
+    flatRate: "60.00",
+    taxCode: "VAT0"
+  }),
+  R("LIFT_ON_OFF", "PER_MOVE", {
+    unitCategory: "CONTAINER",
+    lengthFt: 40,
+    flatRate: "90.00",
+    taxCode: "VAT0"
+  }),
+  R("STORAGE_TRANSIT", "PER_UNIT_DAY", {
+    unitCategory: "CONTAINER",
+    lengthFt: 20,
+    clockStart: "DISCHARGE",
+    freeDays: 14,
+    taxCode: "VAT0",
+    slabs: sl([1, 14, 0], [15, 30, 10], [31, null, 20])
+  }),
+  R("STORAGE_TRANSIT", "PER_UNIT_DAY", {
+    unitCategory: "CONTAINER",
+    lengthFt: 40,
+    clockStart: "DISCHARGE",
+    freeDays: 14,
+    taxCode: "VAT0",
+    slabs: sl([1, 14, 0], [15, 30, 20], [31, null, 40])
+  }),
+  R("EXAM_HANDLING", "PER_UNIT", {
+    unitCategory: "CONTAINER",
+    flatRate: "100.00",
+    taxCode: "VAT0"
+  }),
   ...vehicleRules("VAT0", 14),
   R("DOC_FEE", "FLAT", { flatRate: "50.00", taxCode: "VAT0" })
-].filter((r3, i, a) => !(r3.chargeCode === "DOC_FEE" && a.findIndex((x) => x.chargeCode === "DOC_FEE") !== i));
+].filter(
+  (r3, i, a) => !(r3.chargeCode === "DOC_FEE" && a.findIndex((x) => x.chargeCode === "DOC_FEE") !== i)
+);
 var tariffs = [
-  { tariffId: 31, tariffCode: "TRF-DAR1-STD", tariffName: "Main yard standard tariff", level: "SITE", companyId: 1, siteId: 1, currency: "USD", versionNo: 3, effectiveFrom: "2026-07-01", status: "ACTIVE", regulatorRef: "Published tariff book 2026/27", rules: siteRules(), updatedBy: "Grace Mrema", remarks: "Free days count Sundays and public holidays." },
-  { tariffId: 32, tariffCode: "TRF-DAR1-STD", tariffName: "Main yard standard tariff", level: "SITE", companyId: 1, siteId: 1, currency: "USD", versionNo: 4, effectiveFrom: "2027-01-01", status: "DRAFT", rules: siteRules(1.1), updatedBy: "Neema Mushi", remarks: "Storage slabs up 10% from 1 Jan 2027. Handling unchanged." },
-  { tariffId: 30, tariffCode: "TRF-DAR1-STD", tariffName: "Main yard standard tariff", level: "SITE", companyId: 1, siteId: 1, currency: "USD", versionNo: 2, effectiveFrom: "2025-07-01", effectiveTo: "2026-06-30", status: "RETIRED", rules: siteRules(0.9), updatedBy: "Grace Mrema" },
-  { tariffId: 41, tariffCode: "TRF-TRANSIT", tariffName: "Transit cargo (Zambia, DRC, Rwanda, Uganda)", level: "REGIME", companyId: 1, regimeCode: "TRANSIT", currency: "USD", versionNo: 2, effectiveFrom: "2026-07-01", status: "ACTIVE", rules: transitRules(), updatedBy: "Grace Mrema", remarks: "14 free days. Services zero-rated for VAT: verify with tax adviser." },
-  { tariffId: 51, tariffCode: "TRF-DAR2-VEH", tariffName: "Vehicle yard standard tariff", level: "SITE", companyId: 1, siteId: 2, currency: "USD", versionNo: 1, effectiveFrom: "2026-07-01", status: "ACTIVE", rules: vehicleRules(), updatedBy: "Grace Mrema" },
-  { tariffId: 61, tariffCode: "TRF-BML-EMPTY", tariffName: "Blue Meridian Line empties", level: "LINE", companyId: 1, partyId: 4, currency: "USD", versionNo: 1, effectiveFrom: "2026-04-01", status: "ACTIVE", updatedBy: "Grace Mrema", rules: [
-    R("LIFT_ON_OFF", "PER_MOVE", { unitCategory: "CONTAINER", fullEmpty: "E", flatRate: "35.00" }),
-    R("STORAGE_EMPTY", "PER_TEU_DAY", { unitCategory: "CONTAINER", fullEmpty: "E", clockStart: "GATE_IN", freeDays: 10, slabs: sl([1, 10, 0], [11, null, 2.5]) })
-  ] },
-  { tariffId: 71, tariffCode: "TRF-KILELE-26", tariffName: "Kilele contract rates 2026/27", level: "CUSTOMER", companyId: 1, partyId: 2, currency: "USD", versionNo: 1, effectiveFrom: "2026-11-01", effectiveTo: "2027-10-31", status: "PENDING_APPROVAL", updatedBy: "Neema Mushi", submittedBy: "Neema Mushi", approvalNote: "Waiting for Grace Mrema (finance manager) since 5 Oct", remarks: "Volume contract: 10 free days, Sundays and holidays do not count.", rules: [
-    R("LIFT_ON_OFF", "PER_MOVE", { unitCategory: "CONTAINER", lengthFt: 20, flatRate: "55.00" }),
-    R("LIFT_ON_OFF", "PER_MOVE", { unitCategory: "CONTAINER", lengthFt: 40, flatRate: "80.00" }),
-    R("STORAGE_IMPORT", "PER_UNIT_DAY", { unitCategory: "CONTAINER", lengthFt: 20, fullEmpty: "F", clockStart: "DISCHARGE", freeDays: 10, freeExclSundays: true, freeExclHolidays: true, slabs: sl([1, 10, 0], [11, 30, 7], [31, null, 15]) }),
-    R("STORAGE_IMPORT", "PER_UNIT_DAY", { unitCategory: "CONTAINER", lengthFt: 40, fullEmpty: "F", clockStart: "DISCHARGE", freeDays: 10, freeExclSundays: true, freeExclHolidays: true, slabs: sl([1, 10, 0], [11, 30, 14], [31, null, 30]) })
-  ] },
-  { tariffId: 81, tariffCode: "TRF-KBH1-WH", tariffName: "Kibaha warehouse tariff", level: "SITE", companyId: 1, siteId: 3, currency: "USD", versionNo: 1, effectiveFrom: "2026-07-01", status: "ACTIVE", updatedBy: "Grace Mrema", rules: [
-    R("CFS_HANDLING", "PER_TONNE", { unitCategory: "LOT", flatRate: "10.00", minCharge: "20.00" }),
-    R("DOC_FEE", "FLAT", { flatRate: "30.00" })
-  ] }
+  {
+    tariffId: 31,
+    tariffCode: "TRF-DAR1-STD",
+    tariffName: "Main yard standard tariff",
+    level: "SITE",
+    companyId: 1,
+    siteId: 1,
+    currency: "USD",
+    versionNo: 3,
+    effectiveFrom: "2026-07-01",
+    status: "ACTIVE",
+    regulatorRef: "Published tariff book 2026/27",
+    rules: siteRules(),
+    updatedBy: "Grace Mrema",
+    remarks: "Free days count Sundays and public holidays."
+  },
+  {
+    tariffId: 32,
+    tariffCode: "TRF-DAR1-STD",
+    tariffName: "Main yard standard tariff",
+    level: "SITE",
+    companyId: 1,
+    siteId: 1,
+    currency: "USD",
+    versionNo: 4,
+    effectiveFrom: "2027-01-01",
+    status: "DRAFT",
+    rules: siteRules(1.1),
+    updatedBy: "Neema Mushi",
+    remarks: "Storage slabs up 10% from 1 Jan 2027. Handling unchanged."
+  },
+  {
+    tariffId: 30,
+    tariffCode: "TRF-DAR1-STD",
+    tariffName: "Main yard standard tariff",
+    level: "SITE",
+    companyId: 1,
+    siteId: 1,
+    currency: "USD",
+    versionNo: 2,
+    effectiveFrom: "2025-07-01",
+    effectiveTo: "2026-06-30",
+    status: "RETIRED",
+    rules: siteRules(0.9),
+    updatedBy: "Grace Mrema"
+  },
+  {
+    tariffId: 41,
+    tariffCode: "TRF-TRANSIT",
+    tariffName: "Transit cargo (Zambia, DRC, Rwanda, Uganda)",
+    level: "REGIME",
+    companyId: 1,
+    regimeCode: "TRANSIT",
+    currency: "USD",
+    versionNo: 2,
+    effectiveFrom: "2026-07-01",
+    status: "ACTIVE",
+    rules: transitRules(),
+    updatedBy: "Grace Mrema",
+    remarks: "14 free days. Services zero-rated for VAT: verify with tax adviser."
+  },
+  {
+    tariffId: 51,
+    tariffCode: "TRF-DAR2-VEH",
+    tariffName: "Vehicle yard standard tariff",
+    level: "SITE",
+    companyId: 1,
+    siteId: 2,
+    currency: "USD",
+    versionNo: 1,
+    effectiveFrom: "2026-07-01",
+    status: "ACTIVE",
+    rules: vehicleRules(),
+    updatedBy: "Grace Mrema"
+  },
+  {
+    tariffId: 61,
+    tariffCode: "TRF-BML-EMPTY",
+    tariffName: "Blue Meridian Line empties",
+    level: "LINE",
+    companyId: 1,
+    partyId: 4,
+    currency: "USD",
+    versionNo: 1,
+    effectiveFrom: "2026-04-01",
+    status: "ACTIVE",
+    updatedBy: "Grace Mrema",
+    rules: [
+      R("LIFT_ON_OFF", "PER_MOVE", {
+        unitCategory: "CONTAINER",
+        fullEmpty: "E",
+        flatRate: "35.00"
+      }),
+      R("STORAGE_EMPTY", "PER_TEU_DAY", {
+        unitCategory: "CONTAINER",
+        fullEmpty: "E",
+        clockStart: "GATE_IN",
+        freeDays: 10,
+        slabs: sl([1, 10, 0], [11, null, 2.5])
+      })
+    ]
+  },
+  {
+    tariffId: 71,
+    tariffCode: "TRF-KILELE-26",
+    tariffName: "Kilele contract rates 2026/27",
+    level: "CUSTOMER",
+    companyId: 1,
+    partyId: 2,
+    currency: "USD",
+    versionNo: 1,
+    effectiveFrom: "2026-11-01",
+    effectiveTo: "2027-10-31",
+    status: "PENDING_APPROVAL",
+    updatedBy: "Neema Mushi",
+    submittedBy: "Neema Mushi",
+    approvalNote: "Waiting for Grace Mrema (finance manager) since 5 Oct",
+    remarks: "Volume contract: 10 free days, Sundays and holidays do not count.",
+    rules: [
+      R("LIFT_ON_OFF", "PER_MOVE", {
+        unitCategory: "CONTAINER",
+        lengthFt: 20,
+        flatRate: "55.00"
+      }),
+      R("LIFT_ON_OFF", "PER_MOVE", {
+        unitCategory: "CONTAINER",
+        lengthFt: 40,
+        flatRate: "80.00"
+      }),
+      R("STORAGE_IMPORT", "PER_UNIT_DAY", {
+        unitCategory: "CONTAINER",
+        lengthFt: 20,
+        fullEmpty: "F",
+        clockStart: "DISCHARGE",
+        freeDays: 10,
+        freeExclSundays: true,
+        freeExclHolidays: true,
+        slabs: sl([1, 10, 0], [11, 30, 7], [31, null, 15])
+      }),
+      R("STORAGE_IMPORT", "PER_UNIT_DAY", {
+        unitCategory: "CONTAINER",
+        lengthFt: 40,
+        fullEmpty: "F",
+        clockStart: "DISCHARGE",
+        freeDays: 10,
+        freeExclSundays: true,
+        freeExclHolidays: true,
+        slabs: sl([1, 10, 0], [11, 30, 14], [31, null, 30])
+      })
+    ]
+  },
+  {
+    tariffId: 81,
+    tariffCode: "TRF-KBH1-WH",
+    tariffName: "Kibaha warehouse tariff",
+    level: "SITE",
+    companyId: 1,
+    siteId: 3,
+    currency: "USD",
+    versionNo: 1,
+    effectiveFrom: "2026-07-01",
+    status: "ACTIVE",
+    updatedBy: "Grace Mrema",
+    rules: [
+      R("CFS_HANDLING", "PER_TONNE", {
+        unitCategory: "LOT",
+        flatRate: "10.00",
+        minCharge: "20.00"
+      }),
+      R("DOC_FEE", "FLAT", { flatRate: "30.00" })
+    ]
+  }
 ];
 var lengthOf = (t) => t.startsWith("2") ? 20 : t.startsWith("4") ? 40 : void 0;
 var billToOf = (s) => consignment(s.consignmentId)?.billToPartyId ?? s.linePartyId ?? 2;
 function tariffFor(s, opts = {}) {
   const ok = (t) => t.status === "ACTIVE" || opts.includePending && t.status === "PENDING_APPROVAL";
   const bill = billToOf(s);
-  return tariffs.find((t) => ok(t) && t.level === "CUSTOMER" && t.partyId === bill) ?? (s.fullEmpty === "E" ? tariffs.find((t) => ok(t) && t.level === "LINE" && t.partyId === s.linePartyId) : void 0) ?? (s.cargoRegimeCode === "TRANSIT" ? tariffs.find((t) => ok(t) && t.level === "REGIME" && t.regimeCode === "TRANSIT") : void 0) ?? tariffs.find((t) => ok(t) && t.level === "SITE" && t.siteId === s.siteId);
+  return tariffs.find(
+    (t) => ok(t) && t.level === "CUSTOMER" && t.partyId === bill
+  ) ?? (s.fullEmpty === "E" ? tariffs.find(
+    (t) => ok(t) && t.level === "LINE" && t.partyId === s.linePartyId
+  ) : void 0) ?? (s.cargoRegimeCode === "TRANSIT" ? tariffs.find(
+    (t) => ok(t) && t.level === "REGIME" && t.regimeCode === "TRANSIT"
+  ) : void 0) ?? tariffs.find((t) => ok(t) && t.level === "SITE" && t.siteId === s.siteId);
 }
 function ruleMatches(r3, s) {
   const u = s.cargoUnit;
@@ -15320,7 +15905,14 @@ function storageClock(s, r3) {
     if (counted < free) d = addDays(d, 1);
   }
   hols = [...new Set(hols)];
-  return { start, freeEnd: d, freeEndDayNo: dayNo, sundays, hols, extended: dayNo - free };
+  return {
+    start,
+    freeEnd: d,
+    freeEndDayNo: dayNo,
+    sundays,
+    hols,
+    extended: dayNo - free
+  };
 }
 function rateStay(s, through, opts = {}) {
   const t = opts.tariffOverride ?? tariffFor(s, opts);
@@ -15368,7 +15960,9 @@ function rateStay(s, through, opts = {}) {
     };
   };
   const gateIn = s.gatedInAt ? eatDate(s.gatedInAt) : null;
-  for (const r3 of t.rules.filter((x) => x.chargeCode !== "DOC_FEE" && ruleMatches(x, s))) {
+  for (const r3 of t.rules.filter(
+    (x) => x.chargeCode !== "DOC_FEE" && ruleMatches(x, s)
+  )) {
     if (r3.basis === "PER_UNIT_DAY" || r3.basis === "PER_TEU_DAY") {
       const c = storageClock(s, r3);
       if (!c || c.start > through) continue;
@@ -15377,39 +15971,106 @@ function rateStay(s, through, opts = {}) {
       const clockHow = `Clock starts at ${r3.clockStart === "GATE_IN" ? "gate-in" : "vessel discharge"} ${dShort(c.start)}`;
       const freeHow = `Free days 1\u2013${c.freeEndDayNo}: ${dShort(c.start)}\u2013${dShort(c.freeEnd)}` + (r3.freeExclSundays || r3.freeExclHolidays ? ` (${r3.freeDays} free days; ${c.extended} Sunday${c.extended === 1 ? "" : "s"}/holiday${c.extended === 1 ? "" : "s"} skipped)` : `; Sundays${c.sundays ? ` (${c.sundays})` : ""} and holidays${c.hols.length ? ` (${c.hols.join(", ")})` : ""} count as free days`);
       if (totalDays <= c.freeEndDayNo) {
-        out.push(base(r3, { serviceFrom: c.start, serviceTo: through, quantity: "0", unitRate: "0", description: `${CHARGE_NAMES[r3.chargeCode]}: within free days`, how: [clockHow, freeHow, `Day ${totalDays} of ${c.freeEndDayNo} free: nothing to pay yet`] }));
+        out.push(
+          base(r3, {
+            serviceFrom: c.start,
+            serviceTo: through,
+            quantity: "0",
+            unitRate: "0",
+            description: `${CHARGE_NAMES[r3.chargeCode]}: within free days`,
+            how: [
+              clockHow,
+              freeHow,
+              `Day ${totalDays} of ${c.freeEndDayNo} free: nothing to pay yet`
+            ]
+          })
+        );
         continue;
       }
       for (const sb of r3.slabs.filter((x) => num(x.rate) > 0)) {
         const from = Math.max(num(sb.fromQty), c.freeEndDayNo + 1);
-        const to = Math.min(sb.toQty === null || sb.toQty === void 0 ? Infinity : num(sb.toQty), totalDays);
+        const to = Math.min(
+          sb.toQty === null || sb.toQty === void 0 ? Infinity : num(sb.toQty),
+          totalDays
+        );
         if (to < from) continue;
         const days = to - from + 1;
-        out.push(base(r3, {
-          serviceFrom: addDays(c.start, from - 1),
-          serviceTo: addDays(c.start, to - 1),
-          quantity: String(days * teu),
-          unitRate: sb.rate,
-          description: `${CHARGE_NAMES[r3.chargeCode]}, days ${from}\u2013${to}`,
-          how: [clockHow, freeHow, `Slab days ${sb.fromQty}\u2013${sb.toQty ?? "\u2026"} at USD ${sb.rate}${teu > 1 ? ` \xD7 ${teu} TEU` : ""}: ${days} day${days === 1 ? "" : "s"}`]
-        }));
+        out.push(
+          base(r3, {
+            serviceFrom: addDays(c.start, from - 1),
+            serviceTo: addDays(c.start, to - 1),
+            quantity: String(days * teu),
+            unitRate: sb.rate,
+            description: `${CHARGE_NAMES[r3.chargeCode]}, days ${from}\u2013${to}`,
+            how: [
+              clockHow,
+              freeHow,
+              `Slab days ${sb.fromQty}\u2013${sb.toQty ?? "\u2026"} at USD ${sb.rate}${teu > 1 ? ` \xD7 ${teu} TEU` : ""}: ${days} day${days === 1 ? "" : "s"}`
+            ]
+          })
+        );
       }
     } else if (r3.basis === "PER_MOVE") {
       if (!gateIn || gateIn > through) continue;
-      out.push(base(r3, { serviceFrom: gateIn, serviceTo: gateIn, quantity: "1", unitRate: r3.flatRate ?? "0", how: [`Lift off at gate-in ${dShort(gateIn)}; lift on at delivery included`, `${BASIS_LABEL[r3.basis]} at USD ${r3.flatRate}`] }));
+      out.push(
+        base(r3, {
+          serviceFrom: gateIn,
+          serviceTo: gateIn,
+          quantity: "1",
+          unitRate: r3.flatRate ?? "0",
+          how: [
+            `Lift off at gate-in ${dShort(gateIn)}; lift on at delivery included`,
+            `${BASIS_LABEL[r3.basis]} at USD ${r3.flatRate}`
+          ]
+        })
+      );
     } else if (r3.basis === "PER_KWH") {
       if (!gateIn) continue;
       const days = Math.max(1, daysBetween(gateIn, through) + 1);
       const k = kwhPerDay(s) * days;
-      out.push(base(r3, { serviceFrom: gateIn, serviceTo: through, quantity: String(k), unitRate: r3.flatRate ?? "0", how: [`Plugged in ${dShort(gateIn)}; meter readings ${days} day${days === 1 ? "" : "s"}, about ${kwhPerDay(s)} kWh a day`, `USD ${r3.flatRate} per kWh`] }));
+      out.push(
+        base(r3, {
+          serviceFrom: gateIn,
+          serviceTo: through,
+          quantity: String(k),
+          unitRate: r3.flatRate ?? "0",
+          how: [
+            `Plugged in ${dShort(gateIn)}; meter readings ${days} day${days === 1 ? "" : "s"}, about ${kwhPerDay(s)} kWh a day`,
+            `USD ${r3.flatRate} per kWh`
+          ]
+        })
+      );
     } else if (r3.basis === "PER_UNIT") {
       const exam2 = r3.chargeCode === "EXAM_HANDLING";
-      if (exam2 && !(s.customsStatus === "UNDER_EXAM" || s.customsStatus === "CLEARED" && (s.unitStayId ?? 0) % 3 === 0)) continue;
+      if (exam2 && !(s.customsStatus === "UNDER_EXAM" || s.customsStatus === "CLEARED" && (s.unitStayId ?? 0) % 3 === 0))
+        continue;
       if (!gateIn) continue;
-      out.push(base(r3, { serviceFrom: gateIn, serviceTo: gateIn, quantity: "1", unitRate: r3.flatRate ?? "0", how: [exam2 ? "Unit moved to exam bay for customs examination" : r3.chargeCode === "HAZ_SURCHARGE" ? `IMO class ${s.imoClass} cargo` : "Vehicle received and parked", `${BASIS_LABEL[r3.basis]} at USD ${r3.flatRate}`] }));
+      out.push(
+        base(r3, {
+          serviceFrom: gateIn,
+          serviceTo: gateIn,
+          quantity: "1",
+          unitRate: r3.flatRate ?? "0",
+          how: [
+            exam2 ? "Unit moved to exam bay for customs examination" : r3.chargeCode === "HAZ_SURCHARGE" ? `IMO class ${s.imoClass} cargo` : "Vehicle received and parked",
+            `${BASIS_LABEL[r3.basis]} at USD ${r3.flatRate}`
+          ]
+        })
+      );
     } else if (r3.basis === "PER_TONNE") {
       if (!gateIn) continue;
-      out.push(base(r3, { serviceFrom: gateIn, serviceTo: gateIn, quantity: String(tonnes(s)), unitRate: r3.flatRate ?? "0", how: [`${tonnes(s)} revenue tonnes tallied at CFS receipt`, `USD ${r3.flatRate} per tonne`] }));
+      out.push(
+        base(r3, {
+          serviceFrom: gateIn,
+          serviceTo: gateIn,
+          quantity: String(tonnes(s)),
+          unitRate: r3.flatRate ?? "0",
+          how: [
+            `${tonnes(s)} revenue tonnes tallied at CFS receipt`,
+            `USD ${r3.flatRate} per tonne`
+          ]
+        })
+      );
     }
   }
   return out;
@@ -15417,7 +16078,9 @@ function rateStay(s, through, opts = {}) {
 function rateStays(stays2, through, opts = {}) {
   const lines = stays2.flatMap((s) => rateStay(s, through, opts));
   const byCons = /* @__PURE__ */ new Map();
-  for (const s of stays2) if (s.consignmentId && !byCons.has(s.consignmentId)) byCons.set(s.consignmentId, s);
+  for (const s of stays2)
+    if (s.consignmentId && !byCons.has(s.consignmentId))
+      byCons.set(s.consignmentId, s);
   for (const [cid, s] of byCons) {
     const t = tariffFor(s, opts);
     const r3 = t.rules.find((x) => x.chargeCode === "DOC_FEE");
@@ -15443,15 +16106,27 @@ function rateStays(stays2, through, opts = {}) {
       tariffCode: t.tariffCode,
       tariffVersion: t.versionNo,
       ruleId: r3.tariffRuleId,
-      how: ["One documentation fee per consignment per invoice", `USD ${r3.flatRate} flat`],
+      how: [
+        "One documentation fee per consignment per invoice",
+        `USD ${r3.flatRate} flat`
+      ],
       kind: "NORMAL"
     });
   }
-  return lines.filter((l) => num(l.amount) > 0 || l.chargeCode.startsWith("STORAGE"));
+  return lines.filter(
+    (l) => num(l.amount) > 0 || l.chargeCode.startsWith("STORAGE")
+  );
 }
 var chargeId = 7e4;
-var billable = allStays.filter((s) => s.billingStatus === "ACCRUING" && s.physicalStatus !== "EXPECTED" && s.physicalStatus !== "DEPARTED");
-var charges = rateStays(billable, TODAY).filter((l) => num(l.amount) > 0).map((l) => ({ ...l, chargeId: ++chargeId, status: "OPEN", ratedAt: at(int(1, 30)) }));
+var billable = allStays.filter(
+  (s) => s.billingStatus === "ACCRUING" && s.physicalStatus !== "EXPECTED" && s.physicalStatus !== "DEPARTED"
+);
+var charges = rateStays(billable, TODAY).filter((l) => num(l.amount) > 0).map((l) => ({
+  ...l,
+  chargeId: ++chargeId,
+  status: "OPEN",
+  ratedAt: at(int(1, 30))
+}));
 {
   const hero = allStays[0];
   charges.push({
@@ -15476,18 +16151,30 @@ var charges = rateStays(billable, TODAY).filter((l) => num(l.amount) > 0).map((l
     taxCode: "VAT18",
     taxPct: 18,
     taxAmount: "4.50",
-    how: ["Manual charge by Neema Mushi", "Approved by Grace Mrema \xB7 6 Oct 15:12"],
+    how: [
+      "Manual charge by Neema Mushi",
+      "Approved by Grace Mrema \xB7 6 Oct 15:12"
+    ],
     kind: "MANUAL"
   });
   const big = charges.find((c) => c.chargeCode === "STORAGE_IMPORT");
-  if (big) Object.assign(big, { status: "WAIVER_PENDING", waiverNote: "50% waiver requested by Neema Mushi: customs exam delay" });
+  if (big)
+    Object.assign(big, {
+      status: "WAIVER_PENDING",
+      waiverNote: "50% waiver requested by Neema Mushi: customs exam delay"
+    });
 }
 var openCharges = (siteId) => charges.filter((c) => {
   const s = c.unitStayId ? allStays.find((x) => x.unitStayId === c.unitStayId) : void 0;
   return s ? s.siteId === siteId : consignment(c.consignmentId)?.vesselCallId !== 13 ? siteId === 1 : siteId === 2;
 });
 var SITE_CODE = { 1: "DAR1", 2: "DAR2", 3: "KBH1" };
-var PREFIX = { PROFORMA: "PRO", TAX_INVOICE: "INV", CREDIT_NOTE: "CN", DEBIT_NOTE: "DN" };
+var PREFIX = {
+  PROFORMA: "PRO",
+  TAX_INVOICE: "INV",
+  CREDIT_NOTE: "CN",
+  DEBIT_NOTE: "DN"
+};
 function toInvLines(ls, currency, rate) {
   return ls.filter((l) => num(l.amount) > 0).map((l, i) => {
     const k = currency === "TZS" ? rate : 1;
@@ -15522,53 +16209,468 @@ function historicLines(n, through, transit) {
     const start = addDays(through, -int(9, 26));
     const add = (code, desc, qty, rate, from, to) => {
       const amt = r2(qty * rate);
-      out.push({ key: `${unitNo}-${code}-${from}`, unitNo, unitCategory: "CONTAINER", billToPartyId: 0, chargeCode: code, chargeName: CHARGE_NAMES[code], description: desc, serviceFrom: from, serviceTo: to, quantity: String(qty), uom: code.startsWith("STORAGE") ? "day" : "move", unitRate: m2(rate), amount: m2(amt), taxCode: v, taxPct: pct, taxAmount: m2(amt * pct / 100), how: [] });
+      out.push({
+        key: `${unitNo}-${code}-${from}`,
+        unitNo,
+        unitCategory: "CONTAINER",
+        billToPartyId: 0,
+        chargeCode: code,
+        chargeName: CHARGE_NAMES[code],
+        description: desc,
+        serviceFrom: from,
+        serviceTo: to,
+        quantity: String(qty),
+        uom: code.startsWith("STORAGE") ? "day" : "move",
+        unitRate: m2(rate),
+        amount: m2(amt),
+        taxCode: v,
+        taxPct: pct,
+        taxAmount: m2(amt * pct / 100),
+        how: []
+      });
     };
-    add("LIFT_ON_OFF", CHARGE_NAMES.LIFT_ON_OFF, 1, forty ? 90 : 60, start, start);
+    add(
+      "LIFT_ON_OFF",
+      CHARGE_NAMES.LIFT_ON_OFF,
+      1,
+      forty ? 90 : 60,
+      start,
+      start
+    );
     const days = daysBetween(start, through) + 1;
     const free = transit ? 14 : 7;
     if (days > free) {
       const s1 = Math.min(days, transit ? 30 : 14);
-      if (s1 > free) add(transit ? "STORAGE_TRANSIT" : "STORAGE_IMPORT", `Storage, days ${free + 1}\u2013${s1}`, s1 - free, transit ? forty ? 20 : 10 : forty ? 16 : 8, addDays(start, free), addDays(start, s1 - 1));
-      if (!transit && days > 14) add("STORAGE_IMPORT", `Storage, days 15\u2013${days}`, days - 14, forty ? 24 : 12, addDays(start, 14), through);
+      if (s1 > free)
+        add(
+          transit ? "STORAGE_TRANSIT" : "STORAGE_IMPORT",
+          `Storage, days ${free + 1}\u2013${s1}`,
+          s1 - free,
+          transit ? forty ? 20 : 10 : forty ? 16 : 8,
+          addDays(start, free),
+          addDays(start, s1 - 1)
+        );
+      if (!transit && days > 14)
+        add(
+          "STORAGE_IMPORT",
+          `Storage, days 15\u2013${days}`,
+          days - 14,
+          forty ? 24 : 12,
+          addDays(start, 14),
+          through
+        );
     }
   }
   return out;
 }
 var specs = [
   // older posted invoices (statement history and ageing)
-  { id: 1201, no: 3268, kind: "TAX_INVOICE", status: "POSTED", bill: 2, cons: 103, date: -104, hist: 3, paid: 0, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1202, no: 3274, kind: "TAX_INVOICE", status: "PART_PAID", bill: 2, cons: 101, date: -78, hist: 2, paid: 0.4, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1203, no: 3279, kind: "TAX_INVOICE", status: "PAID", bill: 1, cons: 109, date: -66, hist: 3, paid: 1, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1204, no: 3283, kind: "TAX_INVOICE", status: "POSTED", bill: 1, cons: 109, date: -47, hist: 2, paid: 0, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1205, no: 3287, kind: "TAX_INVOICE", status: "PAID", bill: 2, cons: 101, date: -40, hist: 4, paid: 1, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1206, no: 3291, kind: "TAX_INVOICE", status: "PART_PAID", bill: 2, cons: 103, date: -29, hist: 3, paid: 0.5, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1207, no: 3295, kind: "TAX_INVOICE", status: "PAID", bill: 11, cons: 102, date: -22, hist: 2, paid: 1, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1208, no: 3298, kind: "TAX_INVOICE", status: "POSTED", bill: 1, cons: 109, date: -18, hist: 2, paid: 0, fiscal: "ISSUED", gl: "FAILED" },
-  { id: 1209, no: 3301, kind: "TAX_INVOICE", status: "PAID", bill: 14, cons: 104, date: -15, hist: 2, paid: 1, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1210, no: 3304, kind: "TAX_INVOICE", status: "POSTED", bill: 2, cons: 101, date: -12, hist: 3, paid: 0, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1211, no: 3306, kind: "TAX_INVOICE", status: "PAID", bill: 10, cons: 107, date: -9, hist: 2, paid: 1, fiscal: "ISSUED", gl: "POSTED", cur: "TZS" },
-  { id: 1212, no: 3308, kind: "TAX_INVOICE", status: "POSTED", bill: 1, cons: 109, date: -6, hist: 2, paid: 0, fiscal: "ISSUED", gl: "POSTED" },
+  {
+    id: 1201,
+    no: 3268,
+    kind: "TAX_INVOICE",
+    status: "POSTED",
+    bill: 2,
+    cons: 103,
+    date: -104,
+    hist: 3,
+    paid: 0,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1202,
+    no: 3274,
+    kind: "TAX_INVOICE",
+    status: "PART_PAID",
+    bill: 2,
+    cons: 101,
+    date: -78,
+    hist: 2,
+    paid: 0.4,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1203,
+    no: 3279,
+    kind: "TAX_INVOICE",
+    status: "PAID",
+    bill: 1,
+    cons: 109,
+    date: -66,
+    hist: 3,
+    paid: 1,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1204,
+    no: 3283,
+    kind: "TAX_INVOICE",
+    status: "POSTED",
+    bill: 1,
+    cons: 109,
+    date: -47,
+    hist: 2,
+    paid: 0,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1205,
+    no: 3287,
+    kind: "TAX_INVOICE",
+    status: "PAID",
+    bill: 2,
+    cons: 101,
+    date: -40,
+    hist: 4,
+    paid: 1,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1206,
+    no: 3291,
+    kind: "TAX_INVOICE",
+    status: "PART_PAID",
+    bill: 2,
+    cons: 103,
+    date: -29,
+    hist: 3,
+    paid: 0.5,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1207,
+    no: 3295,
+    kind: "TAX_INVOICE",
+    status: "PAID",
+    bill: 11,
+    cons: 102,
+    date: -22,
+    hist: 2,
+    paid: 1,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1208,
+    no: 3298,
+    kind: "TAX_INVOICE",
+    status: "POSTED",
+    bill: 1,
+    cons: 109,
+    date: -18,
+    hist: 2,
+    paid: 0,
+    fiscal: "ISSUED",
+    gl: "FAILED"
+  },
+  {
+    id: 1209,
+    no: 3301,
+    kind: "TAX_INVOICE",
+    status: "PAID",
+    bill: 14,
+    cons: 104,
+    date: -15,
+    hist: 2,
+    paid: 1,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1210,
+    no: 3304,
+    kind: "TAX_INVOICE",
+    status: "POSTED",
+    bill: 2,
+    cons: 101,
+    date: -12,
+    hist: 3,
+    paid: 0,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1211,
+    no: 3306,
+    kind: "TAX_INVOICE",
+    status: "PAID",
+    bill: 10,
+    cons: 107,
+    date: -9,
+    hist: 2,
+    paid: 1,
+    fiscal: "ISSUED",
+    gl: "POSTED",
+    cur: "TZS"
+  },
+  {
+    id: 1212,
+    no: 3308,
+    kind: "TAX_INVOICE",
+    status: "POSTED",
+    bill: 1,
+    cons: 109,
+    date: -6,
+    hist: 2,
+    paid: 0,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
   // the hero invoice: converted from a paid proforma, storage paid through 10 Oct
-  { id: 1220, no: 3310, kind: "TAX_INVOICE", status: "PART_PAID", bill: 2, cons: 101, date: -1, through: 3, units: 3, paid: 0.6, fiscal: "ISSUED", gl: "POSTED", disb: true, proforma: 1240 },
-  { id: 1221, no: 3312, kind: "TAX_INVOICE", status: "PAID", bill: 11, cons: 102, date: -1, through: 1, units: 2, paid: 1, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1222, no: 3314, kind: "TAX_INVOICE", status: "POSTED", bill: 2, cons: 103, date: -1, through: 4, units: 3, paid: 0, fiscal: "ISSUED", gl: "POSTED" },
-  { id: 1223, no: 3316, kind: "TAX_INVOICE", status: "PAID", bill: 13, cons: 108, date: 0, through: 1, units: 2, paid: 1, fiscal: "ISSUED", gl: "PENDING" },
-  { id: 1224, no: 3318, kind: "TAX_INVOICE", status: "POSTED", bill: 11, cons: 102, date: 0, through: 2, units: 1, paid: 0, fiscal: "FAILED", gl: "PENDING" },
-  { id: 1225, no: 3319, kind: "TAX_INVOICE", status: "POSTED", bill: 1, cons: 109, date: 0, through: 2, units: 2, paid: 0, fiscal: "PENDING", gl: "PENDING" },
-  { id: 1226, no: 3320, kind: "TAX_INVOICE", status: "DRAFT", bill: 2, cons: 103, date: 0, through: 5, units: 2, fiscal: null, gl: null, by: "Neema Mushi" },
-  { id: 1230, no: 841, kind: "TAX_INVOICE", status: "PAID", site: 2, bill: 3, cons: 105, date: -1, through: 2, units: 3, paid: 1, fiscal: "ISSUED", gl: "POSTED", proforma: 1243 },
-  { id: 1231, no: 844, kind: "TAX_INVOICE", status: "POSTED", site: 2, bill: 2, cons: 106, date: 0, through: 3, units: 2, paid: 0, fiscal: "ISSUED", gl: "PENDING" },
+  {
+    id: 1220,
+    no: 3310,
+    kind: "TAX_INVOICE",
+    status: "PART_PAID",
+    bill: 2,
+    cons: 101,
+    date: -1,
+    through: 3,
+    units: 3,
+    paid: 0.6,
+    fiscal: "ISSUED",
+    gl: "POSTED",
+    disb: true,
+    proforma: 1240
+  },
+  {
+    id: 1221,
+    no: 3312,
+    kind: "TAX_INVOICE",
+    status: "PAID",
+    bill: 11,
+    cons: 102,
+    date: -1,
+    through: 1,
+    units: 2,
+    paid: 1,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1222,
+    no: 3314,
+    kind: "TAX_INVOICE",
+    status: "POSTED",
+    bill: 2,
+    cons: 103,
+    date: -1,
+    through: 4,
+    units: 3,
+    paid: 0,
+    fiscal: "ISSUED",
+    gl: "POSTED"
+  },
+  {
+    id: 1223,
+    no: 3316,
+    kind: "TAX_INVOICE",
+    status: "PAID",
+    bill: 13,
+    cons: 108,
+    date: 0,
+    through: 1,
+    units: 2,
+    paid: 1,
+    fiscal: "ISSUED",
+    gl: "PENDING"
+  },
+  {
+    id: 1224,
+    no: 3318,
+    kind: "TAX_INVOICE",
+    status: "POSTED",
+    bill: 11,
+    cons: 102,
+    date: 0,
+    through: 2,
+    units: 1,
+    paid: 0,
+    fiscal: "FAILED",
+    gl: "PENDING"
+  },
+  {
+    id: 1225,
+    no: 3319,
+    kind: "TAX_INVOICE",
+    status: "POSTED",
+    bill: 1,
+    cons: 109,
+    date: 0,
+    through: 2,
+    units: 2,
+    paid: 0,
+    fiscal: "PENDING",
+    gl: "PENDING"
+  },
+  {
+    id: 1226,
+    no: 3320,
+    kind: "TAX_INVOICE",
+    status: "DRAFT",
+    bill: 2,
+    cons: 103,
+    date: 0,
+    through: 5,
+    units: 2,
+    fiscal: null,
+    gl: null,
+    by: "Neema Mushi"
+  },
+  {
+    id: 1230,
+    no: 841,
+    kind: "TAX_INVOICE",
+    status: "PAID",
+    site: 2,
+    bill: 3,
+    cons: 105,
+    date: -1,
+    through: 2,
+    units: 3,
+    paid: 1,
+    fiscal: "ISSUED",
+    gl: "POSTED",
+    proforma: 1243
+  },
+  {
+    id: 1231,
+    no: 844,
+    kind: "TAX_INVOICE",
+    status: "POSTED",
+    site: 2,
+    bill: 2,
+    cons: 106,
+    date: 0,
+    through: 3,
+    units: 2,
+    paid: 0,
+    fiscal: "ISSUED",
+    gl: "PENDING"
+  },
   // proformas
-  { id: 1240, no: 2051, kind: "PROFORMA", status: "CONVERTED", bill: 2, cons: 101, date: -2, through: 3, units: 3, paid: 0, fiscal: null, gl: null, disb: true },
-  { id: 1241, no: 2058, kind: "PROFORMA", status: "ISSUED", bill: 14, cons: 104, date: -1, through: 2, units: 3, paid: 0, fiscal: null, gl: null },
-  { id: 1242, no: 2060, kind: "PROFORMA", status: "ISSUED", bill: 13, cons: 108, date: 0, through: 3, units: 1, paid: 1, fiscal: null, gl: null },
-  { id: 1243, no: 2049, kind: "PROFORMA", status: "CONVERTED", site: 2, bill: 3, cons: 105, date: -2, through: 2, units: 3, paid: 0, fiscal: null, gl: null },
-  { id: 1244, no: 2061, kind: "PROFORMA", status: "ISSUED", site: 2, bill: 3, cons: 105, date: 0, through: 4, units: 2, paid: 0, fiscal: null, gl: null },
-  { id: 1245, no: 2062, kind: "PROFORMA", status: "ISSUED", bill: 10, cons: 107, date: 0, through: 6, units: 2, paid: 0, fiscal: null, gl: null, cur: "TZS" },
-  // notes
-  { id: 1250, no: 212, kind: "CREDIT_NOTE", status: "POSTED", bill: 2, cons: 101, date: -8, orig: 1210, creditPart: 0.25, fiscal: "ISSUED", gl: "POSTED", reason: "Storage waived 3 days: depot reach stacker breakdown delayed delivery" },
-  { id: 1251, no: 48, kind: "DEBIT_NOTE", status: "POSTED", bill: 1, cons: 109, date: -5, orig: 1204, creditPart: 0.12, fiscal: "ISSUED", gl: "POSTED", reason: "CFS handling under-charged: 4 revenue tonnes missed at tally" }
+  {
+    id: 1240,
+    no: 2051,
+    kind: "PROFORMA",
+    status: "CONVERTED",
+    bill: 2,
+    cons: 101,
+    date: -2,
+    through: 3,
+    units: 3,
+    paid: 0,
+    fiscal: null,
+    gl: null,
+    disb: true
+  },
+  {
+    id: 1241,
+    no: 2058,
+    kind: "PROFORMA",
+    status: "ISSUED",
+    bill: 14,
+    cons: 104,
+    date: -1,
+    through: 2,
+    units: 3,
+    paid: 0,
+    fiscal: null,
+    gl: null
+  },
+  {
+    id: 1242,
+    no: 2060,
+    kind: "PROFORMA",
+    status: "ISSUED",
+    bill: 13,
+    cons: 108,
+    date: 0,
+    through: 3,
+    units: 1,
+    paid: 1,
+    fiscal: null,
+    gl: null
+  },
+  {
+    id: 1243,
+    no: 2049,
+    kind: "PROFORMA",
+    status: "CONVERTED",
+    site: 2,
+    bill: 3,
+    cons: 105,
+    date: -2,
+    through: 2,
+    units: 3,
+    paid: 0,
+    fiscal: null,
+    gl: null
+  },
+  {
+    id: 1244,
+    no: 2061,
+    kind: "PROFORMA",
+    status: "ISSUED",
+    site: 2,
+    bill: 3,
+    cons: 105,
+    date: 0,
+    through: 4,
+    units: 2,
+    paid: 0,
+    fiscal: null,
+    gl: null
+  },
+  {
+    id: 1245,
+    no: 2062,
+    kind: "PROFORMA",
+    status: "ISSUED",
+    bill: 10,
+    cons: 107,
+    date: 0,
+    through: 6,
+    units: 2,
+    paid: 0,
+    fiscal: null,
+    gl: null,
+    cur: "TZS"
+  },
+  {
+    id: 1250,
+    no: 212,
+    kind: "CREDIT_NOTE",
+    status: "POSTED",
+    bill: 2,
+    cons: 101,
+    date: -8,
+    orig: 1210,
+    creditPart: 0.25,
+    fiscal: "ISSUED",
+    gl: "POSTED",
+    reason: "Storage waived 3 days: depot reach stacker breakdown delayed delivery"
+  },
+  {
+    id: 1251,
+    no: 48,
+    kind: "DEBIT_NOTE",
+    status: "POSTED",
+    bill: 1,
+    cons: 109,
+    date: -5,
+    orig: 1204,
+    creditPart: 0.12,
+    fiscal: "ISSUED",
+    gl: "POSTED",
+    reason: "CFS handling under-charged: 4 revenue tonnes missed at tally"
+  }
 ];
 var invById = /* @__PURE__ */ new Map();
 var invoices = [];
@@ -15585,26 +16687,75 @@ for (const sp of specs) {
   if (sp.orig) {
     const o = invById.get(sp.orig);
     const part = sp.creditPart ?? 0.2;
-    const src = o.lines.filter((l) => l.chargeCode?.startsWith("STORAGE") || l.chargeCode === "CFS_HANDLING" || l.chargeCode === "LIFT_ON_OFF").slice(0, 2);
+    const src = o.lines.filter(
+      (l) => l.chargeCode?.startsWith("STORAGE") || l.chargeCode === "CFS_HANDLING" || l.chargeCode === "LIFT_ON_OFF"
+    ).slice(0, 2);
     lines = src.map((l, i) => {
       const amt = r2(num(l.amount) * part * 2);
       const tax2 = r2(amt * num(l.taxRatePct) / 100);
-      return { ...l, lineNo: i + 1, description: `${sp.kind === "CREDIT_NOTE" ? "Credit" : "Additional charge"}: ${l.description}`, quantity: "1", unitRate: m2(amt), amount: m2(amt), taxAmount: m2(tax2), lineTotal: m2(amt + tax2) };
+      return {
+        ...l,
+        lineNo: i + 1,
+        description: `${sp.kind === "CREDIT_NOTE" ? "Credit" : "Additional charge"}: ${l.description}`,
+        quantity: "1",
+        unitRate: m2(amt),
+        amount: m2(amt),
+        taxAmount: m2(tax2),
+        lineTotal: m2(amt + tax2)
+      };
     });
   } else if (sp.units) {
-    const stays2 = allStays.filter((s) => s.consignmentId === sp.cons && s.physicalStatus !== "EXPECTED" && s.siteId === site);
+    const stays2 = allStays.filter(
+      (s) => s.consignmentId === sp.cons && s.physicalStatus !== "EXPECTED" && s.siteId === site
+    );
     const pickS = (sp.id === 1220 ? [allStays[0], ...stays2.filter((s) => s !== allStays[0])] : stays2).slice(0, sp.units);
     let ls = rateStays(pickS, through);
     if (sp.disb) {
       const amt = 145, fee = 15;
       ls = ls.concat([
-        { key: "d1", billToPartyId: sp.bill, chargeCode: "DISB_PORT", chargeName: CHARGE_NAMES.DISB_PORT, description: "Port charges paid on your behalf, receipt PA-DSM-26-551902", serviceFrom: day(-4), serviceTo: day(-4), quantity: "1", uom: "each", unitRate: m2(amt), amount: m2(amt), taxCode: "OOS", taxPct: 0, taxAmount: "0.00", how: ["Re-billed at cost; outside VAT scope"] },
-        { key: "d2", billToPartyId: sp.bill, chargeCode: "DISB_HANDLING_FEE", chargeName: CHARGE_NAMES.DISB_HANDLING_FEE, description: "Disbursement handling fee", serviceFrom: day(-4), serviceTo: day(-4), quantity: "1", uom: "each", unitRate: m2(fee), amount: m2(fee), taxCode: "VAT18", taxPct: 18, taxAmount: m2(fee * 0.18), how: ["Handling fee on disbursement DSB-DAR1-26-0187"] }
+        {
+          key: "d1",
+          billToPartyId: sp.bill,
+          chargeCode: "DISB_PORT",
+          chargeName: CHARGE_NAMES.DISB_PORT,
+          description: "Port charges paid on your behalf, receipt PA-DSM-26-551902",
+          serviceFrom: day(-4),
+          serviceTo: day(-4),
+          quantity: "1",
+          uom: "each",
+          unitRate: m2(amt),
+          amount: m2(amt),
+          taxCode: "OOS",
+          taxPct: 0,
+          taxAmount: "0.00",
+          how: ["Re-billed at cost; outside VAT scope"]
+        },
+        {
+          key: "d2",
+          billToPartyId: sp.bill,
+          chargeCode: "DISB_HANDLING_FEE",
+          chargeName: CHARGE_NAMES.DISB_HANDLING_FEE,
+          description: "Disbursement handling fee",
+          serviceFrom: day(-4),
+          serviceTo: day(-4),
+          quantity: "1",
+          uom: "each",
+          unitRate: m2(fee),
+          amount: m2(fee),
+          taxCode: "VAT18",
+          taxPct: 18,
+          taxAmount: m2(fee * 0.18),
+          how: ["Handling fee on disbursement DSB-DAR1-26-0187"]
+        }
       ]);
     }
     lines = toInvLines(ls, cur, rate);
   } else {
-    lines = toInvLines(historicLines(sp.hist ?? 2, date, cons?.cargoRegimeCode === "TRANSIT"), cur, rate);
+    lines = toInvLines(
+      historicLines(sp.hist ?? 2, date, cons?.cargoRegimeCode === "TRANSIT"),
+      cur,
+      rate
+    );
   }
   const sub = r2(lines.reduce((a, l) => a + num(l.amount), 0));
   const tax = r2(lines.reduce((a, l) => a + num(l.taxAmount), 0));
@@ -15634,7 +16785,9 @@ for (const sp of specs) {
     totalBase: m2(cur === "TZS" ? total : total * rate),
     amountPaid: m2(paidAmt),
     amountCredited: m2(credited),
-    balance: m2(sp.kind === "PROFORMA" && sp.status === "CONVERTED" ? 0 : total - paidAmt - credited),
+    balance: m2(
+      sp.kind === "PROFORMA" && sp.status === "CONVERTED" ? 0 : total - paidAmt - credited
+    ),
     proformaInvoiceId: sp.proforma,
     originalInvoiceId: sp.orig,
     reason,
@@ -15661,10 +16814,14 @@ for (const sp of specs) {
 for (const n of invoices.filter((i) => i.docKind === "CREDIT_NOTE")) {
   const o = invById.get(n.originalInvoiceId);
   const cr = num(n.total);
-  Object.assign(o, { amountCredited: m2(cr), balance: m2(num(o.total) - num(o.amountPaid) - cr) });
+  Object.assign(o, {
+    amountCredited: m2(cr),
+    balance: m2(num(o.total) - num(o.amountPaid) - cr)
+  });
   Object.assign(n, { balance: "0.00" });
 }
-for (const n of invoices.filter((i) => i.docKind === "DEBIT_NOTE")) Object.assign(n, { balance: n.total });
+for (const n of invoices.filter((i) => i.docKind === "DEBIT_NOTE"))
+  Object.assign(n, { balance: n.total });
 {
   const p2 = invById.get(1242);
   Object.assign(p2, { amountPaid: p2.total, balance: "0.00" });
@@ -15677,18 +16834,108 @@ for (const n of invoices.filter((i) => i.docKind === "DEBIT_NOTE")) Object.assig
   const p2 = invById.get(1243);
   Object.assign(p2, { amountPaid: p2.total });
 }
-var invoice = (id) => invById.get(id);
-for (const r3 of rates) r3.usedBy = invoices.filter((i) => i.exchangeRateDate === r3.rateDate && i.status !== "DRAFT" && i.docKind !== "PROFORMA").length;
-var DOC_KIND = { PROFORMA: "Proforma", TAX_INVOICE: "Tax invoice", CREDIT_NOTE: "Credit note", DEBIT_NOTE: "Debit note" };
+for (const r3 of rates)
+  r3.usedBy = invoices.filter(
+    (i) => i.exchangeRateDate === r3.rateDate && i.status !== "DRAFT" && i.docKind !== "PROFORMA"
+  ).length;
+var DOC_KIND = {
+  PROFORMA: "Proforma",
+  TAX_INVOICE: "Tax invoice",
+  CREDIT_NOTE: "Credit note",
+  DEBIT_NOTE: "Debit note"
+};
 var channels = [
-  { paymentChannelId: 1, companyId: 1, channelCode: "CASH_USD", channelName: "Cash USD", method: "CASH", currency: "USD", glAccount: "1011 Cash on hand USD", isActive: true },
-  { paymentChannelId: 2, companyId: 1, channelCode: "CASH_TZS", channelName: "Cash TZS", method: "CASH", currency: "TZS", glAccount: "1010 Cash on hand TZS", isActive: true },
-  { paymentChannelId: 3, companyId: 1, channelCode: "CRDB_USD", channelName: "CRDB transfer (USD)", method: "BANK_TRANSFER", provider: "CRDB", currency: "USD", glAccount: "1020 CRDB USD", referencePattern: "FT reference", isActive: true },
-  { paymentChannelId: 4, companyId: 1, channelCode: "NMB_TZS", channelName: "NMB transfer (TZS)", method: "BANK_TRANSFER", provider: "NMB", currency: "TZS", glAccount: "1030 NMB TZS", referencePattern: "Bank reference", isActive: true },
-  { paymentChannelId: 5, companyId: 1, channelCode: "MPESA", channelName: "M-Pesa", method: "MOBILE_MONEY", provider: "M-Pesa", currency: "TZS", glAccount: "1041 M-Pesa till", referencePattern: "10 characters, e.g. SJ47KQ2ZP1", isActive: true },
-  { paymentChannelId: 6, companyId: 1, channelCode: "TIGO", channelName: "Tigo Pesa", method: "MOBILE_MONEY", provider: "Tigo Pesa", currency: "TZS", glAccount: "1042 Tigo Pesa till", referencePattern: "Transaction ID", isActive: true },
-  { paymentChannelId: 7, companyId: 1, channelCode: "AIRTEL", channelName: "Airtel Money", method: "MOBILE_MONEY", provider: "Airtel Money", currency: "TZS", glAccount: "1043 Airtel Money till", referencePattern: "Transaction ID", isActive: true },
-  { paymentChannelId: 8, companyId: 1, channelCode: "CHEQUE", channelName: "Cheque", method: "CHEQUE", currency: "TZS", glAccount: "1025 Cheques in hand", referencePattern: "Cheque number and bank", isActive: true }
+  {
+    paymentChannelId: 1,
+    companyId: 1,
+    channelCode: "CASH_USD",
+    channelName: "Cash USD",
+    method: "CASH",
+    currency: "USD",
+    glAccount: "1011 Cash on hand USD",
+    isActive: true
+  },
+  {
+    paymentChannelId: 2,
+    companyId: 1,
+    channelCode: "CASH_TZS",
+    channelName: "Cash TZS",
+    method: "CASH",
+    currency: "TZS",
+    glAccount: "1010 Cash on hand TZS",
+    isActive: true
+  },
+  {
+    paymentChannelId: 3,
+    companyId: 1,
+    channelCode: "CRDB_USD",
+    channelName: "CRDB transfer (USD)",
+    method: "BANK_TRANSFER",
+    provider: "CRDB",
+    currency: "USD",
+    glAccount: "1020 CRDB USD",
+    referencePattern: "FT reference",
+    isActive: true
+  },
+  {
+    paymentChannelId: 4,
+    companyId: 1,
+    channelCode: "NMB_TZS",
+    channelName: "NMB transfer (TZS)",
+    method: "BANK_TRANSFER",
+    provider: "NMB",
+    currency: "TZS",
+    glAccount: "1030 NMB TZS",
+    referencePattern: "Bank reference",
+    isActive: true
+  },
+  {
+    paymentChannelId: 5,
+    companyId: 1,
+    channelCode: "MPESA",
+    channelName: "M-Pesa",
+    method: "MOBILE_MONEY",
+    provider: "M-Pesa",
+    currency: "TZS",
+    glAccount: "1041 M-Pesa till",
+    referencePattern: "10 characters, e.g. SJ47KQ2ZP1",
+    isActive: true
+  },
+  {
+    paymentChannelId: 6,
+    companyId: 1,
+    channelCode: "TIGO",
+    channelName: "Tigo Pesa",
+    method: "MOBILE_MONEY",
+    provider: "Tigo Pesa",
+    currency: "TZS",
+    glAccount: "1042 Tigo Pesa till",
+    referencePattern: "Transaction ID",
+    isActive: true
+  },
+  {
+    paymentChannelId: 7,
+    companyId: 1,
+    channelCode: "AIRTEL",
+    channelName: "Airtel Money",
+    method: "MOBILE_MONEY",
+    provider: "Airtel Money",
+    currency: "TZS",
+    glAccount: "1043 Airtel Money till",
+    referencePattern: "Transaction ID",
+    isActive: true
+  },
+  {
+    paymentChannelId: 8,
+    companyId: 1,
+    channelCode: "CHEQUE",
+    channelName: "Cheque",
+    method: "CHEQUE",
+    currency: "TZS",
+    glAccount: "1025 Cheques in hand",
+    referencePattern: "Cheque number and bank",
+    isActive: true
+  }
 ];
 var channel = (code) => channels.find((c) => c.channelCode === code);
 var payId = 3100;
@@ -15702,7 +16949,15 @@ function mkPayment(o) {
     const invRate = num(inv.exchangeRate);
     const inInvCcy = inv.currency === o.currency ? amtPayCcy : o.currency === "TZS" ? amtPayCcy / invRate : amtPayCcy * invRate;
     const fxDiff = inv.currency === "USD" ? r2(inInvCcy * (rate - invRate)) : 0;
-    return { paymentAllocationId: ++allocId, invoiceId: inv.invoiceId, invoiceNo: inv.invoiceNo, amount: m2(amtPayCcy), amountInvoiceCcy: m2(inInvCcy), fxDifferenceBase: m2(fxDiff), allocatedAt: at(o.hoursAgo - 0.02) };
+    return {
+      paymentAllocationId: ++allocId,
+      invoiceId: inv.invoiceId,
+      invoiceNo: inv.invoiceNo,
+      amount: m2(amtPayCcy),
+      amountInvoiceCcy: m2(inInvCcy),
+      fxDifferenceBase: m2(fxDiff),
+      allocatedAt: at(o.hoursAgo - 0.02)
+    };
   });
   const allocated = r2(allocs.reduce((a, x) => a + num(x.amount), 0));
   const p2 = {
@@ -15728,29 +16983,95 @@ function mkPayment(o) {
   payments.push(p2);
   return p2;
 }
-for (const inv of invoices.filter((i) => i.docKind === "TAX_INVOICE" && num(i.amountPaid) > 0 && i.invoiceId !== 1220 && i.invoiceId !== 1242)) {
+for (const inv of invoices.filter(
+  (i) => i.docKind === "TAX_INVOICE" && num(i.amountPaid) > 0 && i.invoiceId !== 1220 && i.invoiceId !== 1242
+)) {
   const hrs = Math.max(1, -daysBetween(TODAY, inv.invoiceDate) * 24 - 2) + (inv.invoiceDate === TODAY ? 0 : 0);
   const usd = inv.currency === "USD";
   const chan = usd ? pick(["CRDB_USD", "CRDB_USD", "CASH_USD"]) : pick(["NMB_TZS", "MPESA"]);
-  mkPayment({ partyId: inv.billToPartyId, channelCode: chan, currency: usd ? "USD" : "TZS", amount: num(inv.amountPaid), hoursAgo: inv.invoiceDate === TODAY ? 2.2 : hrs, ref: chan.startsWith("CASH") ? void 0 : chan === "CRDB_USD" ? `CRDB/FT/26${int(200, 280)}/${int(1e4, 99999)}` : `NMB${int(1e7, 99999999)}`, alloc: [[inv, num(inv.amountPaid)]], cashier: pick(["Mary Temba", "Joseph Kweka", ME2]) });
+  mkPayment({
+    partyId: inv.billToPartyId,
+    channelCode: chan,
+    currency: usd ? "USD" : "TZS",
+    amount: num(inv.amountPaid),
+    hoursAgo: inv.invoiceDate === TODAY ? 2.2 : hrs,
+    ref: chan.startsWith("CASH") ? void 0 : chan === "CRDB_USD" ? `CRDB/FT/26${int(200, 280)}/${int(1e4, 99999)}` : `NMB${int(1e7, 99999999)}`,
+    alloc: [[inv, num(inv.amountPaid)]],
+    cashier: pick(["Mary Temba", "Joseph Kweka", ME2])
+  });
 }
 {
   const hero = invById.get(1220);
   const part = num(hero.amountPaid);
   const r3 = fx(TODAY);
-  mkPayment({ partyId: 2, channelCode: "CRDB_USD", currency: "USD", amount: r2(part - 200), hoursAgo: 26, ref: "CRDB/FT/26279/44812", alloc: [[hero, r2(part - 200)]], cashier: "Mary Temba" });
-  mkPayment({ partyId: 2, channelCode: "MPESA", currency: "TZS", amount: Math.round(200 * r3), hoursAgo: 1.4, ref: "SJ47KQ2ZP1", alloc: [[hero, Math.round(200 * r3)]], payer: "Baraka Mwita (collector)" });
+  mkPayment({
+    partyId: 2,
+    channelCode: "CRDB_USD",
+    currency: "USD",
+    amount: r2(part - 200),
+    hoursAgo: 26,
+    ref: "CRDB/FT/26279/44812",
+    alloc: [[hero, r2(part - 200)]],
+    cashier: "Mary Temba"
+  });
+  mkPayment({
+    partyId: 2,
+    channelCode: "MPESA",
+    currency: "TZS",
+    amount: Math.round(200 * r3),
+    hoursAgo: 1.4,
+    ref: "SJ47KQ2ZP1",
+    alloc: [[hero, Math.round(200 * r3)]],
+    payer: "Baraka Mwita (collector)"
+  });
   const pro = invById.get(1242);
-  mkPayment({ partyId: 13, channelCode: "CASH_USD", currency: "USD", amount: num(pro.total) + 640, hoursAgo: 3.1, alloc: [[pro, num(pro.total)]], payer: "Tanzanite Pharma, A. Msuya" });
-  mkPayment({ partyId: 1, channelCode: "NMB_TZS", currency: "TZS", amount: 185e4, hoursAgo: 0.8, ref: "NMB60228814", alloc: [] });
-  mkPayment({ partyId: 3, channelCode: "TIGO", currency: "TZS", amount: 265e3, hoursAgo: 2.6, ref: "8F21KX09TA", alloc: [], payer: "Bahari Motors, yard clerk" });
-  mkPayment({ partyId: 10, channelCode: "CASH_TZS", currency: "TZS", amount: 412e3, hoursAgo: 0.5, alloc: [], payer: "Nyota Agro, driver" });
+  mkPayment({
+    partyId: 13,
+    channelCode: "CASH_USD",
+    currency: "USD",
+    amount: num(pro.total) + 640,
+    hoursAgo: 3.1,
+    alloc: [[pro, num(pro.total)]],
+    payer: "Tanzanite Pharma, A. Msuya"
+  });
+  mkPayment({
+    partyId: 1,
+    channelCode: "NMB_TZS",
+    currency: "TZS",
+    amount: 185e4,
+    hoursAgo: 0.8,
+    ref: "NMB60228814",
+    alloc: []
+  });
+  mkPayment({
+    partyId: 3,
+    channelCode: "TIGO",
+    currency: "TZS",
+    amount: 265e3,
+    hoursAgo: 2.6,
+    ref: "8F21KX09TA",
+    alloc: [],
+    payer: "Bahari Motors, yard clerk"
+  });
+  mkPayment({
+    partyId: 10,
+    channelCode: "CASH_TZS",
+    currency: "TZS",
+    amount: 412e3,
+    hoursAgo: 0.5,
+    alloc: [],
+    payer: "Nyota Agro, driver"
+  });
 }
-var cashIn = (cur, who, since) => payments.filter((p2) => p2.cashier === who && p2.channelCode === `CASH_${cur}` && Date.parse(p2.receivedAt) >= Date.parse(at(since)));
+var cashIn = (cur, who, since) => payments.filter(
+  (p2) => p2.cashier === who && p2.channelCode === `CASH_${cur}` && Date.parse(p2.receivedAt) >= Date.parse(at(since))
+);
 function mkShift(id, who, cur, openHrs, float, o = {}) {
   const cash = cashIn(cur, who, openHrs).reduce((a, p2) => a + num(p2.amount), 0) + (o.extra ?? 0);
   const expected = float + cash;
-  const nonCash = payments.filter((p2) => p2.cashier === who && p2.currency === cur && !p2.channelCode.startsWith("CASH") && Date.parse(p2.receivedAt) >= Date.parse(at(openHrs))).reduce((a, p2) => a + num(p2.amount), 0);
+  const nonCash = payments.filter(
+    (p2) => p2.cashier === who && p2.currency === cur && !p2.channelCode.startsWith("CASH") && Date.parse(p2.receivedAt) >= Date.parse(at(openHrs))
+  ).reduce((a, p2) => a + num(p2.amount), 0);
   return {
     cashierShiftId: id,
     siteId: 1,
@@ -15764,7 +17085,9 @@ function mkShift(id, who, cur, openHrs, float, o = {}) {
     countedCash: o.diff !== void 0 ? m2(expected + o.diff) : void 0,
     difference: o.diff !== void 0 ? m2(o.diff) : void 0,
     status: o.status ?? "OPEN",
-    receiptsCount: payments.filter((p2) => p2.cashier === who && p2.currency === cur && Date.parse(p2.receivedAt) >= Date.parse(at(openHrs))).length + (o.extra ? 6 : 0),
+    receiptsCount: payments.filter(
+      (p2) => p2.cashier === who && p2.currency === cur && Date.parse(p2.receivedAt) >= Date.parse(at(openHrs))
+    ).length + (o.extra ? 6 : 0),
     nonCash: m2(nonCash),
     note: o.note,
     approvedBy: o.approvedBy
@@ -15773,55 +17096,293 @@ function mkShift(id, who, cur, openHrs, float, o = {}) {
 var shifts = [
   mkShift(901, ME2, "USD", 3.5, 200),
   mkShift(902, ME2, "TZS", 3.5, 3e5),
-  mkShift(895, "Mary Temba", "TZS", 27, 3e5, { closeHrs: 18, extra: 2316e3, diff: -4e3, status: "CLOSED", note: "Short TZS 4,000. Recounted twice; one TZS 5,000 note given as change for TZS 1,000." }),
-  mkShift(896, "Mary Temba", "USD", 27, 200, { closeHrs: 18, extra: 1840, diff: 0, status: "CLOSED", note: "Balanced." }),
-  mkShift(897, "Joseph Kweka", "USD", 26, 200, { closeHrs: 17, extra: 3120, diff: 20, status: "CLOSED", note: "Over USD 20; customer left before change was given, name noted." }),
-  mkShift(890, "Joseph Kweka", "TZS", 50, 3e5, { closeHrs: 41, extra: 1904500, diff: 0, status: "APPROVED", approvedBy: "Grace Mrema" })
+  mkShift(895, "Mary Temba", "TZS", 27, 3e5, {
+    closeHrs: 18,
+    extra: 2316e3,
+    diff: -4e3,
+    status: "CLOSED",
+    note: "Short TZS 4,000. Recounted twice; one TZS 5,000 note given as change for TZS 1,000."
+  }),
+  mkShift(896, "Mary Temba", "USD", 27, 200, {
+    closeHrs: 18,
+    extra: 1840,
+    diff: 0,
+    status: "CLOSED",
+    note: "Balanced."
+  }),
+  mkShift(897, "Joseph Kweka", "USD", 26, 200, {
+    closeHrs: 17,
+    extra: 3120,
+    diff: 20,
+    status: "CLOSED",
+    note: "Over USD 20; customer left before change was given, name noted."
+  }),
+  mkShift(890, "Joseph Kweka", "TZS", 50, 3e5, {
+    closeHrs: 41,
+    extra: 1904500,
+    diff: 0,
+    status: "APPROVED",
+    approvedBy: "Grace Mrema"
+  })
 ];
 var refunds = (() => {
-  const over = payments.find((p5) => p5.partyId === 13 && num(p5.unallocated) > 0);
+  const over = payments.find(
+    (p5) => p5.partyId === 13 && num(p5.unallocated) > 0
+  );
   const p2 = payments.find((p5) => p5.partyId === 3 && p5.channelCode === "TIGO");
   const p3 = payments.find((p5) => p5.partyId === 11);
   const p4 = payments.find((p5) => p5.partyId === 10 && p5.status === "ALLOCATED") ?? payments[0];
   return [
-    { refundId: 61, refundNo: "RFD-DAR1-26-000071", paymentId: over.paymentId, partyId: 13, currency: "USD", amount: "640.00", reason: "Paid proforma PRO-DAR1-26-002060 plus USD 640 for a second container that was not released to them. Customer asks for the balance back to their CRDB account.", status: "PENDING_L1", requestedBy: "Neema Mushi", requestedAt: at(2.2), method: "Bank transfer CRDB", levels: [{ level: 1, who: APPROVERS.l1 }, { level: 2, who: APPROVERS.l2 }] },
-    { refundId: 60, refundNo: "RFD-DAR1-26-000070", paymentId: p3.paymentId, partyId: 11, currency: "USD", amount: "1180.00", reason: "Invoice INV-DAR1-26-003295 paid twice: by CRDB transfer and again by the clearing agent.", status: "PENDING_L2", requestedBy: "Halima Said", requestedAt: at(22), method: "Bank transfer CRDB", levels: [{ level: 1, who: APPROVERS.l1, at: at(6), decision: "APPROVED" }, { level: 2, who: APPROVERS.l2 }] },
-    { refundId: 59, refundNo: "RFD-DAR1-26-000069", paymentId: p2.paymentId, partyId: 3, currency: "TZS", amount: "265000.00", reason: "Tigo Pesa payment sent to our till by mistake; Bahari Motors had no invoice open.", status: "APPROVED", requestedBy: "Neema Mushi", requestedAt: at(5), method: "Tigo Pesa reversal", levels: [] },
-    { refundId: 58, refundNo: "RFD-DAR1-26-000068", paymentId: p4.paymentId, partyId: 10, currency: "USD", amount: "320.00", reason: "Export cancelled; documentation and lift charges credited on CN-DAR1-26-000209.", status: "PAID", requestedBy: "Halima Said", requestedAt: at(120), method: "Bank transfer CRDB", paidAt: at(70), paidReference: "CRDB/FT/26276/10988", levels: [] },
-    { refundId: 57, refundNo: "RFD-DAR1-26-000067", paymentId: p4.paymentId, partyId: 1, currency: "USD", amount: "2400.00", reason: "Customer asked for advance back; later agreed to keep it on account.", status: "CANCELLED", requestedBy: "Joseph Kweka", requestedAt: at(200), method: "Bank transfer CRDB", levels: [{ level: 1, who: APPROVERS.l1, at: at(190), decision: "APPROVED" }, { level: 2, who: APPROVERS.l2 }] }
+    {
+      refundId: 61,
+      refundNo: "RFD-DAR1-26-000071",
+      paymentId: over.paymentId,
+      partyId: 13,
+      currency: "USD",
+      amount: "640.00",
+      reason: "Paid proforma PRO-DAR1-26-002060 plus USD 640 for a second container that was not released to them. Customer asks for the balance back to their CRDB account.",
+      status: "PENDING_L1",
+      requestedBy: "Neema Mushi",
+      requestedAt: at(2.2),
+      method: "Bank transfer CRDB",
+      levels: [
+        { level: 1, who: APPROVERS.l1 },
+        { level: 2, who: APPROVERS.l2 }
+      ]
+    },
+    {
+      refundId: 60,
+      refundNo: "RFD-DAR1-26-000070",
+      paymentId: p3.paymentId,
+      partyId: 11,
+      currency: "USD",
+      amount: "1180.00",
+      reason: "Invoice INV-DAR1-26-003295 paid twice: by CRDB transfer and again by the clearing agent.",
+      status: "PENDING_L2",
+      requestedBy: "Halima Said",
+      requestedAt: at(22),
+      method: "Bank transfer CRDB",
+      levels: [
+        { level: 1, who: APPROVERS.l1, at: at(6), decision: "APPROVED" },
+        { level: 2, who: APPROVERS.l2 }
+      ]
+    },
+    {
+      refundId: 59,
+      refundNo: "RFD-DAR1-26-000069",
+      paymentId: p2.paymentId,
+      partyId: 3,
+      currency: "TZS",
+      amount: "265000.00",
+      reason: "Tigo Pesa payment sent to our till by mistake; Bahari Motors had no invoice open.",
+      status: "APPROVED",
+      requestedBy: "Neema Mushi",
+      requestedAt: at(5),
+      method: "Tigo Pesa reversal",
+      levels: []
+    },
+    {
+      refundId: 58,
+      refundNo: "RFD-DAR1-26-000068",
+      paymentId: p4.paymentId,
+      partyId: 10,
+      currency: "USD",
+      amount: "320.00",
+      reason: "Export cancelled; documentation and lift charges credited on CN-DAR1-26-000209.",
+      status: "PAID",
+      requestedBy: "Halima Said",
+      requestedAt: at(120),
+      method: "Bank transfer CRDB",
+      paidAt: at(70),
+      paidReference: "CRDB/FT/26276/10988",
+      levels: []
+    },
+    {
+      refundId: 57,
+      refundNo: "RFD-DAR1-26-000067",
+      paymentId: p4.paymentId,
+      partyId: 1,
+      currency: "USD",
+      amount: "2400.00",
+      reason: "Customer asked for advance back; later agreed to keep it on account.",
+      status: "CANCELLED",
+      requestedBy: "Joseph Kweka",
+      requestedAt: at(200),
+      method: "Bank transfer CRDB",
+      levels: [
+        { level: 1, who: APPROVERS.l1, at: at(190), decision: "APPROVED" },
+        { level: 2, who: APPROVERS.l2 }
+      ]
+    }
   ];
 })();
 var disbursements = [
-  { disbursementId: 187, disbNo: "DSB-DAR1-26-0187", consignmentId: 101, billToPartyId: 2, payeeName: "Port authority, Dar es Salaam port", chargeCode: "DISB_PORT", description: "Port charges: wharfage and removal to ICD", currency: "USD", amountPaid: "145.00", paidAt: day(-4), payeeReceiptNo: "PA-DSM-26-551902", rebillMode: "COST_PLUS_FEE", handlingFee: "15.00", status: "INVOICED", invoiceId: 1220, recordedBy: "Halima Said" },
-  { disbursementId: 188, disbNo: "DSB-DAR1-26-0188", consignmentId: 103, billToPartyId: 2, payeePartyId: 5, payeeName: partyName(5), chargeCode: "DISB_LINE", description: "Delivery order fee and container deposit handling", currency: "USD", amountPaid: "380.00", paidAt: day(-3), payeeReceiptNo: "IOS-DSM-DO-77120", rebillMode: "COST_PLUS_FEE", handlingFee: "25.00", status: "RECORDED", recordedBy: "Halima Said" },
-  { disbursementId: 189, disbNo: "DSB-DAR1-26-0189", consignmentId: 109, billToPartyId: 1, payeeName: "TRA customs (duty and taxes)", chargeCode: "DISB_DUTY", description: "Import duty and VAT on entry TZDL-26-0418877", currency: "TZS", amountPaid: "18450000.00", paidAt: day(-2), payeeReceiptNo: "TRA-CN-99128834", rebillMode: "COST_PLUS_FEE", handlingFee: "150000.00", status: "RECORDED", recordedBy: "Joseph Kweka" },
-  { disbursementId: 181, disbNo: "DSB-DAR1-26-0181", consignmentId: 102, billToPartyId: 11, payeePartyId: 4, payeeName: partyName(4), chargeCode: "DISB_LINE", description: "Line demurrage settled to release the hold", currency: "USD", amountPaid: "620.00", paidAt: day(-21), payeeReceiptNo: "BML-DSM-RCT-30017", rebillMode: "AT_COST", handlingFee: "0.00", status: "INVOICED", invoiceId: 1207, recordedBy: "Halima Said" },
-  { disbursementId: 176, disbNo: "DSB-DAR1-26-0176", consignmentId: 104, billToPartyId: 14, payeeName: "Port authority, Dar es Salaam port", chargeCode: "DISB_PORT", description: "Port storage before transfer to ICD", currency: "USD", amountPaid: "210.00", paidAt: day(-38), payeeReceiptNo: "PA-DSM-26-540118", rebillMode: "AT_COST", handlingFee: "0.00", status: "WRITTEN_OFF", recordedBy: "Joseph Kweka" },
-  { disbursementId: 183, disbNo: "DSB-DAR1-26-0183", consignmentId: 101, billToPartyId: 2, payeeName: "Port authority, Dar es Salaam port", chargeCode: "DISB_PORT", description: "Port charges: second batch", currency: "USD", amountPaid: "96.00", paidAt: day(-13), payeeReceiptNo: "PA-DSM-26-549330", rebillMode: "COST_PLUS_FEE", handlingFee: "10.00", status: "INVOICED", invoiceId: 1210, recordedBy: "Halima Said" }
+  {
+    disbursementId: 187,
+    disbNo: "DSB-DAR1-26-0187",
+    consignmentId: 101,
+    billToPartyId: 2,
+    payeeName: "Port authority, Dar es Salaam port",
+    chargeCode: "DISB_PORT",
+    description: "Port charges: wharfage and removal to ICD",
+    currency: "USD",
+    amountPaid: "145.00",
+    paidAt: day(-4),
+    payeeReceiptNo: "PA-DSM-26-551902",
+    rebillMode: "COST_PLUS_FEE",
+    handlingFee: "15.00",
+    status: "INVOICED",
+    invoiceId: 1220,
+    recordedBy: "Halima Said"
+  },
+  {
+    disbursementId: 188,
+    disbNo: "DSB-DAR1-26-0188",
+    consignmentId: 103,
+    billToPartyId: 2,
+    payeePartyId: 5,
+    payeeName: partyName(5),
+    chargeCode: "DISB_LINE",
+    description: "Delivery order fee and container deposit handling",
+    currency: "USD",
+    amountPaid: "380.00",
+    paidAt: day(-3),
+    payeeReceiptNo: "IOS-DSM-DO-77120",
+    rebillMode: "COST_PLUS_FEE",
+    handlingFee: "25.00",
+    status: "RECORDED",
+    recordedBy: "Halima Said"
+  },
+  {
+    disbursementId: 189,
+    disbNo: "DSB-DAR1-26-0189",
+    consignmentId: 109,
+    billToPartyId: 1,
+    payeeName: "TRA customs (duty and taxes)",
+    chargeCode: "DISB_DUTY",
+    description: "Import duty and VAT on entry TZDL-26-0418877",
+    currency: "TZS",
+    amountPaid: "18450000.00",
+    paidAt: day(-2),
+    payeeReceiptNo: "TRA-CN-99128834",
+    rebillMode: "COST_PLUS_FEE",
+    handlingFee: "150000.00",
+    status: "RECORDED",
+    recordedBy: "Joseph Kweka"
+  },
+  {
+    disbursementId: 181,
+    disbNo: "DSB-DAR1-26-0181",
+    consignmentId: 102,
+    billToPartyId: 11,
+    payeePartyId: 4,
+    payeeName: partyName(4),
+    chargeCode: "DISB_LINE",
+    description: "Line demurrage settled to release the hold",
+    currency: "USD",
+    amountPaid: "620.00",
+    paidAt: day(-21),
+    payeeReceiptNo: "BML-DSM-RCT-30017",
+    rebillMode: "AT_COST",
+    handlingFee: "0.00",
+    status: "INVOICED",
+    invoiceId: 1207,
+    recordedBy: "Halima Said"
+  },
+  {
+    disbursementId: 176,
+    disbNo: "DSB-DAR1-26-0176",
+    consignmentId: 104,
+    billToPartyId: 14,
+    payeeName: "Port authority, Dar es Salaam port",
+    chargeCode: "DISB_PORT",
+    description: "Port storage before transfer to ICD",
+    currency: "USD",
+    amountPaid: "210.00",
+    paidAt: day(-38),
+    payeeReceiptNo: "PA-DSM-26-540118",
+    rebillMode: "AT_COST",
+    handlingFee: "0.00",
+    status: "WRITTEN_OFF",
+    recordedBy: "Joseph Kweka"
+  },
+  {
+    disbursementId: 183,
+    disbNo: "DSB-DAR1-26-0183",
+    consignmentId: 101,
+    billToPartyId: 2,
+    payeeName: "Port authority, Dar es Salaam port",
+    chargeCode: "DISB_PORT",
+    description: "Port charges: second batch",
+    currency: "USD",
+    amountPaid: "96.00",
+    paidAt: day(-13),
+    payeeReceiptNo: "PA-DSM-26-549330",
+    rebillMode: "COST_PLUS_FEE",
+    handlingFee: "10.00",
+    status: "INVOICED",
+    invoiceId: 1210,
+    recordedBy: "Halima Said"
+  }
 ];
 function statement(partyId, from = day(-60), to = TODAY) {
   const usd = (amt, cur, rate) => cur === "USD" ? amt : amt / rate;
   const ev = [];
-  for (const i of invoices.filter((x) => x.billToPartyId === partyId && x.docKind !== "PROFORMA" && x.status !== "DRAFT" && x.status !== "CANCELLED")) {
+  for (const i of invoices.filter(
+    (x) => x.billToPartyId === partyId && x.docKind !== "PROFORMA" && x.status !== "DRAFT" && x.status !== "CANCELLED"
+  )) {
     const amt = usd(num(i.total), i.currency, num(i.exchangeRate));
     const credit = i.docKind === "CREDIT_NOTE";
-    ev.push({ date: i.invoiceDate, docKind: DOC_KIND[i.docKind], docNo: i.invoiceNo, reference: i.consignmentRef, debit: credit ? 0 : amt, credit: credit ? amt : 0, to: `/invoices/${i.invoiceId}`, due: i.dueDate ?? void 0 });
+    ev.push({
+      date: i.invoiceDate,
+      docKind: DOC_KIND[i.docKind],
+      docNo: i.invoiceNo,
+      reference: i.consignmentRef,
+      debit: credit ? 0 : amt,
+      credit: credit ? amt : 0,
+      to: `/invoices/${i.invoiceId}`,
+      due: i.dueDate ?? void 0
+    });
   }
-  for (const p2 of payments.filter((x) => x.partyId === partyId && x.status !== "REVERSED")) {
-    ev.push({ date: p2.valueDate ?? eatDate(p2.receivedAt), docKind: "Payment", docNo: p2.receiptNo, reference: [channel(p2.channelCode)?.channelName, p2.externalRef].filter(Boolean).join(" \xB7 "), debit: 0, credit: usd(num(p2.amount), p2.currency, num(p2.exchangeRate)) });
+  for (const p2 of payments.filter(
+    (x) => x.partyId === partyId && x.status !== "REVERSED"
+  )) {
+    ev.push({
+      date: p2.valueDate ?? eatDate(p2.receivedAt),
+      docKind: "Payment",
+      docNo: p2.receiptNo,
+      reference: [channel(p2.channelCode)?.channelName, p2.externalRef].filter(Boolean).join(" \xB7 "),
+      debit: 0,
+      credit: usd(num(p2.amount), p2.currency, num(p2.exchangeRate))
+    });
   }
-  for (const r3 of refunds.filter((x) => x.partyId === partyId && x.status === "PAID")) {
-    ev.push({ date: eatDate(r3.paidAt), docKind: "Refund", docNo: r3.refundNo, reference: r3.paidReference ?? void 0, debit: usd(num(r3.amount), r3.currency, fx(eatDate(r3.paidAt))), credit: 0 });
+  for (const r3 of refunds.filter(
+    (x) => x.partyId === partyId && x.status === "PAID"
+  )) {
+    ev.push({
+      date: eatDate(r3.paidAt),
+      docKind: "Refund",
+      docNo: r3.refundNo,
+      reference: r3.paidReference ?? void 0,
+      debit: usd(num(r3.amount), r3.currency, fx(eatDate(r3.paidAt))),
+      credit: 0
+    });
   }
-  ev.sort((a, b) => a.date.localeCompare(b.date) || a.docNo.localeCompare(b.docNo));
-  const opening = r2(ev.filter((e) => e.date < from).reduce((a, e) => a + e.debit - e.credit, 0));
+  ev.sort(
+    (a, b) => a.date.localeCompare(b.date) || a.docNo.localeCompare(b.docNo)
+  );
+  const opening = r2(
+    ev.filter((e) => e.date < from).reduce((a, e) => a + e.debit - e.credit, 0)
+  );
   let bal = opening;
   const lines = ev.filter((e) => e.date >= from && e.date <= to).map((e) => {
     bal = r2(bal + e.debit - e.credit);
     return { ...e, debit: r2(e.debit), credit: r2(e.credit), balance: bal };
   });
   const ageing = { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, over90: 0 };
-  for (const i of invoices.filter((x) => x.billToPartyId === partyId && (x.docKind === "TAX_INVOICE" || x.docKind === "DEBIT_NOTE") && num(x.balance) > 0 && x.status !== "DRAFT")) {
+  for (const i of invoices.filter(
+    (x) => x.billToPartyId === partyId && (x.docKind === "TAX_INVOICE" || x.docKind === "DEBIT_NOTE") && num(x.balance) > 0 && x.status !== "DRAFT"
+  )) {
     const b = usd(num(i.balance), i.currency, num(i.exchangeRate));
     const late = daysBetween(i.dueDate ?? i.invoiceDate, to);
     if (late <= 0) ageing.current += b;
@@ -15830,7 +17391,10 @@ function statement(partyId, from = day(-60), to = TODAY) {
     else if (late <= 90) ageing.d61_90 += b;
     else ageing.over90 += b;
   }
-  const unallocated = payments.filter((p2) => p2.partyId === partyId).reduce((a, p2) => a + usd(num(p2.unallocated), p2.currency, num(p2.exchangeRate)), 0);
+  const unallocated = payments.filter((p2) => p2.partyId === partyId).reduce(
+    (a, p2) => a + usd(num(p2.unallocated), p2.currency, num(p2.exchangeRate)),
+    0
+  );
   const outstanding = r2(Object.values(ageing).reduce((a, b) => a + b, 0));
   return {
     partyId,
@@ -15840,12 +17404,18 @@ function statement(partyId, from = day(-60), to = TODAY) {
     openingBalance: opening,
     lines,
     closingBalance: bal,
-    ageing: Object.fromEntries(Object.entries(ageing).map(([k, v]) => [k, r2(v)])),
+    ageing: Object.fromEntries(
+      Object.entries(ageing).map(([k, v]) => [k, r2(v)])
+    ),
     outstanding,
     unallocated: r2(unallocated)
   };
 }
-var customers = parties.filter((p2) => p2.roles.includes("CUSTOMER") || p2.roles.includes("SHIPPING_LINE")).filter((p2) => invoices.some((i) => i.billToPartyId === p2.partyId) || p2.roles.includes("CUSTOMER"));
+var customers = parties.filter(
+  (p2) => p2.roles.includes("CUSTOMER") || p2.roles.includes("SHIPPING_LINE")
+).filter(
+  (p2) => invoices.some((i) => i.billToPartyId === p2.partyId) || p2.roles.includes("CUSTOMER")
+);
 var glId = 88e3;
 function journalForInvoice(i) {
   const rate = i.currency === "TZS" ? 1 : num(i.exchangeRate);
@@ -15857,22 +17427,74 @@ function journalForInvoice(i) {
     byAcc.set(acc, (byAcc.get(acc) ?? 0) + Math.round(num(l.amount) * rate));
   }
   const vat = Math.round(num(i.taxTotal) * rate);
-  for (const [acc, v] of byAcc) lines.push({ account: acc, description: credit ? "Revenue reversed" : "Revenue", debit: credit ? v : 0, credit: credit ? 0 : v });
-  if (vat) lines.push({ account: "2310 VAT output", description: "VAT 18%", debit: credit ? vat : 0, credit: credit ? 0 : vat });
+  for (const [acc, v] of byAcc)
+    lines.push({
+      account: acc,
+      description: credit ? "Revenue reversed" : "Revenue",
+      debit: credit ? v : 0,
+      credit: credit ? 0 : v
+    });
+  if (vat)
+    lines.push({
+      account: "2310 VAT output",
+      description: "VAT 18%",
+      debit: credit ? vat : 0,
+      credit: credit ? 0 : vat
+    });
   const total = [...byAcc.values()].reduce((a, b) => a + b, 0) + vat;
-  lines.unshift({ account: "1200 Trade receivables (AR control)", description: `${partyName(i.billToPartyId)}`, debit: credit ? 0 : total, credit: credit ? total : 0 });
+  lines.unshift({
+    account: "1200 Trade receivables (AR control)",
+    description: `${partyName(i.billToPartyId)}`,
+    debit: credit ? 0 : total,
+    credit: credit ? total : 0
+  });
   return lines;
 }
 function journalForPayment(p2) {
   const base = Math.round(num(p2.amountBase));
-  const fxd = Math.round(p2.allocations.reduce((a, x) => a + num(x.fxDifferenceBase), 0));
-  const lines = [{ account: channel(p2.channelCode)?.glAccount ?? "1010 Cash", description: `${p2.receiptNo} ${p2.externalRef ?? ""}`.trim(), debit: base, credit: 0 }];
-  const unalloc = Math.round(num(p2.unallocated) * (p2.currency === "USD" ? num(p2.exchangeRate) : 1));
+  const fxd = Math.round(
+    p2.allocations.reduce((a, x) => a + num(x.fxDifferenceBase), 0)
+  );
+  const lines = [
+    {
+      account: channel(p2.channelCode)?.glAccount ?? "1010 Cash",
+      description: `${p2.receiptNo} ${p2.externalRef ?? ""}`.trim(),
+      debit: base,
+      credit: 0
+    }
+  ];
+  const unalloc = Math.round(
+    num(p2.unallocated) * (p2.currency === "USD" ? num(p2.exchangeRate) : 1)
+  );
   const toAr = base - unalloc;
-  if (toAr) lines.push({ account: "1200 Trade receivables (AR control)", description: partyName(p2.partyId), debit: 0, credit: toAr - fxd });
-  if (fxd > 0) lines.push({ account: "7100 Exchange gain", description: "Rate moved since invoice", debit: 0, credit: fxd });
-  if (fxd < 0) lines.push({ account: "7110 Exchange loss", description: "Rate moved since invoice", debit: -fxd, credit: 0 });
-  if (unalloc) lines.push({ account: "2150 Unallocated receipts", description: "Kept on account", debit: 0, credit: unalloc });
+  if (toAr)
+    lines.push({
+      account: "1200 Trade receivables (AR control)",
+      description: partyName(p2.partyId),
+      debit: 0,
+      credit: toAr - fxd
+    });
+  if (fxd > 0)
+    lines.push({
+      account: "7100 Exchange gain",
+      description: "Rate moved since invoice",
+      debit: 0,
+      credit: fxd
+    });
+  if (fxd < 0)
+    lines.push({
+      account: "7110 Exchange loss",
+      description: "Rate moved since invoice",
+      debit: -fxd,
+      credit: 0
+    });
+  if (unalloc)
+    lines.push({
+      account: "2150 Unallocated receipts",
+      description: "Kept on account",
+      debit: 0,
+      credit: unalloc
+    });
   return lines;
 }
 var glPostings = [];
@@ -15918,13 +17540,56 @@ for (const p2 of payments) {
     amountBase: jl2.reduce((a, l) => a + l.debit, 0)
   });
 }
-glPostings.sort((a, b) => b.postingDate.localeCompare(a.postingDate) || b.glPostingId - a.glPostingId);
+glPostings.sort(
+  (a, b) => b.postingDate.localeCompare(a.postingDate) || b.glPostingId - a.glPostingId
+);
 var periods2 = [
-  { accountingPeriodId: 26, companyId: 1, periodKey: "2026-10", periodStart: "2026-10-01", periodEnd: "2026-10-31", status: "OPEN" },
-  { accountingPeriodId: 25, companyId: 1, periodKey: "2026-09", periodStart: "2026-09-01", periodEnd: "2026-09-30", status: "OPEN" },
-  { accountingPeriodId: 24, companyId: 1, periodKey: "2026-08", periodStart: "2026-08-01", periodEnd: "2026-08-31", status: "CLOSED", closedAt: at(24 * 30), closedBy: "Grace Mrema" },
-  { accountingPeriodId: 23, companyId: 1, periodKey: "2026-07", periodStart: "2026-07-01", periodEnd: "2026-07-31", status: "CLOSED", closedAt: at(24 * 62), closedBy: "Grace Mrema" },
-  { accountingPeriodId: 22, companyId: 1, periodKey: "2026-06", periodStart: "2026-06-01", periodEnd: "2026-06-30", status: "CLOSED", closedAt: at(24 * 95), closedBy: "Grace Mrema" }
+  {
+    accountingPeriodId: 26,
+    companyId: 1,
+    periodKey: "2026-10",
+    periodStart: "2026-10-01",
+    periodEnd: "2026-10-31",
+    status: "OPEN"
+  },
+  {
+    accountingPeriodId: 25,
+    companyId: 1,
+    periodKey: "2026-09",
+    periodStart: "2026-09-01",
+    periodEnd: "2026-09-30",
+    status: "OPEN"
+  },
+  {
+    accountingPeriodId: 24,
+    companyId: 1,
+    periodKey: "2026-08",
+    periodStart: "2026-08-01",
+    periodEnd: "2026-08-31",
+    status: "CLOSED",
+    closedAt: at(24 * 30),
+    closedBy: "Grace Mrema"
+  },
+  {
+    accountingPeriodId: 23,
+    companyId: 1,
+    periodKey: "2026-07",
+    periodStart: "2026-07-01",
+    periodEnd: "2026-07-31",
+    status: "CLOSED",
+    closedAt: at(24 * 62),
+    closedBy: "Grace Mrema"
+  },
+  {
+    accountingPeriodId: 22,
+    companyId: 1,
+    periodKey: "2026-06",
+    periodStart: "2026-06-01",
+    periodEnd: "2026-06-30",
+    status: "CLOSED",
+    closedAt: at(24 * 95),
+    closedBy: "Grace Mrema"
+  }
 ];
 registerSearch((q) => {
   const n = q.replace(/[\s-]/g, "").toUpperCase();
@@ -16419,121 +18084,107 @@ var InvoicesController = class {
       const billToPartyId = req.query.billToPartyId ? parseInt(String(req.query.billToPartyId), 10) : void 0;
       const q = req.query.q ? String(req.query.q).trim().toLowerCase() : void 0;
       const prisma4 = getPrisma();
-      if (prisma4) {
-        const whereClause = {};
-        if (siteId) whereClause.site_id = siteId;
-        if (kind && kind !== "ALL") whereClause.doc_kind = kind;
-        if (statusParam && statusParam !== "ALL") whereClause.status = statusParam;
-        if (billToPartyId) whereClause.bill_to_party_id = billToPartyId;
-        const dbInvoices = await prisma4.invoice.findMany({
-          where: whereClause,
-          include: {
-            invoice_invoice_line: true,
-            m_party_invoice: true,
-            consignment_invoice: true,
-            invoice_fiscal_receipt: true,
-            invoice_payment_allocation: {
-              include: {
-                payment_payment_allocation: true
-              }
-            }
-          },
-          orderBy: [{ invoice_date: "desc" }, { invoice_id: "desc" }]
-        });
-        if (dbInvoices && dbInvoices.length > 0) {
-          let items = dbInvoices.map((inv) => {
-            const fiscal = inv.invoice_fiscal_receipt;
-            const party2 = inv.m_party_invoice;
-            const con = inv.consignment_invoice;
-            return {
-              invoiceId: Number(inv.invoice_id),
-              invoiceNo: inv.invoice_no || `INV-${inv.invoice_id}`,
-              docKind: inv.doc_kind,
-              status: inv.status,
-              siteId: inv.site_id,
-              billToPartyId: inv.bill_to_party_id,
-              partyName: party2?.party_name,
-              consignmentId: inv.consignment_id ? Number(inv.consignment_id) : null,
-              consignmentRef: con?.ref_no,
-              currency: inv.currency,
-              baseCurrency: inv.base_currency,
-              exchangeRate: Number(inv.exchange_rate),
-              exchangeRateDate: inv.exchange_rate_date ? inv.exchange_rate_date.toISOString().slice(0, 10) : null,
-              invoiceDate: inv.invoice_date.toISOString().slice(0, 10),
-              dueDate: inv.due_date ? inv.due_date.toISOString().slice(0, 10) : null,
-              serviceToDate: inv.service_to_date ? inv.service_to_date.toISOString().slice(0, 10) : null,
-              subtotal: Number(inv.subtotal).toFixed(2),
-              taxTotal: Number(inv.tax_total).toFixed(2),
-              total: Number(inv.total).toFixed(2),
-              totalBase: Number(inv.total_base).toFixed(2),
-              amountPaid: Number(inv.amount_paid).toFixed(2),
-              amountCredited: Number(inv.amount_credited).toFixed(2),
-              balance: Number(inv.balance ?? Number(inv.total) - Number(inv.amount_paid) - Number(inv.amount_credited)).toFixed(2),
-              proformaInvoiceId: inv.proforma_invoice_id ? Number(inv.proforma_invoice_id) : null,
-              originalInvoiceId: inv.original_invoice_id ? Number(inv.original_invoice_id) : null,
-              reason: inv.reason,
-              postedAt: inv.posted_at ? inv.posted_at.toISOString() : void 0,
-              fiscalReceipt: fiscal ? {
-                provider: fiscal.provider,
-                status: fiscal.status,
-                attempts: fiscal.attempts,
-                receiptNo: fiscal.receipt_no,
-                verificationCode: fiscal.verification_code,
-                verificationUrl: fiscal.verification_url,
-                issuedAt: fiscal.issued_at ? fiscal.issued_at.toISOString() : null,
-                lastError: fiscal.last_error
-              } : void 0,
-              createdBy: inv.createdby,
-              lines: (inv.invoice_invoice_line || []).map((l) => ({
-                lineNo: l.line_no,
-                description: l.description,
-                quantity: String(l.quantity),
-                uom: l.uom,
-                unitRate: String(l.unit_rate),
-                amount: String(l.amount),
-                taxAmount: String(l.tax_amount),
-                lineTotal: String(l.line_total || Number(l.amount) + Number(l.tax_amount)),
-                serviceFrom: l.service_from ? l.service_from.toISOString().slice(0, 10) : null,
-                serviceTo: l.service_to ? l.service_to.toISOString().slice(0, 10) : null
-              }))
-            };
-          });
-          if (q) {
-            const cleanQ = q.replace(/[\s-]/g, "").toLowerCase();
-            items = items.filter((i) => {
-              const no = (i.invoiceNo || "").replace(/-/g, "").toLowerCase();
-              const pName = (i.partyName || "").toLowerCase();
-              const cRef = (i.consignmentRef || "").replace(/-/g, "").toLowerCase();
-              return no.includes(cleanQ) || pName.includes(cleanQ) || cRef.includes(cleanQ);
-            });
-          }
-          return res.json(items);
-        }
+      if (!prisma4) {
+        return res.status(500).json({ error: "Database client unavailable" });
       }
-      let fallback = [...invoices];
-      if (siteId) fallback = fallback.filter((i) => i.siteId === siteId);
-      if (kind && kind !== "ALL") fallback = fallback.filter((i) => i.docKind === kind);
-      if (statusParam && statusParam !== "ALL") fallback = fallback.filter((i) => i.status === statusParam);
-      if (billToPartyId) fallback = fallback.filter((i) => i.billToPartyId === billToPartyId);
+      const whereClause = {};
+      if (siteId) whereClause.site_id = siteId;
+      if (kind && kind !== "ALL") whereClause.doc_kind = kind;
+      if (statusParam && statusParam !== "ALL")
+        whereClause.status = statusParam;
+      if (billToPartyId) whereClause.bill_to_party_id = billToPartyId;
+      const dbInvoices = await prisma4.invoice.findMany({
+        where: whereClause,
+        include: {
+          invoice_invoice_line: true,
+          m_party_invoice: true,
+          consignment_invoice: true,
+          invoice_fiscal_receipt: true,
+          invoice_payment_allocation: {
+            include: {
+              payment_payment_allocation: true
+            }
+          }
+        },
+        orderBy: [{ invoice_date: "desc" }, { invoice_id: "desc" }]
+      });
+      let items = (dbInvoices || []).map((inv) => {
+        const fiscal = inv.invoice_fiscal_receipt;
+        const party2 = inv.m_party_invoice;
+        const con = inv.consignment_invoice;
+        return {
+          invoiceId: Number(inv.invoice_id),
+          invoiceNo: inv.invoice_no || `INV-${inv.invoice_id}`,
+          docKind: inv.doc_kind,
+          status: inv.status,
+          siteId: inv.site_id,
+          billToPartyId: inv.bill_to_party_id,
+          partyName: party2?.party_name,
+          consignmentId: inv.consignment_id ? Number(inv.consignment_id) : null,
+          consignmentRef: con?.ref_no,
+          currency: inv.currency,
+          baseCurrency: inv.base_currency,
+          exchangeRate: Number(inv.exchange_rate),
+          exchangeRateDate: inv.exchange_rate_date ? inv.exchange_rate_date.toISOString().slice(0, 10) : null,
+          invoiceDate: inv.invoice_date.toISOString().slice(0, 10),
+          dueDate: inv.due_date ? inv.due_date.toISOString().slice(0, 10) : null,
+          serviceToDate: inv.service_to_date ? inv.service_to_date.toISOString().slice(0, 10) : null,
+          subtotal: Number(inv.subtotal).toFixed(2),
+          taxTotal: Number(inv.tax_total).toFixed(2),
+          total: Number(inv.total).toFixed(2),
+          totalBase: Number(inv.total_base).toFixed(2),
+          amountPaid: Number(inv.amount_paid).toFixed(2),
+          amountCredited: Number(inv.amount_credited).toFixed(2),
+          balance: Number(
+            inv.balance ?? Number(inv.total) - Number(inv.amount_paid) - Number(inv.amount_credited)
+          ).toFixed(2),
+          proformaInvoiceId: inv.proforma_invoice_id ? Number(inv.proforma_invoice_id) : null,
+          originalInvoiceId: inv.original_invoice_id ? Number(inv.original_invoice_id) : null,
+          reason: inv.reason,
+          postedAt: inv.posted_at ? inv.posted_at.toISOString() : void 0,
+          fiscalReceipt: fiscal ? {
+            provider: fiscal.provider,
+            status: fiscal.status,
+            attempts: fiscal.attempts,
+            receiptNo: fiscal.receipt_no,
+            verificationCode: fiscal.verification_code,
+            verificationUrl: fiscal.verification_url,
+            issuedAt: fiscal.issued_at ? fiscal.issued_at.toISOString() : null,
+            lastError: fiscal.last_error
+          } : void 0,
+          createdBy: inv.createdby,
+          lines: (inv.invoice_invoice_line || []).map((l) => ({
+            lineNo: l.line_no,
+            description: l.description,
+            quantity: String(l.quantity),
+            uom: l.uom,
+            unitRate: String(l.unit_rate),
+            amount: String(l.amount),
+            taxAmount: String(l.tax_amount),
+            lineTotal: String(
+              l.line_total || Number(l.amount) + Number(l.tax_amount)
+            ),
+            serviceFrom: l.service_from ? l.service_from.toISOString().slice(0, 10) : null,
+            serviceTo: l.service_to ? l.service_to.toISOString().slice(0, 10) : null
+          }))
+        };
+      });
       if (q) {
         const cleanQ = q.replace(/[\s-]/g, "").toLowerCase();
-        fallback = fallback.filter((i) => {
+        items = items.filter((i) => {
           const no = (i.invoiceNo || "").replace(/-/g, "").toLowerCase();
-          const pName = (party(i.billToPartyId)?.partyName || "").toLowerCase();
+          const pName = (i.partyName || "").toLowerCase();
           const cRef = (i.consignmentRef || "").replace(/-/g, "").toLowerCase();
           return no.includes(cleanQ) || pName.includes(cleanQ) || cRef.includes(cleanQ);
         });
       }
-      res.json(fallback);
+      return res.json(items);
+      return res.status(500).json({ error: "Database client unavailable" });
     } catch (err) {
       console.error("[InvoicesController.getInvoices] Error:", err);
-      res.json(invoices);
+      return res.status(500).json({ error: err.message });
     }
   };
-  /**
-   * GET /invoices/:invoiceId
-   * Fetch single invoice with details.
-   */
   getInvoiceById = async (req, res) => {
     try {
       const { invoiceId } = req.params;
@@ -16586,7 +18237,9 @@ var InvoicesController = class {
             totalBase: Number(inv.total_base).toFixed(2),
             amountPaid: Number(inv.amount_paid).toFixed(2),
             amountCredited: Number(inv.amount_credited).toFixed(2),
-            balance: Number(inv.balance ?? Number(inv.total) - Number(inv.amount_paid) - Number(inv.amount_credited)).toFixed(2),
+            balance: Number(
+              inv.balance ?? Number(inv.total) - Number(inv.amount_paid) - Number(inv.amount_credited)
+            ).toFixed(2),
             proformaInvoiceId: inv.proforma_invoice_id ? Number(inv.proforma_invoice_id) : null,
             originalInvoiceId: inv.original_invoice_id ? Number(inv.original_invoice_id) : null,
             reason: inv.reason,
@@ -16610,17 +18263,18 @@ var InvoicesController = class {
               unitRate: String(l.unit_rate),
               amount: String(l.amount),
               taxAmount: String(l.tax_amount),
-              lineTotal: String(l.line_total || Number(l.amount) + Number(l.tax_amount)),
+              lineTotal: String(
+                l.line_total || Number(l.amount) + Number(l.tax_amount)
+              ),
               serviceFrom: l.service_from ? l.service_from.toISOString().slice(0, 10) : null,
               serviceTo: l.service_to ? l.service_to.toISOString().slice(0, 10) : null
             }))
           };
           return res.json(result);
         }
+        return sendError3(res, `Invoice not found: ${invoiceId}`, 404);
       }
-      const found = invoice(numId) || invoices.find((i) => i.invoiceNo === invoiceId);
-      if (!found) return sendError3(res, `Invoice not found: ${invoiceId}`, 404);
-      res.json(found);
+      return res.status(500).json({ error: "Database client unavailable" });
     } catch (err) {
       console.error("[InvoicesController.getInvoiceById] Error:", err);
       res.status(500).json({ error: err.message });
@@ -16637,8 +18291,14 @@ var InvoicesController = class {
       const siteId = body.siteId ? Number(body.siteId) : 1;
       const billToPartyId = Number(body.billToPartyId || body.partyId || 1);
       const lines = Array.isArray(body.lines) ? body.lines : [];
-      const subtotal = lines.reduce((acc, l) => acc + (Number(l.amount) || 0), 0);
-      const taxTotal = lines.reduce((acc, l) => acc + (Number(l.taxAmount) || 0), 0);
+      const subtotal = lines.reduce(
+        (acc, l) => acc + (Number(l.amount) || 0),
+        0
+      );
+      const taxTotal = lines.reduce(
+        (acc, l) => acc + (Number(l.taxAmount) || 0),
+        0
+      );
       const total = subtotal + taxTotal;
       const currency = body.currency || "USD";
       const exchangeRate = Number(body.exchangeRate) || (currency === "USD" ? 2600 : 1);
@@ -16648,15 +18308,123 @@ var InvoicesController = class {
       const invoiceNo = `${prefix}-DAR${siteId}-26-00${seq}`;
       const prisma4 = getPrisma();
       if (prisma4) {
+        let resolvedConsignmentId = null;
+        if (body.consignmentId) {
+          try {
+            const con = await prisma4.consignment.findUnique({
+              where: { consignment_id: BigInt(body.consignmentId) },
+              select: { consignment_id: true }
+            });
+            if (con) resolvedConsignmentId = con.consignment_id;
+          } catch {
+            resolvedConsignmentId = null;
+          }
+        }
+        if (!resolvedConsignmentId && body.consignmentRef) {
+          try {
+            const con = await prisma4.consignment.findFirst({
+              where: { ref_no: String(body.consignmentRef) },
+              select: { consignment_id: true }
+            });
+            if (con) resolvedConsignmentId = con.consignment_id;
+          } catch {
+          }
+        }
+        let resolvedPartyId = billToPartyId;
+        const partyExists = await prisma4.m_party.findUnique({
+          where: { party_id: resolvedPartyId },
+          select: { party_id: true }
+        });
+        if (!partyExists) {
+          const firstParty = await prisma4.m_party.findFirst({
+            select: { party_id: true }
+          });
+          if (firstParty) resolvedPartyId = firstParty.party_id;
+        }
+        let resolvedSiteId = siteId;
+        const siteExists = await prisma4.m_site.findUnique({
+          where: { site_id: resolvedSiteId },
+          select: { site_id: true }
+        });
+        if (!siteExists) {
+          const firstSite = await prisma4.m_site.findFirst({
+            select: { site_id: true }
+          });
+          if (firstSite) resolvedSiteId = firstSite.site_id;
+        }
+        let resolvedProformaId = null;
+        if (body.proformaInvoiceId) {
+          try {
+            const p2 = await prisma4.invoice.findUnique({
+              where: { invoice_id: BigInt(body.proformaInvoiceId) },
+              select: { invoice_id: true }
+            });
+            if (p2) resolvedProformaId = p2.invoice_id;
+          } catch {
+          }
+        }
+        let resolvedOriginalId = null;
+        if (body.originalInvoiceId) {
+          try {
+            const o = await prisma4.invoice.findUnique({
+              where: { invoice_id: BigInt(body.originalInvoiceId) },
+              select: { invoice_id: true }
+            });
+            if (o) resolvedOriginalId = o.invoice_id;
+          } catch {
+          }
+        }
+        const defaultChargeCode = await prisma4.m_charge_code.findFirst({
+          select: { charge_code_id: true }
+        });
+        const defaultChargeCodeId = defaultChargeCode?.charge_code_id || 1;
+        const resolvedLines = await Promise.all(
+          lines.map(async (l, idx) => {
+            let chargeCodeId = Number(l.chargeCodeId);
+            if (!chargeCodeId || isNaN(chargeCodeId)) {
+              if (l.chargeCode) {
+                const found = await prisma4.m_charge_code.findFirst({
+                  where: { charge_code: String(l.chargeCode) },
+                  select: { charge_code_id: true }
+                });
+                chargeCodeId = found?.charge_code_id || defaultChargeCodeId;
+              } else {
+                chargeCodeId = defaultChargeCodeId;
+              }
+            } else {
+              const exists = await prisma4.m_charge_code.findUnique({
+                where: { charge_code_id: chargeCodeId },
+                select: { charge_code_id: true }
+              });
+              if (!exists) chargeCodeId = defaultChargeCodeId;
+            }
+            return {
+              line_no: idx + 1,
+              line_doc_kind: docKind,
+              charge_code_id: chargeCodeId,
+              description: l.description || "Logistics service charge",
+              service_from: l.serviceFrom ? new Date(l.serviceFrom) : null,
+              service_to: l.serviceTo ? new Date(l.serviceTo) : null,
+              quantity: Number(l.quantity) || 1,
+              uom: l.uom || "UNIT",
+              unit_rate: Number(l.unitRate) || Number(l.amount) || 0,
+              amount: Number(l.amount) || 0,
+              tax_rate_pct: Number(l.taxRatePct || l.taxPct) || 18,
+              tax_amount: Number(l.taxAmount) || 0,
+              line_total: (Number(l.amount) || 0) + (Number(l.taxAmount) || 0),
+              createdby: "Neema Mushi"
+            };
+          })
+        );
         const created = await prisma4.invoice.create({
           data: {
             company_id: 1,
-            site_id: siteId,
+            site_id: resolvedSiteId,
             doc_kind: docKind,
             invoice_no: invoiceNo,
             status: docKind === "PROFORMA" ? "ISSUED" : "DRAFT",
-            bill_to_party_id: billToPartyId,
-            consignment_id: body.consignmentId ? BigInt(body.consignmentId) : null,
+            bill_to_party_id: resolvedPartyId,
+            consignment_id: resolvedConsignmentId,
             currency,
             base_currency: "TZS",
             exchange_rate: exchangeRate,
@@ -16670,28 +18438,12 @@ var InvoicesController = class {
             total_base: totalBase,
             amount_paid: 0,
             amount_credited: 0,
-            balance: total,
-            proforma_invoice_id: body.proformaInvoiceId ? BigInt(body.proformaInvoiceId) : null,
-            original_invoice_id: body.originalInvoiceId ? BigInt(body.originalInvoiceId) : null,
+            proforma_invoice_id: resolvedProformaId,
+            original_invoice_id: resolvedOriginalId,
             reason: body.reason || null,
             createdby: "Neema Mushi",
             invoice_invoice_line: {
-              create: lines.map((l, idx) => ({
-                line_no: idx + 1,
-                line_doc_kind: docKind,
-                charge_code_id: Number(l.chargeCodeId) || 1,
-                description: l.description || "Logistics service charge",
-                service_from: l.serviceFrom ? new Date(l.serviceFrom) : null,
-                service_to: l.serviceTo ? new Date(l.serviceTo) : null,
-                quantity: Number(l.quantity) || 1,
-                uom: l.uom || "UNIT",
-                unit_rate: Number(l.unitRate) || Number(l.amount) || 0,
-                amount: Number(l.amount) || 0,
-                tax_rate_pct: Number(l.taxRatePct || l.taxPct) || 18,
-                tax_amount: Number(l.taxAmount) || 0,
-                line_total: (Number(l.amount) || 0) + (Number(l.taxAmount) || 0),
-                createdby: "Neema Mushi"
-              }))
+              create: resolvedLines
             }
           },
           include: {
@@ -16708,33 +18460,13 @@ var InvoicesController = class {
           siteId: created.site_id,
           billToPartyId: created.bill_to_party_id,
           total: Number(created.total).toFixed(2),
-          balance: Number(created.balance).toFixed(2),
+          balance: Number(
+            created.balance ?? Number(created.total) - Number(created.amount_paid) - Number(created.amount_credited)
+          ).toFixed(2),
           invoiceDate: created.invoice_date.toISOString().slice(0, 10)
         });
       }
-      const newInv = {
-        invoiceId: invoices.length + 3301,
-        invoiceNo,
-        docKind,
-        status: docKind === "PROFORMA" ? "ISSUED" : "DRAFT",
-        siteId,
-        billToPartyId,
-        currency,
-        baseCurrency: "TZS",
-        exchangeRate,
-        invoiceDate: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
-        subtotal: subtotal.toFixed(2),
-        taxTotal: taxTotal.toFixed(2),
-        total: total.toFixed(2),
-        totalBase: totalBase.toFixed(2),
-        amountPaid: "0.00",
-        amountCredited: "0.00",
-        balance: total.toFixed(2),
-        lines,
-        ...body
-      };
-      invoices.unshift(newInv);
-      res.status(201).json(newInv);
+      return res.status(500).json({ error: "Database client unavailable" });
     } catch (err) {
       console.error("[InvoicesController.createInvoice] Error:", err);
       res.status(500).json({ error: err.message });
@@ -16749,44 +18481,56 @@ var InvoicesController = class {
       const proformaId = Number(req.params.invoiceId || req.body.proformaId);
       const prisma4 = getPrisma();
       if (prisma4) {
-        const prof2 = await prisma4.invoice.findUnique({
+        const prof = await prisma4.invoice.findUnique({
           where: { invoice_id: BigInt(proformaId) },
           include: { invoice_invoice_line: true }
         });
-        if (!prof2) return sendError3(res, `Proforma invoice #${proformaId} not found`, 404);
+        if (!prof)
+          return sendError3(
+            res,
+            `Proforma invoice #${proformaId} not found`,
+            404
+          );
         const seq = Math.floor(1e3 + Math.random() * 9e3);
-        const invNo = `INV-DAR${prof2.site_id}-26-00${seq}`;
+        const invNo = `INV-DAR${prof.site_id}-26-00${seq}`;
+        let validConsignmentId = null;
+        if (prof.consignment_id) {
+          const c = await prisma4.consignment.findUnique({
+            where: { consignment_id: prof.consignment_id },
+            select: { consignment_id: true }
+          });
+          if (c) validConsignmentId = c.consignment_id;
+        }
         const taxInv = await prisma4.invoice.create({
           data: {
-            company_id: prof2.company_id,
-            site_id: prof2.site_id,
+            company_id: prof.company_id,
+            site_id: prof.site_id,
             doc_kind: "TAX_INVOICE",
             invoice_no: invNo,
             status: "POSTED",
-            bill_to_party_id: prof2.bill_to_party_id,
-            consignment_id: prof2.consignment_id,
-            currency: prof2.currency,
-            base_currency: prof2.base_currency,
-            exchange_rate: prof2.exchange_rate,
-            exchange_rate_date: prof2.exchange_rate_date,
+            bill_to_party_id: prof.bill_to_party_id,
+            consignment_id: validConsignmentId,
+            currency: prof.currency,
+            base_currency: prof.base_currency,
+            exchange_rate: prof.exchange_rate,
+            exchange_rate_date: prof.exchange_rate_date,
             invoice_date: /* @__PURE__ */ new Date(),
             due_date: /* @__PURE__ */ new Date(),
-            service_to_date: prof2.service_to_date,
-            subtotal: prof2.subtotal,
-            tax_total: prof2.tax_total,
-            total: prof2.total,
-            total_base: prof2.total_base,
-            amount_paid: prof2.total,
+            service_to_date: prof.service_to_date,
+            subtotal: prof.subtotal,
+            tax_total: prof.tax_total,
+            total: prof.total,
+            total_base: prof.total_base,
+            amount_paid: prof.total,
             amount_credited: 0,
-            balance: 0,
-            proforma_invoice_id: prof2.invoice_id,
+            proforma_invoice_id: prof.invoice_id,
             posted_at: /* @__PURE__ */ new Date(),
             createdby: "Neema Mushi",
             invoice_fiscal_receipt: {
               create: {
                 provider: "VFD \xB7 TRA EFD gateway",
                 status: "ISSUED",
-                receiptNo: `10TZ100877-${Math.floor(48e3 + Math.random() * 2e3)}`,
+                receipt_no: `10TZ100877-${Math.floor(48e3 + Math.random() * 2e3)}`,
                 verification_code: `VFD${Date.now().toString(16).toUpperCase()}`,
                 verification_url: "https://verify.tra.go.tz/",
                 issued_at: /* @__PURE__ */ new Date(),
@@ -16795,7 +18539,7 @@ var InvoicesController = class {
               }
             },
             invoice_invoice_line: {
-              create: prof2.invoice_invoice_line.map((l) => ({
+              create: prof.invoice_invoice_line.map((l) => ({
                 line_no: l.line_no,
                 line_doc_kind: "TAX_INVOICE",
                 charge_code_id: l.charge_code_id,
@@ -16831,30 +18575,12 @@ var InvoicesController = class {
           balance: "0.00"
         });
       }
-      const prof = invoices.find((i) => String(i.invoiceId) === String(proformaId));
-      if (!prof) return sendError3(res, `Proforma invoice #${proformaId} not found`, 404);
-      prof.status = "CONVERTED";
-      const newInv = {
-        ...prof,
-        invoiceId: invoices.length + 3301,
-        invoiceNo: `INV-DAR${prof.siteId}-26-00${Math.floor(1e3 + Math.random() * 9e3)}`,
-        docKind: "TAX_INVOICE",
-        status: "POSTED",
-        proformaInvoiceId: prof.invoiceId,
-        amountPaid: prof.total,
-        balance: "0.00"
-      };
-      invoices.unshift(newInv);
-      res.status(201).json(newInv);
+      return res.status(500).json({ error: "Database client unavailable" });
     } catch (err) {
-      console.error("[InvoicesController.convertProforma] Error:", err);
+      console.error("InvoicesController convertProforma Error:", err);
       res.status(500).json({ error: err.message });
     }
   };
-  /**
-   * POST /invoices/:invoiceId/post or /invoices/:invoiceId:post
-   * Post draft invoice to official invoice.
-   */
   postInvoice = async (req, res) => {
     try {
       const { invoiceId } = req.params;
@@ -16874,20 +18600,12 @@ var InvoicesController = class {
           postedAt: updated.posted_at
         });
       }
-      const inv = invoices.find((i) => String(i.invoiceId) === invoiceId || i.invoiceNo === invoiceId);
-      if (!inv) return sendError3(res, `Invoice #${invoiceId} not found`, 404);
-      inv.status = "POSTED";
-      inv.postedAt = (/* @__PURE__ */ new Date()).toISOString();
-      res.json(inv);
+      return res.status(500).json({ error: "Database client unavailable" });
     } catch (err) {
       console.error("[InvoicesController.postInvoice] Error:", err);
       res.status(500).json({ error: err.message });
     }
   };
-  /**
-   * POST /invoices/:invoiceId/fiscalise
-   * Submit to TRA / VFD fiscal device.
-   */
   fiscalise = async (req, res) => {
     try {
       const { invoiceId } = req.params;
@@ -16900,7 +18618,7 @@ var InvoicesController = class {
             invoice_id: BigInt(numId),
             provider: "VFD \xB7 TRA EFD gateway",
             status: "ISSUED",
-            receiptNo: `10TZ100877-${Math.floor(48e3 + Math.random() * 2e3)}`,
+            receipt_no: `10TZ100877-${Math.floor(48e3 + Math.random() * 2e3)}`,
             verification_code: `VFD${Date.now().toString(16).toUpperCase()}`,
             verification_url: "https://verify.tra.go.tz/",
             issued_at: /* @__PURE__ */ new Date(),
@@ -16922,27 +18640,12 @@ var InvoicesController = class {
           fiscalReceipt: receipt
         });
       }
-      const inv = invoices.find((i) => String(i.invoiceId) === invoiceId || i.invoiceNo === invoiceId);
-      if (!inv) return sendError3(res, `Invoice #${invoiceId} not found`, 404);
-      inv.fiscalReceipt = {
-        provider: "VFD \xB7 TRA EFD gateway",
-        status: "ISSUED",
-        attempts: 1,
-        receiptNo: `10TZ100877-048991`,
-        verificationCode: `VFDDAR26`,
-        verificationUrl: "https://verify.tra.go.tz/",
-        issuedAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      res.json(inv);
+      return res.status(500).json({ error: "Database client unavailable" });
     } catch (err) {
       console.error("[InvoicesController.fiscalise] Error:", err);
       res.status(500).json({ error: err.message });
     }
   };
-  /**
-   * POST /invoices/:invoiceId/credit-note
-   * Issue credit note against a posted invoice.
-   */
   issueCreditNote = async (req, res) => {
     try {
       const origId = Number(req.params.invoiceId);
@@ -16950,92 +18653,67 @@ var InvoicesController = class {
       const creditAmt = Number(amount) || 50;
       const prisma4 = getPrisma();
       if (prisma4) {
-        const orig2 = await prisma4.invoice.findUnique({
+        const orig = await prisma4.invoice.findUnique({
           where: { invoice_id: BigInt(origId) }
         });
-        if (!orig2) return sendError3(res, `Original invoice #${origId} not found`, 404);
+        if (!orig)
+          return sendError3(res, `Original invoice #${origId} not found`, 404);
         const seq = Math.floor(100 + Math.random() * 900);
-        const crnNo = `CRN-DAR${orig2.site_id}-26-000${seq}`;
-        const crn2 = await prisma4.invoice.create({
+        const crnNo = `CRN-DAR${orig.site_id}-26-000${seq}`;
+        let validConsignmentId = null;
+        if (orig.consignment_id) {
+          const c = await prisma4.consignment.findUnique({
+            where: { consignment_id: orig.consignment_id },
+            select: { consignment_id: true }
+          });
+          if (c) validConsignmentId = c.consignment_id;
+        }
+        const crn = await prisma4.invoice.create({
           data: {
-            company_id: orig2.company_id,
-            site_id: orig2.site_id,
+            company_id: orig.company_id,
+            site_id: orig.site_id,
             doc_kind: "CREDIT_NOTE",
             invoice_no: crnNo,
             status: "POSTED",
-            bill_to_party_id: orig2.bill_to_party_id,
-            consignment_id: orig2.consignment_id,
-            currency: orig2.currency,
-            base_currency: orig2.base_currency,
-            exchange_rate: orig2.exchange_rate,
+            bill_to_party_id: orig.bill_to_party_id,
+            consignment_id: validConsignmentId,
+            currency: orig.currency,
+            base_currency: orig.base_currency,
+            exchange_rate: orig.exchange_rate,
             invoice_date: /* @__PURE__ */ new Date(),
             due_date: /* @__PURE__ */ new Date(),
             subtotal: creditAmt,
             tax_total: 0,
             total: creditAmt,
-            total_base: creditAmt * Number(orig2.exchange_rate),
+            total_base: creditAmt * Number(orig.exchange_rate),
             amount_paid: 0,
             amount_credited: 0,
-            balance: 0,
-            original_invoice_id: orig2.invoice_id,
+            original_invoice_id: orig.invoice_id,
             reason: reason || "Adjustment/waiver granted",
             posted_at: /* @__PURE__ */ new Date(),
             createdby: "Neema Mushi"
           }
         });
-        const newCredited = Number(orig2.amount_credited) + creditAmt;
-        const newBalance = Math.max(0, Number(orig2.total) - Number(orig2.amount_paid) - newCredited);
+        const newCredited = Number(orig.amount_credited) + creditAmt;
         await prisma4.invoice.update({
           where: { invoice_id: BigInt(origId) },
           data: {
-            amount_credited: newCredited,
-            balance: newBalance
+            amount_credited: newCredited
           }
         });
         return res.status(201).json({
-          invoiceId: Number(crn2.invoice_id),
-          invoiceNo: crn2.invoice_no,
-          total: Number(crn2.total).toFixed(2),
+          invoiceId: Number(crn.invoice_id),
+          invoiceNo: crn.invoice_no,
+          total: Number(crn.total).toFixed(2),
           originalInvoiceId: origId
         });
       }
-      const orig = invoices.find((i) => String(i.invoiceId) === String(origId));
-      if (!orig) return sendError3(res, `Original invoice #${origId} not found`, 404);
-      const crn = {
-        invoiceId: invoices.length + 3301,
-        invoiceNo: `CRN-DAR${orig.siteId}-26-000${Math.floor(100 + Math.random() * 900)}`,
-        docKind: "CREDIT_NOTE",
-        status: "POSTED",
-        siteId: orig.siteId,
-        billToPartyId: orig.billToPartyId,
-        consignmentId: orig.consignmentId,
-        currency: orig.currency,
-        baseCurrency: orig.baseCurrency,
-        exchangeRate: orig.exchangeRate,
-        invoiceDate: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
-        subtotal: creditAmt.toFixed(2),
-        taxTotal: "0.00",
-        total: creditAmt.toFixed(2),
-        totalBase: (creditAmt * Number(orig.exchangeRate)).toFixed(2),
-        amountPaid: "0.00",
-        amountCredited: "0.00",
-        balance: "0.00",
-        originalInvoiceId: orig.invoiceId,
-        reason: reason || "Adjustment/waiver"
-      };
-      invoices.unshift(crn);
-      orig.amountCredited = (Number(orig.amountCredited || 0) + creditAmt).toFixed(2);
-      orig.balance = Math.max(0, Number(orig.total) - Number(orig.amountPaid || 0) - Number(orig.amountCredited)).toFixed(2);
-      res.status(201).json(crn);
+      return res.status(500).json({ error: "Database client unavailable" });
     } catch (err) {
       console.error("[InvoicesController.issueCreditNote] Error:", err);
       res.status(500).json({ error: err.message });
     }
   };
-  /**
-   * POST /invoices/:invoiceId:cancel or /invoices/:invoiceId/cancel
-   * Void or cancel draft invoice.
-   */
   cancelInvoice = async (req, res) => {
     try {
       const { invoiceId } = req.params;
@@ -17056,24 +18734,20 @@ var InvoicesController = class {
           cancelledAt: cancelled.cancelled_at
         });
       }
-      const inv = invoices.find((i) => String(i.invoiceId) === invoiceId || i.invoiceNo === invoiceId);
-      if (!inv) return sendError3(res, `Invoice #${invoiceId} not found`, 404);
-      inv.status = "CANCELLED";
-      res.json(inv);
+      return res.status(500).json({ error: "Database client unavailable" });
     } catch (err) {
       console.error("[InvoicesController.cancelInvoice] Error:", err);
       res.status(500).json({ error: err.message });
     }
   };
-  /**
-   * GET /invoices/:invoiceId/pdf
-   * Generate downloadable PDF.
-   */
   getInvoicePdf = async (req, res) => {
     try {
       const { invoiceId } = req.params;
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=invoice-${invoiceId}.pdf`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=invoice-${invoiceId}.pdf`
+      );
       res.send(Buffer.from(`%PDF-1.4
 % Invoice #${invoiceId}
 %%EOF`));
@@ -17355,7 +19029,6 @@ var cashierController = {
                     where: { invoice_id: invId },
                     data: {
                       amount_paid: newPaid,
-                      balance: newBal,
                       status: newBal <= 0.01 ? "PAID" : "POSTED"
                     }
                   });
@@ -23460,11 +25133,13 @@ var PortalController = class {
       const currentBal = Number(dbInv.balance !== void 0 && dbInv.balance !== null ? dbInv.balance : dbInv.total || dbInv.total_amount);
       const payAmount = body.amount ? Number(body.amount) : currentBal;
       const newBal = Math.max(0, currentBal - payAmount);
+      const currentPaid = Number(dbInv.amount_paid || 0);
+      const newPaid = currentPaid + payAmount;
       const updated = await invDelegate.update({
         where: { invoice_id: invoiceId },
         data: {
-          balance: newBal,
-          status: newBal === 0 ? "PAID" : "PART_PAID"
+          amount_paid: newPaid,
+          status: newBal <= 0.01 ? "PAID" : "PART_PAID"
         }
       });
       return sendSuccess(
@@ -26575,14 +28250,23 @@ var searchController = {
           try {
             return await Promise.race([
               promise,
-              new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2e3))
+              new Promise(
+                (_, reject) => setTimeout(() => reject(new Error("timeout")), 2e3)
+              )
             ]);
           } catch (err) {
             return fallback;
           }
         };
-        const [units, visits2, consignments2, parties2, regimes, appointments3, invoices3] = await Promise.all([
-          // 1. Cargo Units
+        const [
+          units,
+          visits2,
+          consignments2,
+          parties2,
+          regimes,
+          appointments3,
+          invoices3
+        ] = await Promise.all([
           queryWithTimeout(
             prisma4.cargo_unit.findMany({
               where: {
@@ -26601,7 +28285,6 @@ var searchController = {
             }),
             []
           ),
-          // 2. Truck Visits
           queryWithTimeout(
             prisma4.truck_visit.findMany({
               where: {
@@ -26620,7 +28303,6 @@ var searchController = {
             }),
             []
           ),
-          // 3. Consignments / BLs
           queryWithTimeout(
             prisma4.consignment.findMany({
               where: {
@@ -26633,7 +28315,6 @@ var searchController = {
             }),
             []
           ),
-          // 4. Customers & Parties
           queryWithTimeout(
             prisma4.m_party.findMany({
               where: {
@@ -26660,7 +28341,6 @@ var searchController = {
             }),
             []
           ),
-          // 6. Appointments
           queryWithTimeout(
             prisma4.appointment.findMany({
               where: {
@@ -26670,7 +28350,6 @@ var searchController = {
             }),
             []
           ),
-          // 7. Invoices
           queryWithTimeout(
             prisma4.invoice.findMany({
               where: {
@@ -26690,9 +28369,15 @@ var searchController = {
               return {
                 id: Number(u.cargo_unit_id),
                 title: u.unit_no,
-                subtitle: [u.unit_category, u.make && `${u.make} ${u.model || ""}`].filter(Boolean).join(" \xB7 "),
+                subtitle: [
+                  u.unit_category,
+                  u.make && `${u.make} ${u.model || ""}`
+                ].filter(Boolean).join(" \xB7 "),
                 status: stay2?.physical_status || "IN_YARD",
-                link: { entityName: "cargo_unit", entityId: Number(u.cargo_unit_id) },
+                link: {
+                  entityName: "cargo_unit",
+                  entityId: Number(u.cargo_unit_id)
+                },
                 to: `/cargo/units`
               };
             })
@@ -26710,7 +28395,10 @@ var searchController = {
                 title: `${v.visit_no} ${plate ? `(${plate})` : ""}`,
                 subtitle: [driver, v.m_party_truck_visit?.party_name].filter(Boolean).join(" \xB7 "),
                 status: v.status,
-                link: { entityName: "truck_visit", entityId: Number(v.truck_visit_id) },
+                link: {
+                  entityName: "truck_visit",
+                  entityId: Number(v.truck_visit_id)
+                },
                 to: "/gate/queue"
               };
             })
@@ -26725,7 +28413,10 @@ var searchController = {
               title: c.ref_no,
               subtitle: c.cargo_description || "Consignment Reference",
               status: c.ref_type,
-              link: { entityName: "consignment", entityId: Number(c.consignment_id) },
+              link: {
+                entityName: "consignment",
+                entityId: Number(c.consignment_id)
+              },
               to: "/cargo/consignments"
             }))
           });
@@ -26767,7 +28458,10 @@ var searchController = {
               title: a.appointment_no,
               subtitle: `Slot: ${a.slot_start?.toLocaleTimeString?.() || ""}`,
               status: a.status,
-              link: { entityName: "appointment", entityId: Number(a.appointment_id) },
+              link: {
+                entityName: "appointment",
+                entityId: Number(a.appointment_id)
+              },
               to: "/gate/appointments"
             }))
           });
@@ -26787,7 +28481,10 @@ var searchController = {
           });
         }
         if (groups.length > 0) {
-          const totalHits = groups.reduce((acc, g2) => acc + (g2.hits?.length || 0), 0);
+          const totalHits = groups.reduce(
+            (acc, g2) => acc + (g2.hits?.length || 0),
+            0
+          );
           return res.json({
             query: q,
             groups,
@@ -26801,7 +28498,10 @@ var searchController = {
     }
     try {
       const mockResults = search(q) || [];
-      const total = mockResults.reduce((acc, g2) => acc + (g2.hits?.length || 0), 0);
+      const total = mockResults.reduce(
+        (acc, g2) => acc + (g2.hits?.length || 0),
+        0
+      );
       return res.json({
         query: q,
         groups: mockResults,

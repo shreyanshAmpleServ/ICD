@@ -257,7 +257,6 @@ export async function seedDisbursements() {
               amount: baseAmount,
               tax_rate_pct: 18.0,
               tax_amount: taxAmt,
-              line_total: totalAmt,
               createdby: 'system',
             },
           });

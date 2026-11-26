@@ -63,7 +63,6 @@ export function PartiesView() {
           <Button
             variant="primary"
             icon={<Plus />}
-            perm="masters.local.edit"
             onClick={() => setShowAddDrawer(true)}
           >
             Add provisional party

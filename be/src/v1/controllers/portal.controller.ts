@@ -818,11 +818,13 @@ export class PortalController {
       const currentBal = Number(dbInv.balance !== undefined && dbInv.balance !== null ? dbInv.balance : (dbInv.total || dbInv.total_amount));
       const payAmount = body.amount ? Number(body.amount) : currentBal;
       const newBal = Math.max(0, currentBal - payAmount);
+      const currentPaid = Number(dbInv.amount_paid || 0);
+      const newPaid = currentPaid + payAmount;
       const updated = await invDelegate.update({
         where: { invoice_id: invoiceId },
         data: {
-          balance: newBal,
-          status: newBal === 0 ? "PAID" : "PART_PAID",
+          amount_paid: newPaid,
+          status: newBal <= 0.01 ? "PAID" : "PART_PAID",
         },
       });
 

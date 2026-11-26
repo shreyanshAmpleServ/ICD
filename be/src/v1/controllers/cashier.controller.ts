@@ -319,7 +319,6 @@ export const cashierController = {
                     where: { invoice_id: invId },
                     data: {
                       amount_paid: newPaid,
-                      balance: newBal,
                       status: newBal <= 0.01 ? "PAID" : "POSTED",
                     },
                   });
