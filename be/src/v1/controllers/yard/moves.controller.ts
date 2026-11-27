@@ -43,7 +43,9 @@ export const yardMovesController = {
 
       const prisma = getPrisma();
       if (!prisma) {
-        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+        return res
+          .status(500)
+          .json({ success: false, message: "Database connection unavailable" });
       }
 
       const whereClause: any = {};
@@ -89,14 +91,12 @@ export const yardMovesController = {
         moveId: Number(m.move_order_id),
         siteId: m.site_id || 1,
         unitStayId: Number(m.unit_stay_id),
-        unitNo:
-          m.unit_stay?.unit_stay_cargo_units?.unit_no || "MSKU 123456 7",
+        unitNo: m.unit_stay?.unit_stay_cargo_units?.unit_no || "MSKU 123456 7",
         isoCode:
-          m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types
-            ?.iso_code || "42G1",
+          m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types?.iso_code ||
+          "42G1",
         category:
-          m.unit_stay?.unit_stay_cargo_units?.unit_category ||
-          "CONTAINER",
+          m.unit_stay?.unit_stay_cargo_units?.unit_category || "CONTAINER",
         unitType:
           m.unit_stay?.unit_stay_cargo_units?.cargo_unit_unit_types
             ?.type_name || "40ft Standard dry",
@@ -120,9 +120,7 @@ export const yardMovesController = {
         equipmentCode: m.m_equipment?.equipment_code || undefined,
         equipmentType: m.m_equipment?.equipment_type || undefined,
         assignedTo:
-          m.assigned_operator_sub ||
-          m.m_equipment?.equipment_code ||
-          undefined,
+          m.assigned_operator_sub || m.m_equipment?.equipment_code || undefined,
         operatorName: m.assigned_operator_sub || undefined,
         licensePlate:
           m.truck_visit_move_order?.m_truck_truck_visit_truck_idTom_truck
@@ -135,16 +133,12 @@ export const yardMovesController = {
           ? m.requested_at.toISOString()
           : new Date().toISOString(),
         startedAt: undefined,
-        completedAt: m.completed_at
-          ? m.completed_at.toISOString()
-          : undefined,
+        completedAt: m.completed_at ? m.completed_at.toISOString() : undefined,
         reason: m.override_reason || undefined,
       }));
 
       if (equipmentCode && typeof equipmentCode === "string") {
-        items = items.filter(
-          (x: any) => x.equipmentCode === equipmentCode,
-        );
+        items = items.filter((x: any) => x.equipmentCode === equipmentCode);
       }
 
       return res.json({
@@ -625,7 +619,9 @@ export const yardMovesController = {
 
       const prisma = getPrisma();
       if (!prisma) {
-        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+        return res
+          .status(500)
+          .json({ success: false, message: "Database connection unavailable" });
       }
 
       const whereClause: any = { is_active: true };
@@ -667,7 +663,9 @@ export const yardMovesController = {
 
       const prisma = getPrisma();
       if (!prisma) {
-        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+        return res
+          .status(500)
+          .json({ success: false, message: "Database connection unavailable" });
       }
 
       const whereClause: any = { is_active: true };
@@ -718,7 +716,9 @@ export const yardMovesController = {
     try {
       const prisma = getPrisma();
       if (!prisma) {
-        return res.status(500).json({ success: false, message: "Database connection unavailable" });
+        return res
+          .status(500)
+          .json({ success: false, message: "Database connection unavailable" });
       }
 
       const users = await prisma.app_user.findMany({

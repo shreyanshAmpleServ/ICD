@@ -3,18 +3,32 @@
   "version": "1.0.0",
   "private": true,
   "description": "DCC NG ICD Monorepo Orchestration",
+  "workspaces": [
+    "be",
+    "fe"
+  ],
   "scripts": {
-    "dev": "concurrently -k -n \"BACKEND,FRONTEND\" -c \"blue.bold,green.bold\" \"npm run dev:be\" \"npm run dev:fe\"",
+    "setup": "npm install && npm run prisma:generate",
+    "dev": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" --kill-others \"npm run dev --prefix be\" \"npm run dev --prefix fe\"",
     "dev:be": "npm run dev --prefix be",
     "dev:fe": "npm run dev --prefix fe",
-    "build": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue.bold,green.bold\" \"npm run build:be\" \"npm run build:fe\"",
+    "build": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run build --prefix be\" \"npm run build --prefix fe\"",
     "build:be": "npm run build --prefix be",
     "build:fe": "npm run build --prefix fe",
-    "start": "concurrently -k -n \"BACKEND,FRONTEND\" -c \"blue.bold,green.bold\" \"npm run start:be\" \"npm run start:fe\"",
+    "build:testing": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run build:testing --prefix be\" \"npm run build:testing --prefix fe\"",
+    "build:staging": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run build:staging --prefix be\" \"npm run build:staging --prefix fe\"",
+    "build:demo": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run build:demo --prefix be\" \"npm run build:demo --prefix fe\"",
+    "build:production": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run build:production --prefix be\" \"npm run build:production --prefix fe\"",
+    "build:all": "npm run build:production && npm run build:staging && npm run build:testing && npm run build:demo",
+    "start": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run start --prefix be\" \"npm run start --prefix fe\"",
     "start:be": "npm run start --prefix be",
     "start:fe": "npm run start --prefix fe",
-    "build:start": "npm run build && npm run start",
-    "install:all": "npm install && npm install --prefix be && npm install --prefix fe"
+    "start:testing": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run start:testing --prefix be\" \"npm run preview:testing --prefix fe\"",
+    "start:staging": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run start:staging --prefix be\" \"npm run preview:staging --prefix fe\"",
+    "start:demo": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run start:demo --prefix be\" \"npm run preview:demo --prefix fe\"",
+    "start:production": "concurrently --names \"BE,FE\" --prefix-colors \"blue,green\" \"npm run start:production --prefix be\" \"npm run preview:production --prefix fe\"",
+    "prisma:generate": "npm run prisma:generate --prefix be",
+    "clean": "npx rimraf be/dist be/dist-testing be/dist-staging be/dist-demo fe/dist"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

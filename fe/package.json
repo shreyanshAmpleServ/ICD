@@ -6,7 +6,18 @@
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js",
     "build": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build",
+    "build:development": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build --mode development",
+    "build:testing": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build --mode testing",
+    "build:staging": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build --mode staging",
+    "build:demo": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build --mode demo",
+    "build:production": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build --mode production",
+    "build:all": "npm run build:production && npm run build:staging && npm run build:testing && npm run build:demo",
     "preview-file": "node ./node_modules/vite/bin/vite.js build --mode single",
+    "preview": "node ./node_modules/vite/bin/vite.js preview",
+    "preview:testing": "node ./node_modules/vite/bin/vite.js preview --mode testing",
+    "preview:staging": "node ./node_modules/vite/bin/vite.js preview --mode staging",
+    "preview:demo": "node ./node_modules/vite/bin/vite.js preview --mode demo",
+    "preview:production": "node ./node_modules/vite/bin/vite.js preview --mode production",
     "start": "node ./node_modules/vite/bin/vite.js preview",
     "typecheck": "node ./node_modules/typescript/bin/tsc -b"
   },

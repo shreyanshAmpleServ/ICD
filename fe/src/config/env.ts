@@ -1,7 +1,13 @@
 import { z } from 'zod';
 
+const rawApiUrl: string =
+  (import.meta.env.VITE_API_BASE_URL as string) ||
+  (import.meta.env.VITE_API_URL as string) ||
+  'http://localhost:4000/api';
+
 const envSchema = z.object({
   VITE_API_URL: z.string().default('http://localhost:4000/api'),
+  VITE_API_BASE_URL: z.string().default('http://localhost:4000/api'),
   VITE_USE_MOCK: z
     .string()
     .optional()
@@ -10,7 +16,8 @@ const envSchema = z.object({
 });
 
 const parsed = envSchema.safeParse({
-  VITE_API_URL: import.meta.env.VITE_API_URL,
+  VITE_API_URL: rawApiUrl,
+  VITE_API_BASE_URL: rawApiUrl,
   VITE_USE_MOCK: import.meta.env.VITE_USE_MOCK,
   VITE_DEFAULT_SITE: import.meta.env.VITE_DEFAULT_SITE,
 });
@@ -22,10 +29,10 @@ if (!parsed.success) {
 export const env = parsed.success
   ? parsed.data
   : {
-      VITE_API_URL: 'http://localhost:4000/api',
+      VITE_API_URL: rawApiUrl,
+      VITE_API_BASE_URL: rawApiUrl,
       VITE_USE_MOCK: false,
       VITE_DEFAULT_SITE: 'DAR1',
     };
 
 export default env;
-

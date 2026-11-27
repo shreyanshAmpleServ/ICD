@@ -6,8 +6,14 @@ fe/node_modules
 be/node_modules
 UI/
 API/
-# dist/
+
 dist-single/
+dist-testing/
+dist-staging/
+dist-demo/
+be/dist-testing/
+be/dist-staging/
+be/dist-demo/
 build/
 out/
 *.tsbuildinfo
@@ -15,9 +21,16 @@ out/
 
 .env
 .env.*
+.env.local
+.env.*.local
 *.env
-!.env.example
-!*.env.example
+*.env.*
+**/.env
+**/.env.*
+**/.env.local
+**/.env.*.local
+!**/.env.example
+!**/*.env.example
 
 .cache/
 .vite/
