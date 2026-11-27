@@ -21,6 +21,7 @@ import { invoicesRouter } from './invoices';
 import { cashierRouter } from './cashier';
 import { searchRouter } from './search';
 import { notificationsRouter } from './notifications';
+import { uploadRouter } from './upload';
 
 // Legacy module routers
 import { sessionRouter } from '../../modules/session/session.router';
@@ -64,6 +65,7 @@ v1Router.use(partiesRouter);
 v1Router.use(chargesRouter);
 v1Router.use(invoicesRouter);
 v1Router.use(cashierRouter);
+v1Router.use(uploadRouter);
 
 // Mount legacy routers
 // v1Router.use(sessionRouter);

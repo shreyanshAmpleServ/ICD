@@ -143,6 +143,25 @@ export const ENV = {
   OPENAPI_SPEC_PATH: resolveOpenApiSpecPath(),
 };
 
+const validateB2Config = () => {
+  const required = {
+    BACKBLAZE_B2_KEY_ID: process.env.BACKBLAZE_B2_KEY_ID,
+    BACKBLAZE_B2_APPLICATION_KEY: process.env.BACKBLAZE_B2_APPLICATION_KEY,
+    BACKBLAZE_B2_BUCKET_ID: process.env.BACKBLAZE_B2_BUCKET_ID,
+    BACKBLAZE_B2_BUCKET_NAME: process.env.BACKBLAZE_B2_BUCKET_NAME,
+  };
+
+  const missing = Object.entries(required)
+    .filter(([_, value]) => !value)
+    .map(([key]) => key);
+
+  if (missing.length > 0) {
+    console.warn(' Missing B2 environment variables:', missing);
+  }
+};
+
+validateB2Config();
+
 export const config = {
   database: {
     url: ENV.DATABASE_URL,
@@ -156,6 +175,13 @@ export const config = {
         ? ENV.PORT
         : parseInt(String(ENV.PORT), 10) || 4000,
     apiPrefix: ENV.API_PREFIX,
+  },
+  b2: {
+    keyId: process.env.BACKBLAZE_B2_KEY_ID || '',
+    applicationKey: process.env.BACKBLAZE_B2_APPLICATION_KEY || '',
+    bucketId: process.env.BACKBLAZE_B2_BUCKET_ID || '',
+    bucketName: process.env.BACKBLAZE_B2_BUCKET_NAME || '',
+    bucketUrl: process.env.BACKBLAZE_BUCKET_URL || '',
   },
 };
 
