@@ -137,6 +137,19 @@ var ENV = {
   DEFAULT_SITE_ID: process.env.DEFAULT_SITE_ID || "DAR1",
   OPENAPI_SPEC_PATH: resolveOpenApiSpecPath()
 };
+var validateB2Config = () => {
+  const required = {
+    BACKBLAZE_B2_KEY_ID: process.env.BACKBLAZE_B2_KEY_ID,
+    BACKBLAZE_B2_APPLICATION_KEY: process.env.BACKBLAZE_B2_APPLICATION_KEY,
+    BACKBLAZE_B2_BUCKET_ID: process.env.BACKBLAZE_B2_BUCKET_ID,
+    BACKBLAZE_B2_BUCKET_NAME: process.env.BACKBLAZE_B2_BUCKET_NAME
+  };
+  const missing = Object.entries(required).filter(([_, value]) => !value).map(([key]) => key);
+  if (missing.length > 0) {
+    console.warn(" Missing B2 environment variables:", missing);
+  }
+};
+validateB2Config();
 var config = {
   database: {
     url: ENV.DATABASE_URL
@@ -147,6 +160,13 @@ var config = {
   server: {
     port: typeof ENV.PORT === "number" ? ENV.PORT : parseInt(String(ENV.PORT), 10) || 4e3,
     apiPrefix: ENV.API_PREFIX
+  },
+  b2: {
+    keyId: process.env.BACKBLAZE_B2_KEY_ID || "",
+    applicationKey: process.env.BACKBLAZE_B2_APPLICATION_KEY || "",
+    bucketId: process.env.BACKBLAZE_B2_BUCKET_ID || "",
+    bucketName: process.env.BACKBLAZE_B2_BUCKET_NAME || "",
+    bucketUrl: process.env.BACKBLAZE_BUCKET_URL || ""
   }
 };
 
@@ -245,12 +265,12 @@ function getPrisma() {
 var import_http = __toESM(require("http"));
 
 // src/app.ts
-var import_express25 = __toESM(require("express"));
+var import_express26 = __toESM(require("express"));
 var import_cors = __toESM(require("cors"));
 var import_morgan = __toESM(require("morgan"));
 
 // src/routes/index.ts
-var import_express24 = require("express");
+var import_express25 = require("express");
 
 // src/configs/swagger.ts
 var import_express = require("express");
@@ -282,7 +302,7 @@ if (ENV.SWAGGER_ENABLED && import_fs2.default.existsSync(ENV.OPENAPI_SPEC_PATH))
 var swaggerRouter = router;
 
 // src/v1/routes/index.ts
-var import_express23 = require("express");
+var import_express24 = require("express");
 
 // src/v1/routes/gate/gate.routes.ts
 var import_express2 = require("express");
@@ -6832,11 +6852,11 @@ function requirePermission(permission, requiredGrant = "VIEW") {
 var gateQueueController = {
   getQueue: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const dbVisits = await prisma4.truck_visit.findMany({
+      const dbVisits = await prisma5.truck_visit.findMany({
         where: {
           status: { in: ["WAITING", "CALLED", "ADMITTED", "ANNOUNCED", "ARRIVED"] }
         },
@@ -6885,17 +6905,17 @@ var gateQueueController = {
   },
   getQueueSummary: async (_req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const waiting = await prisma4.truck_visit.count({
+      const waiting = await prisma5.truck_visit.count({
         where: { status: { in: ["WAITING", "ANNOUNCED"] } }
       });
-      const inProgress = await prisma4.truck_visit.count({
+      const inProgress = await prisma5.truck_visit.count({
         where: { status: { in: ["CALLED", "ADMITTED", "ARRIVED"] } }
       });
-      const openLanes = await prisma4.m_gate_lane.count({
+      const openLanes = await prisma5.m_gate_lane.count({
         where: { is_active: true }
       });
       return res.json({
@@ -6916,11 +6936,11 @@ var gateQueueController = {
 var gateLaneController = {
   getLanes: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const lanes = await prisma4.m_gate_lane.findMany({
+      const lanes = await prisma5.m_gate_lane.findMany({
         include: { m_gate: true },
         orderBy: { gate_lane_id: "asc" }
       });
@@ -6947,12 +6967,12 @@ var gateLaneController = {
   openBarrier: async (req, res) => {
     try {
       const { laneId } = req.params;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const id = Number(laneId);
-      const lane = await prisma4.m_gate_lane.findFirst({
+      const lane = await prisma5.m_gate_lane.findFirst({
         where: { gate_lane_id: isNaN(id) ? void 0 : id },
         include: { m_gate: true }
       });
@@ -6984,11 +7004,11 @@ var gateLaneController = {
   getGatePass: async (req, res) => {
     try {
       const { token } = req.params;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const visit = await prisma4.truck_visit.findFirst({
+      const visit = await prisma5.truck_visit.findFirst({
         where: {
           OR: [{ gate_pass_no: token }, { visit_no: token }]
         },
@@ -7038,11 +7058,11 @@ var gateLaneController = {
 var gateAppointmentsController = {
   getAppointments: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const appts = await prisma4.appointment.findMany({
+      const appts = await prisma5.appointment.findMany({
         include: {
           m_truck: true,
           m_driver: true,
@@ -7088,10 +7108,10 @@ var gateAppointmentsController = {
   getAppointmentById: async (req, res) => {
     try {
       const { id } = req.params;
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const numId = Number(id);
-        const a = await prisma4.appointment.findFirst({
+        const a = await prisma5.appointment.findFirst({
           where: {
             OR: [
               ...isNaN(numId) ? [] : [{ appointment_id: BigInt(numId) }],
@@ -7137,8 +7157,8 @@ var gateAppointmentsController = {
   },
   createAppointment: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4)
+      const prisma5 = getPrisma();
+      if (!prisma5)
         return res.status(500).json({ error: "Database unavailable" });
       let truckId = req.body.truckId ? Number(req.body.truckId) : void 0;
       let driverId = req.body.driverId ? Number(req.body.driverId) : void 0;
@@ -7146,13 +7166,13 @@ var gateAppointmentsController = {
       let visitTypeId = req.body.visitTypeId ? Number(req.body.visitTypeId) : void 0;
       const plateNo = req.body.truckPlate || req.body.plateNo || req.body.plate;
       if (!truckId && plateNo) {
-        const foundTruck = await prisma4.m_truck.findFirst({
+        const foundTruck = await prisma5.m_truck.findFirst({
           where: { plate_no: plateNo }
         });
         if (foundTruck) {
           truckId = foundTruck.truck_id;
         } else {
-          const newTruck = await prisma4.m_truck.create({
+          const newTruck = await prisma5.m_truck.create({
             data: {
               plate_no: plateNo,
               plate_display: plateNo,
@@ -7164,13 +7184,13 @@ var gateAppointmentsController = {
         }
       }
       if (!driverId && req.body.driverName) {
-        const foundDriver = await prisma4.m_driver.findFirst({
+        const foundDriver = await prisma5.m_driver.findFirst({
           where: { driver_name: req.body.driverName }
         });
         if (foundDriver) {
           driverId = foundDriver.driver_id;
         } else {
-          const newDriver = await prisma4.m_driver.create({
+          const newDriver = await prisma5.m_driver.create({
             data: {
               driver_name: req.body.driverName,
               licence_no: `LIC-${Date.now().toString().slice(-6)}`,
@@ -7182,18 +7202,18 @@ var gateAppointmentsController = {
         }
       }
       if (!partyId) {
-        const firstParty = await prisma4.m_party.findFirst();
+        const firstParty = await prisma5.m_party.findFirst();
         partyId = firstParty?.party_id || 1;
       }
       if (!visitTypeId) {
         if (req.body.visitTypeCode) {
-          const vt2 = await prisma4.m_visit_type.findFirst({
+          const vt2 = await prisma5.m_visit_type.findFirst({
             where: { visit_type_code: req.body.visitTypeCode }
           });
           if (vt2) visitTypeId = vt2.visit_type_id;
         }
         if (!visitTypeId) {
-          const firstVt = await prisma4.m_visit_type.findFirst();
+          const firstVt = await prisma5.m_visit_type.findFirst();
           visitTypeId = firstVt?.visit_type_id || 1;
         }
       }
@@ -7204,7 +7224,7 @@ var gateAppointmentsController = {
         req.body.slotEnd || slotStart.getTime() + 36e5
       );
       const apptNo = req.body.appointmentNo || req.body.apptNo || `APT-${(/* @__PURE__ */ new Date()).toISOString().slice(2, 4)}-${Math.floor(1e4 + Math.random() * 9e4)}`;
-      const created = await prisma4.appointment.create({
+      const created = await prisma5.appointment.create({
         data: {
           site_id: Number(req.body.siteId) || 1,
           appointment_no: apptNo,
@@ -7251,10 +7271,10 @@ var gateAppointmentsController = {
     try {
       const { id } = req.params;
       const status = req.body.status || "CONFIRMED";
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const numId = Number(id);
-        const updated = await prisma4.appointment.update({
+        const updated = await prisma5.appointment.update({
           where: isNaN(numId) ? { appointment_no: id } : { appointment_id: BigInt(numId) },
           data: { status, updatedate: /* @__PURE__ */ new Date() }
         });
@@ -7272,11 +7292,11 @@ var gateAppointmentsController = {
   },
   getSlotRules: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const dbRules = await prisma4.m_appointment_slot_rule.findMany({
+      const dbRules = await prisma5.m_appointment_slot_rule.findMany({
         include: { m_visit_type: true },
         orderBy: { appointment_slot_rule_id: "asc" }
       });
@@ -7334,11 +7354,11 @@ function getCheckpointCode(status, currentSeqNo) {
 var gateVisitsController = {
   getVisits: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const dbVisits = await prisma4.truck_visit.findMany({
+      const dbVisits = await prisma5.truck_visit.findMany({
         include: {
           m_truck_truck_visit_truck_idTom_truck: true,
           m_driver: true,
@@ -7404,10 +7424,10 @@ var gateVisitsController = {
   getVisitById: async (req, res) => {
     try {
       const { id } = req.params;
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const numId = Number(id);
-        const v = await prisma4.truck_visit.findFirst({
+        const v = await prisma5.truck_visit.findFirst({
           where: {
             OR: [
               ...isNaN(numId) ? [] : [{ truck_visit_id: BigInt(numId) }],
@@ -7478,20 +7498,20 @@ var gateVisitsController = {
   },
   createVisit: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         let truckId = req.body.truckId ? Number(req.body.truckId) : void 0;
         let driverId = req.body.driverId ? Number(req.body.driverId) : void 0;
         let transporterPartyId = req.body.partyId || req.body.transporterPartyId ? Number(req.body.partyId || req.body.transporterPartyId) : void 0;
         let visitTypeId = req.body.visitTypeId ? Number(req.body.visitTypeId) : void 0;
         if (!truckId && req.body.plateNo) {
-          const foundTruck = await prisma4.m_truck.findFirst({
+          const foundTruck = await prisma5.m_truck.findFirst({
             where: { plate_no: req.body.plateNo }
           });
           if (foundTruck) {
             truckId = foundTruck.truck_id;
           } else {
-            const newTruck = await prisma4.m_truck.create({
+            const newTruck = await prisma5.m_truck.create({
               data: {
                 plate_no: req.body.plateNo,
                 plate_display: req.body.plateNo,
@@ -7502,13 +7522,13 @@ var gateVisitsController = {
           }
         }
         if (!driverId && req.body.driverName) {
-          const foundDriver = await prisma4.m_driver.findFirst({
+          const foundDriver = await prisma5.m_driver.findFirst({
             where: { driver_name: req.body.driverName }
           });
           if (foundDriver) {
             driverId = foundDriver.driver_id;
           } else {
-            const newDriver = await prisma4.m_driver.create({
+            const newDriver = await prisma5.m_driver.create({
               data: {
                 driver_name: req.body.driverName,
                 licence_no: req.body.licenseNo || req.body.licenceNo || `LIC-${Date.now().toString().slice(-6)}`,
@@ -7520,24 +7540,24 @@ var gateVisitsController = {
           }
         }
         if (!transporterPartyId) {
-          const p2 = await prisma4.m_party.findFirst();
+          const p2 = await prisma5.m_party.findFirst();
           transporterPartyId = p2?.party_id || 1;
         }
         if (!visitTypeId) {
           if (req.body.visitTypeCode) {
-            const vt2 = await prisma4.m_visit_type.findFirst({
+            const vt2 = await prisma5.m_visit_type.findFirst({
               where: { visit_type_code: req.body.visitTypeCode }
             });
             if (vt2) visitTypeId = vt2.visit_type_id;
           }
           if (!visitTypeId) {
-            const defaultVt = await prisma4.m_visit_type.findFirst();
+            const defaultVt = await prisma5.m_visit_type.findFirst();
             visitTypeId = defaultVt?.visit_type_id || 1;
           }
         }
         const visitNo = req.body.visitNo || `VIS-${(/* @__PURE__ */ new Date()).toISOString().slice(2, 4)}-${Math.floor(1e4 + Math.random() * 9e4)}`;
         const normalizedStatus = normalizeVisitStatus(req.body.status || "AT_OUTER_GATE");
-        const created = await prisma4.truck_visit.create({
+        const created = await prisma5.truck_visit.create({
           data: {
             site_id: Number(req.body.siteId) || 1,
             visit_no: visitNo,
@@ -7555,7 +7575,7 @@ var gateVisitsController = {
         if (req.body.unitStayId || unitNo) {
           let stayId2 = req.body.unitStayId ? Number(req.body.unitStayId) : void 0;
           if (!stayId2 && unitNo) {
-            const stay2 = await prisma4.unit_stay.findFirst({
+            const stay2 = await prisma5.unit_stay.findFirst({
               where: { unit_stay_cargo_units: { unit_no: unitNo } }
             });
             if (stay2) {
@@ -7563,7 +7583,7 @@ var gateVisitsController = {
             }
           }
           if (stayId2) {
-            await prisma4.visit_unit_txn.create({
+            await prisma5.visit_unit_txn.create({
               data: {
                 truck_visit_id: created.truck_visit_id,
                 unit_stay_id: BigInt(stayId2),
@@ -7594,8 +7614,8 @@ var gateVisitsController = {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const numId = Number(id);
         const normalizedStatus = normalizeVisitStatus(status);
         const updateData = { status: normalizedStatus, updatedate: /* @__PURE__ */ new Date() };
@@ -7606,7 +7626,7 @@ var gateVisitsController = {
           updateData.exited_at = /* @__PURE__ */ new Date();
           updateData.current_seq_no = 4;
         }
-        const updated = await prisma4.truck_visit.update({
+        const updated = await prisma5.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: updateData
         });
@@ -7626,10 +7646,10 @@ var gateVisitsController = {
   checkin: async (req, res) => {
     try {
       const id = req.params.id?.replace(/:checkin$/, "");
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const numId = Number(id);
-        const updated = await prisma4.truck_visit.update({
+        const updated = await prisma5.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: {
             status: "ADMITTED",
@@ -7654,10 +7674,10 @@ var gateVisitsController = {
   checkout: async (req, res) => {
     try {
       const id = req.params.id?.replace(/:checkout$/, "");
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const numId = Number(id);
-        const updated = await prisma4.truck_visit.update({
+        const updated = await prisma5.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: {
             status: "EXITED",
@@ -7683,10 +7703,10 @@ var gateVisitsController = {
   cancelVisit: async (req, res) => {
     try {
       const id = req.params.id?.replace(/:cancel$/, "");
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const numId = Number(id);
-        const updated = await prisma4.truck_visit.update({
+        const updated = await prisma5.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: {
             status: "CANCELLED",
@@ -7708,10 +7728,10 @@ var gateVisitsController = {
   turnBack: async (req, res) => {
     try {
       const { id } = req.params;
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const numId = Number(id);
-        const updated = await prisma4.truck_visit.update({
+        const updated = await prisma5.truck_visit.update({
           where: { truck_visit_id: BigInt(numId) },
           data: {
             status: "REJECTED",
@@ -8046,8 +8066,8 @@ var gateWeighbridgeController = {
   getTickets: async (req, res) => {
     try {
       const siteIdParam = req.query.siteId || req.siteId;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return sendError(res, "Database connection unavailable", 500);
       }
       const whereClause = {};
@@ -8057,7 +8077,7 @@ var gateWeighbridgeController = {
           whereClause.site_id = sid;
         }
       }
-      const dbTickets = await prisma4.weighing.findMany({
+      const dbTickets = await prisma5.weighing.findMany({
         where: whereClause,
         include: {
           truck_visit: {
@@ -8112,8 +8132,8 @@ var gateWeighbridgeController = {
   },
   createTicket: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return sendError(res, "Database connection unavailable", 500);
       }
       const siteId = Number(req.siteId || req.body.siteId) || 1;
@@ -8121,7 +8141,7 @@ var gateWeighbridgeController = {
       if (req.body.truckVisitId) {
         try {
           const tvId = BigInt(req.body.truckVisitId);
-          const tv = await prisma4.truck_visit.findUnique({
+          const tv = await prisma5.truck_visit.findUnique({
             where: { truck_visit_id: tvId },
             select: { truck_visit_id: true }
           });
@@ -8134,7 +8154,7 @@ var gateWeighbridgeController = {
       if (!validTruckVisitId && (req.body.plateNo || req.body.visitNo)) {
         try {
           const cleanPlate = req.body.plateNo?.replace(/\s+/g, "");
-          const tv = await prisma4.truck_visit.findFirst({
+          const tv = await prisma5.truck_visit.findFirst({
             where: {
               site_id: siteId,
               OR: [
@@ -8155,7 +8175,7 @@ var gateWeighbridgeController = {
       if (req.body.unitStayId) {
         try {
           const usId = BigInt(req.body.unitStayId);
-          const us = await prisma4.unit_stay.findUnique({
+          const us = await prisma5.unit_stay.findUnique({
             where: { unit_stay_id: usId },
             select: { unit_stay_id: true }
           });
@@ -8168,7 +8188,7 @@ var gateWeighbridgeController = {
       if (!validUnitStayId && req.body.unitNo) {
         try {
           const cleanNo = req.body.unitNo.replace(/\s+/g, "").toUpperCase();
-          const us = await prisma4.unit_stay.findFirst({
+          const us = await prisma5.unit_stay.findFirst({
             where: {
               site_id: siteId,
               unit_stay_cargo_units: {
@@ -8200,7 +8220,7 @@ var gateWeighbridgeController = {
       } else if (!withinTol) {
         status = "OVERRIDE_PENDING";
       }
-      const created = await prisma4.weighing.create({
+      const created = await prisma5.weighing.create({
         data: {
           site_id: siteId,
           ticket_no: ticketNo,
@@ -8232,13 +8252,13 @@ var gateWeighbridgeController = {
   },
   requestOverride: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return sendError(res, "Database connection unavailable", 500);
       }
       const id = parseInt(req.params.ticketId || req.params.id, 10);
       const approvalNo = `APR-26-00${420 + id % 100}`;
-      await prisma4.weighing.update({
+      await prisma5.weighing.update({
         where: { weighing_id: id },
         data: {
           override_approval_ref: BigInt(420 + id % 100)
@@ -8299,17 +8319,25 @@ var yardMapController = {
     try {
       const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : 1;
       const NON_BLOCK_KINDS = /* @__PURE__ */ new Set(["AREA", "KEY_CABINET", "AISLE"]);
-      const NON_BLOCK_CODES = /* @__PURE__ */ new Set(["MAIN", "KC1", "AREA", "GATE", "WH1", "VEH"]);
+      const NON_BLOCK_CODES = /* @__PURE__ */ new Set([
+        "MAIN",
+        "KC1",
+        "AREA",
+        "GATE",
+        "WH1",
+        "VEH"
+      ]);
       const isRealBlock = (code) => {
         const c = (code || "").toUpperCase().replace("BLOCK-", "");
         if (NON_BLOCK_CODES.has(c)) return false;
-        if (c.startsWith("AREA") || c.startsWith("KC") || c.startsWith("WH") || c.startsWith("GATE") || c.startsWith("MAIN")) return false;
+        if (c.startsWith("AREA") || c.startsWith("KC") || c.startsWith("WH") || c.startsWith("GATE") || c.startsWith("MAIN"))
+          return false;
         return true;
       };
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const dbLocations = await prisma4.m_yard_location.findMany({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const dbLocations = await prisma5.m_yard_location.findMany({
             where: siteId ? { site_id: siteId } : {},
             include: {
               unit_stay: {
@@ -8348,7 +8376,9 @@ var yardMapController = {
               };
             });
             const blockMap = /* @__PURE__ */ new Map();
-            dbLocations.filter((l) => l.location_kind === "BLOCK" && isRealBlock(l.location_code)).forEach((l) => {
+            dbLocations.filter(
+              (l) => l.location_kind === "BLOCK" && isRealBlock(l.location_code)
+            ).forEach((l) => {
               let code = l.location_code.replace("BLOCK-", "").toUpperCase();
               if (code === "REEFER") code = "R";
               blockMap.set(code, {
@@ -8364,7 +8394,9 @@ var yardMapController = {
                 occupiedSlots: 0
               });
             });
-            dbLocations.filter((l) => (l.is_slot || l.location_kind === "SLOT") && isRealBlock(l.location_code)).forEach((l) => {
+            dbLocations.filter(
+              (l) => (l.is_slot || l.location_kind === "SLOT") && isRealBlock(l.location_code)
+            ).forEach((l) => {
               let code = (l.location_code || "").split("-")[0].toUpperCase();
               if (code === "REEFER") code = "R";
               if (isRealBlock(code)) {
@@ -8405,7 +8437,9 @@ var yardMapController = {
                 });
               });
             }
-            const dbBlocks = Array.from(blockMap.values()).sort((a, b) => a.blockCode.localeCompare(b.blockCode));
+            const dbBlocks = Array.from(blockMap.values()).sort(
+              (a, b) => a.blockCode.localeCompare(b.blockCode)
+            );
             return res.json({
               blocks: dbBlocks,
               locations: mappedLocations,
@@ -8432,17 +8466,25 @@ var yardMapController = {
   getBlocks: async (req, res) => {
     try {
       const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : void 0;
-      const NON_BLOCK_CODES = /* @__PURE__ */ new Set(["MAIN", "KC1", "AREA", "GATE", "WH1", "VEH"]);
+      const NON_BLOCK_CODES = /* @__PURE__ */ new Set([
+        "MAIN",
+        "KC1",
+        "AREA",
+        "GATE",
+        "WH1",
+        "VEH"
+      ]);
       const isRealBlock = (code) => {
         const c = (code || "").toUpperCase().replace("BLOCK-", "");
         if (NON_BLOCK_CODES.has(c)) return false;
-        if (c.startsWith("AREA") || c.startsWith("KC") || c.startsWith("WH") || c.startsWith("GATE") || c.startsWith("MAIN")) return false;
+        if (c.startsWith("AREA") || c.startsWith("KC") || c.startsWith("WH") || c.startsWith("GATE") || c.startsWith("MAIN"))
+          return false;
         return true;
       };
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const dbLocations = await prisma4.m_yard_location.findMany({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const dbLocations = await prisma5.m_yard_location.findMany({
             where: siteId ? { site_id: siteId } : {},
             include: {
               unit_stay: true
@@ -8486,9 +8528,9 @@ var yardMapController = {
   getLocations: async (req, res) => {
     try {
       const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : void 0;
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        const dbLocs = await prisma4.m_yard_location.findMany({
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        const dbLocs = await prisma5.m_yard_location.findMany({
           where: siteId ? { site_id: siteId } : {},
           include: {
             unit_stay: {
@@ -8533,23 +8575,23 @@ var yardMapController = {
   getOccupancy: async (req, res) => {
     try {
       const siteId = req.query.siteId ? parseInt(req.query.siteId, 10) : void 0;
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const siteFilter = siteId ? { site_id: siteId } : {};
-        const totalUnitsInYard = await prisma4.unit_stay.count({
+        const totalUnitsInYard = await prisma5.unit_stay.count({
           where: {
             ...siteFilter,
             physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
           }
         });
-        const reeferUnits = await prisma4.unit_stay.count({
+        const reeferUnits = await prisma5.unit_stay.count({
           where: {
             ...siteFilter,
             reefer_set_temp_c: { not: null },
             physical_status: { in: ["IN_YARD", "GATED_IN", "INSPECTION"] }
           }
         });
-        const dgUnits = await prisma4.unit_stay.count({
+        const dgUnits = await prisma5.unit_stay.count({
           where: {
             ...siteFilter,
             imo_class: { not: null },
@@ -8563,9 +8605,18 @@ var yardMapController = {
           totalCapacityTeu,
           occupiedTeu: Math.round(occupiedTeu),
           occupancyRate,
-          reeferOccupancyRate: Number((reeferUnits / Math.max(totalCapacityTeu * 0.1, 1) * 100).toFixed(1)),
-          dangerousGoodsRate: Number((dgUnits / Math.max(totalCapacityTeu * 0.05, 1) * 100).toFixed(1)),
-          availableSlots: Math.max(totalCapacityTeu - Math.round(occupiedTeu), 0)
+          reeferOccupancyRate: Number(
+            (reeferUnits / Math.max(totalCapacityTeu * 0.1, 1) * 100).toFixed(
+              1
+            )
+          ),
+          dangerousGoodsRate: Number(
+            (dgUnits / Math.max(totalCapacityTeu * 0.05, 1) * 100).toFixed(1)
+          ),
+          availableSlots: Math.max(
+            totalCapacityTeu - Math.round(occupiedTeu),
+            0
+          )
         });
       }
       res.json({
@@ -8585,17 +8636,19 @@ var yardMapController = {
     try {
       const blockIdOrCode = req.params.blockId;
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           const id = Number(blockIdOrCode);
           let blockLetter = String(blockIdOrCode).toUpperCase();
           if (Number.isFinite(id)) {
-            const blockLoc = await prisma4.m_yard_location.findUnique({ where: { yard_location_id: id } });
+            const blockLoc = await prisma5.m_yard_location.findUnique({
+              where: { yard_location_id: id }
+            });
             if (blockLoc) {
               blockLetter = blockLoc.location_code.replace("BLOCK-", "");
             }
           }
-          const slots = await prisma4.m_yard_location.findMany({
+          const slots = await prisma5.m_yard_location.findMany({
             where: {
               OR: [
                 { location_code: { startsWith: blockLetter + "-" } },
@@ -8625,7 +8678,11 @@ var yardMapController = {
               flow: u.flow
             }))
           }));
-          return res.json({ block: blockLetter, slots: items, total: items.length });
+          return res.json({
+            block: blockLetter,
+            slots: items,
+            total: items.length
+          });
         }
       }
       return res.json({ block: blockIdOrCode, slots: [], total: 0 });
@@ -8689,8 +8746,8 @@ var yardMovesController = {
         req.query.siteId || req.headers["x-site-id"] || req.siteId
       );
       const { status, equipmentCode } = req.query;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
       const whereClause = {};
@@ -8702,7 +8759,7 @@ var yardMovesController = {
           whereClause.status = status;
         }
       }
-      const dbMoves = await prisma4.move_order.findMany({
+      const dbMoves = await prisma5.move_order.findMany({
         where: whereClause,
         include: {
           unit_stay: {
@@ -8801,14 +8858,14 @@ var yardMovesController = {
         });
       }
       const normalizedKind = normalizeMoveKind(moveKind || moveType);
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
       let targetStay = null;
       if (unitStayId) {
         try {
-          targetStay = await prisma4.unit_stay.findUnique({
+          targetStay = await prisma5.unit_stay.findUnique({
             where: { unit_stay_id: BigInt(unitStayId) },
             include: { unit_stay_cargo_units: true }
           });
@@ -8818,7 +8875,7 @@ var yardMovesController = {
       const searchUnitNo = (unitNo || req.body.unit_no || "").trim().toUpperCase();
       if (!targetStay && searchUnitNo) {
         const cleanNo = searchUnitNo.replace(/[\s-]/g, "");
-        targetStay = await prisma4.unit_stay.findFirst({
+        targetStay = await prisma5.unit_stay.findFirst({
           where: {
             site_id: siteId,
             unit_stay_cargo_units: {
@@ -8831,14 +8888,14 @@ var yardMovesController = {
       }
       if (!targetStay) {
         const finalUnitNo = searchUnitNo || `CONT-${Date.now().toString().slice(-6)}`;
-        let cu = await prisma4.cargo_unit.findFirst({
+        let cu = await prisma5.cargo_unit.findFirst({
           where: { unit_no: finalUnitNo }
         });
         if (!cu) {
-          const firstType = await prisma4.m_unit_type.findFirst({
+          const firstType = await prisma5.m_unit_type.findFirst({
             select: { unit_type_id: true }
           });
-          cu = await prisma4.cargo_unit.create({
+          cu = await prisma5.cargo_unit.create({
             data: {
               unit_category: "CONTAINER",
               unit_no: finalUnitNo,
@@ -8847,10 +8904,10 @@ var yardMovesController = {
             }
           });
         }
-        const firstRegime = await prisma4.m_cargo_regime.findFirst({
+        const firstRegime = await prisma5.m_cargo_regime.findFirst({
           select: { cargo_regime_id: true }
         });
-        targetStay = await prisma4.unit_stay.create({
+        targetStay = await prisma5.unit_stay.create({
           data: {
             cargo_unit_id: cu.cargo_unit_id,
             site_id: siteId,
@@ -8866,7 +8923,7 @@ var yardMovesController = {
       let resolvedFromLocId = fromLocationId ? Number(fromLocationId) : null;
       const rawFromCode = String(fromCode || sourceLocation || "").trim();
       if (!resolvedFromLocId && rawFromCode) {
-        const loc = await prisma4.m_yard_location.findFirst({
+        const loc = await prisma5.m_yard_location.findFirst({
           where: {
             site_id: siteId,
             OR: [{ location_code: rawFromCode }, { full_code: rawFromCode }]
@@ -8876,7 +8933,7 @@ var yardMovesController = {
         if (loc) resolvedFromLocId = loc.yard_location_id;
       }
       if (resolvedFromLocId) {
-        const exists = await prisma4.m_yard_location.findUnique({
+        const exists = await prisma5.m_yard_location.findUnique({
           where: { yard_location_id: resolvedFromLocId },
           select: { yard_location_id: true }
         });
@@ -8885,7 +8942,7 @@ var yardMovesController = {
       let resolvedToLocId = toLocationId ? Number(toLocationId) : null;
       const rawToCode = String(toCode || targetLocation || "").trim();
       if (!resolvedToLocId && rawToCode) {
-        const loc = await prisma4.m_yard_location.findFirst({
+        const loc = await prisma5.m_yard_location.findFirst({
           where: {
             site_id: siteId,
             OR: [{ location_code: rawToCode }, { full_code: rawToCode }]
@@ -8895,7 +8952,7 @@ var yardMovesController = {
         if (loc) resolvedToLocId = loc.yard_location_id;
       }
       if (resolvedToLocId) {
-        const exists = await prisma4.m_yard_location.findUnique({
+        const exists = await prisma5.m_yard_location.findUnique({
           where: { yard_location_id: resolvedToLocId },
           select: { yard_location_id: true }
         });
@@ -8903,7 +8960,7 @@ var yardMovesController = {
       }
       let resolvedEquipId = assignedEquipmentId ? Number(assignedEquipmentId) : null;
       if (resolvedEquipId) {
-        const exists = await prisma4.m_equipment.findUnique({
+        const exists = await prisma5.m_equipment.findUnique({
           where: { equipment_id: resolvedEquipId },
           select: { equipment_id: true }
         });
@@ -8912,7 +8969,7 @@ var yardMovesController = {
       let resolvedTruckVisitId = null;
       if (truckVisitId) {
         try {
-          const tv = await prisma4.truck_visit.findUnique({
+          const tv = await prisma5.truck_visit.findUnique({
             where: { truck_visit_id: BigInt(truckVisitId) },
             select: { truck_visit_id: true }
           });
@@ -8920,7 +8977,7 @@ var yardMovesController = {
         } catch {
         }
       }
-      const newOrder = await prisma4.move_order.create({
+      const newOrder = await prisma5.move_order.create({
         data: {
           site_id: siteId,
           unit_stay_id: targetStay.unit_stay_id,
@@ -8977,9 +9034,9 @@ var yardMovesController = {
         return res.status(400).json({ success: false, message: "moveOrderId is required" });
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const updated = await prisma4.move_order.update({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const updated = await prisma5.move_order.update({
             where: { move_order_id: BigInt(moveOrderId) },
             data: {
               status: "IN_PROGRESS",
@@ -9013,16 +9070,16 @@ var yardMovesController = {
         return res.status(400).json({ success: false, message: "moveOrderId is required" });
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const existing = await prisma4.move_order.findUnique({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const existing = await prisma5.move_order.findUnique({
             where: { move_order_id: BigInt(moveOrderId) }
           });
           if (!existing) {
             return res.status(404).json({ success: false, message: "Move order not found" });
           }
           const targetLocationId = toLocationId ? Number(toLocationId) : existing.to_location_id;
-          const updated = await prisma4.move_order.update({
+          const updated = await prisma5.move_order.update({
             where: { move_order_id: BigInt(moveOrderId) },
             data: {
               status: "DONE",
@@ -9033,7 +9090,7 @@ var yardMovesController = {
             }
           });
           if (targetLocationId && existing.unit_stay_id) {
-            await prisma4.unit_stay.update({
+            await prisma5.unit_stay.update({
               where: { unit_stay_id: existing.unit_stay_id },
               data: {
                 current_location_id: targetLocationId,
@@ -9075,16 +9132,16 @@ var yardMovesController = {
         return res.status(400).json({ success: false, message: "moveOrderId is required" });
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           let resolvedEquipmentId = equipmentId ? Number(equipmentId) : void 0;
           if (!resolvedEquipmentId && equipmentCode) {
-            const eq = await prisma4.m_equipment.findFirst({
+            const eq = await prisma5.m_equipment.findFirst({
               where: { equipment_code: String(equipmentCode) }
             });
             if (eq) resolvedEquipmentId = eq.equipment_id;
           }
-          const updated = await prisma4.move_order.update({
+          const updated = await prisma5.move_order.update({
             where: { move_order_id: BigInt(moveOrderId) },
             data: {
               assigned_equipment_id: resolvedEquipmentId ?? null,
@@ -9130,9 +9187,9 @@ var yardMovesController = {
         return res.status(400).json({ success: false, message: "moveId is required" });
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const updated = await prisma4.move_order.update({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const updated = await prisma5.move_order.update({
             where: { move_order_id: BigInt(moveId) },
             data: {
               status: "IN_PROGRESS",
@@ -9163,18 +9220,18 @@ var yardMovesController = {
       const siteId = parseSiteId(
         req.query.siteId || req.headers["x-site-id"] || req.siteId
       );
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
       const whereClause = { is_active: true };
       if (siteId) whereClause.site_id = siteId;
-      let equipment3 = await prisma4.m_equipment.findMany({
+      let equipment3 = await prisma5.m_equipment.findMany({
         where: whereClause,
         orderBy: { equipment_code: "asc" }
       });
       if ((!equipment3 || equipment3.length === 0) && siteId) {
-        equipment3 = await prisma4.m_equipment.findMany({
+        equipment3 = await prisma5.m_equipment.findMany({
           where: { is_active: true },
           orderBy: { equipment_code: "asc" }
         });
@@ -9199,19 +9256,19 @@ var yardMovesController = {
       const siteId = parseSiteId(
         req.query.siteId || req.headers["x-site-id"] || req.siteId
       );
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
       const whereClause = { is_active: true };
       if (siteId) whereClause.site_id = siteId;
-      let locations = await prisma4.m_yard_location.findMany({
+      let locations = await prisma5.m_yard_location.findMany({
         where: whereClause,
         orderBy: { location_code: "asc" },
         take: 300
       });
       if ((!locations || locations.length === 0) && siteId) {
-        locations = await prisma4.m_yard_location.findMany({
+        locations = await prisma5.m_yard_location.findMany({
           where: { is_active: true },
           orderBy: { location_code: "asc" },
           take: 300
@@ -9245,11 +9302,11 @@ var yardMovesController = {
   },
   getOperators: async (_req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
-      const users2 = await prisma4.app_user.findMany({
+      const users2 = await prisma5.app_user.findMany({
         where: { is_active: true },
         select: {
           user_id: true,
@@ -9961,8 +10018,8 @@ var yardInspectionsController = {
       const statusParam = req.query.status;
       const kindParam = req.query.inspectionKind || req.query.kind;
       const unitNoParam = req.query.unitNo;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ success: false, message: "Database connection unavailable" });
       }
       const whereClause = {};
@@ -9986,7 +10043,7 @@ var yardInspectionsController = {
           }
         };
       }
-      const dbInspections = await prisma4.inspection.findMany({
+      const dbInspections = await prisma5.inspection.findMany({
         where: whereClause,
         include: {
           unit_stay: {
@@ -10076,11 +10133,11 @@ var yardInspectionsController = {
         req.params.inspectionId || req.params.id,
         10
       );
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return sendError(res, "Database connection unavailable", 500);
       }
-      const i = await prisma4.inspection.findUnique({
+      const i = await prisma5.inspection.findUnique({
         where: { inspection_id: id },
         include: {
           unit_stay: {
@@ -10195,9 +10252,9 @@ var yardInspectionsController = {
       };
       inMemoryInspections.unshift(newInsp);
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          prisma4.inspection.create({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          prisma5.inspection.create({
             data: {
               unit_stay_id: unitStayId,
               inspection_template_id: req.body.templateId || (req.body.category === "VEHICLE" ? 3 : 1),
@@ -10246,14 +10303,14 @@ var yardInspectionsController = {
         if (remarks !== void 0) local.remarks = remarks;
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           try {
             if (results && Array.isArray(results)) {
               for (const r3 of results) {
                 const itemId = Number(r3.inspectionItemId);
                 const isOk = r3.resultValue === "OK" || r3.isOk === true;
-                await prisma4.inspection_result.upsert({
+                await prisma5.inspection_result.upsert({
                   where: {
                     inspection_id_inspection_item_id: {
                       inspection_id: id,
@@ -10278,12 +10335,12 @@ var yardInspectionsController = {
               for (const f of findings) {
                 let damageCodeId = f.damageCodeId || 1;
                 if (f.damageCode) {
-                  const dc = await prisma4.m_damage_code.findFirst({
+                  const dc = await prisma5.m_damage_code.findFirst({
                     where: { damage_code: f.damageCode }
                   });
                   if (dc) damageCodeId = dc.damage_code_id;
                 }
-                await prisma4.inspection_finding.create({
+                await prisma5.inspection_finding.create({
                   data: {
                     inspection_id: id,
                     area: f.area || "WALLS",
@@ -10298,7 +10355,7 @@ var yardInspectionsController = {
                 });
               }
             }
-            await prisma4.inspection.update({
+            await prisma5.inspection.update({
               where: { inspection_id: id },
               data: {
                 odometer_km: odometerKm ? Number(odometerKm) : void 0,
@@ -10335,9 +10392,9 @@ var yardInspectionsController = {
         local.approvalNeeded = isMajor;
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          prisma4.inspection.update({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          prisma5.inspection.update({
             where: { inspection_id: id },
             data: {
               status: "COMPLETED",
@@ -10371,9 +10428,9 @@ var yardInspectionsController = {
         local.approvedAt = (/* @__PURE__ */ new Date()).toISOString();
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          prisma4.inspection.update({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          prisma5.inspection.update({
             where: { inspection_id: id },
             data: {
               status: "APPROVED",
@@ -10399,11 +10456,11 @@ var yardInspectionsController = {
 var yardKeysController = {
   getKeys: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const keys2 = await prisma4.vehicle_keys?.findMany({
+      const keys2 = await prisma5.vehicle_keys?.findMany({
         include: {
           unit_stays: true
         },
@@ -10430,11 +10487,11 @@ var yardKeysController = {
     try {
       const { keyId } = req.params;
       const { holderName } = req.body;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const updated = await prisma4.vehicle_keys.update({
+      const updated = await prisma5.vehicle_keys.update({
         where: { key_id: Number(keyId) },
         data: { status: "CHECKED_OUT", current_holder: holderName || "Driver", checked_out_at: /* @__PURE__ */ new Date() }
       });
@@ -10447,11 +10504,11 @@ var yardKeysController = {
   returnKey: async (req, res) => {
     try {
       const { keyId } = req.params;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const updated = await prisma4.vehicle_keys.update({
+      const updated = await prisma5.vehicle_keys.update({
         where: { key_id: Number(keyId) },
         data: { status: "IN_BOARD", current_holder: null, checked_out_at: null }
       });
@@ -10467,11 +10524,11 @@ var yardKeysController = {
 var yardCfsController = {
   getJobs: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const jobs2 = await prisma4.cfs_jobs?.findMany({
+      const jobs2 = await prisma5.cfs_jobs?.findMany({
         include: { unit_stays: true },
         orderBy: { job_id: "desc" }
       }) || [];
@@ -10495,11 +10552,11 @@ var yardCfsController = {
   },
   createJob: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const created = await prisma4.cfs_jobs.create({
+      const created = await prisma5.cfs_jobs.create({
         data: {
           site_id: Number(req.body.siteId) || 1,
           job_no: `CFS-${Date.now()}`,
@@ -10518,11 +10575,11 @@ var yardCfsController = {
   updateJob: async (req, res) => {
     try {
       const { jobId } = req.params;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const updated = await prisma4.cfs_jobs.update({
+      const updated = await prisma5.cfs_jobs.update({
         where: { job_id: Number(jobId) },
         data: req.body
       });
@@ -10538,11 +10595,11 @@ var yardCfsController = {
 var yardReefersController = {
   getLogs: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const logs = await prisma4.reefer_monitoring_logs?.findMany({
+      const logs = await prisma5.reefer_monitoring_logs?.findMany({
         include: { unit_stays: true },
         orderBy: { log_id: "desc" }
       }) || [];
@@ -10566,11 +10623,11 @@ var yardReefersController = {
   },
   createLog: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const created = await prisma4.reefer_monitoring_logs.create({
+      const created = await prisma5.reefer_monitoring_logs.create({
         data: {
           unit_stay_id: Number(req.body.unitStayId) || 1,
           set_temp_c: parseFloat(req.body.setTempC) || -18,
@@ -10594,11 +10651,11 @@ var yardReefersController = {
 var yardRepairsController = {
   getWorkOrders: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const orders = await prisma4.repair_work_orders?.findMany({
+      const orders = await prisma5.repair_work_orders?.findMany({
         include: { unit_stays: true },
         orderBy: { work_order_id: "desc" }
       }) || [];
@@ -10621,11 +10678,11 @@ var yardRepairsController = {
   },
   createWorkOrder: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const created = await prisma4.repair_work_orders.create({
+      const created = await prisma5.repair_work_orders.create({
         data: {
           site_id: Number(req.body.siteId) || 1,
           order_no: `WO-${Date.now()}`,
@@ -11135,8 +11192,8 @@ var CargoService = class {
       search: searchQ,
       siteId
     } = query;
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
         const where = {};
         if (siteId) {
@@ -11165,7 +11222,7 @@ var CargoService = class {
             { unit_stay_yard_locations: { full_code: { contains: q } } }
           ];
         }
-        const dbStays = await prisma4.unit_stay.findMany({
+        const dbStays = await prisma5.unit_stay.findMany({
           where,
           include: {
             unit_stay_cargo_units: {
@@ -11275,11 +11332,11 @@ var CargoService = class {
     return [];
   }
   async getUnit(unitStayId) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(unitStayId);
-    if (prisma4) {
+    if (prisma5) {
       try {
-        const u = await prisma4.unit_stay.findFirst({
+        const u = await prisma5.unit_stay.findFirst({
           where: {
             OR: [
               ...Number.isFinite(id) ? [{ unit_stay_id: id }] : [],
@@ -11384,17 +11441,17 @@ var CargoService = class {
     return s || allStays[0];
   }
   async createUnit(body) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
         const unitNo = body.unitNo || `NEWU${Date.now().toString().slice(-7)}`;
-        let cu = await prisma4.cargo_unit.findFirst({
+        let cu = await prisma5.cargo_unit.findFirst({
           where: { unit_no: unitNo }
         });
         if (!cu) {
-          const uTypes = await prisma4.m_unit_type.findMany();
+          const uTypes = await prisma5.m_unit_type.findMany();
           const targetType = uTypes.find((t) => t.type_code === body.isoType) || uTypes[0];
-          cu = await prisma4.cargo_unit.create({
+          cu = await prisma5.cargo_unit.create({
             data: {
               unit_category: body.category || "CONTAINER",
               unit_no: unitNo,
@@ -11403,7 +11460,7 @@ var CargoService = class {
             }
           });
         }
-        const stay2 = await prisma4.unit_stay.create({
+        const stay2 = await prisma5.unit_stay.create({
           data: {
             cargo_unit_id: cu.cargo_unit_id,
             site_id: body.siteId || 1,
@@ -11451,9 +11508,9 @@ var CargoService = class {
     return newStay;
   }
   async updateUnit(unitStayId, body) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(unitStayId);
-    if (prisma4 && Number.isFinite(id)) {
+    if (prisma5 && Number.isFinite(id)) {
       try {
         const updateData = {};
         if (body.physicalStatus)
@@ -11464,7 +11521,7 @@ var CargoService = class {
         if (body.sealNo) updateData.seal_no = body.sealNo;
         if (body.currentLocationId)
           updateData.current_location_id = Number(body.currentLocationId);
-        await prisma4.unit_stay.update({
+        await prisma5.unit_stay.update({
           where: { unit_stay_id: id },
           data: updateData
         });
@@ -11500,8 +11557,8 @@ var CargoService = class {
   // ------------------------------------------------------------------ 2. CONSIGNMENTS
   async getConsignments(query = {}) {
     const { status, regime, search: searchQ, siteId } = query;
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
         const where = {};
         if (siteId) where.site_id = Number(siteId);
@@ -11515,7 +11572,7 @@ var CargoService = class {
             { m_party_consignment_consignee: { party_name: { contains: q } } }
           ];
         }
-        const dbConsignments = await prisma4.consignment.findMany({
+        const dbConsignments = await prisma5.consignment.findMany({
           where,
           include: {
             vessel_call: { include: { m_vessel: true } },
@@ -11616,11 +11673,11 @@ var CargoService = class {
     return [];
   }
   async getConsignment(id) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const cId = Number(id);
-    if (prisma4) {
+    if (prisma5) {
       try {
-        const c = await prisma4.consignment.findFirst({
+        const c = await prisma5.consignment.findFirst({
           where: {
             OR: [
               ...Number.isFinite(cId) ? [{ consignment_id: cId }] : [],
@@ -11729,11 +11786,11 @@ var CargoService = class {
     return consignments.find((x) => String(x.consignmentId) === String(id)) || consignments[0];
   }
   async createConsignment(body) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
         const refNo = body.refNo || `BL-AUTO-${Date.now().toString().slice(-6)}`;
-        const created = await prisma4.consignment.create({
+        const created = await prisma5.consignment.create({
           data: {
             site_id: body.siteId || 1,
             ref_type: body.refType || "BL",
@@ -11775,9 +11832,9 @@ var CargoService = class {
     return newC;
   }
   async updateConsignment(id, body) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const cId = Number(id);
-    if (prisma4 && Number.isFinite(cId)) {
+    if (prisma5 && Number.isFinite(cId)) {
       try {
         const updateData = {};
         if (body.cargoDescription)
@@ -11785,7 +11842,7 @@ var CargoService = class {
         if (body.status) updateData.status = body.status;
         if (body.destinationCountry)
           updateData.destination_country = body.destinationCountry;
-        await prisma4.consignment.update({
+        await prisma5.consignment.update({
           where: { consignment_id: cId },
           data: updateData
         });
@@ -11802,11 +11859,11 @@ var CargoService = class {
     return c;
   }
   async getConsignmentLines(consignmentId) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const cId = Number(consignmentId);
-    if (prisma4 && Number.isFinite(cId)) {
+    if (prisma5 && Number.isFinite(cId)) {
       try {
-        const lines = await prisma4.consignment_line.findMany({
+        const lines = await prisma5.consignment_line.findMany({
           where: { consignment_id: cId },
           orderBy: { line_no: "asc" }
         });
@@ -11829,16 +11886,16 @@ var CargoService = class {
     return [];
   }
   async saveConsignmentLines(consignmentId, lines) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const cId = Number(consignmentId);
-    if (prisma4 && Number.isFinite(cId) && Array.isArray(lines)) {
+    if (prisma5 && Number.isFinite(cId) && Array.isArray(lines)) {
       try {
-        await prisma4.consignment_line.deleteMany({
+        await prisma5.consignment_line.deleteMany({
           where: { consignment_id: cId }
         });
         for (let i = 0; i < lines.length; i++) {
           const l = lines[i];
-          await prisma4.consignment_line.create({
+          await prisma5.consignment_line.create({
             data: {
               consignment_id: cId,
               line_no: l.lineNo || i + 1,
@@ -11865,10 +11922,10 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ 3. VESSEL CALLS
   async getVesselCalls(query = {}) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const dbCalls = await prisma4.vessel_call.findMany({
+        const dbCalls = await prisma5.vessel_call.findMany({
           include: {
             m_vessel: true,
             m_port: true,
@@ -11911,14 +11968,14 @@ var CargoService = class {
     return list.find((v) => String(v.vesselCallId) === String(vesselCallId)) || list[0];
   }
   async createVesselCall(body) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const vessels3 = await prisma4.m_vessel.findMany();
+        const vessels3 = await prisma5.m_vessel.findMany();
         const v = vessels3[0];
-        const ports2 = await prisma4.m_port.findMany();
+        const ports2 = await prisma5.m_port.findMany();
         const p2 = ports2[0];
-        const created = await prisma4.vessel_call.create({
+        const created = await prisma5.vessel_call.create({
           data: {
             vessel_id: body.vesselId ? Number(body.vesselId) : v?.vessel_id || 1,
             voyage_no: body.voyageNo || `V.${Date.now().toString().slice(-4)}`,
@@ -11945,9 +12002,9 @@ var CargoService = class {
     return newVc;
   }
   async updateVesselCall(vesselCallId, body) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(vesselCallId);
-    if (prisma4 && Number.isFinite(id)) {
+    if (prisma5 && Number.isFinite(id)) {
       try {
         const updateData = {};
         if (body.status) updateData.status = body.status;
@@ -11956,7 +12013,7 @@ var CargoService = class {
           updateData.discharge_completed_at = new Date(
             body.dischargeCompletedAt
           );
-        await prisma4.vessel_call.update({
+        await prisma5.vessel_call.update({
           where: { vessel_call_id: id },
           data: updateData
         });
@@ -11973,10 +12030,10 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ 4. MANIFESTS
   async getManifests() {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const dbManifests = await prisma4.manifest.findMany({
+        const dbManifests = await prisma5.manifest.findMany({
           include: {
             vessel_call: { include: { m_vessel: true } },
             manifest_line: true
@@ -12026,7 +12083,7 @@ var CargoService = class {
     return list.find((m) => String(m.manifestId) === String(manifestId)) || list[0];
   }
   async evaluateManifest(body = {}) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const siteId = Number(body.siteId) || 1;
     const vesselCallId = body.vesselCallId ? Number(body.vesselCallId) : null;
     let inputLines = body.lines || body.items || [];
@@ -12072,8 +12129,8 @@ var CargoService = class {
     };
     if (!inputLines || inputLines.length === 0 || body.generateDummy) {
       let vcRef = "SCL318N";
-      if (prisma4 && vesselCallId) {
-        const vc = await prisma4.vessel_call.findUnique({
+      if (prisma5 && vesselCallId) {
+        const vc = await prisma5.vessel_call.findUnique({
           where: { vessel_call_id: vesselCallId },
           include: { m_vessel: true }
         }).catch(() => null);
@@ -12182,15 +12239,15 @@ var CargoService = class {
     let dbParties = [];
     let dbUnitTypes = [];
     let dbUnits = [];
-    if (prisma4) {
+    if (prisma5) {
       try {
-        dbParties = await prisma4.m_party.findMany({
+        dbParties = await prisma5.m_party.findMany({
           where: { is_active: true }
         });
-        dbUnitTypes = await prisma4.m_unit_type.findMany({
+        dbUnitTypes = await prisma5.m_unit_type.findMany({
           where: { is_active: true }
         });
-        dbUnits = await prisma4.cargo_unit.findMany({
+        dbUnits = await prisma5.cargo_unit.findMany({
           select: {
             unit_no: true,
             cargo_unit_unit_stays: {
@@ -12331,15 +12388,15 @@ var CargoService = class {
     };
   }
   async createManifest(body) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const siteId = body.siteId ? Number(body.siteId) : 1;
     const vesselCallId = body.vesselCallId ? Number(body.vesselCallId) : null;
     const manifestRef = body.manifestRef || body.manifestNo || `MAN-${Date.now().toString().slice(-6)}`;
     const source = body.format === "EXCEL" ? "EXCEL" : body.source || "EDI";
     const items = body.items || body.lines || [];
-    if (prisma4) {
+    if (prisma5) {
       try {
-        const created = await prisma4.manifest.create({
+        const created = await prisma5.manifest.create({
           data: {
             site_id: siteId,
             vessel_call_id: vesselCallId,
@@ -12362,7 +12419,7 @@ var CargoService = class {
           const rawUnit = String(
             it2.unitNo || it2.unitNoRaw || `UNIT-${i + 1}`
           ).trim();
-          await prisma4.manifest_line.create({
+          await prisma5.manifest_line.create({
             data: {
               manifest_id: created.manifest_id,
               line_no: it2.lineNo || i + 1,
@@ -12411,11 +12468,11 @@ var CargoService = class {
     return newM;
   }
   async updateManifestLine(manifestLineId, body) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(manifestLineId);
-    if (prisma4 && Number.isFinite(id)) {
+    if (prisma5 && Number.isFinite(id)) {
       try {
-        const updated = await prisma4.manifest_line.update({
+        const updated = await prisma5.manifest_line.update({
           where: { manifest_line_id: id },
           data: {
             unit_no: body.unitNo || void 0,
@@ -12438,11 +12495,11 @@ var CargoService = class {
     return { manifestLineId, ...body };
   }
   async applyManifest(manifestId) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(manifestId);
-    if (prisma4 && Number.isFinite(id)) {
+    if (prisma5 && Number.isFinite(id)) {
       try {
-        const manifest = await prisma4.manifest.findUnique({
+        const manifest = await prisma5.manifest.findUnique({
           where: { manifest_id: id },
           include: { manifest_line: true }
         });
@@ -12458,19 +12515,19 @@ var CargoService = class {
           }
           let consignmentsCreated = 0;
           let unitsCreated = 0;
-          const defaultUt = await prisma4.m_unit_type.findFirst({
+          const defaultUt = await prisma5.m_unit_type.findFirst({
             where: { is_active: true }
           });
           const defaultUnitTypeId = defaultUt ? defaultUt.unit_type_id : 1;
           for (const [blNo, blLines] of blMap.entries()) {
-            let cons = await prisma4.consignment.findFirst({
+            let cons = await prisma5.consignment.findFirst({
               where: { ref_no: blNo, site_id: manifest.site_id }
             });
             if (!cons) {
               const firstLine = blLines[0];
               let partyId = null;
               if (firstLine.consignee_raw) {
-                const party2 = await prisma4.m_party.findFirst({
+                const party2 = await prisma5.m_party.findFirst({
                   where: {
                     OR: [
                       { party_name: { contains: firstLine.consignee_raw } },
@@ -12480,7 +12537,7 @@ var CargoService = class {
                 });
                 if (party2) partyId = party2.party_id;
               }
-              cons = await prisma4.consignment.create({
+              cons = await prisma5.consignment.create({
                 data: {
                   site_id: manifest.site_id,
                   ref_type: "BL",
@@ -12505,17 +12562,17 @@ var CargoService = class {
               const uNo = (l.unit_no || l.unit_no_raw || "").replace(/\s/g, "").toUpperCase();
               if (!uNo) continue;
               const typeCode = (l.unit_type_raw || "40HC").trim().toUpperCase();
-              const ut = await prisma4.m_unit_type.findFirst({
+              const ut = await prisma5.m_unit_type.findFirst({
                 where: {
                   OR: [{ type_code: typeCode }]
                 }
               });
               const unitTypeId = ut ? ut.unit_type_id : defaultUnitTypeId;
-              let cu = await prisma4.cargo_unit.findFirst({
+              let cu = await prisma5.cargo_unit.findFirst({
                 where: { unit_no: uNo }
               });
               if (!cu) {
-                cu = await prisma4.cargo_unit.create({
+                cu = await prisma5.cargo_unit.create({
                   data: {
                     unit_category: "CONTAINER",
                     unit_no: uNo,
@@ -12524,7 +12581,7 @@ var CargoService = class {
                   }
                 });
               }
-              const stay2 = await prisma4.unit_stay.create({
+              const stay2 = await prisma5.unit_stay.create({
                 data: {
                   cargo_unit_id: cu.cargo_unit_id,
                   site_id: manifest.site_id,
@@ -12543,7 +12600,7 @@ var CargoService = class {
                 }
               });
               unitsCreated++;
-              await prisma4.manifest_line.update({
+              await prisma5.manifest_line.update({
                 where: { manifest_line_id: l.manifest_line_id },
                 data: {
                   unit_stay_id: stay2.unit_stay_id,
@@ -12552,7 +12609,7 @@ var CargoService = class {
               });
             }
           }
-          await prisma4.manifest.update({
+          await prisma5.manifest.update({
             where: { manifest_id: id },
             data: {
               status: "APPLIED",
@@ -12579,11 +12636,11 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ REFERENCE DATA
   async getParties(role) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
         const whereClause = { is_active: true };
-        const parties2 = await prisma4.m_party.findMany({
+        const parties2 = await prisma5.m_party.findMany({
           where: whereClause,
           include: { m_party_m_party_role: true },
           orderBy: { party_name: "asc" }
@@ -12627,10 +12684,10 @@ var CargoService = class {
     return [];
   }
   async getUnitTypes() {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const unitTypes2 = await prisma4.m_unit_type.findMany({
+        const unitTypes2 = await prisma5.m_unit_type.findMany({
           where: { is_active: true },
           orderBy: { type_code: "asc" }
         });
@@ -12655,10 +12712,10 @@ var CargoService = class {
     return [];
   }
   async getRegimes() {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const regimes = await prisma4.m_cargo_regime.findMany({
+        const regimes = await prisma5.m_cargo_regime.findMany({
           where: { is_active: true },
           orderBy: { regime_code: "asc" }
         });
@@ -12690,10 +12747,10 @@ var CargoService = class {
     return [];
   }
   async getHoldTypes() {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const holdTypes2 = await prisma4.m_hold_type.findMany({
+        const holdTypes2 = await prisma5.m_hold_type.findMany({
           where: { is_active: true },
           orderBy: { hold_code: "asc" }
         });
@@ -12722,10 +12779,10 @@ var CargoService = class {
     return [];
   }
   async getImoClasses() {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const classes = await prisma4.m_imo_class.findMany({
+        const classes = await prisma5.m_imo_class.findMany({
           orderBy: { imo_class: "asc" }
         });
         if (classes && classes.length > 0) {
@@ -12742,10 +12799,10 @@ var CargoService = class {
     return [];
   }
   async getCustomsRefTypes() {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const types = await prisma4.m_customs_ref_type.findMany({
+        const types = await prisma5.m_customs_ref_type.findMany({
           where: { is_active: true },
           orderBy: { ref_type_code: "asc" }
         });
@@ -12769,10 +12826,10 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ 5. CUSTOMS & EXAMS
   async getCustomsRefs(query = {}) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const dbRefs = await prisma4.customs_ref.findMany({
+        const dbRefs = await prisma5.customs_ref.findMany({
           include: {
             m_customs_ref_type: true,
             consignment: true,
@@ -12808,10 +12865,10 @@ var CargoService = class {
     return customsRefs;
   }
   async createCustomsRef(body) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const created = await prisma4.customs_ref.create({
+        const created = await prisma5.customs_ref.create({
           data: {
             customs_ref_type_id: body.customsRefTypeId || 1,
             consignment_id: body.consignmentId ? Number(body.consignmentId) : null,
@@ -12842,10 +12899,10 @@ var CargoService = class {
     return newRef;
   }
   async getCustomsExams() {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const dbExams = await prisma4.exam.findMany({
+        const dbExams = await prisma5.exam.findMany({
           include: {
             unit_stay: {
               include: {
@@ -12882,10 +12939,10 @@ var CargoService = class {
     return exams;
   }
   async createCustomsExam(body) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const created = await prisma4.exam.create({
+        const created = await prisma5.exam.create({
           data: {
             unit_stay_id: Number(body.unitStayId) || 1,
             exam_type: body.examType || "PHYSICAL",
@@ -12911,11 +12968,11 @@ var CargoService = class {
     return newE;
   }
   async completeCustomsExam(examId, body) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(examId);
-    if (prisma4 && Number.isFinite(id)) {
+    if (prisma5 && Number.isFinite(id)) {
       try {
-        const updated = await prisma4.exam.update({
+        const updated = await prisma5.exam.update({
           where: { exam_id: id },
           data: {
             status: "COMPLETED",
@@ -12938,10 +12995,10 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ 6. HOLDS
   async getHolds(query = {}) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const dbHolds = await prisma4.hold.findMany({
+        const dbHolds = await prisma5.hold.findMany({
           include: {
             hold_types: true,
             hold_unit_stays: {
@@ -12980,11 +13037,11 @@ var CargoService = class {
     return holds;
   }
   async placeHold(body, username = "Customs Officer") {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
         const unitStayId = Number(body.unitStayId) || 1;
-        const created = await prisma4.hold.create({
+        const created = await prisma5.hold.create({
           data: {
             unit_stay_id: unitStayId,
             hold_type_id: body.holdTypeId ? Number(body.holdTypeId) : 1,
@@ -12996,7 +13053,7 @@ var CargoService = class {
             createdby: "system"
           }
         });
-        await prisma4.unit_stay.update({
+        await prisma5.unit_stay.update({
           where: { unit_stay_id: unitStayId },
           data: { active_hold_count: { increment: 1 } }
         });
@@ -13016,15 +13073,15 @@ var CargoService = class {
     return newH;
   }
   async liftHold(holdId2, body, username = "Customs Officer") {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(holdId2);
-    if (prisma4 && Number.isFinite(id)) {
+    if (prisma5 && Number.isFinite(id)) {
       try {
-        const existing = await prisma4.hold.findUnique({
+        const existing = await prisma5.hold.findUnique({
           where: { hold_id: id }
         });
         if (existing) {
-          const updated = await prisma4.hold.update({
+          const updated = await prisma5.hold.update({
             where: { hold_id: id },
             data: {
               status: "LIFTED",
@@ -13033,7 +13090,7 @@ var CargoService = class {
               lift_reason: body.liftReason || "Authorized release"
             }
           });
-          await prisma4.unit_stay.update({
+          await prisma5.unit_stay.update({
             where: { unit_stay_id: existing.unit_stay_id },
             data: { active_hold_count: { decrement: 1 } }
           });
@@ -13054,10 +13111,10 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ 7. RELEASE ORDERS
   async getReleaseOrders(query = {}) {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const dbRos = await prisma4.release_order.findMany({
+        const dbRos = await prisma5.release_order.findMany({
           include: {
             consignment: true,
             m_party_release_order_requested_by: true,
@@ -13107,10 +13164,10 @@ var CargoService = class {
     return list.find((r3) => String(r3.releaseOrderId) === String(releaseOrderId)) || list[0];
   }
   async createReleaseOrder(body, username = "Release Officer") {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const created = await prisma4.release_order.create({
+        const created = await prisma5.release_order.create({
           data: {
             site_id: body.siteId || 1,
             release_no: body.releaseNo || `RO-${Date.now().toString().slice(-6)}`,
@@ -13177,11 +13234,11 @@ var CargoService = class {
     };
   }
   async approveReleaseOrder(releaseOrderId, username = "Terminal Manager") {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(releaseOrderId);
-    if (prisma4 && Number.isFinite(id)) {
+    if (prisma5 && Number.isFinite(id)) {
       try {
-        await prisma4.release_order.update({
+        await prisma5.release_order.update({
           where: { release_order_id: id },
           data: {
             status: "APPROVED",
@@ -13208,11 +13265,11 @@ var CargoService = class {
     return ro2;
   }
   async cancelReleaseOrder(releaseOrderId, reason) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(releaseOrderId);
-    if (prisma4 && Number.isFinite(id)) {
+    if (prisma5 && Number.isFinite(id)) {
       try {
-        await prisma4.release_order.update({
+        await prisma5.release_order.update({
           where: { release_order_id: id },
           data: {
             status: "CANCELLED",
@@ -13237,11 +13294,11 @@ var CargoService = class {
     return ro2;
   }
   async revalidateReleaseOrder(releaseOrderId, newValidTo) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const id = Number(releaseOrderId);
-    if (prisma4 && Number.isFinite(id)) {
+    if (prisma5 && Number.isFinite(id)) {
       try {
-        await prisma4.release_order.update({
+        await prisma5.release_order.update({
           where: { release_order_id: id },
           data: {
             valid_to: new Date(newValidTo)
@@ -13269,10 +13326,10 @@ var CargoService = class {
   }
   // ------------------------------------------------------------------ 8. DANGEROUS GOODS
   async getDgLines() {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const dbDg = await prisma4.unit_dg_line.findMany({
+        const dbDg = await prisma5.unit_dg_line.findMany({
           include: {
             unit_stay: {
               include: {
@@ -13308,12 +13365,12 @@ var CargoService = class {
     return dgLines;
   }
   async saveDgLines(unitStayId, lines) {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const stayId2 = Number(unitStayId);
-    if (prisma4 && Number.isFinite(stayId2) && Array.isArray(lines)) {
+    if (prisma5 && Number.isFinite(stayId2) && Array.isArray(lines)) {
       try {
         for (const l of lines) {
-          await prisma4.unit_dg_line.create({
+          await prisma5.unit_dg_line.create({
             data: {
               unit_stay: { connect: { unit_stay_id: BigInt(stayId2) } },
               m_imo_class_unit_dg_line_imo_classTom_imo_class: {
@@ -17558,13 +17615,13 @@ var ChargesController = class {
       const billToPartyId = req.query.billToPartyId ? parseInt(String(req.query.billToPartyId), 10) : void 0;
       const statusParam = req.query.status ? String(req.query.status).toUpperCase() : void 0;
       const q = req.query.q ? String(req.query.q).trim().toLowerCase() : void 0;
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const whereClause = {};
         if (statusParam) {
           whereClause.status = statusParam;
         }
-        const dbCharges = await prisma4.charge.findMany({
+        const dbCharges = await prisma5.charge.findMany({
           where: whereClause,
           include: {
             billable_event_charge: {
@@ -17730,13 +17787,13 @@ var ChargesController = class {
     try {
       const chargeIdParam = parseInt(req.params.chargeId, 10);
       const { reason, percentage } = req.body;
-      const prisma4 = getPrisma();
-      if (prisma4 && !isNaN(chargeIdParam)) {
-        const existing = await prisma4.charge.findUnique({
+      const prisma5 = getPrisma();
+      if (prisma5 && !isNaN(chargeIdParam)) {
+        const existing = await prisma5.charge.findUnique({
           where: { charge_id: BigInt(chargeIdParam) }
         });
         if (existing) {
-          const updated = await prisma4.charge.update({
+          const updated = await prisma5.charge.update({
             where: { charge_id: BigInt(chargeIdParam) },
             data: {
               status: "WAIVED",
@@ -17776,18 +17833,18 @@ var ChargesController = class {
         taxCode,
         reason
       } = req.body;
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        let codeRec = await prisma4.m_charge_code.findFirst({
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        let codeRec = await prisma5.m_charge_code.findFirst({
           where: { charge_code: chargeCode || "OTHER" }
         });
         if (!codeRec) {
-          codeRec = await prisma4.m_charge_code.findFirst();
+          codeRec = await prisma5.m_charge_code.findFirst();
         }
         let validConsignmentId = null;
         if (consignmentId) {
           try {
-            const conExists = await prisma4.consignment.findUnique({
+            const conExists = await prisma5.consignment.findUnique({
               where: { consignment_id: BigInt(consignmentId) },
               select: { consignment_id: true }
             });
@@ -17801,7 +17858,7 @@ var ChargesController = class {
         let validUnitStayId = null;
         if (unitStayId) {
           try {
-            const stayExists = await prisma4.unit_stay.findUnique({
+            const stayExists = await prisma5.unit_stay.findUnique({
               where: { unit_stay_id: BigInt(unitStayId) },
               select: { unit_stay_id: true }
             });
@@ -17815,20 +17872,20 @@ var ChargesController = class {
         let validPartyId = 1;
         try {
           if (billToPartyId) {
-            const partyExists = await prisma4.m_party.findUnique({
+            const partyExists = await prisma5.m_party.findUnique({
               where: { party_id: Number(billToPartyId) },
               select: { party_id: true }
             });
             if (partyExists) {
               validPartyId = partyExists.party_id;
             } else {
-              const anyParty = await prisma4.m_party.findFirst({
+              const anyParty = await prisma5.m_party.findFirst({
                 select: { party_id: true }
               });
               if (anyParty) validPartyId = anyParty.party_id;
             }
           } else {
-            const anyParty = await prisma4.m_party.findFirst({
+            const anyParty = await prisma5.m_party.findFirst({
               select: { party_id: true }
             });
             if (anyParty) validPartyId = anyParty.party_id;
@@ -17838,12 +17895,12 @@ var ChargesController = class {
         }
         let validSiteId = req.body.siteId ? Number(req.body.siteId) : 1;
         try {
-          const siteExists = await prisma4.m_site.findUnique({
+          const siteExists = await prisma5.m_site.findUnique({
             where: { site_id: validSiteId },
             select: { site_id: true }
           });
           if (!siteExists) {
-            const anySite = await prisma4.m_site.findFirst({
+            const anySite = await prisma5.m_site.findFirst({
               select: { site_id: true }
             });
             validSiteId = anySite ? anySite.site_id : 1;
@@ -17851,7 +17908,7 @@ var ChargesController = class {
         } catch {
           validSiteId = 1;
         }
-        const event = await prisma4.billable_event.create({
+        const event = await prisma5.billable_event.create({
           data: {
             site_id: validSiteId,
             charge_code_id: codeRec?.charge_code_id || 1,
@@ -17872,7 +17929,7 @@ var ChargesController = class {
         const taxRate2 = 18;
         const taxAmt2 = numAmount2 * (taxRate2 / 100);
         const reqNo = `APR-${Date.now().toString().slice(-8)}`;
-        const apprReq = await prisma4.approval_request.create({
+        const apprReq = await prisma5.approval_request.create({
           data: {
             site_id: validSiteId,
             request_no: reqNo,
@@ -17889,7 +17946,7 @@ var ChargesController = class {
             createdby: req.userSub || "system"
           }
         });
-        const newCharge = await prisma4.charge.create({
+        const newCharge = await prisma5.charge.create({
           data: {
             billable_event_id: event.billable_event_id,
             bill_to_party_id: validPartyId,
@@ -18018,8 +18075,8 @@ var InvoicesController = class {
       const statusParam = req.query.status ? String(req.query.status).toUpperCase() : void 0;
       const billToPartyId = req.query.billToPartyId ? parseInt(String(req.query.billToPartyId), 10) : void 0;
       const q = req.query.q ? String(req.query.q).trim().toLowerCase() : void 0;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database client unavailable" });
       }
       const whereClause = {};
@@ -18028,7 +18085,7 @@ var InvoicesController = class {
       if (statusParam && statusParam !== "ALL")
         whereClause.status = statusParam;
       if (billToPartyId) whereClause.bill_to_party_id = billToPartyId;
-      const dbInvoices = await prisma4.invoice.findMany({
+      const dbInvoices = await prisma5.invoice.findMany({
         where: whereClause,
         include: {
           invoice_invoice_line: true,
@@ -18124,9 +18181,9 @@ var InvoicesController = class {
     try {
       const { invoiceId } = req.params;
       const numId = parseInt(invoiceId, 10);
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        const inv = await prisma4.invoice.findFirst({
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        const inv = await prisma5.invoice.findFirst({
           where: {
             OR: [
               ...Number.isFinite(numId) ? [{ invoice_id: BigInt(numId) }] : [],
@@ -18241,12 +18298,12 @@ var InvoicesController = class {
       const prefix = docKind === "PROFORMA" ? "PRO" : docKind === "CREDIT_NOTE" ? "CRN" : docKind === "DEBIT_NOTE" ? "DBN" : "INV";
       const seq = Math.floor(1e3 + Math.random() * 9e3);
       const invoiceNo = `${prefix}-DAR${siteId}-26-00${seq}`;
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         let resolvedConsignmentId = null;
         if (body.consignmentId) {
           try {
-            const con = await prisma4.consignment.findUnique({
+            const con = await prisma5.consignment.findUnique({
               where: { consignment_id: BigInt(body.consignmentId) },
               select: { consignment_id: true }
             });
@@ -18257,7 +18314,7 @@ var InvoicesController = class {
         }
         if (!resolvedConsignmentId && body.consignmentRef) {
           try {
-            const con = await prisma4.consignment.findFirst({
+            const con = await prisma5.consignment.findFirst({
               where: { ref_no: String(body.consignmentRef) },
               select: { consignment_id: true }
             });
@@ -18266,23 +18323,23 @@ var InvoicesController = class {
           }
         }
         let resolvedPartyId = billToPartyId;
-        const partyExists = await prisma4.m_party.findUnique({
+        const partyExists = await prisma5.m_party.findUnique({
           where: { party_id: resolvedPartyId },
           select: { party_id: true }
         });
         if (!partyExists) {
-          const firstParty = await prisma4.m_party.findFirst({
+          const firstParty = await prisma5.m_party.findFirst({
             select: { party_id: true }
           });
           if (firstParty) resolvedPartyId = firstParty.party_id;
         }
         let resolvedSiteId = siteId;
-        const siteExists = await prisma4.m_site.findUnique({
+        const siteExists = await prisma5.m_site.findUnique({
           where: { site_id: resolvedSiteId },
           select: { site_id: true }
         });
         if (!siteExists) {
-          const firstSite = await prisma4.m_site.findFirst({
+          const firstSite = await prisma5.m_site.findFirst({
             select: { site_id: true }
           });
           if (firstSite) resolvedSiteId = firstSite.site_id;
@@ -18290,7 +18347,7 @@ var InvoicesController = class {
         let resolvedProformaId = null;
         if (body.proformaInvoiceId) {
           try {
-            const p2 = await prisma4.invoice.findUnique({
+            const p2 = await prisma5.invoice.findUnique({
               where: { invoice_id: BigInt(body.proformaInvoiceId) },
               select: { invoice_id: true }
             });
@@ -18301,7 +18358,7 @@ var InvoicesController = class {
         let resolvedOriginalId = null;
         if (body.originalInvoiceId) {
           try {
-            const o = await prisma4.invoice.findUnique({
+            const o = await prisma5.invoice.findUnique({
               where: { invoice_id: BigInt(body.originalInvoiceId) },
               select: { invoice_id: true }
             });
@@ -18309,11 +18366,11 @@ var InvoicesController = class {
           } catch {
           }
         }
-        const defaultChargeCode = await prisma4.m_charge_code.findFirst({
+        const defaultChargeCode = await prisma5.m_charge_code.findFirst({
           select: { charge_code_id: true }
         });
         const defaultChargeCodeId = defaultChargeCode?.charge_code_id || 1;
-        const defaultCharge = await prisma4.charge.findFirst({
+        const defaultCharge = await prisma5.charge.findFirst({
           select: { charge_id: true }
         });
         const resolvedLines = await Promise.all(
@@ -18321,7 +18378,7 @@ var InvoicesController = class {
             let chargeCodeId = Number(l.chargeCodeId);
             if (!chargeCodeId || isNaN(chargeCodeId)) {
               if (l.chargeCode) {
-                const found = await prisma4.m_charge_code.findFirst({
+                const found = await prisma5.m_charge_code.findFirst({
                   where: { charge_code: String(l.chargeCode) },
                   select: { charge_code_id: true }
                 });
@@ -18330,7 +18387,7 @@ var InvoicesController = class {
                 chargeCodeId = defaultChargeCodeId;
               }
             } else {
-              const exists = await prisma4.m_charge_code.findUnique({
+              const exists = await prisma5.m_charge_code.findUnique({
                 where: { charge_code_id: chargeCodeId },
                 select: { charge_code_id: true }
               });
@@ -18339,7 +18396,7 @@ var InvoicesController = class {
             let resolvedChargeId = null;
             if (l.chargeId) {
               try {
-                const c = await prisma4.charge.findUnique({
+                const c = await prisma5.charge.findUnique({
                   where: { charge_id: BigInt(l.chargeId) },
                   select: { charge_id: true }
                 });
@@ -18368,7 +18425,7 @@ var InvoicesController = class {
             };
           })
         );
-        const created = await prisma4.invoice.create({
+        const created = await prisma5.invoice.create({
           data: {
             company_id: 1,
             site_id: resolvedSiteId,
@@ -18431,9 +18488,9 @@ var InvoicesController = class {
   convertProforma = async (req, res) => {
     try {
       const proformaId = Number(req.params.invoiceId || req.body.proformaId);
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        const prof = await prisma4.invoice.findUnique({
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        const prof = await prisma5.invoice.findUnique({
           where: { invoice_id: BigInt(proformaId) },
           include: { invoice_invoice_line: true }
         });
@@ -18447,13 +18504,13 @@ var InvoicesController = class {
         const invNo = `INV-DAR${prof.site_id}-26-00${seq}`;
         let validConsignmentId = null;
         if (prof.consignment_id) {
-          const c = await prisma4.consignment.findUnique({
+          const c = await prisma5.consignment.findUnique({
             where: { consignment_id: prof.consignment_id },
             select: { consignment_id: true }
           });
           if (c) validConsignmentId = c.consignment_id;
         }
-        const taxInv = await prisma4.invoice.create({
+        const taxInv = await prisma5.invoice.create({
           data: {
             company_id: prof.company_id,
             site_id: prof.site_id,
@@ -18515,7 +18572,7 @@ var InvoicesController = class {
             invoice_invoice_line: true
           }
         });
-        await prisma4.invoice.update({
+        await prisma5.invoice.update({
           where: { invoice_id: BigInt(proformaId) },
           data: { status: "CONVERTED" }
         });
@@ -18538,9 +18595,9 @@ var InvoicesController = class {
     try {
       const { invoiceId } = req.params;
       const numId = parseInt(invoiceId, 10);
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        const updated = await prisma4.invoice.update({
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        const updated = await prisma5.invoice.update({
           where: { invoice_id: BigInt(numId) },
           data: {
             status: "POSTED",
@@ -18563,9 +18620,9 @@ var InvoicesController = class {
     try {
       const { invoiceId } = req.params;
       const numId = parseInt(invoiceId, 10);
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        const receipt = await prisma4.fiscal_receipt.upsert({
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        const receipt = await prisma5.fiscal_receipt.upsert({
           where: { invoice_id: BigInt(numId) },
           create: {
             invoice_id: BigInt(numId),
@@ -18604,9 +18661,9 @@ var InvoicesController = class {
       const origId = Number(req.params.invoiceId);
       const { amount, reason } = req.body;
       const creditAmt = Number(amount) || 50;
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        const orig = await prisma4.invoice.findUnique({
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        const orig = await prisma5.invoice.findUnique({
           where: { invoice_id: BigInt(origId) }
         });
         if (!orig)
@@ -18615,13 +18672,13 @@ var InvoicesController = class {
         const crnNo = `CRN-DAR${orig.site_id}-26-000${seq}`;
         let validConsignmentId = null;
         if (orig.consignment_id) {
-          const c = await prisma4.consignment.findUnique({
+          const c = await prisma5.consignment.findUnique({
             where: { consignment_id: orig.consignment_id },
             select: { consignment_id: true }
           });
           if (c) validConsignmentId = c.consignment_id;
         }
-        const crn = await prisma4.invoice.create({
+        const crn = await prisma5.invoice.create({
           data: {
             company_id: orig.company_id,
             site_id: orig.site_id,
@@ -18648,7 +18705,7 @@ var InvoicesController = class {
           }
         });
         const newCredited = Number(orig.amount_credited) + creditAmt;
-        await prisma4.invoice.update({
+        await prisma5.invoice.update({
           where: { invoice_id: BigInt(origId) },
           data: {
             amount_credited: newCredited
@@ -18671,9 +18728,9 @@ var InvoicesController = class {
     try {
       const { invoiceId } = req.params;
       const numId = parseInt(invoiceId, 10);
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        const cancelled = await prisma4.invoice.update({
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        const cancelled = await prisma5.invoice.update({
           where: { invoice_id: BigInt(numId) },
           data: {
             status: "CANCELLED",
@@ -18734,15 +18791,15 @@ var cashierController = {
     try {
       const { siteId, partyId, cashier, status, search: search2, date } = req.query;
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.payment) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.payment) {
           try {
             const whereClause = {};
             if (siteId) whereClause.site_id = Number(siteId);
             if (partyId) whereClause.party_id = Number(partyId);
             if (status) whereClause.status = String(status);
             if (cashier) whereClause.createdby = { contains: String(cashier) };
-            const dbPayments = await prisma4.payment.findMany({
+            const dbPayments = await prisma5.payment.findMany({
               where: whereClause,
               include: {
                 m_party_payment: true,
@@ -18841,11 +18898,11 @@ var cashierController = {
     try {
       const { paymentId } = req.params;
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.payment) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.payment) {
           try {
             const isNum = !isNaN(Number(paymentId));
-            const p2 = await prisma4.payment.findFirst({
+            const p2 = await prisma5.payment.findFirst({
               where: isNum ? {
                 OR: [
                   { payment_id: BigInt(paymentId) },
@@ -18924,17 +18981,17 @@ var cashierController = {
       const unallocated = Math.max(0, amount - allocated);
       const cashierName = req.user?.username || b.cashier || "Ashok Kumar";
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.payment) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.payment) {
           try {
             let channelId = Number(b.channelId || b.paymentChannelId || 1);
             if (b.channelCode) {
-              const ch = await prisma4.m_payment_channel.findFirst({
+              const ch = await prisma5.m_payment_channel.findFirst({
                 where: { channel_code: b.channelCode }
               });
               if (ch) channelId = ch.payment_channel_id;
             }
-            const created = await prisma4.payment.create({
+            const created = await prisma5.payment.create({
               data: {
                 company_id: 1,
                 site_id: Number(b.siteId || 1),
@@ -18959,7 +19016,7 @@ var cashierController = {
             if (allocations.length > 0) {
               for (const alloc of allocations) {
                 const invId = BigInt(alloc.invoiceId);
-                await prisma4.payment_allocation.create({
+                await prisma5.payment_allocation.create({
                   data: {
                     payment_id: created.payment_id,
                     invoice_id: invId,
@@ -18972,13 +19029,13 @@ var cashierController = {
                     createdby: cashierName
                   }
                 });
-                const targetInv = await prisma4.invoice.findUnique({
+                const targetInv = await prisma5.invoice.findUnique({
                   where: { invoice_id: invId }
                 });
                 if (targetInv) {
                   const newPaid = Number(targetInv.amount_paid || 0) + Number(alloc.amountInvoiceCcy || alloc.amount);
                   const newBal = Math.max(0, Number(targetInv.total) - newPaid);
-                  await prisma4.invoice.update({
+                  await prisma5.invoice.update({
                     where: { invoice_id: invId },
                     data: {
                       amount_paid: newPaid,
@@ -19044,10 +19101,10 @@ var cashierController = {
       const { paymentId } = req.params;
       const { allocations = [] } = req.body;
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.payment) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.payment) {
           try {
-            const p2 = await prisma4.payment.findFirst({
+            const p2 = await prisma5.payment.findFirst({
               where: {
                 OR: [
                   {
@@ -19061,7 +19118,7 @@ var cashierController = {
               let addedAlloc = 0;
               for (const a of allocations) {
                 const invId = BigInt(a.invoiceId);
-                await prisma4.payment_allocation.create({
+                await prisma5.payment_allocation.create({
                   data: {
                     payment_id: p2.payment_id,
                     invoice_id: invId,
@@ -19076,7 +19133,7 @@ var cashierController = {
               }
               const newAllocated = Number(p2.amount_allocated || 0) + addedAlloc;
               const newUnalloc = Math.max(0, Number(p2.amount) - newAllocated);
-              const updated = await prisma4.payment.update({
+              const updated = await prisma5.payment.update({
                 where: { payment_id: p2.payment_id },
                 data: {
                   amount_allocated: newAllocated,
@@ -19126,10 +19183,10 @@ var cashierController = {
       const { paymentId } = req.params;
       const { reason = "Customer requested refund / reversal" } = req.body;
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.payment) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.payment) {
           try {
-            const p2 = await prisma4.payment.findFirst({
+            const p2 = await prisma5.payment.findFirst({
               where: {
                 OR: [
                   {
@@ -19140,7 +19197,7 @@ var cashierController = {
               }
             });
             if (p2) {
-              const updated = await prisma4.payment.update({
+              const updated = await prisma5.payment.update({
                 where: { payment_id: p2.payment_id },
                 data: {
                   status: "REVERSED",
@@ -19183,14 +19240,14 @@ var cashierController = {
     try {
       const { siteId, status, cashier } = req.query;
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.cashier_shift) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.cashier_shift) {
           try {
             const whereClause = {};
             if (siteId) whereClause.site_id = Number(siteId);
             if (status) whereClause.status = String(status);
             if (cashier) whereClause.cashier_sub = String(cashier);
-            const dbShifts = await prisma4.cashier_shift.findMany({
+            const dbShifts = await prisma5.cashier_shift.findMany({
               where: whereClause,
               include: {
                 cashier_shift_payment: true,
@@ -19246,10 +19303,10 @@ var cashierController = {
     try {
       const cashierName = req.user?.username || "Neema Mushi";
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.cashier_shift) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.cashier_shift) {
           try {
-            const active = await prisma4.cashier_shift.findFirst({
+            const active = await prisma5.cashier_shift.findFirst({
               where: {
                 cashier_sub: cashierName,
                 status: "OPEN"
@@ -19293,10 +19350,10 @@ var cashierController = {
       const tzsFloat = Number(b.tzsFloat || b.openingFloatTZS || 3e5);
       const siteId = Number(b.siteId || 1);
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.cashier_shift) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.cashier_shift) {
           try {
-            const createdUsd = await prisma4.cashier_shift.create({
+            const createdUsd = await prisma5.cashier_shift.create({
               data: {
                 site_id: siteId,
                 cashier_sub: cashierName,
@@ -19308,7 +19365,7 @@ var cashierController = {
                 createdby: cashierName
               }
             });
-            const createdTzs = await prisma4.cashier_shift.create({
+            const createdTzs = await prisma5.cashier_shift.create({
               data: {
                 site_id: siteId,
                 cashier_sub: cashierName,
@@ -19379,15 +19436,15 @@ var cashierController = {
       const { actualCash, countedCash, note } = req.body;
       const counted = Number(actualCash ?? countedCash ?? 0);
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.cashier_shift) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.cashier_shift) {
           try {
-            const s2 = await prisma4.cashier_shift.findUnique({
+            const s2 = await prisma5.cashier_shift.findUnique({
               where: { cashier_shift_id: BigInt(shiftId) }
             });
             if (s2) {
               const diff = counted - Number(s2.expected_cash || s2.opening_float);
-              const updated = await prisma4.cashier_shift.update({
+              const updated = await prisma5.cashier_shift.update({
                 where: { cashier_shift_id: BigInt(shiftId) },
                 data: {
                   counted_cash: counted,
@@ -19429,10 +19486,10 @@ var cashierController = {
       const { shiftId } = req.params;
       const approvedBy = req.user?.username || "Finance Manager";
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.cashier_shift) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.cashier_shift) {
           try {
-            const updated = await prisma4.cashier_shift.update({
+            const updated = await prisma5.cashier_shift.update({
               where: { cashier_shift_id: BigInt(shiftId) },
               data: {
                 status: "APPROVED",
@@ -19461,10 +19518,10 @@ var cashierController = {
   getChannels: async (_req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && prisma4.m_payment_channel) {
+        const prisma5 = getPrisma();
+        if (prisma5 && prisma5.m_payment_channel) {
           try {
-            const channels2 = await prisma4.m_payment_channel.findMany({
+            const channels2 = await prisma5.m_payment_channel.findMany({
               where: { is_active: true },
               orderBy: { payment_channel_id: "asc" }
             });
@@ -19704,9 +19761,9 @@ var RefundsController = class {
   async ensureDatabaseSeeded() {
     if (seededInitial) return;
     try {
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        const count = await prisma4.refund.count();
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        const count = await prisma5.refund.count();
         if (count === 0) {
           console.log("[RefundsController] DB has 0 refunds. Seeding initial data...");
           await seedRefunds();
@@ -19724,10 +19781,10 @@ var RefundsController = class {
   getRefunds = async (req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           await this.ensureDatabaseSeeded();
-          const dbRefunds = await prisma4.refund.findMany({
+          const dbRefunds = await prisma5.refund.findMany({
             include: {
               payment_refund: {
                 include: {
@@ -19812,16 +19869,16 @@ var RefundsController = class {
       const cashierName = req.user?.username || req.headers["x-user-sub"] || "Neema Mushi";
       const levelsRequired = amount >= 500 ? 2 : 1;
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          let paymentRow = await prisma4.payment.findUnique({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          let paymentRow = await prisma5.payment.findUnique({
             where: { payment_id: BigInt(paymentId) }
           });
           if (!paymentRow) {
-            paymentRow = await prisma4.payment.findFirst();
+            paymentRow = await prisma5.payment.findFirst();
           }
           const targetPaymentId = paymentRow ? paymentRow.payment_id : BigInt(paymentId);
-          const appReq = await prisma4.approval_request.create({
+          const appReq = await prisma5.approval_request.create({
             data: {
               site_id: 1,
               request_no: `APR-26-0${seq}`,
@@ -19840,7 +19897,7 @@ var RefundsController = class {
               createdby: cashierName
             }
           });
-          await prisma4.approval_step.create({
+          await prisma5.approval_step.create({
             data: {
               approval_request_id: appReq.approval_request_id,
               level_no: 1,
@@ -19851,7 +19908,7 @@ var RefundsController = class {
               createdby: cashierName
             }
           });
-          const newRefund = await prisma4.refund.create({
+          const newRefund = await prisma5.refund.create({
             data: {
               payment_id: targetPaymentId,
               refund_no: refundNo,
@@ -19921,9 +19978,9 @@ var RefundsController = class {
       const { ok, level, note } = req.body || {};
       const decider = req.user?.username || req.headers["x-user-sub"] || "Grace Mrema";
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const currentRefund = await prisma4.refund.findUnique({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const currentRefund = await prisma5.refund.findUnique({
             where: { refund_id: BigInt(refundId) },
             include: {
               approval_request_refund: {
@@ -19949,14 +20006,14 @@ var RefundsController = class {
             newRefundStatus = "APPROVED";
           }
           if (app2) {
-            const existingStep = await prisma4.approval_step.findFirst({
+            const existingStep = await prisma5.approval_step.findFirst({
               where: {
                 approval_request_id: app2.approval_request_id,
                 level_no: currentLevel
               }
             });
             if (existingStep) {
-              await prisma4.approval_step.update({
+              await prisma5.approval_step.update({
                 where: { approval_step_id: existingStep.approval_step_id },
                 data: {
                   decision: ok ? "APPROVED" : "REJECTED",
@@ -19967,7 +20024,7 @@ var RefundsController = class {
                 }
               });
             } else {
-              await prisma4.approval_step.create({
+              await prisma5.approval_step.create({
                 data: {
                   approval_request_id: app2.approval_request_id,
                   level_no: currentLevel,
@@ -19980,7 +20037,7 @@ var RefundsController = class {
                 }
               });
             }
-            await prisma4.approval_request.update({
+            await prisma5.approval_request.update({
               where: { approval_request_id: app2.approval_request_id },
               data: {
                 current_level: ok && currentLevel === 1 && levelsRequired > 1 ? 2 : currentLevel,
@@ -19991,7 +20048,7 @@ var RefundsController = class {
               }
             });
           }
-          const updatedRefund = await prisma4.refund.update({
+          const updatedRefund = await prisma5.refund.update({
             where: { refund_id: BigInt(refundId) },
             data: {
               status: newRefundStatus,
@@ -20030,9 +20087,9 @@ var RefundsController = class {
         return sendError4(res, "Bank payment voucher reference is required to mark paid");
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const updated = await prisma4.refund.update({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const updated = await prisma5.refund.update({
             where: { refund_id: BigInt(refundId) },
             data: {
               status: "PAID",
@@ -20090,11 +20147,11 @@ var DisbursementsController = class {
    */
   getDisbursements = async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
       }
-      const dbDisbs = await prisma4.disbursement.findMany({
+      const dbDisbs = await prisma5.disbursement.findMany({
         include: {
           consignment_disbursement: true,
           m_party_disbursement_bill_to: true,
@@ -20161,11 +20218,11 @@ var DisbursementsController = class {
     try {
       const disbIdParam = req.params.disbursementId;
       const disbId = BigInt(disbIdParam);
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const d = await prisma4.disbursement.findUnique({
+      const d = await prisma5.disbursement.findUnique({
         where: { disbursement_id: disbId },
         include: {
           consignment_disbursement: true,
@@ -20241,47 +20298,47 @@ var DisbursementsController = class {
       const description = b.description || "Disbursement expense paid on customer behalf";
       const rebillMode = b.rebillMode === "COST_PLUS_FEE" ? "COST_PLUS_FEE" : "AT_COST";
       const handlingFee = Number(b.handlingFee || 0);
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       let consignmentId = b.consignmentId ? BigInt(b.consignmentId) : null;
       if (!consignmentId) {
-        const firstCon = await prisma4.consignment.findFirst({
+        const firstCon = await prisma5.consignment.findFirst({
           orderBy: { consignment_id: "asc" }
         });
         consignmentId = firstCon ? firstCon.consignment_id : BigInt(1);
       }
       let billToPartyId = Number(b.billToPartyId || 0);
       if (!billToPartyId) {
-        const conRow = await prisma4.consignment.findUnique({
+        const conRow = await prisma5.consignment.findUnique({
           where: { consignment_id: consignmentId }
         });
         billToPartyId = conRow?.bill_to_party_id || 1;
       }
       let chargeCodeId = Number(b.chargeCodeId || 0);
       if (!chargeCodeId && b.chargeCode) {
-        const cRow = await prisma4.m_charge_code.findUnique({
+        const cRow = await prisma5.m_charge_code.findUnique({
           where: { charge_code: b.chargeCode }
         });
         if (cRow) chargeCodeId = cRow.charge_code_id;
       }
       if (!chargeCodeId) {
-        const cRow = await prisma4.m_charge_code.findFirst({
+        const cRow = await prisma5.m_charge_code.findFirst({
           where: { is_disbursement: true }
         });
         chargeCodeId = cRow ? cRow.charge_code_id : 1;
       }
       let payeePartyId = b.payeePartyId ? Number(b.payeePartyId) : null;
       if (!payeePartyId && b.payeeName) {
-        const pRow = await prisma4.m_party.findFirst({
+        const pRow = await prisma5.m_party.findFirst({
           where: { party_name: { contains: b.payeeName } }
         });
         if (pRow) payeePartyId = pRow.party_id;
       }
-      const siteRow = await prisma4.m_site.findFirst();
+      const siteRow = await prisma5.m_site.findFirst();
       const siteId = siteRow ? siteRow.site_id : 1;
-      const created = await prisma4.disbursement.create({
+      const created = await prisma5.disbursement.create({
         data: {
           site_id: siteId,
           consignment_id: consignmentId,
@@ -20340,11 +20397,11 @@ var DisbursementsController = class {
       const disbIdParam = req.params.disbursementId;
       const disbId = BigInt(disbIdParam);
       const reason = req.body?.reason || "Disbursement expense unrecoverable and approved for write-off";
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const d = await prisma4.disbursement.findUnique({
+      const d = await prisma5.disbursement.findUnique({
         where: { disbursement_id: disbId }
       });
       if (!d) {
@@ -20355,11 +20412,11 @@ var DisbursementsController = class {
         );
       }
       const requestNo = `APR-DAR1-26-DISB-${String(Number(disbId)).padStart(4, "0")}`;
-      let app2 = await prisma4.approval_request.findUnique({
+      let app2 = await prisma5.approval_request.findUnique({
         where: { request_no: requestNo }
       });
       if (!app2) {
-        app2 = await prisma4.approval_request.create({
+        app2 = await prisma5.approval_request.create({
           data: {
             site_id: d.site_id,
             request_no: requestNo,
@@ -20380,7 +20437,7 @@ var DisbursementsController = class {
           }
         });
       }
-      const updated = await prisma4.disbursement.update({
+      const updated = await prisma5.disbursement.update({
         where: { disbursement_id: disbId },
         data: {
           status: "WRITTEN_OFF",
@@ -20705,9 +20762,9 @@ var StatementsController = class {
   async ensureDatabaseSeeded() {
     if (seededInitial2) return;
     try {
-      const prisma4 = getPrisma();
-      if (prisma4) {
-        const count = await prisma4.m_party.count({
+      const prisma5 = getPrisma();
+      if (prisma5) {
+        const count = await prisma5.m_party.count({
           where: { m_party_m_party_role: { some: { role_code: "CUSTOMER" } } }
         });
         if (count === 0) {
@@ -20727,10 +20784,10 @@ var StatementsController = class {
   getStatements = async (req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           await this.ensureDatabaseSeeded();
-          const parties2 = await prisma4.m_party.findMany({
+          const parties2 = await prisma5.m_party.findMany({
             where: {
               OR: [
                 { m_party_m_party_role: { some: { role_code: "CUSTOMER" } } },
@@ -20839,9 +20896,9 @@ var StatementsController = class {
       const from = req.query.from || new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
       const to = req.query.to || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const party2 = await prisma4.m_party.findUnique({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const party2 = await prisma5.m_party.findUnique({
             where: { party_id: partyId },
             include: {
               m_party_invoice: {
@@ -20863,7 +20920,7 @@ var StatementsController = class {
           if (!party2) {
             return sendError6(res, `Customer with ID ${partyId} not found`, 404);
           }
-          const refunds2 = await prisma4.refund.findMany({
+          const refunds2 = await prisma5.refund.findMany({
             where: {
               payment_refund: {
                 party_id: partyId
@@ -21065,10 +21122,10 @@ var tariffsController = {
   getTariffs: async (req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           try {
-            const dbTariffs = await prisma4.tariff.findMany({
+            const dbTariffs = await prisma5.tariff.findMany({
               where: {
                 tariff_code: { startsWith: "TRF-" }
               },
@@ -21106,11 +21163,11 @@ var tariffsController = {
     const tariffIdParam = req.params.tariffId;
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const dbTariff = await prisma4.tariff.findFirst({
+          const dbTariff = await prisma5.tariff.findFirst({
             where: whereClause,
             include: {
               tariff_tariff_rule: {
@@ -21145,11 +21202,11 @@ var tariffsController = {
     const tariffIdParam = req.params.tariffId;
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const dbTariff = await prisma4.tariff.findFirst({
+          const dbTariff = await prisma5.tariff.findFirst({
             where: whereClause,
             include: {
               tariff_tariff_rule: {
@@ -21187,10 +21244,10 @@ var tariffsController = {
   createTariff: async (req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           const b = req.body;
-          const created = await prisma4.tariff.create({
+          const created = await prisma5.tariff.create({
             data: {
               tariff_code: b.tariffCode || `TRF-${Date.now()}`,
               tariff_name: b.tariffName || "Standard ICD Tariff",
@@ -21242,14 +21299,14 @@ var tariffsController = {
     const tariffIdParam = req.params.tariffId;
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const target = await prisma4.tariff.findFirst({ where: whereClause });
+          const target = await prisma5.tariff.findFirst({ where: whereClause });
           if (target) {
             const b = req.body;
-            const updated = await prisma4.tariff.update({
+            const updated = await prisma5.tariff.update({
               where: { tariff_id: target.tariff_id },
               data: {
                 ...b.tariffName && { tariff_name: b.tariffName },
@@ -21293,13 +21350,13 @@ var tariffsController = {
     const tariffIdParam = req.params.tariffId;
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const target = await prisma4.tariff.findFirst({ where: whereClause });
+          const target = await prisma5.tariff.findFirst({ where: whereClause });
           if (target) {
-            const updated = await prisma4.tariff.update({
+            const updated = await prisma5.tariff.update({
               where: { tariff_id: target.tariff_id },
               data: {
                 status: "PENDING_APPROVAL",
@@ -21334,11 +21391,11 @@ var tariffsController = {
     const tariffIdParam = req.params.tariffId;
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           const isNumeric = /^\d+$/.test(tariffIdParam);
           const whereClause = isNumeric ? { tariff_id: parseInt(tariffIdParam, 10) } : { tariff_code: tariffIdParam };
-          const target = await prisma4.tariff.findFirst({
+          const target = await prisma5.tariff.findFirst({
             where: whereClause,
             include: {
               tariff_tariff_rule: {
@@ -21350,7 +21407,7 @@ var tariffsController = {
           });
           if (target) {
             const nextVersionNo = target.version_no + 1;
-            const created = await prisma4.tariff.create({
+            const created = await prisma5.tariff.create({
               data: {
                 tariff_code: target.tariff_code,
                 tariff_name: target.tariff_name,
@@ -21369,7 +21426,7 @@ var tariffsController = {
               }
             });
             for (const r3 of target.tariff_tariff_rule) {
-              const newRule = await prisma4.tariff_rule.create({
+              const newRule = await prisma5.tariff_rule.create({
                 data: {
                   tariff_id: created.tariff_id,
                   charge_code_id: r3.charge_code_id,
@@ -21394,7 +21451,7 @@ var tariffsController = {
                 }
               });
               for (const s of r3.tariff_rule_tariff_slab) {
-                await prisma4.tariff_slab.create({
+                await prisma5.tariff_slab.create({
                   data: {
                     tariff_rule_id: newRule.tariff_rule_id,
                     from_qty: s.from_qty,
@@ -21406,7 +21463,7 @@ var tariffsController = {
                 });
               }
             }
-            const fullNewTariff = await prisma4.tariff.findUnique({
+            const fullNewTariff = await prisma5.tariff.findUnique({
               where: { tariff_id: created.tariff_id },
               include: {
                 tariff_tariff_rule: {
@@ -21443,9 +21500,9 @@ var tariffsController = {
   getTariffRates: async (_req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const rules = await prisma4.tariff_rule.findMany({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const rules = await prisma5.tariff_rule.findMany({
             include: {
               m_charge_code_tariff_rule: true,
               tariff_rule_tariff_slab: true
@@ -21520,16 +21577,16 @@ function formatDbRate(r3, usedBy = 0) {
 var exchangeRatesController = {
   getExchangeRates: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
       }
-      const dbRates = await prisma4.m_exchange_rate.findMany({
+      const dbRates = await prisma5.m_exchange_rate.findMany({
         orderBy: [{ rate_date: "desc" }, { rate_kind: "asc" }]
       });
       let invoiceCounts = {};
       try {
-        const invoices3 = await prisma4.invoice.findMany({
+        const invoices3 = await prisma5.invoice.findMany({
           select: { exchange_rate: true }
         });
         for (const inv of invoices3) {
@@ -21554,12 +21611,12 @@ var exchangeRatesController = {
   getEffectiveRate: async (req, res) => {
     const targetDate = req.query.date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const targetD = /* @__PURE__ */ new Date(targetDate + "T00:00:00Z");
-      const exactDaily = await prisma4.m_exchange_rate.findFirst({
+      const exactDaily = await prisma5.m_exchange_rate.findFirst({
         where: {
           from_currency: "USD",
           to_currency: "TZS",
@@ -21575,7 +21632,7 @@ var exchangeRatesController = {
       }
       const targetMonth = targetDate.slice(0, 7);
       const monthStart = /* @__PURE__ */ new Date(`${targetMonth}-01T00:00:00Z`);
-      const carryDaily = await prisma4.m_exchange_rate.findFirst({
+      const carryDaily = await prisma5.m_exchange_rate.findFirst({
         where: {
           from_currency: "USD",
           to_currency: "TZS",
@@ -21597,7 +21654,7 @@ var exchangeRatesController = {
           note
         });
       }
-      const monthlyRate = await prisma4.m_exchange_rate.findFirst({
+      const monthlyRate = await prisma5.m_exchange_rate.findFirst({
         where: {
           from_currency: "USD",
           to_currency: "TZS",
@@ -21612,7 +21669,7 @@ var exchangeRatesController = {
           note: "No daily rate; monthly rate used"
         });
       }
-      const anyLatest = await prisma4.m_exchange_rate.findFirst({
+      const anyLatest = await prisma5.m_exchange_rate.findFirst({
         where: {
           from_currency: "USD",
           to_currency: "TZS",
@@ -21644,12 +21701,12 @@ var exchangeRatesController = {
       if (!rateVal || isNaN(rateVal)) {
         return res.status(400).json({ error: "Valid rate number is required" });
       }
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const d = /* @__PURE__ */ new Date(rateDateStr + "T00:00:00Z");
-      const created = await prisma4.m_exchange_rate.upsert({
+      const created = await prisma5.m_exchange_rate.upsert({
         where: {
           company_id_from_currency_to_currency_rate_date: {
             company_id: 1,
@@ -21686,17 +21743,17 @@ var exchangeRatesController = {
     try {
       const exchangeRateId = Number(req.params.exchangeRateId);
       const { rate, sourceNote, enteredBy } = req.body;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const existing = await prisma4.m_exchange_rate.findUnique({
+      const existing = await prisma5.m_exchange_rate.findUnique({
         where: { exchange_rate_id: exchangeRateId }
       });
       if (!existing) {
         return res.status(404).json({ error: "Exchange rate not found" });
       }
-      const invoiceCount = await prisma4.invoice.count({
+      const invoiceCount = await prisma5.invoice.count({
         where: { exchange_rate: existing.rate }
       });
       if (invoiceCount > 0) {
@@ -21704,7 +21761,7 @@ var exchangeRatesController = {
           error: "A rate used by a posted document can't be edited: the invoice, its fiscal receipt and its NG journal all carry it. Corrections go on the next rate."
         });
       }
-      const updated = await prisma4.m_exchange_rate.update({
+      const updated = await prisma5.m_exchange_rate.update({
         where: { exchange_rate_id: exchangeRateId },
         data: {
           ...rate !== void 0 ? { rate: Number(rate) } : {},
@@ -21725,20 +21782,20 @@ var exchangeRatesController = {
 var ledgerController = {
   getLedgerPostings: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
       }
-      const rows = await prisma4.gl_posting.findMany({
+      const rows = await prisma5.gl_posting.findMany({
         orderBy: [{ posting_date: "desc" }, { gl_posting_id: "desc" }]
       });
       const paymentIds = rows.filter((r3) => r3.source_entity === "payment").map((r3) => r3.source_id);
       const invoiceIds = rows.filter((r3) => r3.source_entity === "invoice").map((r3) => r3.source_id);
-      const payments2 = await prisma4.payment.findMany({
+      const payments2 = await prisma5.payment.findMany({
         where: { payment_id: { in: paymentIds } },
         select: { payment_id: true, receipt_no: true }
       });
-      const invoices3 = await prisma4.invoice.findMany({
+      const invoices3 = await prisma5.invoice.findMany({
         where: { invoice_id: { in: invoiceIds } },
         select: { invoice_id: true, invoice_no: true, doc_kind: true }
       });
@@ -21798,17 +21855,17 @@ var ledgerController = {
   retryPosting: async (req, res) => {
     try {
       const glPostingId = BigInt(req.params.glPostingId.replace(":retry", ""));
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const existing = await prisma4.gl_posting.findUnique({
+      const existing = await prisma5.gl_posting.findUnique({
         where: { gl_posting_id: glPostingId }
       });
       if (!existing) {
         return res.status(404).json({ error: "GL posting not found" });
       }
-      const updated = await prisma4.gl_posting.update({
+      const updated = await prisma5.gl_posting.update({
         where: { gl_posting_id: glPostingId },
         data: {
           status: "POSTED",
@@ -21848,11 +21905,11 @@ var ledgerController = {
   },
   getPeriods: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable", items: [], total: 0 });
       }
-      const rows = await prisma4.accounting_period.findMany({
+      const rows = await prisma5.accounting_period.findMany({
         orderBy: { period_key: "desc" }
       });
       const items = rows.map((p2) => ({
@@ -21875,17 +21932,17 @@ var ledgerController = {
   closePeriod: async (req, res) => {
     try {
       const periodId = Number(req.params.accountingPeriodId.replace(":close", ""));
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const period = await prisma4.accounting_period.findUnique({
+      const period = await prisma5.accounting_period.findUnique({
         where: { accounting_period_id: periodId }
       });
       if (!period) {
         return res.status(404).json({ error: "Accounting period not found" });
       }
-      const failedCount = await prisma4.gl_posting.count({
+      const failedCount = await prisma5.gl_posting.count({
         where: {
           posting_date: {
             gte: period.period_start,
@@ -21899,7 +21956,7 @@ var ledgerController = {
           error: `${failedCount} postings failed in period ${period.period_key}. NG's ledger is missing these until they are retried. Periods with failures can't be closed.`
         });
       }
-      const updated = await prisma4.accounting_period.update({
+      const updated = await prisma5.accounting_period.update({
         where: { accounting_period_id: periodId },
         data: {
           status: "CLOSED",
@@ -21924,17 +21981,17 @@ var ledgerController = {
   reopenPeriod: async (req, res) => {
     try {
       const periodId = Number(req.params.accountingPeriodId.replace(":reopen", ""));
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const period = await prisma4.accounting_period.findUnique({
+      const period = await prisma5.accounting_period.findUnique({
         where: { accounting_period_id: periodId }
       });
       if (!period) {
         return res.status(404).json({ error: "Accounting period not found" });
       }
-      const updated = await prisma4.accounting_period.update({
+      const updated = await prisma5.accounting_period.update({
         where: { accounting_period_id: periodId },
         data: {
           status: "OPEN",
@@ -22005,8 +22062,8 @@ var controlApprovalsController = {
     try {
       const statusParam = req.query.status;
       const siteIdParam = req.query.siteId ? Number(req.query.siteId) : void 0;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({
           error: "Database connection unavailable",
           items: [],
@@ -22020,7 +22077,7 @@ var controlApprovalsController = {
       if (siteIdParam) {
         whereClause.site_id = siteIdParam;
       }
-      const dbApprovals = await prisma4.approval_request.findMany({
+      const dbApprovals = await prisma5.approval_request.findMany({
         where: Object.keys(whereClause).length > 0 ? whereClause : void 0,
         include: {
           m_permission_approval_request: true,
@@ -22080,25 +22137,25 @@ var controlApprovalsController = {
       const { action, comments, reason } = req.body || {};
       const isApprove = action === "APPROVE" || action === "APPROVED";
       const deciderSub = req.headers["x-user-sub"] || req.user?.username || "Ashok K.";
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       let existing = null;
       if (approvalIdParam) {
         if (String(approvalIdParam).startsWith("APR-")) {
-          existing = await prisma4.approval_request.findUnique({
+          existing = await prisma5.approval_request.findUnique({
             where: { request_no: String(approvalIdParam) }
           });
         }
         const cleanDigits = String(approvalIdParam).replace(/[^0-9]/g, "");
         if (!existing && cleanDigits) {
-          existing = await prisma4.approval_request.findUnique({
+          existing = await prisma5.approval_request.findUnique({
             where: { approval_request_id: BigInt(cleanDigits) }
           });
         }
         if (!existing) {
-          existing = await prisma4.approval_request.findFirst({
+          existing = await prisma5.approval_request.findFirst({
             where: {
               OR: [
                 { request_no: String(approvalIdParam) },
@@ -22116,7 +22173,7 @@ var controlApprovalsController = {
       const isDone = !isApprove || nextLvl >= (existing.levels_required || 1);
       const newStatus = !isApprove ? "REJECTED" : isDone ? "APPROVED" : "PENDING";
       try {
-        await prisma4.approval_step.create({
+        await prisma5.approval_step.create({
           data: {
             approval_request_id: existing.approval_request_id,
             level_no: nextLvl,
@@ -22133,7 +22190,7 @@ var controlApprovalsController = {
           stepErr.message
         );
       }
-      const updated = await prisma4.approval_request.update({
+      const updated = await prisma5.approval_request.update({
         where: { approval_request_id: existing.approval_request_id },
         data: {
           status: newStatus,
@@ -22145,7 +22202,7 @@ var controlApprovalsController = {
       });
       if (isDone) {
         if (existing.entity_name === "refund") {
-          await prisma4.refund.updateMany({
+          await prisma5.refund.updateMany({
             where: { approval_request_id: existing.approval_request_id },
             data: {
               status: newStatus === "APPROVED" ? "APPROVED" : "REJECTED",
@@ -22154,7 +22211,7 @@ var controlApprovalsController = {
             }
           });
         } else if (existing.entity_name === "disbursement") {
-          await prisma4.disbursement.updateMany({
+          await prisma5.disbursement.updateMany({
             where: {
               write_off_approval_request_id: existing.approval_request_id
             },
@@ -22184,11 +22241,11 @@ var controlApprovalsController = {
 var controlExceptionsController = {
   getExceptions: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
-      const dbExceptions = await prisma4.exception_case.findMany({
+      const dbExceptions = await prisma5.exception_case.findMany({
         include: { m_exception_type: true },
         orderBy: { exception_case_id: "desc" }
       });
@@ -22218,13 +22275,13 @@ var controlExceptionsController = {
     try {
       const { exceptionId } = req.params;
       const { resolution, resolutionNotes } = req.body;
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const isNumeric = /^\d+$/.test(exceptionId);
       const whereClause = isNumeric ? { exception_case_id: BigInt(exceptionId) } : { case_no: exceptionId };
-      const updated = await prisma4.exception_case.update({
+      const updated = await prisma5.exception_case.update({
         where: whereClause,
         data: {
           status: "RESOLVED",
@@ -22677,13 +22734,13 @@ var controlForecastsController = {
 var controlAuditController = {
   getAuditTrail: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         const { entityName, entityId } = req.params;
         const where = {};
         if (entityName) where.entity_name = entityName;
         if (entityId) where.entity_id = entityId;
-        const dbLogs = await prisma4.audit_log.findMany({
+        const dbLogs = await prisma5.audit_log.findMany({
           where,
           orderBy: { occurred_at: "desc" },
           take: 200
@@ -22739,8 +22796,8 @@ function resolveSiteId(req) {
 var controlTowerController = {
   getControlTower: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const siteId = resolveSiteId(req);
@@ -22778,7 +22835,7 @@ var controlTowerController = {
         equipmentList
       ] = await Promise.all([
         // 1. Truck visits: either active now OR admitted/exited today
-        prisma4.truck_visit.findMany({
+        prisma5.truck_visit.findMany({
           where: {
             site_id: siteId,
             OR: [
@@ -22806,7 +22863,7 @@ var controlTowerController = {
           orderBy: { arrived_at: "asc" }
         }),
         // 2. Appointments for today (planIn / planOut)
-        prisma4.appointment.findMany({
+        prisma5.appointment.findMany({
           where: {
             site_id: siteId,
             slot_start: { gte: startOfToday, lte: endOfToday },
@@ -22815,18 +22872,18 @@ var controlTowerController = {
           include: { appointments_visit_types: true }
         }),
         // 3. Yard locations for block-level & total slot occupancy
-        prisma4.m_yard_location.findMany({
+        prisma5.m_yard_location.findMany({
           where: { site_id: siteId, is_active: true }
         }),
         // 4. Active yard occupancies for this site
-        prisma4.yard_occupancy.findMany({
+        prisma5.yard_occupancy.findMany({
           where: {
             m_yard_location_yard_occupancy: { site_id: siteId }
           },
           select: { yard_location_id: true }
         }),
         // 5. Pending move orders
-        prisma4.move_order.findMany({
+        prisma5.move_order.findMany({
           where: {
             site_id: siteId,
             status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] }
@@ -22838,7 +22895,7 @@ var controlTowerController = {
           }
         }),
         // 6. Completed moves today (for equipment movesToday counts)
-        prisma4.move_order.findMany({
+        prisma5.move_order.findMany({
           where: {
             site_id: siteId,
             status: { in: ["DONE", "COMPLETED"] },
@@ -22847,7 +22904,7 @@ var controlTowerController = {
           select: { assigned_equipment_id: true }
         }),
         // 7. Pending approval requests
-        prisma4.approval_request.findMany({
+        prisma5.approval_request.findMany({
           where: {
             OR: [{ site_id: siteId }, { site_id: null }],
             status: "PENDING"
@@ -22855,7 +22912,7 @@ var controlTowerController = {
           orderBy: { requested_at: "asc" }
         }),
         // 8. Open exception cases
-        prisma4.exception_case.findMany({
+        prisma5.exception_case.findMany({
           where: {
             site_id: siteId,
             status: { notIn: ["RESOLVED", "CLOSED"] }
@@ -22864,7 +22921,7 @@ var controlTowerController = {
           orderBy: { raised_at: "desc" }
         }),
         // 9. Site equipment
-        prisma4.m_equipment.findMany({
+        prisma5.m_equipment.findMany({
           where: { site_id: siteId, is_active: true },
           orderBy: { equipment_code: "asc" }
         })
@@ -23058,8 +23115,8 @@ var controlTowerController = {
    */
   getStatus: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database connection unavailable" });
       }
       const siteId = resolveSiteId(req);
@@ -23069,23 +23126,23 @@ var controlTowerController = {
         activeCriticalAlerts,
         activeEquipment
       ] = await Promise.all([
-        prisma4.truck_visit.count({
+        prisma5.truck_visit.count({
           where: {
             site_id: siteId,
             status: { notIn: ["EXITED", "CANCELLED", "EXPIRED", "ANNOUNCED"] }
           }
         }),
-        prisma4.truck_visit.count({
+        prisma5.truck_visit.count({
           where: { site_id: siteId, status: { in: ["AT_OUTER_GATE", "HELD"] } }
         }),
-        prisma4.exception_case.count({
+        prisma5.exception_case.count({
           where: {
             site_id: siteId,
             severity: "CRITICAL",
             status: { notIn: ["RESOLVED", "CLOSED"] }
           }
         }),
-        prisma4.m_equipment.count({
+        prisma5.m_equipment.count({
           where: { site_id: siteId, is_active: true }
         })
       ]);
@@ -23132,10 +23189,10 @@ var customerPortalController = {
   getOverview: async (req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const totalConsignments = await prisma4.consignments.count();
-          const totalUnits = await prisma4.unit_stay.count();
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const totalConsignments = await prisma5.consignments.count();
+          const totalUnits = await prisma5.unit_stay.count();
           return res.json({
             activeConsignments: totalConsignments,
             totalUnitsInDepot: totalUnits,
@@ -23193,11 +23250,11 @@ var SLA_HOURS = {
 var customerServiceRequestsController = {
   getServiceRequests: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database unavailable" });
       }
-      const srDelegate = prisma4.service_request || prisma4.service_requests;
+      const srDelegate = prisma5.service_request || prisma5.service_requests;
       const dbReqs = await srDelegate.findMany({
         include: {
           m_party_service_request: true,
@@ -23272,11 +23329,11 @@ var customerServiceRequestsController = {
   },
   createServiceRequest: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database unavailable" });
       }
-      const srDelegate = prisma4.service_request || prisma4.service_requests;
+      const srDelegate = prisma5.service_request || prisma5.service_requests;
       const count = await srDelegate.count();
       const requestNo = req.body.requestNo || `SR-26-0${7120 + count + 1}`;
       const kind = req.body.requestKind || req.body.requestType || "OTHER";
@@ -23331,11 +23388,11 @@ var customerServiceRequestsController = {
   },
   respondServiceRequest: async (req, res) => {
     try {
-      const prisma4 = getPrisma();
-      if (!prisma4) {
+      const prisma5 = getPrisma();
+      if (!prisma5) {
         return res.status(500).json({ error: "Database unavailable" });
       }
-      const srDelegate = prisma4.service_request || prisma4.service_requests;
+      const srDelegate = prisma5.service_request || prisma5.service_requests;
       const id = Number(req.params.serviceRequestId || req.params.id);
       const existing = await srDelegate.findFirst({
         where: { service_request_id: id }
@@ -23427,10 +23484,10 @@ var authSessionController = {
       const activeSiteId = req.headers["x-site-id"]?.toUpperCase() || "DAR1";
       const roleCode = req.headers["x-role-code"] || "ALL_PERMISSIONS";
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           const [dbUser, dbSites, dbRoles] = await Promise.all([
-            prisma4.app_user.findFirst({
+            prisma5.app_user.findFirst({
               where: { user_id: 1 },
               include: {
                 user_site_role: {
@@ -23441,11 +23498,11 @@ var authSessionController = {
                 }
               }
             }),
-            prisma4.m_site.findMany({
+            prisma5.m_site.findMany({
               where: { is_active: true },
               orderBy: { site_id: "asc" }
             }),
-            prisma4.m_role.findMany({
+            prisma5.m_role.findMany({
               where: { is_active: true },
               orderBy: { role_id: "asc" }
             })
@@ -23542,8 +23599,8 @@ var authSessionController = {
         newLang = "en";
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           const updateData = {
             updatedate: /* @__PURE__ */ new Date(),
             updatedby: "user:1"
@@ -23551,7 +23608,7 @@ var authSessionController = {
           if (newName) updateData.user_name = newName;
           if (newPhone) updateData.phone = newPhone;
           if (newLang) updateData.preferred_language = newLang;
-          const updated = await prisma4.app_user.update({
+          const updated = await prisma5.app_user.update({
             where: { user_id: 1 },
             data: updateData,
             include: {
@@ -23602,9 +23659,9 @@ var authSessionController = {
       const { siteCode } = req.body;
       const targetCode = (siteCode || "DAR1").toUpperCase();
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const matched = await prisma4.m_site.findFirst({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const matched = await prisma5.m_site.findFirst({
             where: { site_code: targetCode }
           });
           if (matched) {
@@ -23880,12 +23937,12 @@ var PLATE_FORMATS = [
 var UnitsController = class {
   getUnitTypes = async (req, res) => {
     const params = parsePaginationParams(req.query);
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendSuccess(res, paginateArray([], params), "Database not connected");
     }
     try {
-      const dbTypes = await prisma4.m_unit_type.findMany({
+      const dbTypes = await prisma5.m_unit_type.findMany({
         orderBy: { unit_type_id: "asc" }
       });
       const mapped = dbTypes.map((u) => ({
@@ -23906,12 +23963,12 @@ var UnitsController = class {
   };
   createUnitType = async (req, res) => {
     const body = req.body;
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database not connected", 500);
     }
     try {
-      const created = await prisma4.m_unit_type.create({
+      const created = await prisma5.m_unit_type.create({
         data: {
           type_code: body.typeCode || body.unitTypeCode || `UT-${Date.now()}`,
           type_name: body.typeName || "Standard Container",
@@ -23943,12 +24000,12 @@ var UnitsController = class {
   };
   getUnitTypeById = async (req, res) => {
     const idOrCode = req.params.unitTypeId;
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database not connected", 500);
     }
     try {
-      const dbType = await prisma4.m_unit_type.findFirst({
+      const dbType = await prisma5.m_unit_type.findFirst({
         where: isNaN(Number(idOrCode)) ? { type_code: idOrCode } : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] }
       });
       if (!dbType) {
@@ -23975,18 +24032,18 @@ var UnitsController = class {
   };
   updateUnitType = async (req, res) => {
     const idOrCode = req.params.unitTypeId;
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database not connected", 500);
     }
     try {
-      const existing = await prisma4.m_unit_type.findFirst({
+      const existing = await prisma5.m_unit_type.findFirst({
         where: isNaN(Number(idOrCode)) ? { type_code: idOrCode } : { OR: [{ unit_type_id: Number(idOrCode) }, { type_code: idOrCode }] }
       });
       if (!existing) {
         throw new NotFoundError("Unit type", idOrCode);
       }
-      const updated = await prisma4.m_unit_type.update({
+      const updated = await prisma5.m_unit_type.update({
         where: { unit_type_id: existing.unit_type_id },
         data: {
           type_name: req.body.typeName ?? existing.type_name,
@@ -24177,11 +24234,11 @@ var UnitsController = class {
       if (!u) {
         throw new NotFoundError("Unit stay", idOrUnitNo);
       }
-      const prisma4 = getPrisma();
+      const prisma5 = getPrisma();
       let moves = [];
-      if (prisma4) {
+      if (prisma5) {
         try {
-          const dbMoves = await prisma4.yard_move.findMany({
+          const dbMoves = await prisma5.yard_move.findMany({
             where: { unit_stay_id: Number(u.unitStayId) },
             include: {
               m_yard_location_yard_move_from_location_idTom_yard_location: true,
@@ -24430,8 +24487,8 @@ var PortalController = class {
   getUnits = async (req, res) => {
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : DEFAULT_PORTAL_PARTY;
     const params = parsePaginationParams(req.query);
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -24439,7 +24496,7 @@ var PortalController = class {
       );
     }
     try {
-      const stayDelegate = prisma4.unit_stay || prisma4.unit_stays;
+      const stayDelegate = prisma5.unit_stay || prisma5.unit_stays;
       const dbStays = await stayDelegate.findMany({
         where: {
           unit_stay_consignments: {
@@ -24537,8 +24594,8 @@ var PortalController = class {
   getInvoices = async (req, res) => {
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : DEFAULT_PORTAL_PARTY;
     const params = parsePaginationParams(req.query);
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -24546,7 +24603,7 @@ var PortalController = class {
       );
     }
     try {
-      const invDelegate = prisma4.invoice || prisma4.invoices;
+      const invDelegate = prisma5.invoice || prisma5.invoices;
       const dbInvoices = await invDelegate.findMany({
         where: { bill_to_party_id: partyId },
         include: { invoice_invoice_line: true },
@@ -24590,8 +24647,8 @@ var PortalController = class {
   };
   getDocuments = async (req, res) => {
     const params = parsePaginationParams(req.query);
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -24599,7 +24656,7 @@ var PortalController = class {
       );
     }
     try {
-      const docDelegate = prisma4.document || prisma4.documents;
+      const docDelegate = prisma5.document || prisma5.documents;
       const dbDocs = await docDelegate.findMany({
         where: { status: "ACTIVE" },
         orderBy: { document_id: "desc" }
@@ -24632,8 +24689,8 @@ var PortalController = class {
   getAppointments = async (req, res) => {
     const params = parsePaginationParams(req.query);
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : void 0;
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -24641,7 +24698,7 @@ var PortalController = class {
       );
     }
     try {
-      const apptDelegate = prisma4.appointment || prisma4.appointments;
+      const apptDelegate = prisma5.appointment || prisma5.appointments;
       const where = {};
       if (partyId && !isNaN(partyId)) {
         where.transporter_party_id = partyId;
@@ -24688,8 +24745,8 @@ var PortalController = class {
   getRequests = async (req, res) => {
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : void 0;
     const params = parsePaginationParams(req.query);
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendSuccess(
         res,
         paginateArray([], params),
@@ -24697,7 +24754,7 @@ var PortalController = class {
       );
     }
     try {
-      const srDelegate = prisma4.service_request || prisma4.service_requests;
+      const srDelegate = prisma5.service_request || prisma5.service_requests;
       const dbReqs = await srDelegate.findMany({
         where: partyId ? { party_id: partyId } : {},
         include: { m_party_service_request: true },
@@ -24756,8 +24813,8 @@ var PortalController = class {
   };
   getSummary = async (req, res) => {
     const partyId = req.query.partyId ? parseInt(String(req.query.partyId), 10) : DEFAULT_PORTAL_PARTY;
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendSuccess(
         res,
         {
@@ -24771,8 +24828,8 @@ var PortalController = class {
       );
     }
     try {
-      const stayDelegate = prisma4.unit_stay || prisma4.unit_stays;
-      const invDelegate = prisma4.invoice || prisma4.invoices;
+      const stayDelegate = prisma5.unit_stay || prisma5.unit_stays;
+      const invDelegate = prisma5.invoice || prisma5.invoices;
       const [dbStays, dbInvoices] = await Promise.all([
         stayDelegate.findMany({
           where: {
@@ -24863,14 +24920,14 @@ var PortalController = class {
   };
   bookAppointment = async (req, res) => {
     const body = req.body;
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const vtDelegate = prisma4.m_visit_type || prisma4.visit_types;
-      const partyDelegate = prisma4.m_party || prisma4.parties;
-      const apptDelegate = prisma4.appointment || prisma4.appointments;
+      const vtDelegate = prisma5.m_visit_type || prisma5.visit_types;
+      const partyDelegate = prisma5.m_party || prisma5.parties;
+      const apptDelegate = prisma5.appointment || prisma5.appointments;
       const visitTypeCode = body.visitTypeCode || "IMPORT_PICKUP";
       const visitType = await vtDelegate.findFirst({
         where: {
@@ -24925,12 +24982,12 @@ var PortalController = class {
   };
   submitRequest = async (req, res) => {
     const body = req.body;
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const srDelegate = prisma4.service_request || prisma4.service_requests;
+      const srDelegate = prisma5.service_request || prisma5.service_requests;
       const k = body.requestKind || body.kind || "DELIVERY";
       const partyId = body.partyId || DEFAULT_PORTAL_PARTY;
       const reqCount = await srDelegate.count();
@@ -24985,12 +25042,12 @@ var PortalController = class {
   };
   respondToRequest = async (req, res) => {
     const id = parseInt(req.params.serviceRequestId, 10);
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const srDelegate = prisma4.service_request || prisma4.service_requests;
+      const srDelegate = prisma5.service_request || prisma5.service_requests;
       const existing = await srDelegate.findFirst({
         where: { service_request_id: id }
       });
@@ -25036,12 +25093,12 @@ var PortalController = class {
   payInvoice = async (req, res) => {
     const invoiceId = parseInt(req.params.invoiceId, 10);
     const body = req.body;
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const invDelegate = prisma4.invoice || prisma4.invoices;
+      const invDelegate = prisma5.invoice || prisma5.invoices;
       const dbInv = await invDelegate.findUnique({
         where: { invoice_id: invoiceId }
       });
@@ -25072,12 +25129,12 @@ var PortalController = class {
     }
   };
   getInvitations = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const piDelegate = prisma4.portal_invitation || prisma4.portal_invitations;
+      const piDelegate = prisma5.portal_invitation || prisma5.portal_invitations;
       const dbInvs = await piDelegate.findMany({
         include: { m_party_portal_invitation: true },
         orderBy: { portal_invitation_id: "desc" }
@@ -25100,12 +25157,12 @@ var PortalController = class {
     }
   };
   createInvitation = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const piDelegate = prisma4.portal_invitation || prisma4.portal_invitations;
+      const piDelegate = prisma5.portal_invitation || prisma5.portal_invitations;
       const partyId = Number(req.body.partyId) || DEFAULT_PORTAL_PARTY;
       const email = req.body.email || "user@example.com";
       const role = req.body.role || "CLEARING_AGENT";
@@ -25136,12 +25193,12 @@ var PortalController = class {
     }
   };
   revokeInvitation = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database client not available", 500);
     }
     try {
-      const piDelegate = prisma4.portal_invitation || prisma4.portal_invitations;
+      const piDelegate = prisma5.portal_invitation || prisma5.portal_invitations;
       const id = parseInt(req.params.invitationId, 10);
       const updated = await piDelegate.update({
         where: { portal_invitation_id: id },
@@ -25388,10 +25445,10 @@ function generateRollingAppointments() {
 }
 var AppointmentsController = class {
   getSlotRules = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const dbRules = await prisma4.m_appointment_slot_rule.findMany({
+        const dbRules = await prisma5.m_appointment_slot_rule.findMany({
           include: { m_visit_type: true },
           orderBy: { appointment_slot_rule_id: "asc" }
         });
@@ -25425,18 +25482,18 @@ var AppointmentsController = class {
     return sendSuccess(res, { items: fallbackRules, total: fallbackRules.length, nextCursor: null });
   };
   createSlotRule = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const flow = req.body.flow || req.body.visitTypeCode || "IMPORT_PICKUP";
-      const visitType = await prisma4.m_visit_type.findFirst({
+      const visitType = await prisma5.m_visit_type.findFirst({
         where: { visit_type_code: flow }
       });
       const vtId = visitType?.visit_type_id || 1;
-      const created = await prisma4.m_appointment_slot_rule.create({
+      const created = await prisma5.m_appointment_slot_rule.create({
         data: {
           site_id: siteId,
           visit_type_id: vtId,
@@ -25463,13 +25520,13 @@ var AppointmentsController = class {
     }
   };
   getSlotRuleById = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const id = parseInt(req.params.appointmentSlotRuleId, 10);
-      const r3 = await prisma4.m_appointment_slot_rule.findUnique({
+      const r3 = await prisma5.m_appointment_slot_rule.findUnique({
         where: { appointment_slot_rule_id: id },
         include: { m_visit_type: true }
       });
@@ -25490,13 +25547,13 @@ var AppointmentsController = class {
     }
   };
   updateSlotRule = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const id = parseInt(req.params.appointmentSlotRuleId, 10);
-      const updated = await prisma4.m_appointment_slot_rule.update({
+      const updated = await prisma5.m_appointment_slot_rule.update({
         where: { appointment_slot_rule_id: id },
         data: {
           capacity_trucks: req.body.maxSlotsPerHour,
@@ -25517,15 +25574,15 @@ var AppointmentsController = class {
     }
   };
   getAvailability = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const date = String(req.query.date || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
       const startOfDay = /* @__PURE__ */ new Date(`${date}T00:00:00.000Z`);
       const endOfDay = /* @__PURE__ */ new Date(`${date}T23:59:59.999Z`);
-      const bookedAppts = await prisma4.appointment.findMany({
+      const bookedAppts = await prisma5.appointment.findMany({
         where: {
           slot_start: { gte: startOfDay, lte: endOfDay },
           status: { not: "CANCELLED" }
@@ -25552,10 +25609,10 @@ var AppointmentsController = class {
     }
   };
   getAppointments = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (prisma4) {
+    const prisma5 = getPrisma();
+    if (prisma5) {
       try {
-        const dbAppts = await prisma4.appointment.findMany({
+        const dbAppts = await prisma5.appointment.findMany({
           include: {
             appointments_visit_types: true,
             m_party_appointment: true,
@@ -25600,27 +25657,27 @@ var AppointmentsController = class {
     return sendSuccess(res, { items: fallbackItems, total: fallbackItems.length, nextCursor: null });
   };
   createAppointment = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const visitTypeCode = req.body.visitTypeCode || "IMPORT_PICKUP";
-      const visitType = await prisma4.m_visit_type.findFirst({
+      const visitType = await prisma5.m_visit_type.findFirst({
         where: { visit_type_code: visitTypeCode }
       });
       const vtId = visitType?.visit_type_id || 1;
       let truckId = req.body.truckId ? Number(req.body.truckId) : void 0;
       const plateNo = req.body.plateNo || req.body.truckPlate || req.body.plate;
       if (!truckId && plateNo) {
-        const foundTruck = await prisma4.m_truck.findFirst({
+        const foundTruck = await prisma5.m_truck.findFirst({
           where: { plate_no: plateNo }
         });
         if (foundTruck) {
           truckId = foundTruck.truck_id;
         } else {
-          const newTruck = await prisma4.m_truck.create({
+          const newTruck = await prisma5.m_truck.create({
             data: {
               plate_no: plateNo,
               plate_display: plateNo,
@@ -25633,13 +25690,13 @@ var AppointmentsController = class {
       }
       let driverId = req.body.driverId ? Number(req.body.driverId) : void 0;
       if (!driverId && req.body.driverName) {
-        const foundDriver = await prisma4.m_driver.findFirst({
+        const foundDriver = await prisma5.m_driver.findFirst({
           where: { driver_name: req.body.driverName }
         });
         if (foundDriver) {
           driverId = foundDriver.driver_id;
         } else {
-          const newDriver = await prisma4.m_driver.create({
+          const newDriver = await prisma5.m_driver.create({
             data: {
               driver_name: req.body.driverName,
               licence_no: `LIC-${Date.now().toString().slice(-6)}`,
@@ -25652,11 +25709,11 @@ var AppointmentsController = class {
         }
       }
       const transporterPartyId = Number(req.body.partyId || req.body.transporterPartyId) || 1;
-      const apptCount = await prisma4.appointment.count();
+      const apptCount = await prisma5.appointment.count();
       const apptNo = req.body.apptNo || req.body.appointmentNo || `APT-26-0${apptCount + 4130}`;
       const slotStart = new Date(req.body.slotStart || req.body.slotTime || Date.now() + 36e5);
       const slotEnd = new Date(req.body.slotEnd || slotStart.getTime() + 36e5);
-      const created = await prisma4.appointment.create({
+      const created = await prisma5.appointment.create({
         data: {
           site_id: siteId,
           visit_type_id: vtId,
@@ -25690,14 +25747,14 @@ var AppointmentsController = class {
     }
   };
   getAppointmentById = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const idStr = String(req.params.appointmentId);
       const isNum = !isNaN(Number(idStr));
-      const a = await prisma4.appointment.findFirst({
+      const a = await prisma5.appointment.findFirst({
         where: isNum ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] } : { appointment_no: idStr },
         include: {
           appointments_visit_types: true,
@@ -25731,18 +25788,18 @@ var AppointmentsController = class {
     }
   };
   cancelAppointment = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const idStr = String(req.params.appointmentId);
       const isNum = !isNaN(Number(idStr));
-      const existing = await prisma4.appointment.findFirst({
+      const existing = await prisma5.appointment.findFirst({
         where: isNum ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] } : { appointment_no: idStr }
       });
       if (!existing) return sendError(res, "Appointment not found", 404);
-      const updated = await prisma4.appointment.update({
+      const updated = await prisma5.appointment.update({
         where: { appointment_id: existing.appointment_id },
         data: { status: "CANCELLED" }
       });
@@ -25752,20 +25809,20 @@ var AppointmentsController = class {
     }
   };
   rescheduleAppointment = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const idStr = String(req.params.appointmentId);
       const isNum = !isNaN(Number(idStr));
-      const existing = await prisma4.appointment.findFirst({
+      const existing = await prisma5.appointment.findFirst({
         where: isNum ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] } : { appointment_no: idStr }
       });
       if (!existing) return sendError(res, "Appointment not found", 404);
       const slotStart = req.body.slotStart ? new Date(req.body.slotStart) : existing.slot_start;
       const slotEnd = req.body.slotEnd ? new Date(req.body.slotEnd) : existing.slot_end;
-      const updated = await prisma4.appointment.update({
+      const updated = await prisma5.appointment.update({
         where: { appointment_id: existing.appointment_id },
         data: {
           slot_start: slotStart,
@@ -25779,17 +25836,17 @@ var AppointmentsController = class {
     }
   };
   updateAppointmentStatus = async (req, res) => {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const idStr = String(req.params.appointmentId);
     const status = req.body.status || "BOOKED";
-    if (prisma4) {
+    if (prisma5) {
       try {
         const isNum = !isNaN(Number(idStr));
-        const existing = await prisma4.appointment.findFirst({
+        const existing = await prisma5.appointment.findFirst({
           where: isNum ? { OR: [{ appointment_id: BigInt(Number(idStr)) }, { appointment_no: idStr }] } : { appointment_no: idStr }
         });
         if (existing) {
-          const updated = await prisma4.appointment.update({
+          const updated = await prisma5.appointment.update({
             where: { appointment_id: existing.appointment_id },
             data: { status, updatedate: /* @__PURE__ */ new Date() }
           });
@@ -25885,10 +25942,10 @@ var CfsController = class {
   getContractors = async (req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           try {
-            const queryPromise = prisma4.labour_contractor.findMany({
+            const queryPromise = prisma5.labour_contractor.findMany({
               where: { is_active: true },
               orderBy: { labour_contractor_id: "asc" }
             });
@@ -25950,9 +26007,9 @@ var CfsController = class {
       };
       inMemoryContractors.push(newContractor);
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          prisma4.labour_contractor.create({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          prisma5.labour_contractor.create({
             data: {
               site_id: siteId,
               contractor_name: newContractor.contractorName,
@@ -26010,10 +26067,10 @@ var CfsController = class {
     try {
       let items = [];
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           try {
-            const queryPromise = prisma4.handling_job.findMany({
+            const queryPromise = prisma5.handling_job.findMany({
               include: {
                 handling_job_unit_stays: {
                   include: {
@@ -26163,9 +26220,9 @@ var CfsController = class {
       };
       inMemoryJobs.unshift(newJob);
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          prisma4.handling_job.create({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          prisma5.handling_job.create({
             data: {
               site_id: siteId,
               job_no: jobNo,
@@ -26451,10 +26508,10 @@ var ReefersController = class {
     try {
       let items = [];
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           try {
-            const queryPromise = prisma4.reefer_session.findMany({
+            const queryPromise = prisma5.reefer_session.findMany({
               include: {
                 reefer_session_unit_stays: {
                   include: {
@@ -26550,9 +26607,9 @@ var ReefersController = class {
       };
       inMemoryReefers.unshift(newSession);
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          prisma4.reefer_session.create({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          prisma5.reefer_session.create({
             data: {
               unit_stay_id: unitStayId,
               plug_location_id: Number(req.body.plugLocationId) || 1,
@@ -26596,9 +26653,9 @@ var ReefersController = class {
         local.kwhUsed = "0.0";
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          prisma4.reefer_session.update({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          prisma5.reefer_session.update({
             where: { reefer_session_id: id },
             data: {
               set_temp_c: setTempC,
@@ -26626,9 +26683,9 @@ var ReefersController = class {
         local.alarm = void 0;
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          prisma4.reefer_session.update({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          prisma5.reefer_session.update({
             where: { reefer_session_id: id },
             data: {
               unplugged_at: /* @__PURE__ */ new Date(),
@@ -26683,9 +26740,9 @@ var ReefersController = class {
         }
       }
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          prisma4.reefer_reading.create({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          prisma5.reefer_reading.create({
             data: {
               reefer_session_id: id,
               read_at: new Date(newReading.readAt),
@@ -26780,10 +26837,10 @@ var RepairsController = class {
   getCodes = async (req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           try {
-            const queryPromise = prisma4.m_repair_code.findMany({
+            const queryPromise = prisma5.m_repair_code.findMany({
               where: { is_active: true },
               orderBy: { repair_code: "asc" }
             });
@@ -26821,10 +26878,10 @@ var RepairsController = class {
         isActive: true
       };
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           try {
-            await prisma4.m_repair_code.create({
+            await prisma5.m_repair_code.create({
               data: {
                 repair_code: code,
                 repair_name: name,
@@ -26875,10 +26932,10 @@ var RepairsController = class {
   getEstimates = async (req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
+        const prisma5 = getPrisma();
+        if (prisma5) {
           try {
-            const queryPromise = prisma4.repair_estimate.findMany({
+            const queryPromise = prisma5.repair_estimate.findMany({
               include: {
                 repair_estimate_unit_stays: {
                   include: {
@@ -27187,12 +27244,12 @@ var import_express16 = require("express");
 var DevicesController = class {
   // Device Integrations
   getIntegrations = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const dbInts = await prisma4.device_integrations.findMany({
+      const dbInts = await prisma5.device_integrations.findMany({
         orderBy: { device_integration_id: "asc" }
       });
       const items = (dbInts || []).map((i) => ({
@@ -27212,14 +27269,14 @@ var DevicesController = class {
     }
   };
   createIntegration = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const siteId = Number(req.siteId || req.body.siteId) || 1;
       const deviceType = req.body.integrationKind || req.body.deviceType || "ANPR";
-      const created = await prisma4.device_integrations.create({
+      const created = await prisma5.device_integrations.create({
         data: {
           site_id: siteId,
           integration_kind: deviceType,
@@ -27246,13 +27303,13 @@ var DevicesController = class {
     }
   };
   getIntegrationById = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const id = parseInt(req.params.deviceIntegrationId, 10);
-      const item2 = await prisma4.device_integrations.findUnique({
+      const item2 = await prisma5.device_integrations.findUnique({
         where: { device_integration_id: id }
       });
       if (!item2) return sendError(res, "Device integration not found", 404);
@@ -27272,13 +27329,13 @@ var DevicesController = class {
     }
   };
   updateIntegration = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const id = parseInt(req.params.deviceIntegrationId, 10);
-      const updated = await prisma4.device_integrations.update({
+      const updated = await prisma5.device_integrations.update({
         where: { device_integration_id: id },
         data: {
           is_active: req.body.isActive
@@ -27295,7 +27352,7 @@ var DevicesController = class {
   };
   // Device Reads (ANPR / OCR Gate Feeds)
   ingestRead = async (req, res) => {
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const payload = req.body.payload || req.body;
     const kind = req.body.integrationKind || "ANPR";
     return sendCreated(res, {
@@ -27307,12 +27364,12 @@ var DevicesController = class {
     });
   };
   getReads = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
-      const visits2 = await prisma4.truck_visits.findMany({
+      const visits2 = await prisma5.truck_visits.findMany({
         take: 10,
         orderBy: { truck_visit_id: "desc" },
         include: { m_truck_truck_visit_truck_idTom_truck: true }
@@ -27434,13 +27491,13 @@ var PartiesController = class {
     try {
       const { role, q, source, syncStatus, creditStatus, isActive } = req.query;
       let items = [];
-      const prisma4 = getPrisma();
-      if (prisma4) {
+      const prisma5 = getPrisma();
+      if (prisma5) {
         try {
           const timeoutPromise = new Promise(
             (_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 1200)
           );
-          const queryPromise = prisma4.m_party.findMany({
+          const queryPromise = prisma5.m_party.findMany({
             where: {
               ...isActive !== void 0 ? { is_active: isActive === "true" } : {},
               ...source ? { source: String(source).toUpperCase() } : {},
@@ -27530,14 +27587,14 @@ var PartiesController = class {
     }
   };
   getPartyDetail = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
-      const p2 = await prisma4.m_party.findFirst({
+      const p2 = await prisma5.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { OR: [{ party_id: numId }, { party_code: partyIdParam }] },
         include: {
           m_party_m_party_role: true,
@@ -27586,15 +27643,15 @@ var PartiesController = class {
     }
   };
   createParty = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const b = req.body;
       const partyCode = b.partyCode || `C-LOCAL${Date.now()}`;
       const roles = Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER"];
-      const created = await prisma4.m_party.create({
+      const created = await prisma5.m_party.create({
         data: {
           party_code: partyCode,
           party_name: b.partyName || "New Party",
@@ -27618,7 +27675,7 @@ var PartiesController = class {
         }
       });
       for (const r3 of roles) {
-        await prisma4.m_party_role.create({
+        await prisma5.m_party_role.create({
           data: {
             party_id: created.party_id,
             role_code: r3.toUpperCase(),
@@ -27666,21 +27723,21 @@ var PartiesController = class {
     }
   };
   updateParty = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
       const b = req.body;
-      const existing = await prisma4.m_party.findFirst({
+      const existing = await prisma5.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { party_id: numId }
       });
       if (!existing) {
         return res.status(404).json({ error: "Party not found" });
       }
-      const updated = await prisma4.m_party.update({
+      const updated = await prisma5.m_party.update({
         where: { party_id: existing.party_id },
         data: {
           ...b.partyName ? { party_name: b.partyName } : {},
@@ -27708,8 +27765,8 @@ var PartiesController = class {
     }
   };
   createProvisional = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database connection not available", 500);
     }
     try {
@@ -27717,7 +27774,7 @@ var PartiesController = class {
       const partyCode = b.partyCode?.trim() || `PROV-${Math.floor(1e5 + Math.random() * 9e5)}`;
       const partyName2 = b.partyName?.trim() || "Provisional Party";
       const roles = Array.isArray(b.roles) && b.roles.length > 0 ? b.roles : ["CUSTOMER"];
-      const created = await prisma4.m_party.create({
+      const created = await prisma5.m_party.create({
         data: {
           party_code: partyCode,
           party_name: partyName2,
@@ -27735,7 +27792,7 @@ var PartiesController = class {
         }
       });
       for (const r3 of roles) {
-        await prisma4.m_party_role.create({
+        await prisma5.m_party_role.create({
           data: {
             party_id: created.party_id,
             role_code: r3.toUpperCase(),
@@ -27772,21 +27829,21 @@ var PartiesController = class {
     }
   };
   matchParty = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
       const ngRefId = req.body.ngRefId || req.body.matchedMasterPartyId || "NG-MATCHED";
-      const existing = await prisma4.m_party.findFirst({
+      const existing = await prisma5.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { party_id: numId }
       });
       if (!existing) {
         return res.status(404).json({ error: "Party not found" });
       }
-      const updated = await prisma4.m_party.update({
+      const updated = await prisma5.m_party.update({
         where: { party_id: existing.party_id },
         data: {
           sync_status: "SYNCED",
@@ -27812,20 +27869,20 @@ var PartiesController = class {
     }
   };
   getContacts = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
-      const party2 = await prisma4.m_party.findFirst({
+      const party2 = await prisma5.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { party_id: numId }
       });
       if (!party2) {
         return res.status(404).json({ error: "Party not found" });
       }
-      const contacts = await prisma4.m_party_contact.findMany({
+      const contacts = await prisma5.m_party_contact.findMany({
         where: { party_id: party2.party_id },
         orderBy: { is_primary: "desc" }
       });
@@ -27844,15 +27901,15 @@ var PartiesController = class {
     }
   };
   updateContacts = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const partyIdParam = req.params.partyId;
       const numId = parseInt(partyIdParam, 10);
       const incomingList = Array.isArray(req.body) ? req.body : [req.body];
-      const party2 = await prisma4.m_party.findFirst({
+      const party2 = await prisma5.m_party.findFirst({
         where: isNaN(numId) ? { party_code: partyIdParam } : { party_id: numId }
       });
       if (!party2) {
@@ -27860,7 +27917,7 @@ var PartiesController = class {
       }
       for (const c of incomingList) {
         if (c.contactId) {
-          await prisma4.m_party_contact.update({
+          await prisma5.m_party_contact.update({
             where: { party_contact_id: Number(c.contactId) },
             data: {
               contact_name: c.fullName || c.contactName,
@@ -27872,7 +27929,7 @@ var PartiesController = class {
             }
           });
         } else {
-          await prisma4.m_party_contact.create({
+          await prisma5.m_party_contact.create({
             data: {
               party_id: party2.party_id,
               contact_name: c.fullName || c.contactName || "New Contact",
@@ -27885,7 +27942,7 @@ var PartiesController = class {
           });
         }
       }
-      const updated = await prisma4.m_party_contact.findMany({
+      const updated = await prisma5.m_party_contact.findMany({
         where: { party_id: party2.party_id }
       });
       const items = updated.map((c) => ({
@@ -27907,14 +27964,14 @@ var PartiesController = class {
    * Patch single contact
    */
   patchContact = async (req, res) => {
-    const prisma4 = getPrisma();
-    if (!prisma4) {
+    const prisma5 = getPrisma();
+    if (!prisma5) {
       return sendError(res, "Database unavailable", 500);
     }
     try {
       const contactId = parseInt(req.params.contactId, 10);
       const b = req.body;
-      const updated = await prisma4.m_party_contact.update({
+      const updated = await prisma5.m_party_contact.update({
         where: { party_contact_id: contactId },
         data: {
           ...b.fullName || b.contactName ? { contact_name: b.fullName || b.contactName } : {},
@@ -28164,7 +28221,7 @@ var searchController = {
       return res.json({ query: q, groups: [], results: [], total: 0 });
     }
     const normQ = q.replace(/[\s-]/g, "");
-    const prisma4 = getPrisma();
+    const prisma5 = getPrisma();
     const groups = [];
     try {
       const mockResults = search(q) || [];
@@ -28201,9 +28258,9 @@ var notificationsController = {
   getInbox: async (req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const dbNotifs = await prisma4.notification.findMany({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const dbNotifs = await prisma5.notification.findMany({
             orderBy: { notification_id: "desc" },
             take: 50
           });
@@ -28270,9 +28327,9 @@ var notificationsController = {
     try {
       const notificationId = req.params.notificationId || req.params.id;
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4 && notificationId) {
-          const updated = await prisma4.notification.update({
+        const prisma5 = getPrisma();
+        if (prisma5 && notificationId) {
+          const updated = await prisma5.notification.update({
             where: { notification_id: BigInt(notificationId) },
             data: {
               read_at: /* @__PURE__ */ new Date(),
@@ -28295,9 +28352,9 @@ var notificationsController = {
   markAllRead: async (_req, res) => {
     try {
       if (true) {
-        const prisma4 = getPrisma();
-        if (prisma4) {
-          const result = await prisma4.notification.updateMany({
+        const prisma5 = getPrisma();
+        if (prisma5) {
+          const result = await prisma5.notification.updateMany({
             where: { read_at: null },
             data: {
               read_at: /* @__PURE__ */ new Date(),
@@ -28326,8 +28383,138 @@ notificationsRouter.post("/notifications:read-all", requireSite(false), notifica
 notificationsRouter.post("/notifications/read-all", requireSite(false), notificationsController.markAllRead);
 notificationsRouter.post("/me/inbox/mark-all-read", requireSite(false), notificationsController.markAllRead);
 
+// src/v1/routes/upload/index.ts
+var import_express23 = __toESM(require("express"));
+var import_multer = __toESM(require("multer"));
+
+// src/utils/blackbaze.ts
+var import_backblaze_b2 = __toESM(require("backblaze-b2"));
+var b2 = new import_backblaze_b2.default({
+  applicationKeyId: process.env.BACKBLAZE_B2_KEY_ID || "",
+  applicationKey: process.env.BACKBLAZE_B2_APPLICATION_KEY || ""
+});
+var authPromise = null;
+var authExpiry = 0;
+async function authorizeB2() {
+  const now = Date.now();
+  if (authExpiry > now + 5 * 60 * 1e3) {
+    return;
+  }
+  if (authPromise) {
+    return authPromise;
+  }
+  authPromise = (async () => {
+    try {
+      await b2.authorize();
+      authExpiry = now + 60 * 60 * 1e3;
+      console.log("B2 Authorization successful");
+    } catch (error) {
+      authExpiry = 0;
+      throw new Error(`B2 Authorization failed: ${error.message}`);
+    } finally {
+      authPromise = null;
+    }
+  })();
+  return authPromise;
+}
+async function uploadFile(fileBuffer, fileName, mimeType) {
+  try {
+    await authorizeB2();
+    const uploadUrlResponse = await b2.getUploadUrl({
+      bucketId: process.env.BACKBLAZE_B2_BUCKET_ID
+    });
+    if (!uploadUrlResponse.data) {
+      throw new Error("Failed to get B2 upload URL");
+    }
+    const { uploadUrl, authorizationToken } = uploadUrlResponse.data;
+    const uploadResponse = await b2.uploadFile({
+      uploadUrl,
+      uploadAuthToken: authorizationToken,
+      fileName,
+      data: fileBuffer,
+      mime: mimeType,
+      info: {
+        src_last_modified_millis: String(Date.now())
+      }
+    });
+    if (!uploadResponse.data) {
+      throw new Error("Upload response missing data");
+    }
+    const bucketName = process.env.BACKBLAZE_B2_BUCKET_NAME;
+    const bucketUrl = process.env.BACKBLAZE_BUCKET_URL;
+    const fileUrl = bucketUrl ? `${bucketUrl.replace(/\/$/, "")}/${fileName}` : `https://f005.backblazeb2.com/file/${bucketName}/${fileName}`;
+    return fileUrl;
+  } catch (error) {
+    const errorMsg = error.response?.data?.message || error.message;
+    console.error("Upload failed:", { fileName, error: errorMsg });
+    throw new Error(`Failed to upload file: ${errorMsg}`);
+  }
+}
+
+// src/configs/prisma.client.ts
+var prisma4 = new Proxy({}, {
+  get(_target, prop) {
+    const client = getPrisma();
+    if (!client) {
+      throw new Error("[Prisma Client] Database connection is not available");
+    }
+    const val = client[prop];
+    return typeof val === "function" ? val.bind(client) : val;
+  }
+});
+var prisma_client_default = prisma4;
+
+// src/v1/controllers/assetImages.controller.ts
+var uploadImageController = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "File is required" });
+    }
+    const fileName = `uploads/${Date.now()}-${req.file.originalname}`;
+    const publicUrl = await uploadFile(
+      req.file.buffer,
+      fileName,
+      req.file.mimetype
+    );
+    let savedRecord = null;
+    if (prisma_client_default.asset_images) {
+      savedRecord = await prisma_client_default.asset_images.create({
+        data: {
+          image_url: publicUrl,
+          uploaded_at: /* @__PURE__ */ new Date()
+        }
+      });
+    } else {
+      savedRecord = {
+        image_url: publicUrl,
+        file_name: fileName,
+        original_name: req.file.originalname,
+        mime_type: req.file.mimetype,
+        size: req.file.size,
+        uploaded_at: /* @__PURE__ */ new Date()
+      };
+    }
+    return res.status(201).json({
+      success: true,
+      data: savedRecord
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// src/v1/routes/upload/index.ts
+var router11 = import_express23.default.Router();
+var upload = (0, import_multer.default)({
+  storage: import_multer.default.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
+  // 10MB limit
+});
+router11.post("/upload", upload.single("file"), uploadImageController);
+router11.post("/upload/image", upload.single("file"), uploadImageController);
+
 // src/v1/routes/index.ts
-var v1Router = (0, import_express23.Router)();
+var v1Router = (0, import_express24.Router)();
 v1Router.use(searchRouter);
 v1Router.use(notificationsRouter);
 v1Router.use(authRoutes);
@@ -28349,9 +28536,10 @@ v1Router.use(partiesRouter);
 v1Router.use(chargesRouter);
 v1Router.use(invoicesRouter);
 v1Router.use(cashierRouter);
+v1Router.use(router11);
 
 // src/routes/index.ts
-var apiRouter = (0, import_express24.Router)();
+var apiRouter = (0, import_express25.Router)();
 apiRouter.use(swaggerRouter);
 apiRouter.get("/health", (_req, res) => {
   res.json({
@@ -28367,7 +28555,7 @@ apiRouter.use(v1Router);
 
 // src/app.ts
 function createApp() {
-  const app2 = (0, import_express25.default)();
+  const app2 = (0, import_express26.default)();
   app2.use(
     (0, import_cors.default)({
       origin: (origin, callback) => callback(null, true),
@@ -28375,8 +28563,8 @@ function createApp() {
       exposedHeaders: ["Idempotency-Key", "If-Match", "ETag", "X-Site-Id"]
     })
   );
-  app2.use(import_express25.default.json({ limit: "10mb" }));
-  app2.use(import_express25.default.urlencoded({ extended: true }));
+  app2.use(import_express26.default.json({ limit: "10mb" }));
+  app2.use(import_express26.default.urlencoded({ extended: true }));
   app2.use(responseEnhancer);
   app2.use((0, import_morgan.default)("dev"));
   app2.use(ENV.API_PREFIX, apiRouter);
