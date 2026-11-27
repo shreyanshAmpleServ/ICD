@@ -26,33 +26,96 @@ var import_client = require("@prisma/client");
 
 // src/configs/env.ts
 var import_dotenv = __toESM(require("dotenv"));
-var import_path = __toESM(require("path"));
+var import_path = require("path");
 var import_fs = __toESM(require("fs"));
-var envCandidates = [
-  import_path.default.resolve(__dirname, "../../.env"),
-  import_path.default.resolve(__dirname, "../../../.env"),
-  import_path.default.resolve(process.cwd(), ".env"),
-  import_path.default.resolve(process.cwd(), "be/.env")
-];
-for (const envPath of envCandidates) {
-  if (import_fs.default.existsSync(envPath)) {
-    import_dotenv.default.config({ path: envPath });
+if (process.env.DATABASE_URL) {
+  console.log("DATABASE_URL found in environment variables");
+} else {
+  let envMode = (process.env.APP_ENV || process.env.NODE_ENV || process.env.env || "").toLowerCase();
+  if (!envMode || envMode === "production" || envMode === "prod") {
+    if (__dirname.includes("dist-testing")) envMode = "testing";
+    else if (__dirname.includes("dist-staging")) envMode = "staging";
+    else if (__dirname.includes("dist-demo")) envMode = "demo";
+    else if (!envMode) envMode = "development";
+  }
+  const isProduction = envMode === "production" || envMode === "prod";
+  const isTesting = envMode === "testing" || envMode === "test";
+  const isStaging = envMode === "staging" || envMode === "stage";
+  const isDemo = envMode === "demo";
+  const possiblePaths = [
+    ...isProduction ? [
+      (0, import_path.resolve)(process.cwd(), ".env.production"),
+      (0, import_path.resolve)(process.cwd(), "be/.env.production"),
+      (0, import_path.resolve)(__dirname, "../../.env.production"),
+      (0, import_path.resolve)(__dirname, "../../../.env.production")
+    ] : [],
+    ...isTesting ? [
+      (0, import_path.resolve)(process.cwd(), ".env.testing"),
+      (0, import_path.resolve)(process.cwd(), "be/.env.testing"),
+      (0, import_path.resolve)(__dirname, "../../.env.testing"),
+      (0, import_path.resolve)(__dirname, "../../../.env.testing")
+    ] : [],
+    ...isStaging ? [
+      (0, import_path.resolve)(process.cwd(), ".env.staging"),
+      (0, import_path.resolve)(process.cwd(), "be/.env.staging"),
+      (0, import_path.resolve)(__dirname, "../../.env.staging"),
+      (0, import_path.resolve)(__dirname, "../../../.env.staging")
+    ] : [],
+    ...isDemo ? [
+      (0, import_path.resolve)(process.cwd(), ".env.demo"),
+      (0, import_path.resolve)(process.cwd(), "be/.env.demo"),
+      (0, import_path.resolve)(__dirname, "../../.env.demo"),
+      (0, import_path.resolve)(__dirname, "../../../.env.demo")
+    ] : [],
+    (0, import_path.resolve)(process.cwd(), ".env"),
+    (0, import_path.resolve)(process.cwd(), "be/.env"),
+    (0, import_path.resolve)(process.cwd(), ".env.development"),
+    (0, import_path.resolve)(process.cwd(), "be/.env.development"),
+    (0, import_path.resolve)(__dirname, "../../.env"),
+    (0, import_path.resolve)(__dirname, "../../../.env"),
+    ".env"
+  ];
+  let envLoaded = false;
+  for (const p2 of possiblePaths) {
+    try {
+      if (!import_fs.default.existsSync(p2)) continue;
+      const result = import_dotenv.default.config({ path: p2 });
+      if (result.error) {
+        continue;
+      }
+      if (process.env.DATABASE_URL) {
+        envLoaded = true;
+        break;
+      }
+    } catch {
+      continue;
+    }
+  }
+  if (!envLoaded && !process.env.DATABASE_URL) {
+    console.warn("Warning: DATABASE_URL not found in any .env file");
+    console.warn("Attempted paths:", possiblePaths);
+    console.warn(
+      "Available env vars:",
+      Object.keys(process.env).filter((key) => key.includes("DATABASE"))
+    );
+    console.warn("Current working directory:", process.cwd());
+    console.warn("Module directory:", __dirname);
+    console.warn("NODE_ENV:", process.env.NODE_ENV);
   }
 }
-import_dotenv.default.config();
 function resolveOpenApiSpecPath() {
   if (process.env.OPENAPI_SPEC_PATH && import_fs.default.existsSync(process.env.OPENAPI_SPEC_PATH)) {
     return process.env.OPENAPI_SPEC_PATH;
   }
-  const localBackendSpec = import_path.default.resolve(process.cwd(), "ng_icd_api.yaml");
+  const localBackendSpec = (0, import_path.resolve)(process.cwd(), "ng_icd_api.yaml");
   if (import_fs.default.existsSync(localBackendSpec)) {
     return localBackendSpec;
   }
-  const docsSpec = import_path.default.resolve(__dirname, "../docs/ng_icd_api.yaml");
+  const docsSpec = (0, import_path.resolve)(__dirname, "../docs/ng_icd_api.yaml");
   if (import_fs.default.existsSync(docsSpec)) {
     return docsSpec;
   }
-  return import_path.default.resolve(process.cwd(), "../API/NG_ICD_API_contract/ng_icd_api.yaml");
+  return (0, import_path.resolve)(process.cwd(), "../API/NG_ICD_API_contract/ng_icd_api.yaml");
 }
 function parsePort(val, defaultPort = 4e3) {
   if (!val) return defaultPort;
@@ -64,6 +127,7 @@ function parsePort(val, defaultPort = 4e3) {
 var ENV = {
   PORT: parsePort(process.env.PORT, 4e3),
   NODE_ENV: process.env.NODE_ENV || "development",
+  APP_ENV: process.env.APP_ENV || process.env.NODE_ENV || "development",
   API_PREFIX: process.env.API_PREFIX || "/api",
   DATABASE_URL: process.env.DATABASE_URL || "",
   ENABLE_FALLBACK_STORE: process.env.ENABLE_FALLBACK_STORE !== "false",
@@ -72,6 +136,18 @@ var ENV = {
   SWAGGER_ENABLED: process.env.SWAGGER_ENABLED !== "false",
   DEFAULT_SITE_ID: process.env.DEFAULT_SITE_ID || "DAR1",
   OPENAPI_SPEC_PATH: resolveOpenApiSpecPath()
+};
+var config = {
+  database: {
+    url: ENV.DATABASE_URL
+  },
+  jwt: {
+    secret: ENV.JWT_SECRET
+  },
+  server: {
+    port: typeof ENV.PORT === "number" ? ENV.PORT : parseInt(String(ENV.PORT), 10) || 4e3,
+    apiPrefix: ENV.API_PREFIX
+  }
 };
 
 // src/configs/prisma.ts
@@ -8681,9 +8757,7 @@ var yardMovesController = {
         reason: m.override_reason || void 0
       }));
       if (equipmentCode && typeof equipmentCode === "string") {
-        items = items.filter(
-          (x) => x.equipmentCode === equipmentCode
-        );
+        items = items.filter((x) => x.equipmentCode === equipmentCode);
       }
       return res.json({
         success: true,
@@ -9945,7 +10019,10 @@ var yardInspectionsController = {
           description: f.description || void 0,
           needsRepair: f.needs_repair ?? true,
           isPreexisting: f.is_preexisting ?? false,
-          photoDocumentIds: [Number(f.inspection_finding_id) * 10, Number(f.inspection_finding_id) * 10 + 1]
+          photoDocumentIds: [
+            Number(f.inspection_finding_id) * 10,
+            Number(f.inspection_finding_id) * 10 + 1
+          ]
         }));
         const results = (i.inspection_result || []).map((r3) => ({
           inspectionItemId: r3.inspection_item_id,
@@ -9986,13 +10063,19 @@ var yardInspectionsController = {
       });
       return res.json(items);
     } catch (err) {
-      console.error("[yardInspectionsController.getInspections] Error:", err.message);
+      console.error(
+        "[yardInspectionsController.getInspections] Error:",
+        err.message
+      );
       return res.status(500).json({ success: false, message: err.message });
     }
   },
   getInspectionById: async (req, res) => {
     try {
-      const id = parseInt(req.params.inspectionId || req.params.id, 10);
+      const id = parseInt(
+        req.params.inspectionId || req.params.id,
+        10
+      );
       const prisma4 = getPrisma();
       if (!prisma4) {
         return sendError(res, "Database connection unavailable", 500);
@@ -10032,7 +10115,10 @@ var yardInspectionsController = {
         description: f.description || void 0,
         needsRepair: f.needs_repair ?? true,
         isPreexisting: f.is_preexisting ?? false,
-        photoDocumentIds: [Number(f.inspection_finding_id) * 10, Number(f.inspection_finding_id) * 10 + 1]
+        photoDocumentIds: [
+          Number(f.inspection_finding_id) * 10,
+          Number(f.inspection_finding_id) * 10 + 1
+        ]
       }));
       const results = (i.inspection_result || []).map((r3) => ({
         inspectionItemId: r3.inspection_item_id,
@@ -10080,7 +10166,10 @@ var yardInspectionsController = {
       const kind = req.body.inspectionKind || req.body.kind || "PERIODIC";
       const templateCode = req.body.templateCode || (req.body.category === "VEHICLE" ? "VEH-STD-v3" : "CTR-STD-v4");
       const siteId = Number(req.query.siteId || req.body.siteId || 1);
-      const maxId = inMemoryInspections.reduce((m, x) => Math.max(m, Number(x.inspectionId) || 0), 1212);
+      const maxId = inMemoryInspections.reduce(
+        (m, x) => Math.max(m, Number(x.inspectionId) || 0),
+        1212
+      );
       const inspectionId = maxId + 1;
       const newInsp = {
         inspectionId,
@@ -10119,7 +10208,12 @@ var yardInspectionsController = {
               remarks: req.body.remarks,
               createdby: "system"
             }
-          }).catch((e) => console.warn("[createInspection] DB background create error:", e.message));
+          }).catch(
+            (e) => console.warn(
+              "createInspection db background create error:",
+              e.message
+            )
+          );
         }
       }
       return sendCreated(res, newInsp);
@@ -10129,15 +10223,26 @@ var yardInspectionsController = {
   },
   saveResults: async (req, res) => {
     try {
-      const id = parseInt(req.params.inspectionId || req.params.id, 10);
-      const { results, findings, odometerKm, fuelLevel, personalEffects, remarks } = req.body;
+      const id = parseInt(
+        req.params.inspectionId || req.params.id,
+        10
+      );
+      const {
+        results,
+        findings,
+        odometerKm,
+        fuelLevel,
+        personalEffects,
+        remarks
+      } = req.body;
       const local = inMemoryInspections.find((x) => x.inspectionId === id);
       if (local) {
         if (results) local.results = results;
         if (findings) local.findings = findings;
         if (odometerKm !== void 0) local.odometerKm = Number(odometerKm);
         if (fuelLevel !== void 0) local.fuelLevel = fuelLevel;
-        if (personalEffects !== void 0) local.personalEffects = personalEffects;
+        if (personalEffects !== void 0)
+          local.personalEffects = personalEffects;
         if (remarks !== void 0) local.remarks = remarks;
       }
       if (true) {
@@ -10173,7 +10278,9 @@ var yardInspectionsController = {
               for (const f of findings) {
                 let damageCodeId = f.damageCodeId || 1;
                 if (f.damageCode) {
-                  const dc = await prisma4.m_damage_code.findFirst({ where: { damage_code: f.damageCode } });
+                  const dc = await prisma4.m_damage_code.findFirst({
+                    where: { damage_code: f.damageCode }
+                  });
                   if (dc) damageCodeId = dc.damage_code_id;
                 }
                 await prisma4.inspection_finding.create({
@@ -10200,7 +10307,10 @@ var yardInspectionsController = {
               }
             });
           } catch (e) {
-            console.warn("[saveResults] DB background update error:", e.message);
+            console.warn(
+              "[saveResults] DB background update error:",
+              e.message
+            );
           }
         }
       }
@@ -10211,7 +10321,10 @@ var yardInspectionsController = {
   },
   completeInspection: async (req, res) => {
     try {
-      const id = parseInt(req.params.inspectionId || req.params.id, 10);
+      const id = parseInt(
+        req.params.inspectionId || req.params.id,
+        10
+      );
       const cond = req.body.overallCondition || req.body.condition || "SOUND";
       const isMajor = cond === "MAJOR_DAMAGE" || cond === "REJECTED";
       const local = inMemoryInspections.find((x) => x.inspectionId === id);
@@ -10231,7 +10344,12 @@ var yardInspectionsController = {
               completed_at: /* @__PURE__ */ new Date(),
               overall_condition: cond
             }
-          }).catch((e) => console.warn("[completeInspection] DB background update error:", e.message));
+          }).catch(
+            (e) => console.warn(
+              "[completeInspection] DB background update error:",
+              e.message
+            )
+          );
         }
       }
       return sendSuccess(res, { success: true, inspection: local });
@@ -10241,7 +10359,10 @@ var yardInspectionsController = {
   },
   approveInspection: async (req, res) => {
     try {
-      const id = parseInt(req.params.inspectionId || req.params.id, 10);
+      const id = parseInt(
+        req.params.inspectionId || req.params.id,
+        10
+      );
       const local = inMemoryInspections.find((x) => x.inspectionId === id);
       if (local) {
         local.status = "APPROVED";
@@ -10259,7 +10380,12 @@ var yardInspectionsController = {
               approved_at: /* @__PURE__ */ new Date(),
               approved_by: "manager.ops"
             }
-          }).catch((e) => console.warn("[approveInspection] DB background update error:", e.message));
+          }).catch(
+            (e) => console.warn(
+              "[approveInspection] DB background update error:",
+              e.message
+            )
+          );
         }
       }
       return sendSuccess(res, { success: true, inspection: local });
@@ -22109,7 +22235,10 @@ var controlExceptionsController = {
       });
       return res.json(updated);
     } catch (err) {
-      console.error("[controlExceptionsController.resolveException] Error:", err);
+      console.error(
+        "[controlExceptionsController.resolveException] Error:",
+        err
+      );
       res.status(500).json({ error: err.message });
     }
   }
@@ -23322,14 +23451,16 @@ var authSessionController = {
             })
           ]);
           if (dbUser) {
-            const currentSite2 = dbSites.find((s) => s.site_code.toUpperCase() === activeSiteId) || dbSites[0] || {
+            const currentSite = dbSites.find(
+              (s) => s.site_code.toUpperCase() === activeSiteId
+            ) || dbSites[0] || {
               site_id: 1,
               site_code: "DAR1",
               site_name: "Dar es Salaam main yard",
               facilities: ["ICD", "CFS", "EMPTY_DEPOT"],
               time_zone: "Africa/Dar_es_Salaam"
             };
-            const permissionsGrants2 = ALL_PERMISSIONS.map((p2) => ({
+            const permissionsGrants = ALL_PERMISSIONS.map((p2) => ({
               permissionCode: p2,
               grant: ROLES[roleCode]?.grants?.[p2] || "APPR"
             }));
@@ -23362,7 +23493,7 @@ var authSessionController = {
                 timeZone: s.time_zone || "Africa/Dar_es_Salaam",
                 facilities: ["ICD", "CFS", "EMPTY_DEPOT"],
                 roles: [primaryRole],
-                permissions: permissionsGrants2
+                permissions: permissionsGrants
               })),
               user: {
                 userId: dbUser.user_id,
@@ -23379,10 +23510,10 @@ var authSessionController = {
                 createdAt: dbUser.createdate?.toISOString()
               },
               activeSite: {
-                siteId: currentSite2.site_id,
-                siteCode: currentSite2.site_code,
-                siteName: currentSite2.site_name,
-                timeZone: currentSite2.time_zone || "Africa/Dar_es_Salaam",
+                siteId: currentSite.site_id,
+                siteCode: currentSite.site_code,
+                siteName: currentSite.site_name,
+                timeZone: currentSite.time_zone || "Africa/Dar_es_Salaam",
                 facilities: ["ICD", "CFS", "EMPTY_DEPOT"]
               },
               permissions: ALL_PERMISSIONS,
@@ -23396,49 +23527,6 @@ var authSessionController = {
           }
         }
       }
-      const user = users[0];
-      const currentSite = sites.find((s) => s.siteCode === activeSiteId) || sites[0];
-      const permissionsGrants = ALL_PERMISSIONS.map((p2) => ({
-        permissionCode: p2,
-        grant: ROLES[roleCode]?.grants?.[p2] || "DO"
-      }));
-      res.json({
-        userId: user.userId,
-        userSub: user.userSub,
-        name: user.userName,
-        userName: user.userName,
-        email: user.email,
-        phone: user.phone,
-        language: "en",
-        preferredLanguage: "en",
-        partyId: null,
-        sites: sites.map((s) => ({
-          siteId: s.siteId,
-          siteCode: s.siteCode,
-          siteName: s.siteName,
-          timeZone: s.timeZone,
-          facilities: s.facilities,
-          roles: [roleCode],
-          permissions: permissionsGrants
-        })),
-        user: {
-          userId: user.userId,
-          userSub: user.userSub,
-          userName: user.userName,
-          title: user.title,
-          email: user.email,
-          phone: user.phone,
-          roleCode,
-          isActive: user.isActive
-        },
-        activeSite: {
-          siteId: currentSite.siteId,
-          siteCode: currentSite.siteCode,
-          siteName: currentSite.siteName,
-          facilities: currentSite.facilities
-        },
-        permissions: permissionsGrants
-      });
     } catch (err) {
       console.error("[SessionController] getMe error:", err);
       res.status(500).json({ error: err.message });
@@ -23534,12 +23622,6 @@ var authSessionController = {
           }
         }
       }
-      const targetSite = sites.find((s) => s.siteCode === targetCode) || sites[0];
-      res.json({
-        success: true,
-        activeSite: targetSite,
-        switchedAt: (/* @__PURE__ */ new Date()).toISOString()
-      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
